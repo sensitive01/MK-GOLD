@@ -115,6 +115,7 @@ export default function Leave() {
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
   const [statusModal, setStatusModal] = useState({ open: false, action: '', id: null });
+  const [filterOpen, setFilterOpen] = useState(false);
   const form = useRef();
 
   const [notify, setNotify] = useState({
