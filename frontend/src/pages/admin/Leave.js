@@ -114,7 +114,7 @@ export default function Leave() {
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
-  const [filterOpen, setFilterOpen] = useState(null);
+  const [statusModal, setStatusModal] = useState({ open: false, action: '', id: null });
   const form = useRef();
 
   const [notify, setNotify] = useState({
@@ -256,6 +256,26 @@ export default function Leave() {
     setFilterOpen(false);
   };
 
+  const handleStatusOpen = (id, action) => {
+    setStatusModal({ open: true, action, id });
+  };
+
+  const handleStatusClose = () => {
+    setStatusModal({ open: false, action: '', id: null });
+  };
+
+  const handleStatusUpdate = () => {
+    updateLeave(statusModal.id, { status: statusModal.action }).then(() => {
+      fetchData();
+      handleStatusClose();
+      setNotify({
+        open: true,
+        message: `Leave ${statusModal.action} Successfully!`,
+        severity: 'success',
+      });
+    });
+  };
+
   const style = {
     position: 'absolute',
     top: '50%',
@@ -281,11 +301,7 @@ export default function Leave() {
           variant="contained"
           color="success"
           size="small"
-          onClick={() => {
-            updateLeave(props._id, { status: 'approved' }).then(() => {
-              fetchData();
-            });
-          }}
+          onClick={() => handleStatusOpen(props._id, 'approved')}
         >
           Approve
         </Button>
@@ -293,11 +309,7 @@ export default function Leave() {
           variant="contained"
           color="error"
           size="small"
-          onClick={() => {
-            updateLeave(props._id, { status: 'rejected' }).then(() => {
-              fetchData();
-            });
-          }}
+          onClick={() => handleStatusOpen(props._id, 'rejected')}
         >
           Reject
         </Button>
@@ -551,6 +563,34 @@ export default function Leave() {
           Delete
         </MenuItem>
       </Popover>
+
+      <Modal
+        open={statusModal.open}
+        onClose={handleStatusClose}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <Box sx={style}>
+          <Typography id="modal-modal-title" variant="h6" component="h2">
+            Confirm Action
+          </Typography>
+          <Typography id="modal-modal-description" sx={{ mt: 3 }}>
+            Are you sure you want to {statusModal.action} this leave request?
+          </Typography>
+          <Stack direction="row" alignItems="center" spacing={2} mt={3}>
+            <Button
+              variant="contained"
+              color={statusModal.action === 'approved' ? 'success' : 'error'}
+              onClick={handleStatusUpdate}
+            >
+              {statusModal.action === 'approved' ? 'Approve' : 'Reject'}
+            </Button>
+            <Button variant="contained" onClick={handleStatusClose}>
+              Cancel
+            </Button>
+          </Stack>
+        </Box>
+      </Modal>
 
       <Modal
         open={openDeleteModal}
