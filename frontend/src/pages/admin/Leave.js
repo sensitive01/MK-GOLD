@@ -276,9 +276,11 @@ export default function Leave() {
 
   function Status(props) {
     return (
-      <>
+      <Stack direction="row" spacing={1}>
         <Button
           variant="contained"
+          color="success"
+          size="small"
           onClick={() => {
             updateLeave(props._id, { status: 'approved' }).then(() => {
               fetchData();
@@ -290,7 +292,7 @@ export default function Leave() {
         <Button
           variant="contained"
           color="error"
-          sx={{ ml: 2 }}
+          size="small"
           onClick={() => {
             updateLeave(props._id, { status: 'rejected' }).then(() => {
               fetchData();
@@ -299,7 +301,7 @@ export default function Leave() {
         >
           Reject
         </Button>
-      </>
+      </Stack>
     );
   }
 
@@ -398,7 +400,7 @@ export default function Leave() {
                           {dates.map((date) => moment(date).format('Y/M/D')).join(', ')}
                         </TableCell>
                         <TableCell align="left">{note}</TableCell>
-                        <TableCell align="left">
+                        <TableCell align="left" sx={{ minWidth: 180 }}>
                           {status === 'pending' ? (
                             <Status status={status} _id={_id} />
                           ) : (
