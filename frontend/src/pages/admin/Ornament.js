@@ -539,7 +539,7 @@ function Print({ data }) {
   return (
     <>
       <iframe id="iframe" style={{ display: 'none', height: '0px', width: '0px', position: 'absolute' }} title="pdf" />
-      <div id="pdf">
+      <div id="pdf" style={{ color: 'white' }}>
         <img
           alt="Logo"
           src="/newLogo.jpeg"
@@ -570,7 +570,7 @@ function Print({ data }) {
             </table>
           </div>
         </div>
-        <hr style={{ border: '0', borderBottom: '1px solid' }} />
+        <hr style={{ border: '0', borderBottom: '1px solid white' }} />
         <div style={{ margin: '30px 0' }}>
           <center style={{ margin: '40px auto' }}>
             <h3>GOLD MOVEMENT DETAILS</h3>
@@ -579,7 +579,7 @@ function Print({ data }) {
             style={{
               width: '100%',
               textAlign: 'center',
-              border: '1px solid',
+              border: '1px solid white',
               borderCollapse: 'collapse',
             }}
           >
@@ -587,7 +587,7 @@ function Print({ data }) {
               <tr>
                 <th
                   style={{
-                    border: '1px solid',
+                    border: '1px solid white',
                     padding: '5px',
                   }}
                 >
@@ -595,7 +595,7 @@ function Print({ data }) {
                 </th>
                 <th
                   style={{
-                    border: '1px solid',
+                    border: '1px solid white',
                     padding: '5px',
                   }}
                 >
@@ -603,7 +603,7 @@ function Print({ data }) {
                 </th>
                 <th
                   style={{
-                    border: '1px solid',
+                    border: '1px solid white',
                     padding: '5px',
                   }}
                 >
@@ -611,7 +611,7 @@ function Print({ data }) {
                 </th>
                 <th
                   style={{
-                    border: '1px solid',
+                    border: '1px solid white',
                     padding: '5px',
                   }}
                 >
@@ -619,7 +619,7 @@ function Print({ data }) {
                 </th>
                 <th
                   style={{
-                    border: '1px solid',
+                    border: '1px solid white',
                     padding: '5px',
                   }}
                 >
@@ -627,7 +627,7 @@ function Print({ data }) {
                 </th>
                 <th
                   style={{
-                    border: '1px solid',
+                    border: '1px solid white',
                     padding: '5px',
                   }}
                 >
@@ -635,7 +635,7 @@ function Print({ data }) {
                 </th>
                 <th
                   style={{
-                    border: '1px solid',
+                    border: '1px solid white',
                     padding: '5px',
                   }}
                 >
@@ -643,7 +643,7 @@ function Print({ data }) {
                 </th>
                 <th
                   style={{
-                    border: '1px solid',
+                    border: '1px solid white',
                     padding: '5px',
                   }}
                 >
@@ -651,7 +651,7 @@ function Print({ data }) {
                 </th>
                 <th
                   style={{
-                    border: '1px solid',
+                    border: '1px solid white',
                     padding: '5px',
                   }}
                 >
@@ -664,7 +664,7 @@ function Print({ data }) {
                 <tr key={e._id}>
                   <td
                     style={{
-                      border: '1px solid',
+                      border: '1px solid white',
                       padding: '5px',
                     }}
                   >
@@ -672,7 +672,7 @@ function Print({ data }) {
                   </td>
                   <td
                     style={{
-                      border: '1px solid',
+                      border: '1px solid white',
                       padding: '5px',
                     }}
                   >
@@ -680,7 +680,7 @@ function Print({ data }) {
                   </td>
                   <td
                     style={{
-                      border: '1px solid',
+                      border: '1px solid white',
                       padding: '5px',
                     }}
                   >
@@ -688,7 +688,7 @@ function Print({ data }) {
                   </td>
                   <td
                     style={{
-                      border: '1px solid',
+                      border: '1px solid white',
                       padding: '5px',
                     }}
                   >
@@ -696,7 +696,7 @@ function Print({ data }) {
                   </td>
                   <td
                     style={{
-                      border: '1px solid',
+                      border: '1px solid white',
                       padding: '5px',
                     }}
                   >
@@ -704,7 +704,7 @@ function Print({ data }) {
                   </td>
                   <td
                     style={{
-                      border: '1px solid',
+                      border: '1px solid white',
                       padding: '5px',
                     }}
                   >
@@ -712,7 +712,7 @@ function Print({ data }) {
                   </td>
                   <td
                     style={{
-                      border: '1px solid',
+                      border: '1px solid white',
                       padding: '5px',
                     }}
                   >
@@ -720,7 +720,7 @@ function Print({ data }) {
                   </td>
                   <td
                     style={{
-                      border: '1px solid',
+                      border: '1px solid white',
                       padding: '5px',
                     }}
                   >
@@ -728,7 +728,7 @@ function Print({ data }) {
                   </td>
                   <td
                     style={{
-                      border: '1px solid',
+                      border: '1px solid white',
                       padding: '5px',
                     }}
                   >
@@ -739,7 +739,7 @@ function Print({ data }) {
             </tbody>
           </table>
         </div>
-        <hr style={{ border: '0', borderBottom: '1px solid' }} />
+        <hr style={{ border: '0', borderBottom: '1px solid white' }} />
         <div style={{ display: 'block', margin: '30px 0' }}>
           <table style={{ width: '100%', textAlign: 'left' }}>
             <tbody>

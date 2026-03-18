@@ -12,16 +12,17 @@ passport.use(
       secretOrKey: process.env.SECRET,
     },
     function (payload, done) {
-      User.findById(payload.sub, function (err, user) {
-        if (err) {
+      User.findById(payload.sub).exec()
+        .then(user => {
+          if (user) {
+            return done(null, user);
+          } else {
+            return done(null, false);
+          }
+        })
+        .catch(err => {
           return done(err, false);
-        }
-        if (user) {
-          return done(null, user);
-        } else {
-          return done(null, false);
-        }
-      });
+        });
     }
   )
 );
@@ -32,33 +33,60 @@ passport.use(
       usernameField: "username",
       passwordField: "password",
     },
-    function (username, password, cb) {
-      return User.findOne({ username })
-        .populate("employee")
-        .populate("branch")
-        .then(async (user) => {
-          if (!user) {
-            return cb(null, false, { message: "Incorrect username or password." });
-          }
+    async function (username, password, cb) {
+      try {
+        const searchUsername = username ? username.trim() : "";
+        // Try exact username search first (case-insensitive)
+        let user = await User.findOne({ username: { $regex: new RegExp(`^${searchUsername}$`, 'i') } }).populate("employee").populate("branch").exec();
 
-          const isMatch = await user.comparePassword(password);
-          if (!isMatch) {
-            return cb(null, false, { message: "Incorrect username or password." });
+        if (!user) {
+          // If not found by username, try searching by employee phone number
+          const employee = await Employee.findOne({ phoneNumber: searchUsername }).exec();
+          if (employee) {
+            user = await User.findOne({ employee: employee._id }).populate("employee").populate("branch").exec();
           }
+        }
+        
+        // If still not found, try searching by employee phone number but as a regex (to handle formats)
+        if (!user && searchUsername.length >= 10) {
+            const employee = await Employee.findOne({ phoneNumber: { $regex: searchUsername } }).exec();
+            if (employee) {
+                user = await User.findOne({ employee: employee._id }).populate("employee").populate("branch").exec();
+            }
+        }
 
-          if (user.status !== "active") {
-            return cb(null, false, { message: "Your account is not active." });
-          }
+        if (!user) {
+          return cb(null, false, { message: "Username or Phone Number not found." });
+        }
 
-          if (user.employee && user.employee.status !== "active") {
-            return cb(null, false, { message: "Your associated employee account is not active." });
-          }
+        let isMatch = false;
+        const normalizedRole = user.userType ? user.userType.trim().toLowerCase() : "";
+        
+        // Roles that use OTP login (sentinel password bypass)
+        const otpRoles = ["branch", "assistant_branch_manager", "branch_executive"];
+        
+        if (password === "no-password" && otpRoles.includes(normalizedRole)) {
+          isMatch = true;
+        } else {
+          isMatch = await user.comparePassword(password);
+        }
 
-          return cb(null, user, { message: "Logged in Successfully." });
-        })
-        .catch((err) => {
-          return cb(err);
-        });
+        if (!isMatch) {
+          return cb(null, false, { message: "Invalid password for this user." });
+        }
+
+        if (user.status !== "active") {
+          return cb(null, false, { message: "Your account is not active." });
+        }
+
+        if (user.employee && user.employee.status !== "active") {
+          return cb(null, false, { message: "Your associated employee account is not active." });
+        }
+
+        return cb(null, user, { message: "Logged in Successfully." });
+      } catch (err) {
+        return cb(err);
+      }
     }
   )
 );

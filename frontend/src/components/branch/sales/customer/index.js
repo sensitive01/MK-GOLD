@@ -118,10 +118,6 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
     setRowsPerPage(parseInt(event.target.value, 10));
   };
 
-  useEffect(() => {
-    fetchCustomer();
-  }, [fetchCustomer]);
-
   const fetchCustomer = useCallback(
     (
       query = {
@@ -137,6 +133,10 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
     },
     []
   );
+
+  useEffect(() => {
+    fetchCustomer();
+  }, [fetchCustomer]);
 
   // Form validation
   const schema = Yup.object({

@@ -21,7 +21,7 @@ function login(req, res, next) {
         return res.send(err);
       }
 
-      if (user.userType?.toLowerCase() === "branch") {
+      if (["branch", "assistant_branch_manager", "branch_executive"].includes(user.userType?.toLowerCase())) {
         const otp = String(
           Math.floor(100000 + Math.random() * 900000)
         ).substring(0, 6);
@@ -49,7 +49,7 @@ function login(req, res, next) {
         return res.json({
           status: true,
           message: "OTP generated successfully (SMS bypassed).",
-          data: { token, otp }, // Returning OTP in data so user can see it if needed
+          data: { token },
         });
 
         /*
@@ -172,13 +172,21 @@ function verifyLoginOtp(req, res, next) {
 }
 
 function getUserType(req, res, next) {
-  console.log("Login")
-  User.findOne({ username: req.body.username })
+  const searchUsername = req.body.username ? req.body.username.trim() : "";
+  User.findOne({ username: { $regex: new RegExp(`^${searchUsername}$`, 'i') } })
   .then(async function (user) {
       if (!user) {
-        const employee = await Employee.findOne({
-          phoneNumber: req.body.username,
+        // Try exact phone number
+        let employee = await Employee.findOne({
+          phoneNumber: searchUsername,
         }).exec();
+
+        // Try regex match for phone number if not found exactly
+        if (!employee && searchUsername.length >= 10) {
+            employee = await Employee.findOne({
+                phoneNumber: { $regex: searchUsername },
+            }).exec();
+        }
 
         if (!employee) {
           return res.json({

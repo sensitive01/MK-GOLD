@@ -24,13 +24,15 @@ async function getLoginNotCreatedEmployee(req, res) {
   
   let allEmployees = await employeeService.find({});
   
-  let data = allEmployees.map(emp => {
-    const empObj = emp.toObject ? emp.toObject() : emp;
-    return {
-      ...empObj,
-      hasUser: employeeIdsWithUser.includes(emp._id.toString())
-    };
-  });
+  let data = allEmployees
+    .filter(emp => !employeeIdsWithUser.includes(emp._id.toString()))
+    .map(emp => {
+      const empObj = emp.toObject ? emp.toObject() : emp;
+      return {
+        ...empObj,
+        hasUser: false
+      };
+    });
 
   res.json({
     status: true,

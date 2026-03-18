@@ -117,7 +117,7 @@ export default function LoginForm() {
             },
           }}
         />
-        {step === 2 && userType !== 'branch' && (
+        {step === 2 && !['branch', 'assistant_branch_manager', 'branch_executive'].includes(userType) && (
           <TextField
             name="password"
             label={'Password'}
@@ -146,7 +146,7 @@ export default function LoginForm() {
             }}
           />
         )}
-        {step === 2 && userType === 'branch' && (
+        {step === 2 && ['branch', 'assistant_branch_manager', 'branch_executive'].includes(userType) && (
           <TextField
             name="otp"
             label={'OTP'}
@@ -204,12 +204,11 @@ export default function LoginForm() {
                 .then((data) => {
                   if (data.status === true) {
                     setUserType(data.data.userType);
-                    if (data.data.userType === 'branch') {
+                    if (['branch', 'assistant_branch_manager', 'branch_executive'].includes(data.data.userType)) {
                       loginApi({ username, password: 'no-password' })
                         .then((data) => {
                           if (data.status === true) {
                             setToken(data.data.token);
-                            setOtp(data.data.otp ?? '');
                             setStep(2);
                           } else {
                             setStep(1);
@@ -239,7 +238,7 @@ export default function LoginForm() {
           } else {
             setIsDisable(true);
             setError(null);
-            if (userType === 'branch') {
+            if (['branch', 'assistant_branch_manager', 'branch_executive'].includes(userType)) {
               verifyLoginOtp({ token, otp })
                 .then((data) => {
                   if (data.status === true) {

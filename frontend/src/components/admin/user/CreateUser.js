@@ -27,7 +27,7 @@ function CreateUser(props) {
   // Form validation
   const schema = Yup.object({
     username: Yup.string().when('userType', {
-      is: (v) => v !== 'branch',
+      is: (v) => !['branch', 'assistant_branch_manager', 'branch_executive'].includes(v),
       then: Yup.string().required('Username is required'),
     }),
     branch: Yup.string().when('userType', {
@@ -35,7 +35,7 @@ function CreateUser(props) {
       then: Yup.string().required('Branch is required'),
     }),
     password: Yup.string().when('userType', {
-      is: (v) => v !== 'branch',
+      is: (v) => !['branch', 'assistant_branch_manager', 'branch_executive'].includes(v),
       then: Yup.string().required('Password is required'),
     }),
     userType: Yup.string().required('User type is required'),
@@ -56,6 +56,7 @@ function CreateUser(props) {
       const payload = { ...values };
       if (['branch', 'assistant_branch_manager', 'branch_executive'].includes(payload.userType)) {
         payload.username = employees.find((e) => e._id === payload.employee)?.phoneNumber ?? null;
+        payload.password = 'no-password';
       } else {
         delete payload.branch;
       }
@@ -170,8 +171,8 @@ function CreateUser(props) {
                 onChange={handleChange}
               >
                 {employees.map((e) => (
-                  <MenuItem value={e._id} key={e._id} disabled={e.hasUser}>
-                    {e.employeeId} {e.name} {e.hasUser ? '(User already exists)' : ''}
+                  <MenuItem value={e._id} key={e._id}>
+                    {e.employeeId} {e.name}
                   </MenuItem>
                 ))}
               </Select>

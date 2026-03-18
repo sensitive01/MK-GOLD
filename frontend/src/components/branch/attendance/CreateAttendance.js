@@ -51,7 +51,7 @@ function CreateAttendance(props) {
         });
         return;
       }
-      createAttendance(values).then((data) => {
+      createAttendance(values).then(async (data) => {
         if (data.status === false) {
           props.setNotify({
             open: true,
@@ -59,17 +59,21 @@ function CreateAttendance(props) {
             severity: 'error',
           });
         } else {
-          fetch(img)
-            .then((res) => res.blob())
-            .then((blob) => {
+          if (img) {
+            try {
+              const res = await fetch(img);
+              const blob = await res.blob();
               const file = new File([blob], `${data.data.fileUpload.uploadId}.png`, { type: 'image/png' });
               const formData = new FormData();
               formData.append('uploadId', data.data.fileUpload.uploadId);
               formData.append('uploadName', data.data.fileUpload.uploadName);
               formData.append('uploadType', 'attendance');
               formData.append('uploadedFile', file);
-              createFile(formData);
-            });
+              await createFile(formData);
+            } catch (error) {
+              console.error('File upload failed:', error);
+            }
+          }
           props.setToggleContainer(false);
           resetForm();
           setImg(null);
@@ -114,7 +118,7 @@ function CreateAttendance(props) {
               </Select>
             </FormControl>
           </Grid> */}
-          <Grid item xs={12}>
+          <Grid item xs={12} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {img === null ? (
               <>
                 <Webcam
@@ -125,25 +129,24 @@ function CreateAttendance(props) {
                   ref={webcamRef}
                   screenshotFormat="image/png"
                   videoConstraints={videoConstraints}
+                  style={{ borderRadius: '10px', marginBottom: '20px' }}
                 />
-                <br />
-                <LoadingButton size="small" type="button" variant="contained" onClick={capture}>
-                  Capture photo
+                <LoadingButton size="large" type="button" variant="contained" onClick={capture} sx={{ bgcolor: '#FFD700', color: '#000', '&:hover': { bgcolor: '#FFC800' } }}>
+                  Capture Photo
                 </LoadingButton>
               </>
             ) : (
               <>
-                <img src={img} alt="screenshot" />
-                <br />
-                <LoadingButton size="small" type="button" variant="contained" onClick={() => setImg(null)}>
-                  Retake
+                <img src={img} alt="screenshot" style={{ borderRadius: '10px', marginBottom: '20px', width: '400px', height: '400px' }} />
+                <LoadingButton size="large" type="button" variant="contained" onClick={() => setImg(null)} sx={{ bgcolor: '#FFD700', color: '#000', '&:hover': { bgcolor: '#FFC800' } }}>
+                  Retake Photo
                 </LoadingButton>
               </>
             )}
           </Grid>
-          <Grid item xs={12}>
-            <LoadingButton size="large" type="submit" variant="contained">
-              Save
+          <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+            <LoadingButton size="large" type="submit" variant="contained" sx={{ px: 8 }}>
+              Save Attendance
             </LoadingButton>
           </Grid>
         </Grid>

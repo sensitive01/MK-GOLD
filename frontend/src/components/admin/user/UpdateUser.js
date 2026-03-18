@@ -24,7 +24,7 @@ function UpdateUser(props) {
   // Form validation
   const schema = Yup.object({
     username: Yup.string().when('userType', {
-      is: (v) => v !== 'branch',
+      is: (v) => !['branch', 'assistant_branch_manager', 'branch_executive'].includes(v),
       then: Yup.string().required('Username is required'),
     }),
     branch: Yup.string().when('userType', {
@@ -32,7 +32,7 @@ function UpdateUser(props) {
       then: Yup.string().required('Branch is required'),
     }),
     password: Yup.string().when('userType', {
-      is: (v) => v !== 'branch',
+      is: (v) => !['branch', 'assistant_branch_manager', 'branch_executive'].includes(v),
       then: Yup.string().required('Password is required'),
     }),
     userType: Yup.string().required('User type is required'),
@@ -46,6 +46,7 @@ function UpdateUser(props) {
       const payload = { ...values };
       if (['branch', 'assistant_branch_manager', 'branch_executive'].includes(payload.userType)) {
         payload.username = employees.find((e) => e._id === payload.employee)?.phoneNumber ?? null;
+        payload.password = 'no-password';
       } else {
         delete payload.branch;
         payload.branch = null;
@@ -80,7 +81,10 @@ function UpdateUser(props) {
       getUserById(props.id).then((data) => {
         setValues({ ...data.data, employee: data.data?.employee?._id, branch: data.data?.branch?._id });
         getLoginNotCreatedEmployee().then((employee) => {
-          const employees = [...employee.data, data.data.employee];
+          const employees = [...employee.data];
+          if (data.data.employee && !employees.find((e) => e._id === data.data.employee._id)) {
+            employees.push(data.data.employee);
+          }
           setEmloyees(employees.filter((e) => e?._id));
         });
       });
