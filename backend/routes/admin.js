@@ -32,6 +32,7 @@ const lead = require("../controllers/admin/lead");
 const melting = require("../controllers/admin/melting");
 const locker = require("../controllers/admin/locker");
 const announcement = require("../controllers/admin/announcement");
+const designation = require("../controllers/admin/designation");
 
 const { isAdmin } = require("../middlewares/authorization");
 const multer = require("../config/multer");
@@ -67,6 +68,13 @@ adminRouter.post("/locker/create", locker.create);
 
 adminRouter.get("/announcement/get", announcement.find);
 adminRouter.post("/announcement/create", announcement.create);
+
+adminRouter.get("/designation/get", designation.find);
+adminRouter.post("/designation/get", designation.find);
+adminRouter.get("/designation/get/:id", designation.findById);
+adminRouter.post("/designation/create", designation.create);
+adminRouter.post("/designation/update/:id", designation.update);
+adminRouter.post("/designation/delete/:id", designation.remove);
 
 adminRouter.get("/goldrate/get", goldRate.find);
 adminRouter.post("/goldrate/get", goldRate.find);

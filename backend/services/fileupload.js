@@ -27,12 +27,8 @@ async function findById(id) {
 
 async function create(payload) {
   try {
-    let filePath = `images/files/${Math.floor(10000 + Math.random() * 99999)}-${
-      payload.uploadedFile.originalname
-    }`;
-    fs.writeFileSync(`./public/${filePath}`, payload.uploadedFile.buffer);
-
-    payload.uploadedFile = filePath;
+    // With cloudinary storage, multer provides the URL in req.file.path
+    payload.uploadedFile = payload.uploadedFile.path; 
     let fileupload = new fileUpload(payload);
     return await fileupload.save();
   } catch (err) {

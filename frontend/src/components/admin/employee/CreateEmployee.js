@@ -1,4 +1,4 @@
-import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid } from '@mui/material';
+import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid, Checkbox, ListItemText, Typography, Button, IconButton, Stack } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
@@ -9,15 +9,27 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import moment from 'moment';
 import { createEmployee, getNextEmployeeId } from '../../../apis/admin/employee';
-import { useEffect } from 'react';
+import { getDesignation } from '../../../apis/admin/designation';
+import { useEffect, useState } from 'react';
+import { createFile } from '../../../apis/admin/fileupload';
+import global from '../../../utils/global';
+import Iconify from '../../../components/iconify';
 
 function CreateEmployee(props) {
   const form = useRef();
+  const [designations, setDesignations] = useState([]);
+  const [photo, setPhoto] = useState(null);
+  const [documents, setDocuments] = useState([]);
 
   useEffect(() => {
     getNextEmployeeId().then((data) => {
       if (data.status) {
         setFieldValue('employeeId', data.data);
+      }
+    });
+    getDesignation({ status: 'active' }).then((data) => {
+      if (data && data.status) {
+        setDesignations(data.data || []);
       }
     });
   }, []);
@@ -40,6 +52,9 @@ function CreateEmployee(props) {
     dob: Yup.string().required('DOB is required'),
     shiftStartTime: Yup.string().required('Login Time is required'),
     shiftEndTime: Yup.string().required('Logout Time is required'),
+    doj: Yup.string().required('DOJ is required'),
+    employmentType: Yup.string().required('Employment Type is required'),
+    languages: Yup.array().min(1, 'Select at least one language'),
     status: Yup.string().required('Status is required'),
   });
 
@@ -56,6 +71,9 @@ function CreateEmployee(props) {
       dob: moment()?.format("YYYY-MM-DD"),
       shiftStartTime: moment()?.format("YYYY-MM-DD"),
       shiftEndTime: moment()?.format("YYYY-MM-DD"),
+      doj: moment()?.format("YYYY-MM-DD"),
+      employmentType: 'full-time',
+      languages: [],
       status: 'active',
     },
     validationSchema: schema,
@@ -68,12 +86,38 @@ function CreateEmployee(props) {
             severity: 'error',
           });
         } else {
+          const { uploadId, uploadName } = data.data.fileUpload;
+
+          // Upload Photo
+          if (photo) {
+            const photoData = new FormData();
+            photoData.append('uploadId', uploadId);
+            photoData.append('uploadName', uploadName);
+            photoData.append('uploadType', 'photo');
+            photoData.append('uploadedFile', photo);
+            createFile(photoData);
+          }
+
+          // Upload Documents
+          if (documents.length > 0) {
+            documents.forEach((doc) => {
+              const docData = new FormData();
+              docData.append('uploadId', uploadId);
+              docData.append('uploadName', uploadName);
+              docData.append('uploadType', 'document');
+              docData.append('uploadedFile', doc);
+              createFile(docData);
+            });
+          }
+
           props.setToggleContainer(false);
           form.current.reset();
           resetForm();
+          setPhoto(null);
+          setDocuments([]);
           props.setNotify({
             open: true,
-            message: 'Employee created',
+            message: 'Employee created successfully!',
             severity: 'success',
           });
         }
@@ -145,14 +189,26 @@ function CreateEmployee(props) {
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={4}>
-            <TextField
-              name="designation"
-              error={touched.designation && errors.designation && true}
-              label={touched.designation && errors.designation ? errors.designation : 'Designation'}
-              fullWidth
-              onBlur={handleBlur}
-              onChange={handleChange}
-            />
+            <FormControl fullWidth error={touched.designation && errors.designation && true}>
+              <InputLabel id="designation-label">Select Designation</InputLabel>
+              <Select
+                labelId="designation-label"
+                id="designation-select"
+                label={touched.designation && errors.designation ? errors.designation : 'Select Designation'}
+                name="designation"
+                value={values.designation}
+                onBlur={handleBlur}
+                onChange={(e) => {
+                  setFieldValue('designation', e.target.value, true);
+                }}
+              >
+                {designations && designations.length > 0 && designations.map((item) => (
+                  <MenuItem key={item._id} value={item.name}>
+                    {item.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid item xs={12} sm={4}>
             <TextField
@@ -254,6 +310,114 @@ function CreateEmployee(props) {
               </Select>
             </FormControl>
           </Grid>
+          <Grid item xs={12} sm={4}>
+            <LocalizationProvider dateAdapter={AdapterMoment} error={touched.doj && errors.doj && true}>
+              <DesktopDatePicker
+                label={touched.doj && errors.doj ? errors.doj : 'Select DOJ'}
+                inputFormat="MM/DD/YYYY"
+                name="doj"
+                value={values.doj}
+                onChange={(value) => {
+                  setFieldValue('doj', value, true);
+                }}
+                renderInput={(params) => <TextField {...params} fullWidth />}
+              />
+            </LocalizationProvider>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth error={touched.employmentType && errors.employmentType && true}>
+              <InputLabel id="employment-label">Employment Type</InputLabel>
+              <Select
+                labelId="employment-label"
+                id="employment-select"
+                label={touched.employmentType && errors.employmentType ? errors.employmentType : 'Employment Type'}
+                name="employmentType"
+                value={values.employmentType}
+                onBlur={handleBlur}
+                onChange={(e) => {
+                  setFieldValue('employmentType', e.target.value, true);
+                }}
+              >
+                {global.employmentTypes.map((type) => (
+                  <MenuItem key={type.value} value={type.value}>
+                    {type.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth error={touched.languages && errors.languages && true}>
+              <InputLabel id="languages-label">Languages</InputLabel>
+              <Select
+                labelId="languages-label"
+                id="languages-select"
+                multiple
+                value={values.languages}
+                onChange={(e) => {
+                  setFieldValue('languages', typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value);
+                }}
+                renderValue={(selected) => (selected ? selected.join(', ') : '')}
+                label="Languages"
+              >
+                {global.languages.map((name) => (
+                  <MenuItem key={name} value={name}>
+                    <Checkbox checked={values.languages && values.languages.indexOf(name) > -1} />
+                    <ListItemText primary={name} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Photo and Documents Section */}
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              Uploads
+            </Typography>
+            <Stack direction="row" spacing={3} alignItems="flex-start">
+              <Stack spacing={1}>
+                <Typography variant="body2">Profile Photo</Typography>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setPhoto(e.target.files[0])}
+                  style={{ display: 'none' }}
+                  id="emp-photo"
+                />
+                <label htmlFor="emp-photo">
+                  <Button variant="outlined" component="span" startIcon={<Iconify icon="mdi:camera" />}>
+                    Upload Photo
+                  </Button>
+                </label>
+                {photo && <Typography variant="caption">{photo.name}</Typography>}
+              </Stack>
+
+              <Stack spacing={1} sx={{ flexGrow: 1 }}>
+                <Typography variant="body2">Documents (Aadhaar, PAN, etc.)</Typography>
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) => setDocuments(Array.from(e.target.files))}
+                  style={{ display: 'none' }}
+                  id="emp-docs"
+                />
+                <label htmlFor="emp-docs">
+                  <Button variant="outlined" component="span" startIcon={<Iconify icon="mdi:file-document" />}>
+                    Upload Documents
+                  </Button>
+                </label>
+                <Stack spacing={0.5}>
+                  {documents.map((doc, index) => (
+                    <Typography key={index} variant="caption">
+                      {doc.name}
+                    </Typography>
+                  ))}
+                </Stack>
+              </Stack>
+            </Stack>
+          </Grid>
+
           <Grid item xs={12}>
             <LoadingButton size="large" type="submit" variant="contained">
               Save

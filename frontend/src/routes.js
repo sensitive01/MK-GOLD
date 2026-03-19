@@ -22,6 +22,7 @@ import AdminSupport from './pages/admin/Support';
 import AdminOTP from './pages/admin/OTP';
 import AdminBalancesheet from './pages/admin/Balancesheet';
 import AdminOrnament from './pages/admin/Ornament';
+import AdminDesignation from './pages/admin/Designation';
 
 // New Roles
 import MasterDashboardLayout from './layouts/dashboard/master';
@@ -105,6 +106,7 @@ export default function Router() {
         { path: 'support', element: <AdminSupport /> },
         { path: 'otp', element: <AdminOTP /> },
         { path: 'balancesheet', element: <AdminBalancesheet /> },
+        { path: 'designation', element: <AdminDesignation /> },
       ],
     },
     {

@@ -82,6 +82,20 @@ const Employee = mongoose.model(
         type: String,
         required: true,
       },
+      doj: {
+        type: String,
+        required: true,
+      },
+      employmentType: {
+        type: String,
+        required: true,
+        default: "full-time",
+      },
+      languages: [
+        {
+          type: String,
+        },
+      ],
       status: {
         type: String,
         required: true,

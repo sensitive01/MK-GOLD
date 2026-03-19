@@ -102,6 +102,11 @@ const navConfig = [
     path: '/admin/balancesheet',
     icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
   },
+  {
+    title: 'Designation',
+    path: '/admin/designation',
+    icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
+  },
 ];
 
 export default navConfig;

@@ -111,4 +111,19 @@ export default {
     { label: 'Branch Executive', value: 'branch_executive' }, // Added for 7.3
     { label: 'Tele-Calling', value: 'telecalling' },
   ],
+  employmentTypes: [
+    { label: 'Full Time', value: 'full-time' },
+    { label: 'Part Time', value: 'part-time' },
+    { label: 'Contract', value: 'contract' },
+  ],
+  languages: [
+    'English',
+    'Hindi',
+    'Kannada',
+    'Tamil',
+    'Malayalam',
+    'Telugu',
+    'Marathi',
+    'Gujarati',
+  ],
 };

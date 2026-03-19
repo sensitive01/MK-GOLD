@@ -1,52 +1,47 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
 import { forwardRef, useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
-    Backdrop,
-    Box,
-    Button,
-    Card,
-    Checkbox,
-    CircularProgress,
-    Container,
-    IconButton,
-    MenuItem,
-    Modal,
-    Paper,
-    Popover,
-    Snackbar,
-    Stack,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TablePagination,
-    TableRow,
-    Typography,
+  Backdrop,
+  Box,
+  Button,
+  Card,
+  Checkbox,
+  CircularProgress,
+  Container,
+  IconButton,
+  MenuItem,
+  Modal,
+  Paper,
+  Popover,
+  Snackbar,
+  Stack,
+  Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TablePagination,
+  TableRow,
+  Typography,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
 // components
-import { CreateEmployee, UpdateEmployee, PreviewEmployee } from '../../components/admin/employee';
+import { CreateDesignation, UpdateDesignation } from '../../components/admin/designation';
 import Iconify from '../../components/iconify';
-import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 // sections
-import { EmployeeListHead, EmployeeListToolbar } from '../../sections/@dashboard/employee';
-// mock
-import { deleteEmployeeById, getEmployee } from '../../apis/admin/employee';
+import { DesignationListHead, DesignationListToolbar } from '../../sections/@dashboard/designation';
+import { deleteDesignationById, getDesignation, updateDesignation as updateDesignationApi } from '../../apis/admin/designation';
 
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
-  { id: 'employeeId', label: 'Employee Id', alignRight: false },
-  { id: 'name', label: 'Name', alignRight: false },
-  { id: 'email', label: 'Email', alignRight: false },
-  { id: 'gender', label: 'Gender', alignRight: false },
-  { id: 'designation', label: 'Designation', alignRight: false },
-  { id: 'phoneNumber', label: 'Phone Number', alignRight: false },
+  { id: 'name', label: 'Designation Name', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
@@ -71,6 +66,7 @@ function getComparator(order, orderBy) {
 }
 
 function applySortFilter(array, comparator, query) {
+  if (!array || !Array.isArray(array)) return [];
   const stabilizedThis = array.map((el, index) => [el, index]);
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
@@ -83,7 +79,7 @@ function applySortFilter(array, comparator, query) {
   return stabilizedThis.map((el) => el[0]);
 }
 
-export default function Employee() {
+export default function Designation() {
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
@@ -112,8 +108,8 @@ export default function Employee() {
   }, [toggleContainer]);
 
   const fetchData = (query = {}) => {
-    getEmployee(query).then((data) => {
-      setData(data.data);
+    getDesignation(query).then((data) => {
+      setData(data.data || []);
       setOpenBackdrop(false);
     });
   };
@@ -175,26 +171,26 @@ export default function Employee() {
   const isNotFound = !filteredData.length && !!filterName;
 
   const handleDelete = () => {
-    deleteEmployeeById(openId).then(() => {
+    deleteDesignationById(openId).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected(selected.filter((e) => e !== openId));
       setNotify({
         open: true,
-        message: 'Employee Deleted Successfully!',
+        message: 'Designation Deleted Successfully!',
         severity: 'success',
       });
     });
   };
 
   const handleDeleteSelected = () => {
-    deleteEmployeeById(selected).then(() => {
+    deleteDesignationById(selected).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected([]);
       setNotify({
         open: true,
-        message: 'Employee Deleted Successfully!',
+        message: 'Designation Deleted Successfully!',
         severity: 'success',
       });
     });
@@ -218,10 +214,59 @@ export default function Employee() {
 
   const Alert = forwardRef(AlertComponent);
 
+  function Status(props) {
+    const [status, setStatus] = useState(props.status === 'active');
+
+    return (
+      <Switch
+        checked={status}
+        onChange={(e) => {
+          const newStatus = e.target.checked;
+          setStatus(newStatus);
+          updateDesignationApi(props._id, { status: newStatus ? 'active' : 'deactive' })
+            .then((response) => {
+              if (response.status) {
+                setNotify({
+                  open: true,
+                  message: `Designation ${newStatus ? 'Activated' : 'Deactivated'} Successfully!`,
+                  severity: 'success',
+                });
+                setData((prevData) =>
+                  prevData.map((item) =>
+                    item._id === props._id ? { ...item, status: newStatus ? 'active' : 'deactive' } : item
+                  )
+                );
+              } else {
+                setStatus(!newStatus);
+                setNotify({
+                  open: true,
+                  message: response.message || 'Failed to update status',
+                  severity: 'error',
+                });
+              }
+            })
+            .catch(() => {
+              setStatus(!newStatus);
+              setNotify({
+                open: true,
+                message: 'An error occurred while updating status',
+                severity: 'error',
+              });
+            });
+        }}
+      />
+    );
+  }
+
+  Status.propTypes = {
+    status: PropTypes.string,
+    _id: PropTypes.string,
+  };
+
   return (
     <>
       <Helmet>
-        <title> Employee | MK Gold </title>
+        <title> Designation | MK Gold </title>
       </Helmet>
 
       <Snackbar
@@ -249,7 +294,7 @@ export default function Employee() {
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Employee
+            Designation
           </Typography>
           <Button
             variant="contained"
@@ -259,12 +304,12 @@ export default function Employee() {
               setToggleContainerType('create');
             }}
           >
-            New Employee
+            New Designation
           </Button>
         </Stack>
 
         <Card>
-          <EmployeeListToolbar
+          <DesignationListToolbar
             numSelected={selected.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
@@ -277,7 +322,7 @@ export default function Employee() {
           <Scrollbar>
             <TableContainer sx={{ minWidth: 800 }}>
               <Table>
-                <EmployeeListHead
+                <DesignationListHead
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
@@ -288,7 +333,7 @@ export default function Employee() {
                 />
                 <TableBody>
                   {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
-                    const { _id, employeeId, name, email, gender, designation, phoneNumber, status, createdAt } = row;
+                    const { _id, name, status, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -296,14 +341,9 @@ export default function Employee() {
                         <TableCell padding="checkbox">
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
-                        <TableCell align="left">{employeeId}</TableCell>
-                        <TableCell align="left">{name}</TableCell>
-                        <TableCell align="left">{email}</TableCell>
-                        <TableCell align="left">{gender}</TableCell>
-                        <TableCell align="left">{sentenceCase(designation)}</TableCell>
-                        <TableCell align="left">{phoneNumber}</TableCell>
+                        <TableCell align="left">{sentenceCase(name)}</TableCell>
                         <TableCell align="left">
-                          <Label color={(status !== 'active' && 'error') || 'success'}>{sentenceCase(status)}</Label>
+                          <Status status={status} _id={_id} />
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">
@@ -312,7 +352,7 @@ export default function Employee() {
                             color="inherit"
                             onClick={(e) => {
                               setOpenId(_id);
-                              handleOpenMenu(e);
+                              setOpen(e.currentTarget);
                             }}
                           >
                             <Iconify icon={'eva:more-vertical-fill'} />
@@ -323,12 +363,12 @@ export default function Employee() {
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={12} />
+                      <TableCell colSpan={4} />
                     </TableRow>
                   )}
                   {filteredData.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={12} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={4} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -344,7 +384,7 @@ export default function Employee() {
                 {filteredData.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
-                      <TableCell align="center" colSpan={12} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={4} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -386,7 +426,7 @@ export default function Employee() {
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Create Employee
+            Create Designation
           </Typography>
           <Button
             variant="contained"
@@ -399,7 +439,7 @@ export default function Employee() {
           </Button>
         </Stack>
 
-        <CreateEmployee setToggleContainer={setToggleContainer} setNotify={setNotify} />
+        <CreateDesignation setToggleContainer={setToggleContainer} setNotify={setNotify} />
       </Container>
 
       <Container
@@ -408,7 +448,7 @@ export default function Employee() {
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Update Employee
+            Update Designation
           </Typography>
           <Button
             variant="contained"
@@ -421,29 +461,7 @@ export default function Employee() {
           </Button>
         </Stack>
 
-        <UpdateEmployee setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
-      </Container>
-
-      <Container
-        maxWidth="xl"
-        sx={{ display: toggleContainer === true && toggleContainerType === 'preview' ? 'block' : 'none' }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            View Employee
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="mdi:arrow-left" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-            }}
-          >
-            Back
-          </Button>
-        </Stack>
-
-        <PreviewEmployee id={openId} />
+        <UpdateDesignation setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
       </Container>
 
       <Popover
@@ -464,17 +482,6 @@ export default function Employee() {
           },
         }}
       >
-        <MenuItem
-          onClick={() => {
-            setOpen(null);
-            setToggleContainerType('preview');
-            setToggleContainer(!toggleContainer);
-          }}
-        >
-          <Iconify icon={'eva:eye-fill'} sx={{ mr: 2 }} />
-          View
-        </MenuItem>
-
         <MenuItem
           onClick={() => {
             setOpen(null);
