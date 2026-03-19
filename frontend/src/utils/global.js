@@ -1,6 +1,6 @@
 export default {
-  // baseURL: 'https://gold-new.onrender.com',
-  baseURL: 'http://localhost:4998',
+  baseURL: 'https://gold-new.onrender.com',
+  // baseURL: 'http://localhost:4998',
   states: [
     'Andaman and Nicobar Islands',
     'Andhra Pradesh',
