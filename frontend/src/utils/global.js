@@ -1,5 +1,5 @@
 export default {
-  baseURL: 'https://gold-new.onrender.com',
+  baseURL: 'https://mk-gold.onrender.com',
   // baseURL: 'http://localhost:4998',
   states: [
     'Andaman and Nicobar Islands',

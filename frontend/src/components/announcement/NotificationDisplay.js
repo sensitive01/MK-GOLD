@@ -19,14 +19,18 @@ function NotificationDisplay() {
   const [dismissedIds, setDismissedIds] = useState([]);
 
   const fetchAnnouncements = async () => {
-    const res = await getMyAnnouncements();
-    if (res.status) {
-      setAnnouncements(res.data);
-      // Find the first 'pop' type announcement that is NOT yet seen
-      const pop = res.data.find((a) => a.notificationType === 'pop' && !a.isSeen);
-      if (pop) {
-        setCurrentPop(pop);
+    try {
+      const res = await getMyAnnouncements();
+      if (res && res.status === true && Array.isArray(res.data)) {
+        setAnnouncements(res.data);
+        // Find the first 'pop' type announcement that is NOT yet seen
+        const pop = res.data.find((a) => a.notificationType === 'pop' && !a.isSeen);
+        if (pop) {
+          setCurrentPop(pop);
+        }
       }
+    } catch (error) {
+      console.error('Failed to fetch announcements:', error);
     }
   };
 
@@ -35,19 +39,23 @@ function NotificationDisplay() {
   }, []);
 
   const handleSeen = async (id) => {
-    const res = await markAsSeen(id);
-    if (res.status) {
-      setAnnouncements((prev) => 
-        prev.map((a) => (a._id === id ? { ...a, isSeen: true } : a))
-      );
-      if (currentPop && currentPop._id === id) {
-        setCurrentPop(null);
+    try {
+      const res = await markAsSeen(id);
+      if (res && res.status === true) {
+        setAnnouncements((prev) => 
+          Array.isArray(prev) ? prev.map((a) => (a._id === id ? { ...a, isSeen: true } : a)) : []
+        );
+        if (currentPop && currentPop._id === id) {
+          setCurrentPop(null);
+        }
       }
+    } catch (error) {
+      console.error('Failed to mark as seen:', error);
     }
   };
 
   useEffect(() => {
-    if (!currentPop) {
+    if (!currentPop && Array.isArray(announcements)) {
       const nextPop = announcements.find((a) => 
         a.notificationType === 'pop' && 
         !a.isSeen && 
@@ -66,7 +74,9 @@ function NotificationDisplay() {
     setCurrentPop(null);
   };
 
-  const scrolls = announcements.filter((a) => a.notificationType === 'scroll' && !a.isSeen);
+  const scrolls = Array.isArray(announcements) 
+    ? announcements.filter((a) => a.notificationType === 'scroll' && !a.isSeen)
+    : [];
 
   return (
     <>
