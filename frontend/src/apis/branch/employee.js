@@ -63,6 +63,15 @@ async function deleteEmployeeById(id) {
   }
 }
 
+async function getNextEmployeeId() {
+  try {
+    const response = await apiClient().get('/api/v1.0/branch/employee/get-next-id');
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
 export {
   getEmployee,
   getLoginNotCreatedEmployee,
@@ -71,4 +80,5 @@ export {
   createEmployee,
   updateEmployee,
   deleteEmployeeById,
+  getNextEmployeeId,
 };

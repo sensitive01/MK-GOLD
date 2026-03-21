@@ -23,6 +23,7 @@ import AdminOTP from './pages/admin/OTP';
 import AdminBalancesheet from './pages/admin/Balancesheet';
 import AdminOrnament from './pages/admin/Ornament';
 import AdminDesignation from './pages/admin/Designation';
+import AdminAnnouncement from './pages/admin/Announcements';
 
 // New Roles
 import MasterDashboardLayout from './layouts/dashboard/master';
@@ -57,12 +58,14 @@ import BranchFund from './pages/branch/Fund';
 import BranchExpense from './pages/branch/Expense';
 import BranchLeave from './pages/branch/Leave';
 import BranchAttendance from './pages/branch/Attendance';
+import BranchLeads from './pages/branch/Leads';
 import BranchSale from './pages/branch/Sale';
 import BranchCustomer from './pages/branch/Customer';
 import BranchRelease from './pages/branch/Release';
 import BranchReport from './pages/branch/Report';
 import BranchBalancesheet from './pages/branch/Balancesheet';
 import BranchOrnament from './pages/branch/Ornament';
+import BranchEmployee from './pages/branch/BranchEmployee';
 
 // ----------------------------------------------------------------------
 
@@ -107,6 +110,7 @@ export default function Router() {
         { path: 'otp', element: <AdminOTP /> },
         { path: 'balancesheet', element: <AdminBalancesheet /> },
         { path: 'designation', element: <AdminDesignation /> },
+        { path: 'announcement', element: <AdminAnnouncement /> },
       ],
     },
     {
@@ -160,12 +164,14 @@ export default function Router() {
         { path: 'expense', element: <BranchExpense /> },
         { path: 'leave', element: <BranchLeave /> },
         { path: 'attendance', element: <BranchAttendance /> },
+        { path: 'leads', element: <BranchLeads /> },
         { path: 'customer', element: <BranchCustomer /> },
         { path: 'release', element: <BranchRelease /> },
         { path: 'sale', element: <BranchSale /> },
         { path: 'report', element: <BranchReport /> },
         { path: 'balancesheet', element: <BranchBalancesheet /> },
         { path: 'ornament', element: <BranchOrnament /> },
+        { path: 'employee', element: <BranchEmployee /> },
       ],
     },
     {

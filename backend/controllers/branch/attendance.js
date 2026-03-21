@@ -5,7 +5,7 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await attendanceService.find(req.body ?? {}),
+    data: await attendanceService.find(req.body ?? {}, req.user),
   });
 }
 
@@ -19,10 +19,15 @@ async function findById(req, res) {
 
 async function create(req, res) {
   try {
+    if (req.user && req.user.branch) {
+        if (!req.body.branch) {
+            req.body.branch = req.user.branch?._id || req.user.branch;
+        }
+    }
     let createdData = await attendanceService.create(req.body);
     res.json({
       status: true,
-      message: "",
+      message: "Attendance marked successfully!",
       data: {
         data: createdData,
         fileUpload: { uploadId: createdData._id, uploadName: "attendance" },
@@ -76,4 +81,32 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { find, findById, create, update, remove };
+async function getStats(req, res) {
+  try {
+    const branchId = req.user.branch?._id || req.user.branch;
+    if (!branchId) {
+      return res.json({ status: false, message: "Branch ID not found" });
+    }
+    
+    let employeeId = null;
+    const type = req.user.userType?.toLowerCase();
+    if (type === "assistant_branch_manager" || type === "branch_executive" || type === "telecalling") {
+      employeeId = req.user.employee?._id || req.user.employee;
+    }
+    
+    const stats = await attendanceService.branchStats(branchId, employeeId);
+    res.json({
+      status: true,
+      message: "Branch attendance stats retrieved!",
+      data: stats,
+    });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: err.message,
+      data: {},
+    });
+  }
+}
+
+module.exports = { find, findById, create, update, remove, getStats };

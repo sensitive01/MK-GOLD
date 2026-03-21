@@ -4,7 +4,7 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await employeeService.find(req.body ?? {}),
+    data: await employeeService.find(req.body ?? {}, req.user),
   });
 }
 
@@ -26,9 +26,14 @@ async function findByBranchId(req, res) {
 
 async function create(req, res) {
   try {
+    if (req.user && req.user.branch) {
+        if (!req.body.branch) {
+            req.body.branch = req.user.branch?._id || req.user.branch;
+        }
+    }
     res.json({
       status: true,
-      message: "",
+      message: "Employee created successfully!",
       data: await employeeService.create(req.body),
     });
   } catch (err) {
@@ -72,4 +77,12 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { find, findById, findByBranchId, create, update, remove };
+async function getNextId(req, res) {
+  res.json({
+    status: true,
+    message: "",
+    data: await employeeService.getNextEmployeeId(),
+  });
+}
+
+module.exports = { find, findById, findByBranchId, create, update, remove, getNextId };

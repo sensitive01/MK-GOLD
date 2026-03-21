@@ -45,4 +45,20 @@ async function deleteAttendanceById(id) {
   }
 }
 
-export { getAttendance, getAttendanceById, createAttendance, updateAttendance, deleteAttendanceById };
+async function getBranchAttendanceStats() {
+  try {
+    const response = await apiClient().get('/api/v1.0/branch/attendance/get-stats');
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+export {
+  getAttendance,
+  getAttendanceById,
+  createAttendance,
+  updateAttendance,
+  deleteAttendanceById,
+  getBranchAttendanceStats,
+};

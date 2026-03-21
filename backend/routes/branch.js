@@ -18,6 +18,7 @@ const attendance = require("../controllers/branch/attendance");
 const leave = require("../controllers/branch/leave");
 const report = require("../controllers/branch/report");
 const balancesheet = require("../controllers/branch/balancesheet");
+const lead = require("../controllers/branch/lead");
 const fileUpload = require("../controllers/branch/fileupload");
 const { isBranch } = require("../middlewares/authorization");
 const multer = require("../config/multer");
@@ -94,12 +95,21 @@ branchRouter.get("/customer-bank/get/:id", customerBank.findById);
 branchRouter.post("/customer-bank/create", customerBank.create);
 branchRouter.post("/customer-bank/delete/:id", customerBank.remove);
 
+branchRouter.get("/lead/get", lead.find);
+branchRouter.post("/lead/get", lead.find);
+branchRouter.get("/lead/get/:id", lead.findById);
+branchRouter.post("/lead/create", lead.create);
+branchRouter.post("/lead/update/:id", lead.update);
+branchRouter.post("/lead/delete/:id", lead.remove);
+branchRouter.post("/lead/disposition/:id", lead.addDisposition);
+
 branchRouter.get("/employee/get", employee.find);
 branchRouter.post("/employee/get", employee.find);
 branchRouter.get("/employee/get/:id", employee.findById);
 branchRouter.get("/employee/get-branch-employee/:id", employee.findByBranchId);
 branchRouter.post("/employee/create", employee.create);
 branchRouter.post("/employee/update/:id", employee.update);
+branchRouter.get("/employee/get-next-id", employee.getNextId);
 branchRouter.post("/employee/delete/:id", employee.remove);
 
 branchRouter.get("/attendance/get", attendance.find);
@@ -108,6 +118,7 @@ branchRouter.get("/attendance/get/:id", attendance.findById);
 branchRouter.post("/attendance/create", attendance.create);
 branchRouter.post("/attendance/update/:id", attendance.update);
 branchRouter.post("/attendance/delete/:id", attendance.remove);
+branchRouter.get("/attendance/get-stats", attendance.getStats);
 
 branchRouter.get("/leave/get", leave.find);
 branchRouter.post("/leave/get", leave.find);

@@ -39,6 +39,16 @@ const navConfig = [
     icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
   },
   {
+    title: 'Leads',
+    path: '/branch/leads',
+    icon: icon('ic_user'),
+  },
+  {
+    title: 'Employee',
+    path: '/branch/employee',
+    icon: icon('ic_user'),
+  },
+  {
     title: 'Walk-ins',
     path: '/branch/customer',
     icon: icon('ic_user'),

@@ -9,6 +9,7 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import SellIcon from '@mui/icons-material/Sell';
 import SafetyCheckIcon from '@mui/icons-material/SafetyCheck';
 import RequestPageIcon from '@mui/icons-material/RequestPage';
+import CampaignIcon from '@mui/icons-material/Campaign';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -106,6 +107,11 @@ const navConfig = [
     title: 'Designation',
     path: '/admin/designation',
     icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Announcement',
+    path: '/admin/announcement',
+    icon: <CampaignIcon sx={{ width: 1, height: 1 }} />,
   },
 ];
 

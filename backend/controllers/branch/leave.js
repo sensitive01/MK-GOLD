@@ -9,7 +9,7 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await leaveService.find(query),
+    data: await leaveService.find(query, req.user),
   });
 }
 
@@ -51,10 +51,19 @@ async function create(req, res) {
 
 async function update(req, res) {
   try {
+    const previousLeave = await leaveService.findById(req.params.id);
+    const updatedLeave = await leaveService.update(req.params.id, req.body);
+    
+    // Notification logic for BM approval moving to HR
+    if (req.user && req.user.userType?.toLowerCase() === "branch" && req.body.bmStatus === "approved") {
+        // Send email to HR?
+        console.log("Leave approved by BM, Notify HR branch: ", req.user.branch);
+    }
+
     res.json({
       status: true,
-      message: "",
-      data: await leaveService.update(req.params.id, req.body),
+      message: "Leave Updated Successfully!",
+      data: updatedLeave,
     });
   } catch (err) {
     res.json({

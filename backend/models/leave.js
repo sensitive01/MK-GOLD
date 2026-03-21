@@ -27,6 +27,14 @@ const Leave = mongoose.model(
         required: true,
         default: "pending",
       },
+      bmStatus: {
+        type: String,
+        default: "pending", // pending, approved, rejected
+      },
+      hrStatus: {
+        type: String,
+        default: "pending", // pending, approved, rejected
+      },
     },
     { timestamps: true }
   )

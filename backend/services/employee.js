@@ -1,8 +1,23 @@
 const Employee = require("../models/employee");
 const User = require("../models/user");
 
-async function find(query = {}) {
+async function find(query = {}, user = null) {
   try {
+    const userType = user?.userType?.toLowerCase();
+    if (
+      userType === "branch" ||
+      userType === "assistant_branch_manager" ||
+      userType === "branch_executive" ||
+      userType === "telecalling"
+    ) {
+      query.branch = user.branch?._id || user.branch;
+      
+      // If it's a sub-role, restrict access to only their own record
+      if (userType !== "branch") {
+        query._id = user.employee?._id || user.employee;
+      }
+    }
+
     if (query.createdAt && "$gte" in query.createdAt) {
       query.createdAt["$gte"] = new Date(
         new Date(query.createdAt["$gte"]).toISOString().replace(/T.*Z/, "T00:00:00Z")

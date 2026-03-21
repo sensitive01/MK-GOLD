@@ -67,7 +67,11 @@ adminRouter.get("/locker/get", locker.find);
 adminRouter.post("/locker/create", locker.create);
 
 adminRouter.get("/announcement/get", announcement.find);
-adminRouter.post("/announcement/create", announcement.create);
+adminRouter.post("/announcement/get", announcement.find);
+adminRouter.get("/announcement/get/:id", announcement.findById);
+adminRouter.post("/announcement/create", multer.single("uploadedFile"), announcement.create);
+adminRouter.post("/announcement/update/:id", multer.single("uploadedFile"), announcement.update);
+adminRouter.post("/announcement/delete/:id", announcement.remove);
 
 adminRouter.get("/designation/get", designation.find);
 adminRouter.post("/designation/get", designation.find);

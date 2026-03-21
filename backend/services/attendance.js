@@ -2,10 +2,26 @@ const Attendance = require("../models/attendance");
 const Employee = require("../models/employee");
 const Payprocess = require("../models/payprocess");
 const Leave = require("../models/leave");
+const User = require("../models/user");
 const mongoose = require("mongoose");
 
-async function find(query = {}) {
+async function find(query = {}, user = null) {
   try {
+    const userType = user.userType?.toLowerCase();
+    if (
+      userType === "branch" ||
+      userType === "assistant_branch_manager" ||
+      userType === "branch_executive" ||
+      userType === "telecalling"
+    ) {
+      query.branch = user.branch?._id || user.branch;
+      
+      // If it's a sub-role, only show their own attendance
+      if (userType !== "branch") {
+        query.employee = user.employee?._id || user.employee;
+      }
+    }
+
     if (query.createdAt && "$gte" in query.createdAt) {
       query.createdAt["$gte"] = new Date(
         new Date(query.createdAt["$gte"]).toISOString().replace(/T.*Z/, "T00:00:00Z")
@@ -401,6 +417,69 @@ async function consolidated(payload) {
   }
 }
 
+async function branchStats(branchId, employeeId = null) {
+  try {
+    const today = new Date();
+    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+    let totalEmployees = 0;
+    
+    if (employeeId) {
+      // For single employee: return cumulative month stats
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      totalEmployees = await Attendance.countDocuments({
+        employee: employeeId,
+        attendanceDate: { $gte: monthStart, $lte: endOfDay }
+      });
+    } else {
+      // Try to count directly
+      totalEmployees = await Employee.countDocuments({ 
+          branch: branchId,
+          status: "active"
+      });
+
+      // If zero, maybe they haven't been migrated yet.
+      // Let's find employees via User -> Branch association.
+      if (totalEmployees === 0) {
+          const users = await User.find({ branch: branchId, userType: { $ne: 'admin' } });
+          const empIds = users.filter(u => u.employee).map(u => u.employee);
+          
+          if (empIds.length > 0) {
+              totalEmployees = await Employee.countDocuments({ 
+                  _id: { $in: empIds },
+                  status: "active"
+              });
+              
+              // MIGRATION: Update these employees so they have the branch field for next time
+              await Employee.updateMany(
+                  { _id: { $in: empIds }, branch: { $exists: false } },
+                  { $set: { branch: branchId } }
+              );
+          }
+      }
+    }
+
+    const presentQuery = {
+      branch: branchId,
+      attendanceDate: { $gte: startOfDay, $lte: endOfDay }
+    };
+    if (employeeId) {
+      presentQuery.employee = employeeId;
+    }
+
+    const presentCount = await Attendance.countDocuments(presentQuery);
+
+    return {
+      total: totalEmployees,
+      present: presentCount,
+      absent: Math.max(0, totalEmployees - presentCount)
+    };
+  } catch (err) {
+    throw err;
+  }
+}
+
 module.exports = {
   find,
   findById,
@@ -410,4 +489,5 @@ module.exports = {
   update,
   remove,
   consolidated,
+  branchStats,
 };

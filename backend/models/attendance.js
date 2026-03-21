@@ -14,6 +14,10 @@ const Attendance = mongoose.model(
         required: true,
         default: new Date(),
       },
+      branch: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "branches",
+      },
     },
     { timestamps: true }
   )

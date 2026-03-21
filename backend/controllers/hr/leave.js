@@ -5,7 +5,7 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await leaveService.find(req.body ?? {}),
+    data: await leaveService.find(req.body ?? {}, req.user),
   });
 }
 

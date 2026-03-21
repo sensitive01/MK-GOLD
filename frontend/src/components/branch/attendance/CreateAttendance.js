@@ -97,7 +97,14 @@ function CreateAttendance(props) {
         autoComplete="off"
       >
         <Grid container spacing={3}>
-          {/* <Grid item xs={12} sm={4}>
+          <Grid
+            item
+            xs={12}
+            sm={12}
+            sx={{
+              display: ['assistant_branch_manager', 'branch_executive', 'telecalling'].includes(auth.user.userType) ? 'none' : 'block',
+            }}
+          >
             <FormControl fullWidth error={touched.employee && errors.employee && true}>
               <InputLabel id="select-label">Select employee</InputLabel>
               <Select
@@ -109,15 +116,15 @@ function CreateAttendance(props) {
                 onBlur={handleBlur}
                 onChange={(e) => {
                   setValues({ ...values, employee: e.target.value });
-                  handleChange(e);
                 }}
+                disabled={['assistant_branch_manager', 'branch_executive', 'telecalling'].includes(auth.user.userType)}
               >
                 {employees.map((e) => (
-                  <MenuItem value={e._id}>{e.employeeId} {e.name}</MenuItem>
+                  <MenuItem key={e._id} value={e._id}>{e.employeeId} {e.name}</MenuItem>
                 ))}
               </Select>
             </FormControl>
-          </Grid> */}
+          </Grid>
           <Grid item xs={12} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {img === null ? (
               <>
@@ -129,7 +136,7 @@ function CreateAttendance(props) {
                   ref={webcamRef}
                   screenshotFormat="image/png"
                   videoConstraints={videoConstraints}
-                  style={{ borderRadius: '10px', marginBottom: '20px' }}
+                  style={{ borderRadius: '10px', marginBottom: '20px', border: '2px solid #33c2ff' }}
                 />
                 <LoadingButton size="large" type="button" variant="contained" onClick={capture} sx={{ bgcolor: '#FFD700', color: '#000', '&:hover': { bgcolor: '#FFC800' } }}>
                   Capture Photo
@@ -137,7 +144,7 @@ function CreateAttendance(props) {
               </>
             ) : (
               <>
-                <img src={img} alt="screenshot" style={{ borderRadius: '10px', marginBottom: '20px', width: '400px', height: '400px' }} />
+                <img src={img} alt="screenshot" style={{ borderRadius: '10px', marginBottom: '20px', width: '400px', height: '400px', border: '2px solid #33c2ff' }} />
                 <LoadingButton size="large" type="button" variant="contained" onClick={() => setImg(null)} sx={{ bgcolor: '#FFD700', color: '#000', '&:hover': { bgcolor: '#FFC800' } }}>
                   Retake Photo
                 </LoadingButton>

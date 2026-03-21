@@ -15,6 +15,7 @@ import Scrollbar from '../../../../components/scrollbar';
 import NavSection from '../../../../components/nav-section';
 //
 import navConfig from './config';
+import global from '../../../../utils/global';
 
 // ----------------------------------------------------------------------
 
@@ -65,20 +66,35 @@ export default function Nav({ openNav, onCloseNav }) {
           <StyledAccount>
             <Avatar src={account.photoURL} alt="photoURL" />
 
-            <Box sx={{ ml: 2 }}>
+            <Box sx={{ ml: 2, minWidth: 0 }}>
               <Typography variant="subtitle2" sx={{ color: '#fff', mb: 0.5 }}>
                 {auth.user.username ?? null}
               </Typography>
 
-              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                {auth.user.userType ?? null}
+              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }} noWrap>
+                {global.userTypes.find((u) => u.value === auth.user.userType)?.label ?? auth.user.userType}
               </Typography>
             </Box>
           </StyledAccount>
         </Link>
       </Box>
 
-      <NavSection data={navConfig} />
+      <NavSection
+        data={(() => {
+          let data = [...navConfig];
+          if (['assistant_branch_manager', 'branch_executive', 'telecalling'].includes(auth.user.userType)) {
+            data = data.filter((item) => !['Employee', 'Report', 'Balancesheet', 'Move Gold'].includes(item.title));
+          }
+          if (auth.user.userType === 'telecalling') {
+            const leadsIndex = data.findIndex((i) => i.title === 'Leads');
+            if (leadsIndex > -1) {
+              const leads = data.splice(leadsIndex, 1)[0];
+              data.splice(1, 0, leads);
+            }
+          }
+          return data;
+        })()}
+      />
 
       <Box sx={{ flexGrow: 1 }} />
     </Scrollbar>

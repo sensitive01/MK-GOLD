@@ -40,16 +40,22 @@ export default function LoginForm() {
   });
 
   if (auth.isAuthenticated === true) {
-    if (auth.user.userType === 'admin') {
+    const userType = auth.user.userType?.toLowerCase();
+    if (userType === 'admin') {
       return <Navigate to="/admin/dashboard" />;
     }
-    if (auth.user.userType === 'hr') {
+    if (userType === 'hr') {
       return <Navigate to="/hr/dashboard" />;
     }
-    if (auth.user.userType === 'accounts') {
+    if (userType === 'accounts') {
       return <Navigate to="/accounts/dashboard" />;
     }
-    if (auth.user.userType === 'branch') {
+    if (
+      userType === 'branch' ||
+      userType === 'assistant_branch_manager' ||
+      userType === 'branch_executive' ||
+      userType === 'telecalling'
+    ) {
       return <Navigate to="/branch/dashboard" />;
     }
     return <Navigate to="/404" />;
@@ -117,7 +123,7 @@ export default function LoginForm() {
             },
           }}
         />
-        {step === 2 && !['branch', 'assistant_branch_manager', 'branch_executive'].includes(userType) && (
+        {step === 2 && !['branch', 'assistant_branch_manager', 'branch_executive', 'telecalling'].includes(userType) && (
           <TextField
             name="password"
             label={'Password'}
@@ -146,7 +152,7 @@ export default function LoginForm() {
             }}
           />
         )}
-        {step === 2 && ['branch', 'assistant_branch_manager', 'branch_executive'].includes(userType) && (
+        {step === 2 && ['branch', 'assistant_branch_manager', 'branch_executive', 'telecalling'].includes(userType) && (
           <TextField
             name="otp"
             label={'OTP'}

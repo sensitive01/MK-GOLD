@@ -29,21 +29,24 @@ import {
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
 // components
-import { CreateAttendance } from '../../components/branch/attendance';
+import { CreateLead, UpdateLead, PreviewLead } from '../../components/branch/lead';
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
 // sections
 import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashboard/attendance';
-// mock
-import { deleteAttendanceById, getAttendance, getBranchAttendanceStats } from '../../apis/branch/attendance';
+// apis
+import { deleteLeadById, getLeads } from '../../apis/branch/lead';
 import global from '../../utils/global';
 
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
-  { id: 'employee', label: 'Employee Id', alignRight: false },
-  { id: 'employee', label: 'Employee Name', alignRight: false },
-  { id: 'attendance', label: 'Employee Photo', alignRight: false },
+  { id: 'name', label: 'Name', alignRight: false },
+  { id: 'mobile', label: 'Mobile', alignRight: false },
+  { id: 'category', label: 'Category', alignRight: false },
+  { id: 'type', label: 'Type', alignRight: false },
+  { id: 'attachment', label: 'Attachment', alignRight: false },
+  { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
 ];
@@ -74,12 +77,12 @@ function applySortFilter(array, comparator, query) {
     return a[1] - b[1];
   });
   if (query) {
-    return filter(array, (row) => row?.employee?.name?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    return filter(array, (row) => row?.name?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
   return stabilizedThis.map((el) => el[0]);
 }
 
-export default function Attendance() {
+export default function Leads() {
   const auth = useSelector((state) => state.auth);
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
@@ -93,7 +96,6 @@ export default function Attendance() {
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
-  const [stats, setStats] = useState({ total: 0, present: 0, absent: 0 });
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
@@ -106,22 +108,10 @@ export default function Attendance() {
   });
 
   const fetchData = useCallback(
-    (
-      query = {
-        createdAt: {
-          $gte: moment()?.format("YYYY-MM-DD"),
-          $lte: moment()?.format("YYYY-MM-DD"),
-        },
-      }
-    ) => {
-      getAttendance(query).then((data) => {
+    () => {
+      getLeads({}).then((data) => {
         setData(data.data);
         setOpenBackdrop(false);
-      });
-      getBranchAttendanceStats().then((data) => {
-        if (data.status) {
-          setStats(data.data);
-        }
       });
     },
     []
@@ -188,7 +178,7 @@ export default function Attendance() {
   const isNotFound = !filteredData.length && !!filterName;
 
   const handleDelete = () => {
-    deleteAttendanceById(openId).then(() => {
+    deleteLeadById(openId).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected(selected.filter((e) => e !== openId));
@@ -196,13 +186,13 @@ export default function Attendance() {
   };
 
   const handleDeleteSelected = () => {
-    deleteAttendanceById(selected).then(() => {
+    deleteLeadById(selected).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected([]);
       setNotify({
         open: true,
-        message: 'Attendance deleted',
+        message: 'Leads deleted',
         severity: 'success',
       });
     });
@@ -229,27 +219,16 @@ export default function Attendance() {
   return (
     <>
       <Helmet>
-        <title> Attendance | MK Gold </title>
+        <title> Leads | MK Gold </title>
       </Helmet>
 
       <Snackbar
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         open={notify.open}
-        onClose={() => {
-          setNotify({ ...notify, open: false });
-        }}
+        onClose={() => setNotify({ ...notify, open: false })}
         autoHideDuration={3000}
       >
-        <Alert
-          onClose={() => {
-            setNotify({ ...notify, open: false });
-          }}
-          severity={notify.severity}
-          sx={{ width: '100%', color: 'white' }}
-        >
+        <Alert onClose={() => setNotify({ ...notify, open: false })} severity={notify.severity} sx={{ width: '100%', color: 'white' }}>
           {notify.message}
         </Alert>
       </Snackbar>
@@ -257,42 +236,19 @@ export default function Attendance() {
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Attendance
+            Leads Management
           </Typography>
           <Button
             variant="contained"
             startIcon={<Iconify icon="eva:plus-fill" />}
             onClick={() => {
-              setToggleContainer(!toggleContainer);
+              setToggleContainer(true);
               setToggleContainerType('create');
             }}
           >
-            New Attendance
+            New Lead
           </Button>
         </Stack>
-
-        <Grid container spacing={3} mb={5}>
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
-              <Typography variant="h6">
-                {(auth.user.userType === 'assistant_branch_manager' || auth.user.userType === 'branch_executive' || auth.user.userType === 'telecalling') ? 'Current Month Attendance' : 'Total Employees'}
-              </Typography>
-              <Typography variant="h4">{stats.total}</Typography>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
-              <Typography variant="h6">Present Today</Typography>
-              <Typography variant="h4">{stats.present}</Typography>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'error.main', color: 'white' }}>
-              <Typography variant="h6">Absent Today</Typography>
-              <Typography variant="h4">{stats.absent}</Typography>
-            </Card>
-          </Grid>
-        </Grid>
 
         <Card>
           <AttendanceListToolbar
@@ -319,7 +275,7 @@ export default function Attendance() {
                 />
                 <TableBody>
                   {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
-                    const { _id, employee, attendance, createdAt } = row;
+                    const { _id, name, mobile, category, type, status, createdAt, lead } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -327,21 +283,27 @@ export default function Attendance() {
                         <TableCell padding="checkbox">
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
-                        <TableCell align="left">{employee?.employeeId}</TableCell>
-                        <TableCell align="left">{employee?.name}</TableCell>
+                        <TableCell align="left">{name}</TableCell>
+                        <TableCell align="left">{mobile}</TableCell>
+                        <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{category}</TableCell>
+                        <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{type}</TableCell>
                         <TableCell align="left">
-                          {attendance?.uploadedFile ? (
+                          {lead?.uploadedFile ? (
                             <img
-                              key={attendance._id ?? _id}
-                              src={`${global.baseURL}/${attendance?.uploadedFile}`}
-                              alt="attendance"
-                              style={{ width: '80px' }}
+                              src={lead.uploadedFile.startsWith('http') ? lead.uploadedFile : `${global.baseURL}/${lead.uploadedFile}`}
+                              alt="lead"
+                              style={{ width: '80px', borderRadius: '4px' }}
                             />
                           ) : (
                             'No Image'
                           )}
                         </TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                        <TableCell align="left">
+                           <Box sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: status === 'pending' ? 'warning.main' : status === 'converted' ? 'success.main' : 'error.main', color: '#fff', width: 'fit-content', textTransform: 'capitalize' }}>
+                             {status}
+                           </Box>
+                        </TableCell>
+                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD')}</TableCell>
                         <TableCell align="right">
                           <IconButton
                             size="large"
@@ -359,47 +321,19 @@ export default function Attendance() {
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={6} />
+                      <TableCell colSpan={7} />
                     </TableRow>
                   )}
                   {filteredData.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
-                          }}
-                        >
-                          <Typography paragraph>No data in table</Typography>
+                      <TableCell align="center" colSpan={7} sx={{ py: 3 }}>
+                        <Paper sx={{ textAlign: 'center' }}>
+                          <Typography paragraph>No leads found</Typography>
                         </Paper>
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
-
-                {filteredData.length > 0 && isNotFound && (
-                  <TableBody>
-                    <TableRow>
-                      <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
-                          }}
-                        >
-                          <Typography variant="h6" paragraph>
-                            Not found
-                          </Typography>
-
-                          <Typography variant="body2">
-                            No results found for &nbsp;
-                            <strong>&quot;{filterName}&quot;</strong>.
-                            <br /> Try checking for typos or using complete words.
-                          </Typography>
-                        </Paper>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                )}
               </Table>
             </TableContainer>
           </Scrollbar>
@@ -416,24 +350,57 @@ export default function Attendance() {
         </Card>
       </Container>
 
-      {toggleContainer === true && toggleContainerType === 'create' && (
+      {toggleContainer === true && toggleContainerType === 'preview' && (
         <Container maxWidth="xl">
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
             <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-              Create Attendance
+              Preview Lead
             </Typography>
             <Button
               variant="contained"
               startIcon={<Iconify icon="mdi:arrow-left" />}
-              onClick={() => {
-                setToggleContainer(!toggleContainer);
-              }}
+              onClick={() => setToggleContainer(false)}
             >
               Back
             </Button>
           </Stack>
+          <PreviewLead setToggleContainer={setToggleContainer} id={openId} />
+        </Container>
+      )}
 
-          <CreateAttendance setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
+      {toggleContainer === true && toggleContainerType === 'create' && (
+        <Container maxWidth="xl">
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+              Create Lead
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="mdi:arrow-left" />}
+              onClick={() => setToggleContainer(false)}
+            >
+              Back
+            </Button>
+          </Stack>
+          <CreateLead setToggleContainer={setToggleContainer} setNotify={setNotify} />
+        </Container>
+      )}
+
+      {toggleContainer === true && toggleContainerType === 'update' && (
+        <Container maxWidth="xl">
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+              Update Lead
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="mdi:arrow-left" />}
+              onClick={() => setToggleContainer(false)}
+            >
+              Back
+            </Button>
+          </Stack>
+          <UpdateLead setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
         </Container>
       )}
 
@@ -443,18 +410,28 @@ export default function Attendance() {
         onClose={handleCloseMenu}
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        PaperProps={{
-          sx: {
-            p: 1,
-            width: 140,
-            '& .MuiMenuItem-root': {
-              px: 1,
-              typography: 'body2',
-              borderRadius: 0.75,
-            },
-          },
-        }}
+        PaperProps={{ sx: { p: 1, width: 140, '& .MuiMenuItem-root': { px: 1, typography: 'body2', borderRadius: 0.75 } } }}
       >
+        <MenuItem
+           onClick={() => {
+             setOpen(null);
+             setToggleContainer(true);
+             setToggleContainerType('preview');
+           }}
+        >
+          <Iconify icon={'eva:eye-outline'} sx={{ mr: 2 }} />
+          Preview
+        </MenuItem>
+        <MenuItem
+           onClick={() => {
+             setOpen(null);
+             setToggleContainer(true);
+             setToggleContainerType('update');
+           }}
+        >
+          <Iconify icon={'eva:edit-outline'} sx={{ mr: 2 }} />
+          Edit
+        </MenuItem>
         <MenuItem
           sx={{ color: 'error.main' }}
           onClick={() => {
@@ -468,36 +445,13 @@ export default function Attendance() {
         </MenuItem>
       </Popover>
 
-      <Modal
-        open={openDeleteModal}
-        onClose={handleCloseDeleteModal}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
+      <Modal open={openDeleteModal} onClose={handleCloseDeleteModal}>
         <Box sx={style}>
-          <Typography id="modal-modal-title" variant="h6" component="h2">
-            Delete
-          </Typography>
-          <Typography id="modal-modal-description" sx={{ mt: 3 }}>
-            Do you want dates delete?
-          </Typography>
-          <Stack direction="row" alignItems="center" spacing={2} mt={3}>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => {
-                if (deleteType === 'single') {
-                  handleDelete();
-                } else {
-                  handleDeleteSelected();
-                }
-              }}
-            >
-              Delete
-            </Button>
-            <Button variant="contained" onClick={handleCloseDeleteModal}>
-              Close
-            </Button>
+          <Typography variant="h6">Delete</Typography>
+          <Typography sx={{ mt: 3 }}>Are you sure you want to delete?</Typography>
+          <Stack direction="row" spacing={2} mt={3}>
+            <Button variant="contained" color="error" onClick={deleteType === 'single' ? handleDelete : handleDeleteSelected}>Delete</Button>
+            <Button variant="contained" onClick={handleCloseDeleteModal}>Close</Button>
           </Stack>
         </Box>
       </Modal>

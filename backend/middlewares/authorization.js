@@ -35,7 +35,13 @@ function isAccounts(req, res, next) {
 }
 
 function isBranch(req, res, next) {
-  if (req.user?.userType?.toLowerCase() === "branch") {
+  const userType = req.user?.userType?.toLowerCase();
+  if (
+    userType === "branch" ||
+    userType === "assistant_branch_manager" ||
+    userType === "branch_executive" ||
+    userType === "telecalling"
+  ) {
     return next();
   }
 

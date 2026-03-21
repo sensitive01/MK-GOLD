@@ -101,6 +101,10 @@ const Employee = mongoose.model(
         required: true,
         default: "active",
       },
+      branch: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "branches",
+      },
     },
     { timestamps: true }
   )

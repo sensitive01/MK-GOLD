@@ -36,7 +36,7 @@ import Scrollbar from '../../components/scrollbar';
 // sections
 import { LeaveListHead, LeaveListToolbar } from '../../sections/@dashboard/leave';
 // mock
-import { deleteLeaveById, getLeave } from '../../apis/branch/leave';
+import { deleteLeaveById, getLeave, updateLeave } from '../../apis/branch/leave';
 
 // ----------------------------------------------------------------------
 
@@ -190,6 +190,26 @@ export default function Leave() {
     });
   };
 
+  const handleApprove = () => {
+    updateLeave(openId, { bmStatus: 'approved' }).then((res) => {
+      if (res.status) {
+        fetchData();
+        setNotify({ open: true, message: 'Leave approved by BM. Moving to HR!', severity: 'success' });
+      }
+      setOpen(null);
+    });
+  };
+
+  const handleReject = () => {
+    updateLeave(openId, { bmStatus: 'rejected', status: 'rejected' }).then((res) => {
+      if (res.status) {
+        fetchData();
+        setNotify({ open: true, message: 'Leave rejected by BM', severity: 'error' });
+      }
+      setOpen(null);
+    });
+  };
+
   const handleDeleteSelected = () => {
     deleteLeaveById(selected).then(() => {
       fetchData();
@@ -291,7 +311,7 @@ export default function Leave() {
                 />
                 <TableBody>
                   {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
-                    const { _id, branch, employee, leaveType, dates, note, status, createdAt } = row;
+                    const { _id, branch, employee, leaveType, dates, note, status, bmStatus, hrStatus, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -309,13 +329,14 @@ export default function Leave() {
                         </TableCell>
                         <TableCell align="left">{note}</TableCell>
                         <TableCell align="left">
-                          <Label
-                            color={
-                              (status === 'approved' && 'success') || (status === 'rejected' && 'error') || 'warning'
-                            }
-                          >
-                            {sentenceCase(status)}
-                          </Label>
+                          <Stack spacing={0.5}>
+                            <Label color={(bmStatus === 'approved' && 'success') || (bmStatus === 'rejected' && 'error') || 'warning'}>
+                              BM: {sentenceCase(bmStatus || 'pending')}
+                            </Label>
+                            <Label color={(hrStatus === 'approved' && 'success') || (hrStatus === 'rejected' && 'error') || 'warning'}>
+                              HR: {sentenceCase(hrStatus || 'pending')}
+                            </Label>
+                          </Stack>
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">
@@ -445,7 +466,7 @@ export default function Leave() {
         PaperProps={{
           sx: {
             p: 1,
-            width: 140,
+            width: 180,
             '& .MuiMenuItem-root': {
               px: 1,
               typography: 'body2',
@@ -454,6 +475,16 @@ export default function Leave() {
           },
         }}
       >
+        <MenuItem onClick={handleApprove} sx={{ color: 'success.main' }}>
+          <Iconify icon={'eva:checkmark-circle-2-fill'} sx={{ mr: 2 }} />
+          Approve (BM)
+        </MenuItem>
+
+        <MenuItem onClick={handleReject} sx={{ color: 'error.main' }}>
+          <Iconify icon={'eva:close-circle-fill'} sx={{ mr: 2 }} />
+          Reject (BM)
+        </MenuItem>
+
         <MenuItem
           onClick={() => {
             setOpen(null);

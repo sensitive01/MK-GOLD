@@ -1,7 +1,8 @@
+import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
-import { forwardRef, useEffect, useState, useCallback } from 'react';
-import { useSelector } from 'react-redux';
+import { forwardRef, useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
+// @mui
 import {
     Backdrop,
     Box,
@@ -10,7 +11,6 @@ import {
     Checkbox,
     CircularProgress,
     Container,
-    Grid,
     IconButton,
     MenuItem,
     Modal,
@@ -29,21 +29,24 @@ import {
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
 // components
-import { CreateAttendance } from '../../components/branch/attendance';
+import { CreateEmployee, UpdateEmployee } from '../../components/branch/employee';
 import Iconify from '../../components/iconify';
+import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 // sections
-import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashboard/attendance';
+import { EmployeeListHead, EmployeeListToolbar } from '../../sections/@dashboard/employee';
 // mock
-import { deleteAttendanceById, getAttendance, getBranchAttendanceStats } from '../../apis/branch/attendance';
-import global from '../../utils/global';
+import { deleteEmployeeById, getEmployee } from '../../apis/branch/employee';
 
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
-  { id: 'employee', label: 'Employee Id', alignRight: false },
-  { id: 'employee', label: 'Employee Name', alignRight: false },
-  { id: 'attendance', label: 'Employee Photo', alignRight: false },
+  { id: 'employeeId', label: 'Employee Id', alignRight: false },
+  { id: 'name', label: 'Name', alignRight: false },
+  { id: 'email', label: 'Email', alignRight: false },
+  { id: 'gender', label: 'Gender', alignRight: false },
+  { id: 'designation', label: 'Designation', alignRight: false },
+  { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
 ];
@@ -74,13 +77,12 @@ function applySortFilter(array, comparator, query) {
     return a[1] - b[1];
   });
   if (query) {
-    return filter(array, (row) => row?.employee?.name?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    return filter(array, (row) => row.name.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
   return stabilizedThis.map((el) => el[0]);
 }
 
-export default function Attendance() {
-  const auth = useSelector((state) => state.auth);
+export default function BranchEmployee() {
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
@@ -93,7 +95,6 @@ export default function Attendance() {
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
-  const [stats, setStats] = useState({ total: 0, present: 0, absent: 0 });
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
@@ -105,31 +106,16 @@ export default function Attendance() {
     severity: 'success',
   });
 
-  const fetchData = useCallback(
-    (
-      query = {
-        createdAt: {
-          $gte: moment()?.format("YYYY-MM-DD"),
-          $lte: moment()?.format("YYYY-MM-DD"),
-        },
-      }
-    ) => {
-      getAttendance(query).then((data) => {
-        setData(data.data);
-        setOpenBackdrop(false);
-      });
-      getBranchAttendanceStats().then((data) => {
-        if (data.status) {
-          setStats(data.data);
-        }
-      });
-    },
-    []
-  );
-
   useEffect(() => {
     fetchData();
-  }, [fetchData, toggleContainer]);
+  }, [toggleContainer]);
+
+  const fetchData = (query = {}) => {
+    getEmployee(query).then((data) => {
+      setData(data.data);
+      setOpenBackdrop(false);
+    });
+  };
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -188,7 +174,7 @@ export default function Attendance() {
   const isNotFound = !filteredData.length && !!filterName;
 
   const handleDelete = () => {
-    deleteAttendanceById(openId).then(() => {
+    deleteEmployeeById(openId).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected(selected.filter((e) => e !== openId));
@@ -196,13 +182,13 @@ export default function Attendance() {
   };
 
   const handleDeleteSelected = () => {
-    deleteAttendanceById(selected).then(() => {
+    deleteEmployeeById(selected).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected([]);
       setNotify({
         open: true,
-        message: 'Attendance deleted',
+        message: 'Employee deleted',
         severity: 'success',
       });
     });
@@ -229,7 +215,7 @@ export default function Attendance() {
   return (
     <>
       <Helmet>
-        <title> Attendance | MK Gold </title>
+        <title> Employee | MK Gold </title>
       </Helmet>
 
       <Snackbar
@@ -257,7 +243,7 @@ export default function Attendance() {
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Attendance
+            Employee
           </Typography>
           <Button
             variant="contained"
@@ -267,35 +253,12 @@ export default function Attendance() {
               setToggleContainerType('create');
             }}
           >
-            New Attendance
+            New Employee
           </Button>
         </Stack>
 
-        <Grid container spacing={3} mb={5}>
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
-              <Typography variant="h6">
-                {(auth.user.userType === 'assistant_branch_manager' || auth.user.userType === 'branch_executive' || auth.user.userType === 'telecalling') ? 'Current Month Attendance' : 'Total Employees'}
-              </Typography>
-              <Typography variant="h4">{stats.total}</Typography>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
-              <Typography variant="h6">Present Today</Typography>
-              <Typography variant="h4">{stats.present}</Typography>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'error.main', color: 'white' }}>
-              <Typography variant="h6">Absent Today</Typography>
-              <Typography variant="h4">{stats.absent}</Typography>
-            </Card>
-          </Grid>
-        </Grid>
-
         <Card>
-          <AttendanceListToolbar
+          <EmployeeListToolbar
             numSelected={selected.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
@@ -308,7 +271,7 @@ export default function Attendance() {
           <Scrollbar>
             <TableContainer sx={{ minWidth: 800 }}>
               <Table>
-                <AttendanceListHead
+                <EmployeeListHead
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
@@ -319,7 +282,7 @@ export default function Attendance() {
                 />
                 <TableBody>
                   {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
-                    const { _id, employee, attendance, createdAt } = row;
+                    const { _id, employeeId, name, email, gender, designation, status, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -327,19 +290,13 @@ export default function Attendance() {
                         <TableCell padding="checkbox">
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
-                        <TableCell align="left">{employee?.employeeId}</TableCell>
-                        <TableCell align="left">{employee?.name}</TableCell>
+                        <TableCell align="left">{employeeId}</TableCell>
+                        <TableCell align="left">{name}</TableCell>
+                        <TableCell align="left">{email}</TableCell>
+                        <TableCell align="left">{gender}</TableCell>
+                        <TableCell align="left">{sentenceCase(designation)}</TableCell>
                         <TableCell align="left">
-                          {attendance?.uploadedFile ? (
-                            <img
-                              key={attendance._id ?? _id}
-                              src={`${global.baseURL}/${attendance?.uploadedFile}`}
-                              alt="attendance"
-                              style={{ width: '80px' }}
-                            />
-                          ) : (
-                            'No Image'
-                          )}
+                          <Label color={(status !== 'active' && 'error') || 'success'}>{sentenceCase(status)}</Label>
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">
@@ -359,12 +316,12 @@ export default function Attendance() {
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={6} />
+                      <TableCell colSpan={8} />
                     </TableRow>
                   )}
                   {filteredData.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -380,7 +337,7 @@ export default function Attendance() {
                 {filteredData.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
-                      <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -416,26 +373,49 @@ export default function Attendance() {
         </Card>
       </Container>
 
-      {toggleContainer === true && toggleContainerType === 'create' && (
-        <Container maxWidth="xl">
-          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-              Create Attendance
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="mdi:arrow-left" />}
-              onClick={() => {
-                setToggleContainer(!toggleContainer);
-              }}
-            >
-              Back
-            </Button>
-          </Stack>
+      <Container
+        maxWidth="xl"
+        sx={{ display: toggleContainer === true && toggleContainerType === 'create' ? 'block' : 'none' }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+            Create Employee
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mdi:arrow-left" />}
+            onClick={() => {
+              setToggleContainer(!toggleContainer);
+            }}
+          >
+            Back
+          </Button>
+        </Stack>
 
-          <CreateAttendance setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
-        </Container>
-      )}
+        <CreateEmployee setToggleContainer={setToggleContainer} setNotify={setNotify} />
+      </Container>
+
+      <Container
+        maxWidth="xl"
+        sx={{ display: toggleContainer === true && toggleContainerType === 'update' ? 'block' : 'none' }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+            Update Employee
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mdi:arrow-left" />}
+            onClick={() => {
+              setToggleContainer(!toggleContainer);
+            }}
+          >
+            Back
+          </Button>
+        </Stack>
+
+        <UpdateEmployee setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
+      </Container>
 
       <Popover
         open={Boolean(open)}
@@ -455,6 +435,17 @@ export default function Attendance() {
           },
         }}
       >
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
+            setToggleContainerType('update');
+            setToggleContainer(!toggleContainer);
+          }}
+        >
+          <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
+          Edit
+        </MenuItem>
+
         <MenuItem
           sx={{ color: 'error.main' }}
           onClick={() => {
@@ -479,7 +470,7 @@ export default function Attendance() {
             Delete
           </Typography>
           <Typography id="modal-modal-description" sx={{ mt: 3 }}>
-            Do you want dates delete?
+            Do you want to delete?
           </Typography>
           <Stack direction="row" alignItems="center" spacing={2} mt={3}>
             <Button

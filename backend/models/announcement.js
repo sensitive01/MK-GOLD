@@ -1,11 +1,47 @@
-﻿const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const Schema = new mongoose.Schema({
-  title: String,
-  description: String,
-  status: { type: String, default: 'active' },
-  branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch' },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-}, { timestamps: true });
+const announcementSchema = new mongoose.Schema(
+  {
+    targetUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users",
+    },
+    targetUserType: [String],
+    notificationType: {
+      type: String,
+      enum: ["pop", "scroll"],
+      default: "scroll",
+    },
+    title: {
+      type: String,
+      required: true,
+    },
+    description: {
+      type: String,
+    },
+    image: {
+      type: String,
+    },
+    expiryDate: {
+      type: Date,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    seenBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+        default: [],
+      },
+    ],
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users",
+    },
+  },
+  { timestamps: true }
+);
 
-module.exports = mongoose.model('announcement', Schema);
+module.exports = mongoose.model("Announcement", announcementSchema);
