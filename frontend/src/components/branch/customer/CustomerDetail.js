@@ -17,15 +17,34 @@ import { useEffect, useState } from 'react';
 import { sentenceCase } from 'change-case';
 import Scrollbar from '../../scrollbar';
 import { getCustomerById } from '../../../apis/branch/customer';
+import { findFile } from '../../../apis/branch/fileupload';
+import global from '../../../utils/global';
+import Iconify from '../../iconify';
+import { Stack, Divider, Box, Avatar, Button, Chip } from '@mui/material';
 
 export default function CustomerDetail({ id }) {
   const [data, setData] = useState({});
   const [openBackdrop, setOpenBackdrop] = useState(true);
 
+  const [photo, setPhoto] = useState(null);
+  const [signature, setSignature] = useState(null);
+  const [documents, setDocuments] = useState([]);
+
   useEffect(() => {
     getCustomerById(id).then((data) => {
       setData(data.data);
       setOpenBackdrop(false);
+      // Fetch files
+      findFile({ uploadId: id, uploadName: 'customer' }).then((fileData) => {
+        if (fileData.status) {
+          const photoFile = fileData.data.find((f) => f.uploadType === 'profile_image');
+          const sigFile = fileData.data.find((f) => f.uploadType === 'signature');
+          const docFiles = fileData.data.filter((f) => f.uploadType === 'upload_id');
+          setPhoto(photoFile);
+          setSignature(sigFile);
+          setDocuments(docFiles);
+        }
+      });
     });
   }, [id]);
 
@@ -219,6 +238,63 @@ export default function CustomerDetail({ id }) {
                 Address Detail:
               </Typography>
               <Address />
+            </Grid>
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                Documents
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={4}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Profile Photo
+                  </Typography>
+                  <Avatar
+                    src={photo ? (photo.uploadedFile.startsWith('http') ? photo.uploadedFile : `${global.baseURL}/uploads/${photo.uploadedFile}`) : ''}
+                    sx={{ width: 120, height: 120, mt: 1, border: '1px solid #ddd' }}
+                  >
+                    {data?.name?.charAt(0)}
+                  </Avatar>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Signature
+                  </Typography>
+                  {signature ? (
+                    <Box
+                      component="img"
+                      src={signature.uploadedFile.startsWith('http') ? signature.uploadedFile : `${global.baseURL}/uploads/${signature.uploadedFile}`}
+                      sx={{ height: 120, mt: 1, border: '1px solid #ddd', borderRadius: 1 }}
+                    />
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">No signature found</Typography>
+                  )}
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    ID Document
+                  </Typography>
+                  {documents.length > 0 ? (
+                    documents.map((doc, index) => (
+                      <Card key={index} variant="outlined" sx={{ p: 1, mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" noWrap sx={{ maxWidth: 100 }}>
+                          {doc.documentType || 'ID Document'}
+                        </Typography>
+                        <Button
+                          size="small"
+                          href={doc.uploadedFile.startsWith('http') ? doc.uploadedFile : `${global.baseURL}/uploads/${doc.uploadedFile}`}
+                          target="_blank"
+                          startIcon={<Iconify icon="mdi:eye" />}
+                        >
+                          View
+                        </Button>
+                      </Card>
+                    ))
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">No ID document found</Typography>
+                  )}
+                </Grid>
+              </Grid>
             </Grid>
           </Grid>
         </Card>

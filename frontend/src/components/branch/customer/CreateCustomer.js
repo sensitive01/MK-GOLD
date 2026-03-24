@@ -131,38 +131,59 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
             severity: 'error',
           });
         } else {
-          fetch(img)
-            .then((res) => res.blob())
-            .then((blob) => {
-              const file = new File([blob], `profile-${data.data.fileUpload.uploadId}.png`, { type: 'image/png' });
-              const formData = new FormData();
-              formData.append('uploadId', data.data.fileUpload.uploadId);
-              formData.append('uploadName', data.data.fileUpload.uploadName);
-              formData.append('uploadType', 'profile_image');
-              formData.append('uploadedFile', file);
-              createFile(formData);
+          const uploadId = data.data.fileUpload.uploadId;
+          const uploadName = data.data.fileUpload.uploadName;
+
+          // 1. Upload Profile Photo (Captured from Webcam)
+          if (img) {
+            fetch(img)
+              .then((res) => res.blob())
+              .then((blob) => {
+                const file = new File([blob], `profile-${uploadId}.png`, { type: 'image/png' });
+                const formData = new FormData();
+                formData.append('uploadId', uploadId);
+                formData.append('uploadName', uploadName);
+                formData.append('uploadType', 'profile_image');
+                formData.append('uploadedFile', file);
+                createFile(formData).then((res) => {
+                  if (!res.status) console.error('Profile photo upload failed:', res.message);
+                });
+              });
+          }
+
+          // 2. Upload ID Document
+          if (values.uploadId && values.uploadId instanceof File) {
+            const formData = new FormData();
+            formData.append('uploadId', uploadId);
+            formData.append('uploadName', uploadName);
+            formData.append('uploadType', 'upload_id');
+            formData.append('uploadedFile', values.uploadId);
+            formData.append('documentType', values.chooseId);
+            formData.append('documentNo', values.idNo);
+            createFile(formData).then((res) => {
+              if (!res.status) console.error('ID document upload failed:', res.message);
             });
-          const formData = new FormData();
-          formData.append('uploadId', data.data.fileUpload.uploadId);
-          formData.append('uploadName', data.data.fileUpload.uploadName);
-          formData.append('uploadType', 'upload_id');
-          formData.append('uploadedFile', values.uploadId);
-          formData.append('documentType', values.chooseId);
-          formData.append('documentNo', values.idNo);
-          createFile(formData);
-          const formData1 = new FormData();
-          formData1.append('uploadId', data.data.fileUpload.uploadId);
-          formData1.append('uploadName', data.data.fileUpload.uploadName);
-          formData1.append('uploadType', 'signature');
-          formData1.append('uploadedFile', values.signature);
-          createFile(formData1);
+          }
+
+          // 3. Upload Signature
+          if (values.signature && values.signature instanceof File) {
+            const formData1 = new FormData();
+            formData1.append('uploadId', uploadId);
+            formData1.append('uploadName', uploadName);
+            formData1.append('uploadType', 'signature');
+            formData1.append('uploadedFile', values.signature);
+            createFile(formData1).then((res) => {
+              if (!res.status) console.error('Signature upload failed:', res.message);
+            });
+          }
+
           setToggleContainer(false);
           setImg(null);
           form.current.reset();
           resetForm();
           setNotify({
             open: true,
-            message: 'Customer created',
+            message: 'Customer created successfully with documents',
             severity: 'success',
           });
         }

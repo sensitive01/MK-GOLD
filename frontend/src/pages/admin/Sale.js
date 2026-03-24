@@ -290,9 +290,17 @@ export default function Sale() {
 
   function Status(props) {
     return (
-      <>
+      <Stack direction="row" spacing={1}>
         <Button
           variant="contained"
+          size="small"
+          startIcon={<Iconify icon="eva:checkmark-circle-2-fill" />}
+          sx={{
+            bgcolor: 'success.main',
+            '&:hover': {
+              bgcolor: 'success.dark',
+            },
+          }}
           onClick={() => {
             updateSales(props._id, { status: 'approved' }).then(() => {
               fetchData();
@@ -303,8 +311,9 @@ export default function Sale() {
         </Button>
         <Button
           variant="contained"
+          size="small"
           color="error"
-          sx={{ ml: 2 }}
+          startIcon={<Iconify icon="eva:close-circle-fill" />}
           onClick={() => {
             updateSales(props._id, { status: 'rejected' }).then(() => {
               fetchData();
@@ -313,7 +322,7 @@ export default function Sale() {
         >
           Reject
         </Button>
-      </>
+      </Stack>
     );
   }
 

@@ -217,7 +217,7 @@ export default function SaleDetail({ id }) {
                     {e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
                       <img
                         key={index}
-                        src={`${global.baseURL}/${e?.uploadedFile}`}
+                        src={e?.uploadedFile?.startsWith('http') ? e.uploadedFile : `${global.baseURL}/${e?.uploadedFile}`}
                         alt="document"
                         style={{ width: '80px' }}
                       />
@@ -359,7 +359,11 @@ export default function SaleDetail({ id }) {
                       <TableCell align="left">
                         Photo:
                         <img
-                          src={`${global.baseURL}/${data?.customer?.profileImage?.uploadedFile}`}
+                          src={
+                            data?.customer?.profileImage?.uploadedFile?.startsWith('http')
+                              ? data.customer.profileImage.uploadedFile
+                              : `${global.baseURL}/${data?.customer?.profileImage?.uploadedFile}`
+                          }
                           alt="document"
                           style={{ width: '80px' }}
                         />

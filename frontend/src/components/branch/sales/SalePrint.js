@@ -16,7 +16,7 @@ export default function SalePrint({ id }) {
   return (
     <>
       <iframe id="iframe" style={{ display: 'none', height: '0px', width: '0px', position: 'absolute' }} title="pdf" />
-      <div id="pdf">
+      <div id="pdf" style={{ color: 'white', backgroundColor: '#8A1B9F', padding: '20px' }}>
         <img
           alt="Logo"
           src="/newLogo.jpeg"
@@ -51,7 +51,7 @@ export default function SalePrint({ id }) {
             </table>
           </div>
         </div>
-        <hr style={{ border: '0', borderBottom: '1px solid' }} />
+        <hr style={{ border: '0', borderBottom: '1px solid white' }} />
         <div style={{ margin: '20px 0' }}>
           <table style={{ width: '100%', textAlign: 'left' }}>
             <tbody>
@@ -72,7 +72,7 @@ export default function SalePrint({ id }) {
             </tbody>
           </table>
         </div>
-        <hr style={{ border: '0', borderBottom: '1px solid' }} />
+        <hr style={{ border: '0', borderBottom: '1px solid white' }} />
         <div style={{ display: 'block', margin: '20px 0' }}>
           <table style={{ width: '100%', textAlign: 'left' }}>
             <tbody>
@@ -120,7 +120,7 @@ export default function SalePrint({ id }) {
             </tbody>
           </table>
         </div>
-        <hr style={{ border: '0', borderBottom: '1px solid' }} />
+        <hr style={{ border: '0', borderBottom: '1px solid white' }} />
         <div style={{ textAlign: 'start', margin: '20px 0' }}>
           Thanks For your billing
           <br /> www.mk-gold.com
@@ -141,7 +141,7 @@ export default function SalePrint({ id }) {
             const content = document.getElementById('pdf');
             const pri = document.getElementById('iframe').contentWindow;
             pri.document.open();
-            pri.document.write(content.innerHTML);
+            pri.document.write(content.outerHTML);
             pri.document.close();
             pri.onload = () => {
               pri.focus();
