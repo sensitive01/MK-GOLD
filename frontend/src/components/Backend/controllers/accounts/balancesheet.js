@@ -4,7 +4,7 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await balanceSheetService.find(req.body ?? {}),
+    data: await balanceSheetService?.find(req.body ?? {}),
   });
 }
 
@@ -25,3 +25,4 @@ async function calculateClosingBalance(req, res) {
 }
 
 module.exports = { find, calculateClosingBalance };
+

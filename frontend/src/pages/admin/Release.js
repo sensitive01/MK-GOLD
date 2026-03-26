@@ -30,6 +30,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
+import Label from '../../components/label';
 import MuiAlert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -42,14 +43,17 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { useFormik } from 'formik';
 import moment from 'moment';
 import * as Yup from 'yup';
+import PropTypes from 'prop-types';
 // components
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
+import { useSelector } from 'react-redux';
+import global from '../../utils/global';
 // sections
 import { ReleaseListHead, ReleaseListToolbar } from '../../sections/@dashboard/release';
 // mock
 import { getBranch } from '../../apis/admin/branch';
-import { deleteReleaseById, findRelease } from '../../apis/admin/release';
+import { deleteReleaseById, findRelease, updateRelease } from '../../apis/admin/release';
 
 // ----------------------------------------------------------------------
 
@@ -62,6 +66,7 @@ const TABLE_HEAD = [
   { id: 'pledgedDate', label: 'Pledged Date', alignRight: false },
   { id: 'payableAmount', label: 'Payable Amount', alignRight: false },
   { id: 'paymentType', label: 'Payment Type', alignRight: false },
+  { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
 ];
@@ -85,7 +90,7 @@ function getComparator(order, orderBy) {
 }
 
 function applySortFilter(array, comparator, query) {
-  const stabilizedThis = array.map((el, index) => [el, index]);
+  const stabilizedThis = array?.map((el, index) => [el, index]) || [];
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) return order;
@@ -94,7 +99,7 @@ function applySortFilter(array, comparator, query) {
   if (query) {
     return filter(array, (row) => row?.branch?.branchName?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
-  return stabilizedThis.map((el) => el[0]);
+  return stabilizedThis?.map((el) => el[0]);
 }
 
 export default function Release() {
@@ -105,6 +110,8 @@ export default function Release() {
   const [filterOpen, setFilterOpen] = useState(null);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
+  const auth = useSelector((state) => state.auth);
+  const userType = auth.user?.userType;
   const [selected, setSelected] = useState([]);
   const [orderBy, setOrderBy] = useState(null);
   const [filterName, setFilterName] = useState('');
@@ -114,6 +121,9 @@ export default function Release() {
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const handleOpenEditModal = () => setOpenEditModal(true);
+  const handleCloseEditModal = () => setOpenEditModal(false);
   const form = useRef();
 
   // Form validation
@@ -193,7 +203,7 @@ export default function Release() {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelecteds = data.map((n) => n._id);
+      const newSelecteds = data?.map((n) => n._id);
       setSelected(newSelecteds);
       return;
     }
@@ -206,11 +216,11 @@ export default function Release() {
     if (selectedIndex === -1) {
       newSelected = newSelected.concat(selected, _id);
     } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1));
+      newSelected = newSelected.concat(selected?.slice(1));
+    } else if (selectedIndex === selected?.length - 1) {
+      newSelected = newSelected.concat(selected?.slice(0, -1));
     } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(selected.slice(0, selectedIndex), selected.slice(selectedIndex + 1));
+      newSelected = newSelected.concat(selected?.slice(0, selectedIndex), selected?.slice(selectedIndex + 1));
     }
     setSelected(newSelected);
   };
@@ -229,15 +239,15 @@ export default function Release() {
     setFilterName(event.target.value);
   };
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
   const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
-  const isNotFound = !filteredData.length && !!filterName;
+  const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
     deleteReleaseById(openId).then(() => {
       fetchData();
       handleCloseDeleteModal();
-      setSelected(selected.filter((e) => e !== openId));
+      setSelected(selected?.filter((e) => e !== openId));
     });
   };
 
@@ -279,6 +289,78 @@ export default function Release() {
   }
 
   const Alert = forwardRef(AlertComponent);
+
+  function Status(props) {
+    const userType = useSelector((state) => state.auth.user?.userType?.toLowerCase());
+    const isPrivileged = userType === 'admin' || userType === 'subadmin';
+
+    if (props.status !== 'pending') {
+      return (
+        <Stack direction="column" spacing={0.5}>
+          <Label
+            color={(props.status === 'approved' && 'success') || (props.status === 'rejected' && 'error') || 'warning'}
+          >
+            {sentenceCase(props.status)}
+          </Label>
+          {props.actionBy && (
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', minWidth: 120 }}>
+              By: {props.actionBy.name} ({props.actionBy.employeeId})<br />
+              At: {moment(props.actionAt).format('YYYY-MM-DD HH:mm:ss')}
+            </Typography>
+          )}
+          {isPrivileged && (
+            <Button
+              size="small"
+              color="inherit"
+              variant="outlined"
+              sx={{ fontSize: '0.65rem', py: 0 }}
+              onClick={() => {
+                updateRelease(props._id, { status: 'pending' }).then(() => fetchData());
+              }}
+            >
+              Revoke
+            </Button>
+          )}
+        </Stack>
+      );
+    }
+
+    return (
+      <Stack direction="row" spacing={1}>
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<Iconify icon="eva:checkmark-circle-2-fill" />}
+          sx={{
+            bgcolor: 'success.main',
+            '&:hover': {
+              bgcolor: 'success.dark',
+            },
+          }}
+          onClick={() => {
+            updateRelease(props._id, { status: 'approved' }).then(() => {
+              fetchData();
+            });
+          }}
+        >
+          Approve
+        </Button>
+        <Button
+          variant="contained"
+          size="small"
+          color="error"
+          startIcon={<Iconify icon="eva:close-circle-fill" />}
+          onClick={() => {
+            updateRelease(props._id, { status: 'rejected' }).then(() => {
+              fetchData();
+            });
+          }}
+        >
+          Reject
+        </Button>
+      </Stack>
+    );
+  }
 
   return (
     <>
@@ -325,12 +407,12 @@ export default function Release() {
         <p style={{ color: '#fff' }}>
           From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
           {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}, Branch:{' '}
-          {branches.find((e) => e._id === values.branch)?.branchName}, Phone Number: {values.phoneNumber}
+          {branches?.find((e) => e._id === values.branch)?.branchName}, Phone Number: {values.phoneNumber}
         </p>
 
         <Card>
           <ReleaseListToolbar
-            numSelected={selected.length}
+            numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
             handleDelete={() => {
@@ -346,13 +428,13 @@ export default function Release() {
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
-                  rowCount={data.length}
-                  numSelected={selected.length}
+                  rowCount={data?.length || 0}
+                  numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
                 />
                 <TableBody>
-                  {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
+                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
                     const {
                       _id,
                       branch,
@@ -363,6 +445,7 @@ export default function Release() {
                       pledgedDate,
                       payableAmount,
                       paymentType,
+                      status,
                       createdAt,
                     } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
@@ -380,6 +463,9 @@ export default function Release() {
                         <TableCell align="left">{moment(pledgedDate).format('YYYY-MM-DD')}</TableCell>
                         <TableCell align="left">{payableAmount}</TableCell>
                         <TableCell align="left">{sentenceCase(paymentType)}</TableCell>
+                        <TableCell align="left">
+                          <Status status={status} _id={_id} actionBy={row.actionBy} actionAt={row.actionAt} />
+                        </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">
                           <IconButton
@@ -401,7 +487,7 @@ export default function Release() {
                       <TableCell colSpan={11} />
                     </TableRow>
                   )}
-                  {filteredData.length === 0 && (
+                  {filteredData?.length === 0 && (
                     <TableRow>
                       <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                         <Paper
@@ -416,7 +502,7 @@ export default function Release() {
                   )}
                 </TableBody>
 
-                {filteredData.length > 0 && isNotFound && (
+                {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
                       <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
@@ -446,7 +532,7 @@ export default function Release() {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data.length}
+            count={data?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -474,16 +560,27 @@ export default function Release() {
         }}
       >
         <MenuItem
-          sx={{ color: 'error.main' }}
           onClick={() => {
             setOpen(null);
-            setDeleteType('single');
-            handleOpenDeleteModal();
+            handleOpenEditModal();
           }}
         >
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-          Delete
+          <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
+          Edit
         </MenuItem>
+        {global.canDelete(userType) && (
+          <MenuItem
+            sx={{ color: 'error.main' }}
+            onClick={() => {
+              setOpen(null);
+              setDeleteType('single');
+              handleOpenDeleteModal();
+            }}
+          >
+            <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
+            Delete
+          </MenuItem>
+        )}
       </Popover>
 
       <Modal
@@ -520,6 +617,8 @@ export default function Release() {
         </Box>
       </Modal>
 
+      <EditReleaseModal open={openEditModal} id={openId} handleClose={handleCloseEditModal} fetchData={fetchData} />
+
       <Dialog open={filterOpen} onClose={handleFilterClose}>
         <form
           ref={form}
@@ -544,7 +643,7 @@ export default function Release() {
                     onBlur={handleBlur}
                     onChange={handleChange}
                   >
-                    {branches.map((e) => (
+                    {branches?.map((e) => (
                       <MenuItem key={e._id} value={e._id}>
                         {e.branchId} {e.branchName}
                       </MenuItem>
@@ -631,3 +730,188 @@ export default function Release() {
     </>
   );
 }
+
+function EditReleaseModal({ open, id, handleClose, fetchData }) {
+  const [loading, setLoading] = useState(false);
+  const schema = Yup.object({
+    pledgeId: Yup.string().required('Pledge Id is required'),
+    pledgeAmount: Yup.number().required('Pledge Amount is required'),
+    payableAmount: Yup.number().required('Payable Amount is required'),
+    pledgedDate: Yup.date().required('Pledged Date is required'),
+    releaseDate: Yup.date().required('Release Date is required'),
+  });
+
+  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue } = useFormik({
+    initialValues: {
+      pledgeId: '',
+      pledgeAmount: '',
+      payableAmount: '',
+      pledgedDate: moment(),
+      releaseDate: moment(),
+      paymentType: '',
+      pledgedIn: '',
+      pledgedBranch: '',
+      comments: '',
+    },
+    validationSchema: schema,
+    onSubmit: (values) => {
+      setLoading(true);
+      updateRelease(id, values).then((data) => {
+        setLoading(false);
+        if (data.status) {
+          handleClose();
+          fetchData();
+        }
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (id && open) {
+      getReleaseById(id).then((data) => {
+        if (data.status) {
+          const release = data.data;
+          setValues({
+            pledgeId: release.pledgeId,
+            pledgeAmount: release.pledgeAmount,
+            payableAmount: release.payableAmount,
+            pledgedDate: moment(release.pledgedDate),
+            releaseDate: moment(release.releaseDate),
+            paymentType: release.paymentType,
+            pledgedIn: release.pledgedIn,
+            pledgedBranch: release.pledgedBranch,
+            comments: release.comments,
+          });
+        }
+      });
+    }
+  }, [id, open, setValues]);
+
+  return (
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+      <form onSubmit={handleSubmit}>
+        <DialogTitle>Edit Release</DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="pledgeId"
+                label="Pledge Id"
+                value={values.pledgeId}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.pledgeId && !!errors.pledgeId}
+                helperText={touched.pledgeId && errors.pledgeId}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="pledgeAmount"
+                label="Pledge Amount"
+                type="number"
+                value={values.pledgeAmount}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.pledgeAmount && !!errors.pledgeAmount}
+                helperText={touched.pledgeAmount && errors.pledgeAmount}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="payableAmount"
+                label="Payable Amount"
+                type="number"
+                value={values.payableAmount}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.payableAmount && !!errors.payableAmount}
+                helperText={touched.payableAmount && errors.payableAmount}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Payment Type</InputLabel>
+                <Select name="paymentType" value={values.paymentType} onChange={handleChange} label="Payment Type">
+                  <MenuItem value="cash">Cash</MenuItem>
+                  <MenuItem value="bank">Bank</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterMoment}>
+                <DesktopDatePicker
+                  label="Pledged Date"
+                  inputFormat="MM/DD/YYYY"
+                  value={values.pledgedDate}
+                  onChange={(v) => setFieldValue('pledgedDate', v)}
+                  renderInput={(params) => <TextField {...params} fullWidth />}
+                />
+              </LocalizationProvider>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterMoment}>
+                <DesktopDatePicker
+                  label="Release Date"
+                  inputFormat="MM/DD/YYYY"
+                  value={values.releaseDate}
+                  onChange={(v) => setFieldValue('releaseDate', v)}
+                  renderInput={(params) => <TextField {...params} fullWidth />}
+                />
+              </LocalizationProvider>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="pledgedIn"
+                label="Pledged In"
+                value={values.pledgedIn}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="pledgedBranch"
+                label="Pledged Branch"
+                value={values.pledgedBranch}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                name="comments"
+                label="Comments"
+                value={values.comments}
+                onChange={handleChange}
+                fullWidth
+                multiline
+                rows={3}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancel</Button>
+          <LoadingButton type="submit" variant="contained" loading={loading} sx={{ color: '#fff' }}>
+            Save Improvements
+          </LoadingButton>
+        </DialogActions>
+      </form>
+    </Dialog>
+  );
+}
+
+EditReleaseModal.propTypes = {
+  open: PropTypes.bool,
+  id: PropTypes.string,
+  handleClose: PropTypes.func,
+  fetchData: PropTypes.func,
+};
+
+
+
+
+

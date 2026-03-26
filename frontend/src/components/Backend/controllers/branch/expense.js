@@ -4,7 +4,7 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await expenseService.find(req.body ?? {}),
+    data: await expenseService?.find(req.body ?? {}),
   });
 }
 
@@ -65,3 +65,4 @@ async function remove(req, res) {
 }
 
 module.exports = { find, findById, create, update, remove };
+

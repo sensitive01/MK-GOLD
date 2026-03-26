@@ -53,12 +53,12 @@ export default function AnnouncementPopover() {
     const res = await markAsSeen(id);
     if (res.status) {
       setNotifications((prev) => 
-        prev.map((n) => (n._id === id ? { ...n, isSeen: true } : n))
+        prev?.map((n) => (n._id === id ? { ...n, isSeen: true } : n))
       );
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.isSeen).length;
+  const unreadCount = notifications?.filter((n) => !n.isSeen)?.length;
 
   return (
     <>
@@ -99,14 +99,14 @@ export default function AnnouncementPopover() {
 
         <Scrollbar sx={{ height: { xs: 340, sm: 'auto' }, maxHeight: 400 }}>
           <List disablePadding>
-            {notifications.length === 0 && (
+            {notifications?.length === 0 && (
               <Box sx={{ p: 3, textAlign: 'center' }}>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                   No announcements
                 </Typography>
               </Box>
             )}
-            {notifications.map((notification) => (
+            {notifications?.map((notification) => (
               <ListItemButton
                 key={notification._id}
                 sx={{
@@ -176,3 +176,4 @@ export default function AnnouncementPopover() {
     </>
   );
 }
+

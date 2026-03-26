@@ -1,6 +1,7 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
 import { forwardRef, useEffect, useRef, useState, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
@@ -47,9 +48,11 @@ import * as Yup from 'yup';
 import PropTypes from 'prop-types';
 // components
 import { SaleDetail, SalePrint } from '../../components/admin/sales';
+import CreateSale from '../../components/branch/sales/CreateSale';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
+import global from '../../utils/global';
 // sections
 import { SaleListHead, SaleListToolbar } from '../../sections/@dashboard/sales';
 // mock
@@ -62,8 +65,8 @@ const TABLE_HEAD = [
   { id: 'billId', label: 'Bill Id', alignRight: false },
   { id: 'saleType', label: 'Sale Type', alignRight: false },
   { id: 'netAmount', label: 'Net Amount', alignRight: false },
-  { id: 'branch', label: 'Branch Id', alignRight: false },
-  { id: 'branch', label: 'Branch Name', alignRight: false },
+  { id: 'branchId', label: 'Branch Id', alignRight: false },
+  { id: 'branchName', label: 'Branch Name', alignRight: false },
   { id: 'purchaseType', label: 'Ornament Type', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
@@ -89,7 +92,7 @@ function getComparator(order, orderBy) {
 }
 
 function applySortFilter(array, comparator, query) {
-  const stabilizedThis = array.map((el, index) => [el, index]);
+  const stabilizedThis = array?.map((el, index) => [el, index]) || [];
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) return order;
@@ -98,14 +101,16 @@ function applySortFilter(array, comparator, query) {
   if (query) {
     return filter(array, (row) => row.customer?.phoneNumber.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
-  return stabilizedThis.map((el) => el[0]);
+  return stabilizedThis?.map((el) => el[0]);
 }
 
 export default function Sale() {
   const [branches, setBranches] = useState([]);
   const [open, setOpen] = useState(null);
   const [filterOpen, setFilterOpen] = useState(null);
-  const [openId, setOpenId] = useState(null);
+  const [saleIdToEdit, setSaleIdToEdit] = useState(null);
+  const auth = useSelector((state) => state.auth);
+  const userType = auth.user?.userType;
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
   const [selected, setSelected] = useState([]);
@@ -183,8 +188,9 @@ export default function Sale() {
     fetchData();
   }, [toggleContainer, fetchData]);
 
-  const handleOpenMenu = (event) => {
+  const handleOpenMenu = (event, id) => {
     setOpen(event.currentTarget);
+    setSaleIdToEdit(id);
   };
 
   const handleCloseMenu = () => {
@@ -199,7 +205,7 @@ export default function Sale() {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelecteds = data.map((n) => n._id);
+      const newSelecteds = data?.map((n) => n._id);
       setSelected(newSelecteds);
       return;
     }
@@ -212,11 +218,11 @@ export default function Sale() {
     if (selectedIndex === -1) {
       newSelected = newSelected.concat(selected, _id);
     } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1));
+      newSelected = newSelected.concat(selected?.slice(1));
+    } else if (selectedIndex === selected?.length - 1) {
+      newSelected = newSelected.concat(selected?.slice(0, -1));
     } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(selected.slice(0, selectedIndex), selected.slice(selectedIndex + 1));
+      newSelected = newSelected.concat(selected?.slice(0, selectedIndex), selected?.slice(selectedIndex + 1));
     }
     setSelected(newSelected);
   };
@@ -235,15 +241,15 @@ export default function Sale() {
     setFilterName(event.target.value);
   };
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
   const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
-  const isNotFound = !filteredData.length && !!filterName;
+  const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
     deleteSalesById(openId).then(() => {
       fetchData();
       handleCloseDeleteModal();
-      setSelected(selected.filter((e) => e !== openId));
+      setSelected(selected?.filter((e) => e !== openId));
     });
   };
 
@@ -289,6 +295,40 @@ export default function Sale() {
   const Alert = forwardRef(AlertComponent);
 
   function Status(props) {
+    const userType = useSelector((state) => state.auth.user?.userType?.toLowerCase());
+    const isPrivileged = userType === 'admin' || userType === 'subadmin';
+
+    if (props.status !== 'pending') {
+      return (
+        <Stack direction="column" spacing={0.5}>
+          <Label
+            color={(props.status === 'approved' && 'success') || (props.status === 'rejected' && 'error') || 'warning'}
+          >
+            {sentenceCase(props.status)}
+          </Label>
+          {props.actionBy && (
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', minWidth: 120 }}>
+              By: {props.actionBy.name} ({props.actionBy.employeeId})<br />
+              At: {moment(props.actionAt).format('YYYY-MM-DD HH:mm:ss')}
+            </Typography>
+          )}
+          {isPrivileged && (
+            <Button
+              size="small"
+              color="inherit"
+              variant="outlined"
+              sx={{ fontSize: '0.65rem', py: 0 }}
+              onClick={() => {
+                updateSales(props._id, { status: 'pending' }).then(() => fetchData());
+              }}
+            >
+              Revoke
+            </Button>
+          )}
+        </Stack>
+      );
+    }
+
     return (
       <Stack direction="row" spacing={1}>
         <Button
@@ -384,7 +424,7 @@ export default function Sale() {
               startIcon={<Iconify icon="carbon:document-export" />}
               onClick={() => {
                 handleExport(
-                  data.map((e) => {
+                  data?.map((e) => {
                     console.log(e);
                     return {
                       BillId: e.billId,
@@ -408,14 +448,15 @@ export default function Sale() {
         <p style={{ color: '#fff' }}>
           From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
           {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}, Branch:{' '}
-          {branches.find((e) => e._id === values.branch)?.branchName}, Phone Number: {values.phoneNumber}
+          {branches?.find((e) => e._id === values.branch)?.branchName}, Phone Number: {values.phoneNumber}
         </p>
 
         <Card>
           <SaleListToolbar
-            numSelected={selected.length}
+            numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
+            userType={userType}
             handleDelete={() => {
               setDeleteType('selected');
               handleOpenDeleteModal();
@@ -429,14 +470,14 @@ export default function Sale() {
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
-                  rowCount={data.length}
-                  numSelected={selected.length}
+                  rowCount={data?.length || 0}
+                  numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
                 />
                 <TableBody>
-                  {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
-                    const { _id, billId, saleType, netAmount, branch, purchaseType, status, createdAt } = row;
+                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
+                    const { _id, billId, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -447,21 +488,11 @@ export default function Sale() {
                         <TableCell align="left">{billId}</TableCell>
                         <TableCell align="left">{sentenceCase(saleType)}</TableCell>
                         <TableCell align="left">&#8377; {netAmount}</TableCell>
-                        <TableCell align="left">{branch?.branchId}</TableCell>
-                        <TableCell align="left">{branch?.branchName}</TableCell>
+                        <TableCell align="left">{rowBranch?.branchId}</TableCell>
+                        <TableCell align="left">{rowBranch?.branchName}</TableCell>
                         <TableCell align="left">{sentenceCase(purchaseType)}</TableCell>
                         <TableCell align="left">
-                          {status === 'pending' ? (
-                            <Status status={status} _id={_id} />
-                          ) : (
-                            <Label
-                              color={
-                                (status === 'approved' && 'success') || (status === 'rejected' && 'error') || 'warning'
-                              }
-                            >
-                              {sentenceCase(status)}
-                            </Label>
-                          )}
+                          <Status status={status} _id={_id} actionBy={rowBranch?.actionBy || row.actionBy} actionAt={row.actionAt} />
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">
@@ -469,8 +500,9 @@ export default function Sale() {
                             size="large"
                             color="inherit"
                             onClick={(e) => {
-                              setOpenId(_id);
-                              handleOpenMenu(e);
+                              e.stopPropagation();
+                              e.preventDefault();
+                              handleOpenMenu(e, _id);
                             }}
                           >
                             <Iconify icon={'eva:more-vertical-fill'} />
@@ -484,7 +516,7 @@ export default function Sale() {
                       <TableCell colSpan={9} />
                     </TableRow>
                   )}
-                  {filteredData.length === 0 && (
+                  {filteredData?.length === 0 && (
                     <TableRow>
                       <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
                         <Paper
@@ -499,7 +531,7 @@ export default function Sale() {
                   )}
                 </TableBody>
 
-                {filteredData.length > 0 && isNotFound && (
+                {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
                       <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
@@ -529,7 +561,7 @@ export default function Sale() {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data.length}
+            count={data?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -579,7 +611,29 @@ export default function Sale() {
           </Button>
         </Stack>
 
-        <SaleDetail id={openId} setNotify={setNotify} />
+        <SaleDetail id={saleIdToEdit} setNotify={setNotify} />
+      </Container>
+
+      <Container
+        maxWidth="xl"
+        sx={{ display: toggleContainer === true && toggleContainerType === 'create' ? 'block' : 'none' }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+            Edit Sale
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mdi:arrow-left" />}
+            onClick={() => {
+              setToggleContainer(!toggleContainer);
+            }}
+          >
+            Back
+          </Button>
+        </Stack>
+
+        <CreateSale setToggleContainer={setToggleContainer} id={saleIdToEdit} setNotify={setNotify} />
       </Container>
 
       <Popover
@@ -604,6 +658,16 @@ export default function Sale() {
           onClick={() => {
             setOpen(null);
             setToggleContainer(!toggleContainer);
+            setToggleContainerType('create');
+          }}
+        >
+          <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
+          Edit
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
+            setToggleContainer(!toggleContainer);
             setToggleContainerType('detail');
           }}
         >
@@ -620,17 +684,19 @@ export default function Sale() {
           <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
           Print
         </MenuItem>
-        <MenuItem
-          sx={{ color: 'error.main' }}
-          onClick={() => {
-            setOpen(null);
-            setDeleteType('single');
-            handleOpenDeleteModal();
-          }}
-        >
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-          Delete
-        </MenuItem>
+        {global.canDelete(userType) && (
+          <MenuItem
+            sx={{ color: 'error.main' }}
+            onClick={() => {
+              setOpen(null);
+              setDeleteType('single');
+              handleOpenDeleteModal();
+            }}
+          >
+            <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
+            Delete
+          </MenuItem>
+        )}
       </Popover>
 
       <Modal
@@ -691,7 +757,7 @@ export default function Sale() {
                     onBlur={handleBlur}
                     onChange={handleChange}
                   >
-                    {branches.map((e) => (
+                    {branches?.map((e) => (
                       <MenuItem key={e._id} value={e._id}>
                         {e.branchId} {e.branchName}
                       </MenuItem>
@@ -778,3 +844,8 @@ export default function Sale() {
     </>
   );
 }
+
+
+
+
+

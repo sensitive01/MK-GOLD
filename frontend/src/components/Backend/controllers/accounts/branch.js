@@ -12,7 +12,7 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await branchService.find(req.body ?? {}),
+    data: await branchService?.find(req.body ?? {}),
   });
 }
 
@@ -25,3 +25,4 @@ async function findById(req, res) {
 }
 
 module.exports = { find, findById, getState };
+

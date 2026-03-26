@@ -19,8 +19,8 @@ function PreviewEmployee({ id }) {
           // Fetch files
           findFile({ uploadId: id, uploadName: 'employee' }).then((fileData) => {
             if (fileData.status) {
-              const photoFile = fileData.data.find((f) => f.uploadType === 'photo');
-              const docFiles = fileData.data.filter((f) => f.uploadType === 'document');
+              const photoFile = fileData.data?.find((f) => f.uploadType === 'photo');
+              const docFiles = fileData.data?.filter((f) => f.uploadType === 'document');
               setPhoto(photoFile);
               setDocuments(docFiles);
             }
@@ -96,7 +96,7 @@ function PreviewEmployee({ id }) {
             label="Languages"
             value={
               <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
-                {employee.languages && employee.languages.map((lang) => (
+                {employee.languages && employee.languages?.map((lang) => (
                   <Chip key={lang} label={lang} variant="outlined" size="small" />
                 ))}
               </Stack>
@@ -113,15 +113,15 @@ function PreviewEmployee({ id }) {
           <Typography variant="h6" gutterBottom>
             Uploaded Documents
           </Typography>
-          {documents.length > 0 ? (
+          {documents?.length > 0 ? (
             <Grid container spacing={2}>
-              {documents.map((doc, index) => (
+              {documents?.map((doc, index) => (
                 <Grid item key={index} xs={12} sm={4}>
                   <Card variant="outlined" sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Stack direction="row" spacing={1} alignItems="center">
                       <Iconify icon="mdi:file-document-outline" sx={{ width: 24, height: 24, color: 'text.secondary' }} />
                       <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
-                        {doc.uploadedFile.split('-').slice(1).join('-')}
+                        {doc.uploadedFile.split('-')?.slice(1).join('-')}
                       </Typography>
                     </Stack>
                     <Button
@@ -159,3 +159,5 @@ function DetailItem({ label, value }) {
 }
 
 export default PreviewEmployee;
+
+

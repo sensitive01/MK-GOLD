@@ -80,7 +80,7 @@ function getComparator(order, orderBy) {
 }
 
 function applySortFilter(array, comparator, query) {
-  const stabilizedThis = array.map((el, index) => [el, index]);
+  const stabilizedThis = array?.map((el, index) => [el, index]) || [];
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) return order;
@@ -89,7 +89,7 @@ function applySortFilter(array, comparator, query) {
   if (query) {
     return filter(array, (row) => row?.branch?.branchName?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
-  return stabilizedThis.map((el) => el[0]);
+  return stabilizedThis?.map((el) => el[0]);
 }
 
 export default function Report() {
@@ -183,9 +183,9 @@ export default function Report() {
     setRowsPerPage(parseInt(event.target.value, 10));
   };
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
   const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
-  const isNotFound = !filteredData.length && !!filterName;
+  const isNotFound = !filteredData?.length && !!filterName;
 
   function AlertComponent(props, ref) {
     return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -248,11 +248,11 @@ export default function Report() {
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
-                  rowCount={data.length}
+                  rowCount={data?.length || 0}
                   onRequestSort={handleRequestSort}
                 />
                 <TableBody>
-                  {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row, index) => {
+                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row, index) => {
                     const {
                       date,
                       type,
@@ -301,7 +301,7 @@ export default function Report() {
                       <TableCell colSpan={11} />
                     </TableRow>
                   )}
-                  {filteredData.length === 0 && (
+                  {filteredData?.length === 0 && (
                     <TableRow>
                       <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                         <Paper
@@ -316,7 +316,7 @@ export default function Report() {
                   )}
                 </TableBody>
 
-                {filteredData.length > 0 && isNotFound && (
+                {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
                       <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
@@ -346,7 +346,7 @@ export default function Report() {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data.length}
+            count={data?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -444,3 +444,8 @@ export default function Report() {
     </>
   );
 }
+
+
+
+
+

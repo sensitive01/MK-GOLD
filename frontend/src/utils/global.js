@@ -100,8 +100,8 @@ export default {
       'Alipurduar|Bankura|Bardhaman|Birbhum|Cooch Behar|Dakshin Dinajpur|Darjeeling|Hooghly|Howrah|Jalpaiguri|Kolkata|Maldah|Murshidabad|Nadia|North 24 Parganas|Paschim Medinipur|Purba Medinipur|Purulia|South 24 Parganas|Uttar Dinajpur',
   },
   userTypes: [
-    { label: 'Master / Super Admin', value: 'master' },
     { label: 'Admin', value: 'admin' },
+    { label: 'Subadmin', value: 'subadmin' },
     { label: 'Operations', value: 'operations' },
     { label: 'Finance', value: 'finance' },
     { label: 'Accounts', value: 'accounts' },
@@ -126,4 +126,7 @@ export default {
     'Marathi',
     'Gujarati',
   ],
+  canDelete: (userType) => {
+    return userType?.toLowerCase() !== 'subadmin';
+  },
 };

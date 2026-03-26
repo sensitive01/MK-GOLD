@@ -12,7 +12,7 @@ async function find(query = {}) {
         new Date(query.createdAt["$lte"]).toISOString().replace(/T.*Z/, "T23:59:59Z")
       );
     }
-    return await Leave.find(query)
+    return await Leave?.find(query)
       .populate("employee")
       .populate("branch")
       .sort({ createdAt: -1 })
@@ -65,3 +65,4 @@ async function remove(id) {
 }
 
 module.exports = { find, findById, create, update, remove };
+

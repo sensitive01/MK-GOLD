@@ -34,7 +34,7 @@ const locker = require("../controllers/admin/locker");
 const announcement = require("../controllers/admin/announcement");
 const designation = require("../controllers/admin/designation");
 
-const { isAdmin } = require("../middlewares/authorization");
+const { isAdmin, canDelete } = require("../middlewares/authorization");
 const multer = require("../config/multer");
 
 adminRouter.get("/", function (req, res, next) {
@@ -49,7 +49,7 @@ adminRouter.get("/dashboard/get", dashboard.get);
 adminRouter.get("/enquiry/get", enquiry.find);
 adminRouter.post("/enquiry/create", enquiry.create);
 adminRouter.post("/enquiry/update/:id", enquiry.update);
-adminRouter.post("/enquiry/delete/:id", enquiry.remove);
+adminRouter.post("/enquiry/delete/:id", canDelete, enquiry.remove);
 
 adminRouter.get("/quotation/get", quotation.find);
 adminRouter.post("/quotation/create", quotation.create);
@@ -71,21 +71,21 @@ adminRouter.post("/announcement/get", announcement.find);
 adminRouter.get("/announcement/get/:id", announcement.findById);
 adminRouter.post("/announcement/create", multer.single("uploadedFile"), announcement.create);
 adminRouter.post("/announcement/update/:id", multer.single("uploadedFile"), announcement.update);
-adminRouter.post("/announcement/delete/:id", announcement.remove);
+adminRouter.post("/announcement/delete/:id", canDelete, announcement.remove);
 
 adminRouter.get("/designation/get", designation.find);
 adminRouter.post("/designation/get", designation.find);
 adminRouter.get("/designation/get/:id", designation.findById);
 adminRouter.post("/designation/create", designation.create);
 adminRouter.post("/designation/update/:id", designation.update);
-adminRouter.post("/designation/delete/:id", designation.remove);
+adminRouter.post("/designation/delete/:id", canDelete, designation.remove);
 
 adminRouter.get("/goldrate/get", goldRate.find);
 adminRouter.post("/goldrate/get", goldRate.find);
 adminRouter.get("/goldrate/get/:id", goldRate.findById);
 adminRouter.post("/goldrate/create", goldRate.create);
 adminRouter.post("/goldrate/update/:id", goldRate.update);
-adminRouter.post("/goldrate/delete/:id", goldRate.remove);
+adminRouter.post("/goldrate/delete/:id", canDelete, goldRate.remove);
 
 adminRouter.get("/branch/get", branch.find);
 adminRouter.post("/branch/get", branch.find);
@@ -94,14 +94,14 @@ adminRouter.get("/branch/get-next-id", branch.getNextBranchId);
 adminRouter.get("/branch/get/:id", branch.findById);
 adminRouter.post("/branch/create", branch.create);
 adminRouter.post("/branch/update/:id", branch.update);
-adminRouter.post("/branch/delete/:id", branch.remove);
+adminRouter.post("/branch/delete/:id", canDelete, branch.remove);
 
 adminRouter.get("/user/get", user.find);
 adminRouter.post("/user/get", user.find);
 adminRouter.get("/user/get/:id", user.findById);
 adminRouter.post("/user/create", user.create);
 adminRouter.post("/user/update/:id", user.update);
-adminRouter.post("/user/delete/:id", user.remove);
+adminRouter.post("/user/delete/:id", canDelete, user.remove);
 
 adminRouter.get("/employee/get", employee.find);
 adminRouter.post("/employee/get", employee.find);
@@ -113,31 +113,31 @@ adminRouter.get("/employee/get-next-id", employee.getNextEmployeeId);
 adminRouter.get("/employee/get/:id", employee.findById);
 adminRouter.post("/employee/create", employee.create);
 adminRouter.post("/employee/update/:id", employee.update);
-adminRouter.post("/employee/delete/:id", employee.remove);
+adminRouter.post("/employee/delete/:id", canDelete, employee.remove);
 
 adminRouter.get("/expense/get", expense.find);
 adminRouter.post("/expense/get", expense.find);
 adminRouter.get("/expense/get/:id", expense.findById);
 adminRouter.post("/expense/update/:id", expense.update);
-adminRouter.post("/expense/delete/:id", expense.remove);
+adminRouter.post("/expense/delete/:id", canDelete, expense.remove);
 
 adminRouter.get("/fund/get", fund.find);
 adminRouter.post("/fund/get", fund.find);
 adminRouter.get("/fund/get/:id", fund.findById);
 adminRouter.post("/fund/update/:id", fund.update);
-adminRouter.post("/fund/delete/:id", fund.remove);
+adminRouter.post("/fund/delete/:id", canDelete, fund.remove);
 
 adminRouter.get("/attendance/get", attendance.find);
 adminRouter.post("/attendance/get", attendance.find);
 adminRouter.get("/attendance/get/:id", attendance.findById);
 adminRouter.post("/attendance/update/:id", attendance.update);
-adminRouter.post("/attendance/delete/:id", attendance.remove);
+adminRouter.post("/attendance/delete/:id", canDelete, attendance.remove);
 
 adminRouter.get("/sales/get", sales.find);
 adminRouter.post("/sales/get", sales.find);
 adminRouter.get("/sales/get/:id", sales.findById);
 adminRouter.post("/sales/update/:id", sales.update);
-adminRouter.post("/sales/delete/:id", sales.remove);
+adminRouter.post("/sales/delete/:id", canDelete, sales.remove);
 
 adminRouter.get("/ornament/get", ornament.find);
 adminRouter.post("/ornament/get", ornament.find);
@@ -148,27 +148,27 @@ adminRouter.get("/otp/get", otp.find);
 adminRouter.post("/otp/get", otp.find);
 adminRouter.get("/otp/get/:id", otp.findById);
 adminRouter.post("/otp/update/:id", otp.update);
-adminRouter.post("/otp/delete/:id", otp.remove);
+adminRouter.post("/otp/delete/:id", canDelete, otp.remove);
 
 adminRouter.get("/leave/get", leave.find);
 adminRouter.post("/leave/get", leave.find);
 adminRouter.get("/leave/get/:id", leave.findById);
 adminRouter.post("/leave/update/:id", leave.update);
-adminRouter.post("/leave/delete/:id", leave.remove);
+adminRouter.post("/leave/delete/:id", canDelete, leave.remove);
 
 adminRouter.get("/release/get", release.find);
 adminRouter.post("/release/get", release.find);
 adminRouter.get("/release/get/:id", release.findById);
 adminRouter.post("/release/create", release.create);
 adminRouter.post("/release/update/:id", release.update);
-adminRouter.post("/release/delete/:id", release.remove);
+adminRouter.post("/release/delete/:id", canDelete, release.remove);
 
 adminRouter.get("/customer/get", customer.find);
 adminRouter.post("/customer/get", customer.find);
 adminRouter.get("/customer/get/:id", customer.findById);
 adminRouter.post("/customer/create", customer.create);
 adminRouter.post("/customer/update/:id", customer.update);
-adminRouter.post("/customer/delete/:id", customer.remove);
+adminRouter.post("/customer/delete/:id", canDelete, customer.remove);
 adminRouter.post("/customer/send-otp", customer.sendOtp);
 adminRouter.post("/customer/verify-otp", customer.verifyOtp);
 
@@ -177,7 +177,7 @@ adminRouter.post("/payprocess/get", payprocess.find);
 adminRouter.get("/payprocess/get/:id", payprocess.findById);
 adminRouter.post("/payprocess/create", payprocess.create);
 adminRouter.post("/payprocess/update/:id", payprocess.update);
-adminRouter.post("/payprocess/delete/:id", payprocess.remove);
+adminRouter.post("/payprocess/delete/:id", canDelete, payprocess.remove);
 
 adminRouter.get("/file-upload/get", fileUpload.find);
 adminRouter.post("/file-upload/get", fileUpload.find);
@@ -187,7 +187,7 @@ adminRouter.post(
   multer.single("uploadedFile"),
   fileUpload.create
 );
-adminRouter.post("/file-upload/delete/:id", fileUpload.remove);
+adminRouter.post("/file-upload/delete/:id", canDelete, fileUpload.remove);
 
 adminRouter.get("/profile", profile.get);
 adminRouter.post("/profile/change-password", profile.changePassword);
@@ -213,7 +213,7 @@ adminRouter.post("/support/get", support.find);
 adminRouter.get("/support/get/:id", support.findById);
 adminRouter.post("/support/create", support.create);
 adminRouter.post("/support/update/:id", support.update);
-adminRouter.post("/support/delete/:id", support.remove);
+adminRouter.post("/support/delete/:id", canDelete, support.remove);
 
 adminRouter.get("/support-reply/get", supportReply.find);
 adminRouter.post("/support-reply/get", supportReply.find);
@@ -224,7 +224,7 @@ adminRouter.get(
 );
 adminRouter.post("/support-reply/create", supportReply.create);
 adminRouter.post("/support-reply/update/:id", supportReply.update);
-adminRouter.post("/support-reply/delete/:id", supportReply.remove);
+adminRouter.post("/support-reply/delete/:id", canDelete, supportReply.remove);
 
 router.use(
   function (req, res, next) {

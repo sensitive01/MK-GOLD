@@ -77,6 +77,20 @@ async function find(query = {}) {
         $addFields: {
           branch: { $first: "$branch" },
           customer: { $first: "$customer" },
+          actionBy: { $first: "$actionBy" },
+        },
+      },
+      {
+        $lookup: {
+          from: "employees",
+          localField: "actionBy",
+          foreignField: "_id",
+          as: "actionBy",
+        },
+      },
+      {
+        $addFields: {
+          actionBy: { $first: "$actionBy" },
         },
       },
       {
@@ -91,7 +105,7 @@ async function find(query = {}) {
 
 async function findById(id) {
   try {
-    return await Release.findById(id).exec();
+    return await Release.findById(id).populate("actionBy").exec();
   } catch (err) {
     throw err;
   }

@@ -29,7 +29,7 @@ import PropTypes from 'prop-types';
 import moment from 'moment';
 // import { getBranchByBranchId } from '../../../apis/branch/branch';
 import { getGoldRateByState } from '../../../apis/branch/gold-rate';
-import { createSales } from '../../../apis/branch/sales';
+import { createSales, getSalesById, updateSales } from '../../../apis/branch/sales';
 import Customer from './customer';
 import Address from './address';
 import Bank from './bank';
@@ -67,7 +67,7 @@ function CreateSale(props) {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - ornaments.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - ornaments?.length) : 0;
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -76,6 +76,41 @@ function CreateSale(props) {
     setPage(0);
     setRowsPerPage(parseInt(event.target.value, 10));
   };
+
+  const [autoOpenEdit, setAutoOpenEdit] = useState(false);
+
+  useEffect(() => {
+    if (props.id) {
+      getSalesById(props.id).then((data) => {
+        if (data.status) {
+          const sale = data.data;
+          setValues({
+            purchaseType: sale.purchaseType,
+            saleType: sale.saleType,
+            dop: moment(sale.dop).format('YYYY-MM-DD'),
+            paymentType: sale.paymentType,
+            cashAmount: sale.cashAmount || '',
+            bankAmount: sale.bankAmount || '',
+            margin: sale.margin,
+            status: sale.status,
+          });
+          setBranch(sale.branch);
+          setSelectedUser(sale.customer);
+          setOrnaments(sale.ornaments);
+          setSelectedBank(sale.bank);
+          setSelectedRelease(sale.release);
+          // Set step to 3 to skip customer/address selection if already present
+          setStep(3);
+        } else {
+          setNotify({
+              open: true,
+              message: 'Failed to fetch sale data: ' + data.message,
+              severity: 'error',
+          });
+        }
+      });
+    }
+  }, [props.id]);
 
   useEffect(() => {
       setBranch(auth.user.branch);
@@ -119,18 +154,19 @@ function CreateSale(props) {
     },
     validationSchema: schema,
     onSubmit: (values) => {
-      createSales(payload).then((data) => {
+      const apiCall = props.id ? updateSales(props.id, payload) : createSales(payload);
+      apiCall.then((data) => {
         if (data.status === false) {
           props.setNotify({
             open: true,
-            message: 'Sale not created',
+            message: props.id ? 'Sale not updated' : 'Sale not created',
             severity: 'error',
           });
         } else {
-          proofDocument.forEach((e) => {
+          proofDocument?.forEach((e) => {
             const formData = new FormData();
-            formData.append('uploadId', data.data.fileUpload.uploadId);
-            formData.append('uploadName', data.data.fileUpload.uploadName);
+            formData.append('uploadId', data.data.fileUpload?.uploadId || data.data._id);
+            formData.append('uploadName', data.data.fileUpload?.uploadName || data.data.billId);
             formData.append('uploadType', 'proof');
             formData.append('uploadedFile', e.documentFile);
             formData.append('documentType', e.documentType);
@@ -142,7 +178,7 @@ function CreateSale(props) {
           props.setToggleContainer(false);
           props.setNotify({
             open: true,
-            message: 'Sale created',
+            message: props.id ? 'Sale updated' : 'Sale created',
             severity: 'success',
           });
         }
@@ -170,6 +206,8 @@ function CreateSale(props) {
         setStep={setStep}
         selectedUser={selectedUser}
         setSelectedUser={setSelectedUser}
+        autoOpenEdit={autoOpenEdit}
+        setAutoOpenEdit={setAutoOpenEdit}
         {...props}
       />
 
@@ -184,9 +222,28 @@ function CreateSale(props) {
         encType="multipart/form-data"
       >
         <Card sx={{ display: step === 3 ? 'block' : 'none', p: 4, my: 4 }}>
-          <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 3 }}>
-            Billing Details
+          <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 1 }}>
+            Billing Details {props.id ? `(Editing: ${props.id})` : ''}
           </Typography>
+          <Box sx={{ mb: 3, p: 2, bgcolor: 'background.neutral', borderRadius: 1 }}>
+            <Typography variant="subtitle1" color="primary">
+              Selected Customer: <strong>{selectedUser?.name}</strong> ({selectedUser?.phoneNumber})
+              <Button
+                size="small"
+                variant="outlined"
+                sx={{ ml: 2, height: 20, fontSize: '0.65rem' }}
+                onClick={() => {
+                  setAutoOpenEdit(true);
+                  setStep(1);
+                }}
+              >
+                Edit Profile
+              </Button>
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Address: {selectedAddress?.houseNo}, {selectedAddress?.streetName}, {selectedAddress?.city}, {selectedAddress?.pincode}
+            </Typography>
+          </Box>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={4}>
               <FormControl fullWidth error={touched.purchaseType && errors.purchaseType && true}>
@@ -357,13 +414,13 @@ function CreateSale(props) {
                       message: 'Please enter cash amount',
                       severity: 'info',
                     });
-                  } else if (values.saleType === 'pledged' && selectedRelease.length === 0) {
+                  } else if (values.saleType === 'pledged' && selectedRelease?.length === 0) {
                     props.setNotify({
                       open: true,
                       message: 'Please select release',
                       severity: 'info',
                     });
-                  } else if (ornaments.length === 0) {
+                  } else if (ornaments?.length === 0) {
                     props.setNotify({
                       open: true,
                       message: 'Please add ornaments',
@@ -484,7 +541,7 @@ function CreateSale(props) {
                           <TableCell colSpan={6} />
                         </TableRow>
                       )}
-                      {ornaments.length === 0 && (
+                      {ornaments?.length === 0 && (
                         <TableRow>
                           <TableCell align="center" colSpan={7} sx={{ py: 3 }}>
                             <Paper
@@ -504,7 +561,7 @@ function CreateSale(props) {
                 <TablePagination
                   rowsPerPageOptions={[5, 10, 25]}
                   component="div"
-                  count={ornaments.length}
+                  count={ornaments?.length}
                   rowsPerPage={rowsPerPage}
                   page={page}
                   onPageChange={handleChangePage}
@@ -700,8 +757,11 @@ function CreateSale(props) {
 }
 
 CreateSale.propTypes = {
+  id: PropTypes.string,
   setNotify: PropTypes.func,
   setToggleContainer: PropTypes.func,
 };
 
 export default CreateSale;
+
+

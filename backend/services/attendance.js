@@ -7,7 +7,7 @@ const mongoose = require("mongoose");
 
 async function find(query = {}, user = null) {
   try {
-    const userType = user.userType?.toLowerCase();
+    const userType = user?.userType?.toLowerCase();
     if (
       userType === "branch" ||
       userType === "assistant_branch_manager" ||

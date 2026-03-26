@@ -1,6 +1,7 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
 import { forwardRef, useEffect, useRef, useState } from 'react';
+import { useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import { Helmet } from 'react-helmet-async';
 // @mui
@@ -48,6 +49,7 @@ import * as Yup from 'yup';
 import { CreateUser, UpdateUser } from '../../components/admin/user';
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
+import global from '../../utils/global';
 // sections
 import { UserListHead, UserListToolbar } from '../../sections/@dashboard/user';
 // mock
@@ -83,7 +85,7 @@ function getComparator(order, orderBy) {
 }
 
 function applySortFilter(array, comparator, query) {
-  const stabilizedThis = array.map((el, index) => [el, index]);
+  const stabilizedThis = array?.map((el, index) => [el, index]) || [];
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) return order;
@@ -94,7 +96,7 @@ function applySortFilter(array, comparator, query) {
       row.username ? row.username.toLowerCase().indexOf(query.toLowerCase()) !== -1 : false
     );
   }
-  return stabilizedThis.map((el) => el[0]);
+  return stabilizedThis?.map((el) => el[0]);
 }
 
 export default function User() {
@@ -105,6 +107,8 @@ export default function User() {
   const [order, setOrder] = useState('asc');
   const [selected, setSelected] = useState([]);
   const [orderBy, setOrderBy] = useState(null);
+  const auth = useSelector((state) => state.auth);
+  const userType = auth.user?.userType;
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [toggleContainer, setToggleContainer] = useState(false);
@@ -178,7 +182,7 @@ export default function User() {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelecteds = data.map((n) => n._id);
+      const newSelecteds = data?.map((n) => n._id);
       setSelected(newSelecteds);
       return;
     }
@@ -191,11 +195,11 @@ export default function User() {
     if (selectedIndex === -1) {
       newSelected = newSelected.concat(selected, _id);
     } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1));
+      newSelected = newSelected.concat(selected?.slice(1));
+    } else if (selectedIndex === selected?.length - 1) {
+      newSelected = newSelected.concat(selected?.slice(0, -1));
     } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(selected.slice(0, selectedIndex), selected.slice(selectedIndex + 1));
+      newSelected = newSelected.concat(selected?.slice(0, selectedIndex), selected?.slice(selectedIndex + 1));
     }
     setSelected(newSelected);
   };
@@ -214,15 +218,15 @@ export default function User() {
     setFilterName(event.target.value);
   };
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
   const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
-  const isNotFound = !filteredData.length && !!filterName;
+  const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
     deleteUserById(openId).then(() => {
       fetchData();
       handleCloseDeleteModal();
-      setSelected(selected.filter((e) => e !== openId));
+      setSelected(selected?.filter((e) => e !== openId));
       setNotify({
         open: true,
         message: 'User Deleted Successfully!',
@@ -298,7 +302,7 @@ export default function User() {
               });
               // Update parent data state to keep it in sync
               setData((prevData) =>
-                prevData.map((item) =>
+                prevData?.map((item) =>
                   item._id === props._id ? { ...item, status: newStatus ? 'active' : 'deactive' } : item
                 )
               );
@@ -379,7 +383,7 @@ export default function User() {
               startIcon={<Iconify icon="carbon:document-export" />}
               onClick={() => {
                 handleExport(
-                  data.map((e) => ({
+                  data?.map((e) => ({
                     Username: e.username,
                     UserType: e.userType,
                     Status: e.status,
@@ -408,9 +412,10 @@ export default function User() {
 
         <Card>
           <UserListToolbar
-            numSelected={selected.length}
+            numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
+            userType={userType}
             handleDelete={() => {
               setDeleteType('selected');
               handleOpenDeleteModal();
@@ -424,13 +429,13 @@ export default function User() {
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
-                  rowCount={data.length}
-                  numSelected={selected.length}
+                  rowCount={data?.length || 0}
+                  numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
                 />
                 <TableBody>
-                  {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
+                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
                     const { _id, username, userType, employee, status, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
@@ -466,7 +471,7 @@ export default function User() {
                       <TableCell colSpan={12} />
                     </TableRow>
                   )}
-                  {filteredData.length === 0 && (
+                  {filteredData?.length === 0 && (
                     <TableRow>
                       <TableCell align="center" colSpan={12} sx={{ py: 3 }}>
                         <Paper
@@ -481,7 +486,7 @@ export default function User() {
                   )}
                 </TableBody>
 
-                {filteredData.length > 0 && isNotFound && (
+                {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
                       <TableCell align="center" colSpan={12} sx={{ py: 3 }}>
@@ -511,7 +516,7 @@ export default function User() {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data.length}
+            count={data?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -593,17 +598,19 @@ export default function User() {
           Edit
         </MenuItem>
 
-        <MenuItem
-          sx={{ color: 'error.main' }}
-          onClick={() => {
-            setOpen(null);
-            setDeleteType('single');
-            handleOpenDeleteModal();
-          }}
-        >
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-          Delete
-        </MenuItem>
+        {global.canDelete(userType) && (
+          <MenuItem
+            sx={{ color: 'error.main' }}
+            onClick={() => {
+              setOpen(null);
+              setDeleteType('single');
+              handleOpenDeleteModal();
+            }}
+          >
+            <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
+            Delete
+          </MenuItem>
+        )}
       </Popover>
 
       <Modal
@@ -714,3 +721,8 @@ export default function User() {
     </>
   );
 }
+
+
+
+
+

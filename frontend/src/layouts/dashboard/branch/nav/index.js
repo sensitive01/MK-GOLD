@@ -72,7 +72,7 @@ export default function Nav({ openNav, onCloseNav }) {
               </Typography>
 
               <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }} noWrap>
-                {global.userTypes.find((u) => u.value === auth.user.userType)?.label ?? auth.user.userType}
+                {global.userTypes?.find((u) => u.value === auth.user.userType)?.label ?? auth.user.userType}
               </Typography>
             </Box>
           </StyledAccount>
@@ -83,7 +83,7 @@ export default function Nav({ openNav, onCloseNav }) {
         data={(() => {
           let data = [...navConfig];
           if (['assistant_branch_manager', 'branch_executive', 'telecalling'].includes(auth.user.userType)) {
-            data = data.filter((item) => !['Employee', 'Report', 'Balancesheet', 'Move Gold'].includes(item.title));
+            data = data?.filter((item) => !['Employee', 'Report', 'Balancesheet', 'Move Gold'].includes(item.title));
           }
           if (auth.user.userType === 'telecalling') {
             const leadsIndex = data.findIndex((i) => i.title === 'Leads');
@@ -142,3 +142,5 @@ export default function Nav({ openNav, onCloseNav }) {
     </Box>
   );
 }
+
+

@@ -12,7 +12,7 @@ async function find(query = {}) {
         new Date(query.createdAt["$lte"]).toISOString().replace(/T.*Z/, "T23:59:59Z")
       );
     }
-    return await Payprocess.find(query)
+    return await Payprocess?.find(query)
       .populate("employee")
       .sort({ createdAt: -1 })
       .exec();
@@ -76,3 +76,4 @@ module.exports = {
   update,
   remove,
 };
+

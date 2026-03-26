@@ -1,5 +1,6 @@
 function isAdmin(req, res, next) {
-  if (req.user?.userType?.toLowerCase() === "admin") {
+  const userType = req.user?.userType?.toLowerCase();
+  if (userType === "admin" || userType === "subadmin") {
     return next();
   }
 
@@ -40,7 +41,9 @@ function isBranch(req, res, next) {
     userType === "branch" ||
     userType === "assistant_branch_manager" ||
     userType === "branch_executive" ||
-    userType === "telecalling"
+    userType === "telecalling" ||
+    userType === "admin" ||
+    userType === "subadmin"
   ) {
     return next();
   }
@@ -52,4 +55,16 @@ function isBranch(req, res, next) {
   });
 }
 
-module.exports = { isAdmin, isHr, isAccounts, isBranch };
+function canDelete(req, res, next) {
+  if (req.user?.userType?.toLowerCase() !== "subadmin") {
+    return next();
+  }
+
+  return res.status(401).json({
+    status: false,
+    message: "Unauthorized to delete",
+    data: {},
+  });
+}
+
+module.exports = { isAdmin, isHr, isAccounts, isBranch, canDelete };

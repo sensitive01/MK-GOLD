@@ -119,7 +119,7 @@ function CreateAttendance(props) {
                 }}
                 disabled={['assistant_branch_manager', 'branch_executive', 'telecalling'].includes(auth.user.userType)}
               >
-                {employees.map((e) => (
+                {employees?.map((e) => (
                   <MenuItem key={e._id} value={e._id}>{e.employeeId} {e.name}</MenuItem>
                 ))}
               </Select>

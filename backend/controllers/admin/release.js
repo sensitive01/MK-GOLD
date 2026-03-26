@@ -39,6 +39,10 @@ async function create(req, res) {
 
 async function update(req, res) {
   try {
+    if (req.body.status) {
+      req.body.actionBy = req.user._id;
+      req.body.actionAt = new Date();
+    }
     res.json({
       status: true,
       message: "",

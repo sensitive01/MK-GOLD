@@ -3,7 +3,7 @@ const fileUpload = require("../models/fileupload");
 
 async function find(query = {}) {
   try {
-    return await fileUpload.find(query).sort({ createdAt: -1 }).exec();
+    return await fileUpload?.find(query).sort({ createdAt: -1 }).exec();
   } catch (err) {
     throw err;
   }
@@ -42,13 +42,13 @@ async function create(payload) {
 
 async function remove(id) {
   try {
-    let oldFiles = await fileUpload.find({
+    let oldFiles = await fileUpload?.find({
       _id: {
         $in: id.split(","),
       },
     });
 
-    oldFiles.forEach((file) => {
+    oldFiles?.forEach((file) => {
       if (file.uploadedFile) {
         fs.unlink(`./public/${file.uploadedFile}`, function (err) {
           // file not deleted
@@ -70,9 +70,9 @@ async function remove(id) {
 
 async function removeMany(query) {
   try {
-    let oldFiles = await fileUpload.find(query);
+    let oldFiles = await fileUpload?.find(query);
 
-    oldFiles.forEach((file) => {
+    oldFiles?.forEach((file) => {
       if (file.uploadedFile) {
         fs.unlink(`./public/${file.uploadedFile}`, function (err) {
           // fileUpload not deleted
@@ -87,3 +87,4 @@ async function removeMany(query) {
 }
 
 module.exports = { find, findOne, findById, create, remove, removeMany };
+

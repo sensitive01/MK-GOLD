@@ -36,7 +36,7 @@ export default function ListHead({
   return (
     <TableHead>
       <TableRow>
-        {headLabel.map((headCell) => (
+        {headLabel?.map((headCell) => (
           <TableCell
             key={headCell.id}
             align={headCell.alignRight ? 'right' : 'left'}
@@ -59,3 +59,4 @@ export default function ListHead({
     </TableHead>
   );
 }
+

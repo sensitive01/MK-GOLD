@@ -85,7 +85,7 @@ function getComparator(order, orderBy) {
 }
 
 function applySortFilter(array, comparator, query) {
-  const stabilizedThis = array.map((el, index) => [el, index]);
+  const stabilizedThis = array?.map((el, index) => [el, index]) || [];
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) return order;
@@ -94,7 +94,7 @@ function applySortFilter(array, comparator, query) {
   if (query) {
     return filter(array, (row) => row.employeeId.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
-  return stabilizedThis.map((el) => el[0]);
+  return stabilizedThis?.map((el) => el[0]);
 }
 
 export default function Leave() {
@@ -188,7 +188,7 @@ export default function Leave() {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelecteds = data.map((n) => n._id);
+      const newSelecteds = data?.map((n) => n._id);
       setSelected(newSelecteds);
       return;
     }
@@ -201,11 +201,11 @@ export default function Leave() {
     if (selectedIndex === -1) {
       newSelected = newSelected.concat(selected, _id);
     } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1));
+      newSelected = newSelected.concat(selected?.slice(1));
+    } else if (selectedIndex === selected?.length - 1) {
+      newSelected = newSelected.concat(selected?.slice(0, -1));
     } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(selected.slice(0, selectedIndex), selected.slice(selectedIndex + 1));
+      newSelected = newSelected.concat(selected?.slice(0, selectedIndex), selected?.slice(selectedIndex + 1));
     }
     setSelected(newSelected);
   };
@@ -224,15 +224,15 @@ export default function Leave() {
     setFilterName(event.target.value);
   };
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
   const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
-  const isNotFound = !filteredData.length && !!filterName;
+  const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
     deleteLeaveById(openId).then(() => {
       fetchData();
       handleCloseDeleteModal();
-      setSelected(selected.filter((e) => e !== openId));
+      setSelected(selected?.filter((e) => e !== openId));
     });
   };
 
@@ -383,7 +383,7 @@ export default function Leave() {
 
         <Card>
           <LeaveListToolbar
-            numSelected={selected.length}
+            numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
             handleDelete={() => {
@@ -399,13 +399,13 @@ export default function Leave() {
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
-                  rowCount={data.length}
-                  numSelected={selected.length}
+                  rowCount={data?.length || 0}
+                  numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
                 />
                 <TableBody>
-                  {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
+                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
                     const { _id, branch, employee, leaveType, dates, note, status, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
@@ -420,7 +420,7 @@ export default function Leave() {
                         <TableCell align="left">{employee?.name}</TableCell>
                         <TableCell align="left">{leaveType}</TableCell>
                         <TableCell align="left">
-                          {dates.map((date) => moment(date).format('Y/M/D')).join(', ')}
+                          {dates?.map((date) => moment(date).format('Y/M/D')).join(', ')}
                         </TableCell>
                         <TableCell align="left">{note}</TableCell>
                         <TableCell align="left" sx={{ minWidth: 180 }}>
@@ -457,7 +457,7 @@ export default function Leave() {
                       <TableCell colSpan={9} />
                     </TableRow>
                   )}
-                  {filteredData.length === 0 && (
+                  {filteredData?.length === 0 && (
                     <TableRow>
                       <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
                         <Paper
@@ -472,7 +472,7 @@ export default function Leave() {
                   )}
                 </TableBody>
 
-                {filteredData.length > 0 && isNotFound && (
+                {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
                       <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
@@ -502,7 +502,7 @@ export default function Leave() {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data.length}
+            count={data?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -738,3 +738,8 @@ export default function Leave() {
     </>
   );
 }
+
+
+
+
+

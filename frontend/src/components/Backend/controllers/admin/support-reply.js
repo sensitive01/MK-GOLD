@@ -5,7 +5,7 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await supportReplyService.find(req.body ?? {}),
+    data: await supportReplyService?.find(req.body ?? {}),
   });
 }
 
@@ -13,7 +13,7 @@ async function findBySupportId(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await supportReplyService.find({ support: req.params.id }),
+    data: await supportReplyService?.find({ support: req.params.id }),
   });
 }
 
@@ -85,3 +85,4 @@ async function remove(req, res) {
 }
 
 module.exports = { find, findById, findBySupportId, create, update, remove };
+

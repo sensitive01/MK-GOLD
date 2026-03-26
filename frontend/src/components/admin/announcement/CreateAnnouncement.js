@@ -26,7 +26,7 @@ function CreateAnnouncement(props) {
   useEffect(() => {
     getUser({ status: 'active' }).then((data) => {
       if (data.status) {
-        setUsers(data.data.filter((u) => u.userType !== 'admin'));
+        setUsers(data.data?.filter((u) => u.userType !== 'admin'));
       }
     });
   }, []);
@@ -50,9 +50,9 @@ function CreateAnnouncement(props) {
     validationSchema: schema,
     onSubmit: async (values, { setSubmitting, resetForm }) => {
       const formData = new FormData();
-      Object.keys(values).forEach((key) => {
+      Object.keys(values)?.forEach((key) => {
         if (Array.isArray(values[key])) {
-          values[key].forEach((v) => formData.append(key, v));
+          values[key]?.forEach((v) => formData.append(key, v));
         } else {
           formData.append(key, values[key]);
         }
@@ -117,7 +117,7 @@ function CreateAnnouncement(props) {
                   { label: 'Finance', value: 'finance' },
                   { label: 'Assistant Branch Manager', value: 'assistant_branch_manager' },
                   { label: 'Branch Executive', value: 'branch_executive' },
-                ].map((role) => (
+                ]?.map((role) => (
                   <MenuItem key={role.value} value={role.value}>
                     <Checkbox checked={formik.values.targetUserType.indexOf(role.value) > -1} />
                     <ListItemText primary={role.label} />
@@ -132,8 +132,8 @@ function CreateAnnouncement(props) {
               <Select label="Target User (Optional)" {...formik.getFieldProps('targetUser')}>
                 <MenuItem value="">None</MenuItem>
                 {users
-                  .filter((u) => formik.values.targetUserType.includes('all') || formik.values.targetUserType.includes(u.userType))
-                  .map((u) => (
+                  ?.filter((u) => formik.values.targetUserType.includes('all') || formik.values.targetUserType.includes(u.userType))
+                  ?.map((u) => (
                     <MenuItem key={u._id} value={u._id}>
                       {u.username} ({u.userType})
                     </MenuItem>
@@ -192,3 +192,5 @@ function CreateAnnouncement(props) {
 }
 
 export default CreateAnnouncement;
+
+

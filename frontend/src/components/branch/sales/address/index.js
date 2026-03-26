@@ -77,7 +77,7 @@ function Address({ step, setStep, setNotify, selectedUser }) {
     style.width = 800;
   }
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -104,7 +104,7 @@ function Address({ step, setStep, setNotify, selectedUser }) {
     pincode: Yup.string()
       .required('Pincode is required')
       .matches(/^[0-9]+$/, 'Must be only digits')
-      .length(6),
+      ?.length(6),
     landmark: Yup.string().required('Landmark is required'),
     residential: Yup.string().required('Residential type is required'),
     label: Yup.string().required('Label is required'),
@@ -222,7 +222,7 @@ function Address({ step, setStep, setNotify, selectedUser }) {
                     <TableCell colSpan={6} />
                   </TableRow>
                 )}
-                {data.length === 0 && (
+                {data?.length === 0 && (
                   <TableRow>
                     <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
                       <Paper
@@ -242,7 +242,7 @@ function Address({ step, setStep, setNotify, selectedUser }) {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data.length}
+            count={data?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -259,7 +259,7 @@ function Address({ step, setStep, setNotify, selectedUser }) {
           variant="contained"
           sx={{ ml: 2 }}
           onClick={() => {
-            if (data.length === 0) {
+            if (data?.length === 0) {
               setNotify({
                 open: true,
                 message: 'Please add address',
@@ -331,7 +331,7 @@ function Address({ step, setStep, setNotify, selectedUser }) {
                     onBlur={handleBlur}
                     onChange={handleChange}
                   >
-                    {global.states.map((state) => (
+                    {global.states?.map((state) => (
                       <MenuItem value={state}>{state}</MenuItem>
                     ))}
                   </Select>
@@ -511,3 +511,5 @@ Address.propTypes = {
 };
 
 export default Address;
+
+

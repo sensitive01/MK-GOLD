@@ -4,7 +4,7 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await fileUpload.find(req.body ?? {}),
+    data: await fileUpload?.find(req.body ?? {}),
   });
 }
 
@@ -57,3 +57,4 @@ async function remove(req, res) {
 }
 
 module.exports = { find, findById, findOne, create, remove };
+

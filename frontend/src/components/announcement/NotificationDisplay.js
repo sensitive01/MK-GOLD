@@ -24,7 +24,7 @@ function NotificationDisplay() {
       if (res && res.status === true && Array.isArray(res.data)) {
         setAnnouncements(res.data);
         // Find the first 'pop' type announcement that is NOT yet seen
-        const pop = res.data.find((a) => a.notificationType === 'pop' && !a.isSeen);
+        const pop = res.data?.find((a) => a.notificationType === 'pop' && !a.isSeen);
         if (pop) {
           setCurrentPop(pop);
         }
@@ -43,7 +43,7 @@ function NotificationDisplay() {
       const res = await markAsSeen(id);
       if (res && res.status === true) {
         setAnnouncements((prev) => 
-          Array.isArray(prev) ? prev.map((a) => (a._id === id ? { ...a, isSeen: true } : a)) : []
+          Array.isArray(prev) ? prev?.map((a) => (a._id === id ? { ...a, isSeen: true } : a)) : []
         );
         if (currentPop && currentPop._id === id) {
           setCurrentPop(null);
@@ -56,7 +56,7 @@ function NotificationDisplay() {
 
   useEffect(() => {
     if (!currentPop && Array.isArray(announcements)) {
-      const nextPop = announcements.find((a) => 
+      const nextPop = announcements?.find((a) => 
         a.notificationType === 'pop' && 
         !a.isSeen && 
         !dismissedIds.includes(a._id)
@@ -75,13 +75,13 @@ function NotificationDisplay() {
   };
 
   const scrolls = Array.isArray(announcements) 
-    ? announcements.filter((a) => a.notificationType === 'scroll' && !a.isSeen)
+    ? announcements?.filter((a) => a.notificationType === 'scroll' && !a.isSeen)
     : [];
 
   return (
     <>
       {/* Scrollable Marquee */}
-      {scrolls.length > 0 && (
+      {scrolls?.length > 0 && (
         <Box
           sx={{
             bgcolor: 'primary.main',
@@ -106,7 +106,7 @@ function NotificationDisplay() {
               fontWeight: 'bold',
             }}
           >
-            {scrolls.map((s, index) => (
+            {scrolls?.map((s, index) => (
               <span key={s._id} style={{ marginRight: '100px' }}>
                 {s.image && (
                    <img 
@@ -186,3 +186,5 @@ function NotificationDisplay() {
 }
 
 export default NotificationDisplay;
+
+

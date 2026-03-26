@@ -205,8 +205,8 @@ function PreviewLead(props) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.dispositions && data.dispositions.length > 0 ? (
-                  data.dispositions.slice().reverse().map((log, index) => (
+                {data.dispositions && data.dispositions?.length > 0 ? (
+                  data.dispositions?.slice().reverse()?.map((log, index) => (
                     <TableRow key={index}>
                       <TableCell>{moment(log.createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>{log.status}</TableCell>
@@ -241,7 +241,7 @@ function PreviewLead(props) {
                     value={logForm.status}
                     onChange={(e) => setLogForm({ ...logForm, status: e.target.value })}
                   >
-                    {DISPOSITIONS.map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}
+                    {DISPOSITIONS?.map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}
                   </Select>
                </FormControl>
             </Grid>
@@ -276,3 +276,5 @@ function PreviewLead(props) {
 }
 
 export default PreviewLead;
+
+

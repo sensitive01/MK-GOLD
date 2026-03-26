@@ -7,7 +7,7 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await supportService.find(req.body ?? {}),
+    data: await supportService?.find(req.body ?? {}),
   });
 }
 
@@ -54,22 +54,22 @@ async function update(req, res) {
 
 async function remove(req, res) {
   try {
-    const reply = await supportReplyService.find({
+    const reply = await supportReplyService?.find({
       support: {
         $in: req.params.id
           .split(",")
-          .map((id) => new mongoose.Types.ObjectId(id)),
+          ?.map((id) => new mongoose.Types.ObjectId(id)),
       },
     });
 
     await fileUploadService.removeMany({
       uploadId: {
-        $in: reply.map((e) => e._id),
+        $in: reply?.map((e) => e._id),
       },
       uploadName: "support_reply",
     });
 
-    await supportReplyService.remove(reply.map((e) => e._id).join(","));
+    await supportReplyService.remove(reply?.map((e) => e._id).join(","));
 
     res.json({
       status: true,
@@ -87,3 +87,5 @@ async function remove(req, res) {
 }
 
 module.exports = { find, findById, create, update, remove };
+
+

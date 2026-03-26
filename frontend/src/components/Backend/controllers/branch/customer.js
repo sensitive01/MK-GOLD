@@ -5,7 +5,7 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await customerService.find(req.body ?? {}),
+    data: await customerService?.find(req.body ?? {}),
   });
 }
 
@@ -94,3 +94,4 @@ async function verifyOtp(req, res) {
 }
 
 module.exports = { find, findById, create, update, remove, sendOtp, verifyOtp };
+

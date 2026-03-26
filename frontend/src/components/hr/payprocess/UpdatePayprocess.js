@@ -109,7 +109,7 @@ function UpdatePayprocess(props) {
                   setFieldValue('employee', e.target.value);
                 }}
               >
-                {employees.map((e) => (
+                {employees?.map((e) => (
                   <MenuItem value={e._id} key={e._id}>
                     {e.employeeId} {e.name}
                   </MenuItem>
@@ -178,3 +178,4 @@ UpdatePayprocess.propTypes = {
 };
 
 export default UpdatePayprocess;
+

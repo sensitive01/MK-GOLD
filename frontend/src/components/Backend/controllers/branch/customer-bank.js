@@ -18,7 +18,7 @@ async function create(req, res) {
       data: {
         data: createdData,
         fileUpload: {
-          uploadId: createdData.bank[createdData.bank.length - 1]._id,
+          uploadId: createdData.bank[createdData.bank?.length - 1]._id,
           uploadName: "customer_bank",
         },
       },
@@ -58,3 +58,4 @@ async function remove(req, res) {
 }
 
 module.exports = { findById, create, remove };
+

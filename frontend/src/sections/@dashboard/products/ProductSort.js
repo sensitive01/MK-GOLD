@@ -45,7 +45,7 @@ export default function ShopProductSort() {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        {SORT_BY_OPTIONS.map((option) => (
+        {SORT_BY_OPTIONS?.map((option) => (
           <MenuItem
             key={option.value}
             selected={option.value === 'newest'}
@@ -59,3 +59,4 @@ export default function ShopProductSort() {
     </>
   );
 }
+

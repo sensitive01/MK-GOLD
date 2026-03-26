@@ -73,7 +73,7 @@ export default function LanguagePopover() {
         }}
       >
         <Stack spacing={0.75}>
-          {LANGS.map((option) => (
+          {LANGS?.map((option) => (
             <MenuItem key={option.value} selected={option.value === LANGS[0].value} onClick={() => handleClose()}>
               <Box component="img" alt={option.label} src={option.icon} sx={{ width: 28, mr: 2 }} />
 
@@ -85,3 +85,4 @@ export default function LanguagePopover() {
     </>
   );
 }
+

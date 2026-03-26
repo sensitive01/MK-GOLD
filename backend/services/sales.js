@@ -110,6 +110,20 @@ async function find(query = {}) {
           branch: { $first: "$branch" },
           customer: { $first: "$customer" },
           bank: { $first: "$bank" },
+          actionBy: { $first: "$actionBy" },
+        },
+      },
+      {
+        $lookup: {
+          from: "employees",
+          localField: "actionBy",
+          foreignField: "_id",
+          as: "actionBy",
+        },
+      },
+      {
+        $addFields: {
+          actionBy: { $first: "$actionBy" },
         },
       },
       {
@@ -192,6 +206,20 @@ async function findById(id) {
           branch: { $first: "$branch" },
           customer: { $first: "$customer" },
           bank: { $first: "$bank" },
+          actionBy: { $first: "$actionBy" },
+        },
+      },
+      {
+        $lookup: {
+          from: "employees",
+          localField: "actionBy",
+          foreignField: "_id",
+          as: "actionBy",
+        },
+      },
+      {
+        $addFields: {
+          actionBy: { $first: "$actionBy" },
         },
       },
       { $limit: 1 },

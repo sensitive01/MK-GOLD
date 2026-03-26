@@ -16,7 +16,7 @@ ColorMultiPicker.propTypes = {
 export default function ColorMultiPicker({ colors, selected, onChangeColor, sx, ...other }) {
   return (
     <Box sx={sx}>
-      {colors.map((color) => {
+      {colors?.map((color) => {
         const whiteColor = color === '#FFFFFF' || color === 'white';
 
         return (
@@ -41,3 +41,4 @@ export default function ColorMultiPicker({ colors, selected, onChangeColor, sx, 
     </Box>
   );
 }
+

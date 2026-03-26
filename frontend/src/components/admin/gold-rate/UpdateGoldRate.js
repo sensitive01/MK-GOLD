@@ -114,7 +114,7 @@ function UpdateGoldRate(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                {data.map((e) => (
+                {data?.map((e) => (
                   <MenuItem value={e}>{e}</MenuItem>
                 ))}
               </Select>
@@ -132,3 +132,4 @@ function UpdateGoldRate(props) {
 }
 
 export default UpdateGoldRate;
+

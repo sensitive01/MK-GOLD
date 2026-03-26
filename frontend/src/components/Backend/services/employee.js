@@ -13,7 +13,7 @@ async function find(query = {}) {
         new Date(query.createdAt["$lte"]).toISOString().replace(/T.*Z/, "T23:59:59Z")
       );
     }
-    return await Employee.find(query).sort({ createdAt: -1 }).exec();
+    return await Employee?.find(query).sort({ createdAt: -1 }).exec();
   } catch (err) {
     throw err;
   }
@@ -127,3 +127,4 @@ module.exports = {
   update,
   remove,
 };
+

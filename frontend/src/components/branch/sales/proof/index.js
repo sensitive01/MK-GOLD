@@ -74,7 +74,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
     style.width = 800;
   }
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - proofDocument.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - proofDocument?.length) : 0;
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -109,7 +109,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
   });
 
   const handleDelete = () => {
-    setProofDocument(proofDocument.filter((e, index) => index !== openId));
+    setProofDocument(proofDocument?.filter((e, index) => index !== openId));
     handleCloseDeleteModal();
   };
 
@@ -170,7 +170,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
                     <TableCell colSpan={6} />
                   </TableRow>
                 )}
-                {proofDocument.length === 0 && (
+                {proofDocument?.length === 0 && (
                   <TableRow>
                     <TableCell align="center" colSpan={7} sx={{ py: 3 }}>
                       <Paper
@@ -190,7 +190,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={proofDocument.length}
+            count={proofDocument?.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -207,7 +207,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
           variant="contained"
           sx={{ ml: 2 }}
           onClick={() => {
-            if (proofDocument.length === 0) {
+            if (proofDocument?.length === 0) {
               setNotify({
                 open: true,
                 message: 'Please upload proof document',
@@ -345,3 +345,4 @@ ProofDocument.propTypes = {
 };
 
 export default ProofDocument;
+

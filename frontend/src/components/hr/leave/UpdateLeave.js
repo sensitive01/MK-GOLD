@@ -59,7 +59,7 @@ function UpdateLeave(props) {
       const payload = {
         employee: values.employee,
         leaveType: values.leaveType === 'Others' ? values.otherLeaveType : values.leaveType,
-        dates: values.dates.map((date) => date.format('YYYY-MM-DD')),
+        dates: values.dates?.map((date) => date.format('YYYY-MM-DD')),
         note: values.note,
       };
       updateLeave(props.id, payload).then((data) => {
@@ -85,7 +85,7 @@ function UpdateLeave(props) {
     if (!values.dates) {
       return <PickersDay {...pickersDayProps} />;
     }
-    const selected = values.dates.find((item) => item?.isSame(moment(date)));
+    const selected = values.dates?.find((item) => item?.isSame(moment(date)));
     return <CustomPickersDay {...pickersDayProps} disableMargin selected={selected} />;
   };
 
@@ -132,7 +132,7 @@ function UpdateLeave(props) {
                   handleChange(e);
                 }}
               >
-                {employees.map((e) => (
+                {employees?.map((e) => (
                   <MenuItem value={e._id}>{e.employeeId} {e.name}</MenuItem>
                 ))}
               </Select>
@@ -221,3 +221,5 @@ function UpdateLeave(props) {
 }
 
 export default UpdateLeave;
+
+

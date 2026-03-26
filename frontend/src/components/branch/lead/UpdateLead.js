@@ -175,7 +175,7 @@ function UpdateLead(props) {
                   formik.setValues({ ...formik.values, state: e.target.value, city: '' });
                 }}
               >
-                {global.states.map((s) => (
+                {global.states?.map((s) => (
                   <MenuItem key={s} value={s}>
                     {s}
                   </MenuItem>
@@ -193,7 +193,7 @@ function UpdateLead(props) {
                 onChange={formik.handleChange}
               >
                 {formik.values.state &&
-                  global.cities[formik.values.state]?.split('|').map((c) => (
+                  global.cities[formik.values.state]?.split('|')?.map((c) => (
                     <MenuItem key={c} value={c}>
                       {c}
                     </MenuItem>
@@ -304,3 +304,4 @@ function UpdateLead(props) {
 }
 
 export default UpdateLead;
+

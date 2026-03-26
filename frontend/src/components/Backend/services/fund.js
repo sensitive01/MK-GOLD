@@ -20,7 +20,7 @@ async function find(query = {}) {
       ];
       delete query.branch;
     }
-    return await Fund.find(query)
+    return await Fund?.find(query)
       .populate("from")
       .populate("to")
       .sort({ createdAt: -1 })
@@ -70,3 +70,4 @@ async function remove(id) {
 }
 
 module.exports = { find, findById, create, update, remove };
+

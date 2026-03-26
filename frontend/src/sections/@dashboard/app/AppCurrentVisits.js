@@ -41,9 +41,9 @@ AppCurrentVisits.propTypes = {
 export default function AppCurrentVisits({ title, subheader, chartColors, chartData, ...other }) {
   const theme = useTheme();
 
-  const chartLabels = chartData.map((i) => i.label);
+  const chartLabels = chartData?.map((i) => i.label);
 
-  const chartSeries = chartData.map((i) => i.value);
+  const chartSeries = chartData?.map((i) => i.value);
 
   const chartOptions = useChart({
     colors: chartColors,
@@ -75,3 +75,4 @@ export default function AppCurrentVisits({ title, subheader, chartColors, chartD
     </Card>
   );
 }
+

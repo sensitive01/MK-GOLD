@@ -68,7 +68,7 @@ function CreateLeave(props) {
         branch: values.branch,
         employee: values.employee,
         leaveType: values.leaveType === 'Others' ? values.otherLeaveType : values.leaveType,
-        dates: values.dates.map((date) => date.format('YYYY-MM-DD')),
+        dates: values.dates?.map((date) => date.format('YYYY-MM-DD')),
         note: values.note,
         status: values.status,
       };
@@ -105,7 +105,7 @@ function CreateLeave(props) {
     if (!values.dates) {
       return <PickersDay {...pickersDayProps} />;
     }
-    const selected = values.dates.find((item) => item?.isSame(moment(date)));
+    const selected = values.dates?.find((item) => item?.isSame(moment(date)));
     return <CustomPickersDay {...pickersDayProps} disableMargin selected={selected} />;
   };
 
@@ -133,7 +133,7 @@ function CreateLeave(props) {
                 onBlur={handleBlur}
                 onChange={(e) => {
                   const empId = e.target.value;
-                  const emp = employees.find((item) => item._id === empId);
+                  const emp = employees?.find((item) => item._id === empId);
                   setValues({
                     ...values,
                     employee: empId,
@@ -141,7 +141,7 @@ function CreateLeave(props) {
                   });
                 }}
               >
-                {employees.map((e) => (
+                {employees?.map((e) => (
                   <MenuItem key={e._id} value={e._id}>
                     {e.employeeId} {e.name}
                   </MenuItem>
@@ -250,3 +250,5 @@ CreateLeave.propTypes = {
 };
 
 export default CreateLeave;
+
+

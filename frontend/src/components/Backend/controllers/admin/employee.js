@@ -6,19 +6,19 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await employeeService.find(req.body ?? {}),
+    data: await employeeService?.find(req.body ?? {}),
   });
 }
 
 async function getLoginNotCreatedEmployee(req, res) {
-  let employees = await userService.find();
+  let employees = await userService?.find();
   let employeeIds = employees
-    .filter((e) => e?.employee?.employeeId)
-    .map((e) => e?.employee?.employeeId);
+    ?.filter((e) => e?.employee?.employeeId)
+    ?.map((e) => e?.employee?.employeeId);
   res.json({
     status: true,
     message: "",
-    data: await employeeService.find({
+    data: await employeeService?.find({
       employeeId: { $nin: employeeIds },
     }),
   });
@@ -106,3 +106,5 @@ module.exports = {
   update,
   remove,
 };
+
+

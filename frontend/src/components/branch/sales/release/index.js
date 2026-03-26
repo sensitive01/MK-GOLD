@@ -177,7 +177,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
     style.width = 800;
   }
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -196,8 +196,8 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
   }, [selectedUser]);
 
   const handleSelect = (release) => {
-    if (selectedRelease && selectedRelease.find((e) => e._id === release._id)) {
-      setSelectedRelease(selectedRelease.filter((e) => e._id !== release._id));
+    if (selectedRelease && selectedRelease?.find((e) => e._id === release._id)) {
+      setSelectedRelease(selectedRelease?.filter((e) => e._id !== release._id));
     } else {
       setSelectedRelease([...selectedRelease, release]);
     }
@@ -248,7 +248,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                   <TableRow hover key={e._id} tabIndex={-1}>
                     <TableCell padding="checkbox">
                       <Checkbox
-                        checked={selectedRelease.find((v) => v._id === e._id)}
+                        checked={selectedRelease?.find((v) => v._id === e._id)}
                         onChange={() => handleSelect(e)}
                       />
                     </TableCell>
@@ -278,7 +278,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                     <TableCell colSpan={9} />
                   </TableRow>
                 )}
-                {data.length === 0 && (
+                {data?.length === 0 && (
                   <TableRow>
                     <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
                       <Paper
@@ -298,7 +298,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data.length}
+            count={data?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -528,3 +528,6 @@ Release.propTypes = {
 };
 
 export default Release;
+
+
+

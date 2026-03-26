@@ -42,15 +42,15 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
     phoneNumber: Yup.string()
       .required('Phone is required')
       .matches(/^[0-9]+$/, 'Must be only digits')
-      .length(10),
+      ?.length(10),
     alternatePhoneNumber: Yup.string()
       .matches(/^[0-9]+$/, 'Must be only digits')
-      .length(10),
+      ?.length(10),
     email: Yup.string().required('Email id is required'),
     dob: Yup.string().required('DOB is required'),
     gender: Yup.string().required('Gender is required'),
-    otp: Yup.string().length(6),
-    altOtp: Yup.string().length(6),
+    otp: Yup.string()?.length(6),
+    altOtp: Yup.string()?.length(6),
     employmentType: Yup.string().required('Employment type is required'),
     organisation: Yup.string().required('Organisation is required'),
     annualIncome: Yup.string().required('Annual income is required'),
@@ -259,7 +259,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                   }
                 });
               }}
-              disabled={values.alternatePhoneNumber.length !== 10}
+              disabled={values.alternatePhoneNumber?.length !== 10}
             >
               Send OTP
             </Button>
@@ -512,3 +512,4 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
 }
 
 export default CreateCustomer;
+

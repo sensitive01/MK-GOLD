@@ -147,7 +147,7 @@ function CreateLead(props) {
                   setValues({ ...values, state: e.target.value, city: '' });
                 }}
               >
-                {global.states.map((s) => (
+                {global.states?.map((s) => (
                   <MenuItem key={s} value={s}>
                     {s}
                   </MenuItem>
@@ -165,7 +165,7 @@ function CreateLead(props) {
                 onChange={handleChange}
               >
                 {values.state &&
-                  global.cities[values.state]?.split('|').map((c) => (
+                  global.cities[values.state]?.split('|')?.map((c) => (
                     <MenuItem key={c} value={c}>
                       {c}
                     </MenuItem>
@@ -264,3 +264,4 @@ function CreateLead(props) {
 }
 
 export default CreateLead;
+

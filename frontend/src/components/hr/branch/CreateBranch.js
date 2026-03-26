@@ -29,7 +29,7 @@ function CreateBranch(props) {
     pincode: Yup.string()
       .required('Pincode is required')
       .matches(/^[0-9]+$/, 'Must be only digits')
-      .length(6),
+      ?.length(6),
     landmark: Yup.string().required('Landmark is required'),
     longitude: Yup.string().required('Longitude is required'),
     latitude: Yup.string().required('Latitude is required'),
@@ -234,3 +234,4 @@ function CreateBranch(props) {
 }
 
 export default CreateBranch;
+

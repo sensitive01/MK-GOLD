@@ -38,7 +38,7 @@ function UpdateBranch(props) {
     pincode: Yup.string()
       .required('Pincode is required')
       .matches(/^[0-9]+$/, 'Must be only digits')
-      .length(6),
+      ?.length(6),
     landmark: Yup.string().required('Landmark is required'),
     longitude: Yup.string().required('Longitude is required'),
     latitude: Yup.string().required('Latitude is required'),
@@ -208,7 +208,7 @@ function UpdateBranch(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                {global.states.map((state) => (
+                {global.states?.map((state) => (
                   <MenuItem key={state} value={state}>
                     {state}
                   </MenuItem>
@@ -317,3 +317,4 @@ UpdateBranch.propTypes = {
 };
 
 export default UpdateBranch;
+

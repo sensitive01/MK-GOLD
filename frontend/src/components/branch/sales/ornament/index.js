@@ -72,7 +72,7 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
     style.width = 800;
   }
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - ornaments.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - ornaments?.length) : 0;
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -117,7 +117,7 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
   });
 
   const handleDelete = () => {
-    setOrnaments(ornaments.filter((e, index) => index !== openId));
+    setOrnaments(ornaments?.filter((e, index) => index !== openId));
     handleCloseDeleteModal();
   };
 
@@ -199,7 +199,7 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                     <TableCell colSpan={8} />
                   </TableRow>
                 )}
-                {ornaments.length === 0 && (
+                {ornaments?.length === 0 && (
                   <TableRow>
                     <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
                       <Paper
@@ -219,7 +219,7 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={ornaments.length}
+            count={ornaments?.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -429,3 +429,4 @@ Ornament.propTypes = {
 };
 
 export default Ornament;
+

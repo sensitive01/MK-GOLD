@@ -5,7 +5,7 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await attendanceService.find(req.body ?? {}),
+    data: await attendanceService?.find(req.body ?? {}),
   });
 }
 
@@ -73,3 +73,4 @@ async function consolidated(req, res) {
 }
 
 module.exports = { find, findById, update, remove, consolidated };
+

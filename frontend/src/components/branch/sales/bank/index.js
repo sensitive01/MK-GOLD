@@ -78,7 +78,7 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
     style.width = 800;
   }
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -361,7 +361,7 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
                     <TableCell colSpan={6} />
                   </TableRow>
                 )}
-                {data.length === 0 && (
+                {data?.length === 0 && (
                   <TableRow>
                     <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
                       <Paper
@@ -381,7 +381,7 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data.length}
+            count={data?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -436,3 +436,5 @@ Bank.propTypes = {
 };
 
 export default Bank;
+
+

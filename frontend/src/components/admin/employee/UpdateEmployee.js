@@ -47,10 +47,10 @@ function UpdateEmployee(props) {
     phoneNumber: Yup.string()
       .required('Phone is required')
       .matches(/^[0-9]+$/, 'Must be only digits')
-      .length(10),
+      ?.length(10),
     alternatePhoneNumber: Yup.string()
       .matches(/^[0-9]+$/, 'Must be only digits')
-      .length(10),
+      ?.length(10),
     dob: Yup.string().required('DOB is required'),
     shiftStartTime: Yup.string().required('Login Time is required'),
     shiftEndTime: Yup.string().required('Logout Time is required'),
@@ -87,8 +87,8 @@ function UpdateEmployee(props) {
             }
 
             // Upload Documents
-            if (documents.length > 0) {
-              documents.forEach((doc) => {
+            if (documents?.length > 0) {
+              documents?.forEach((doc) => {
                 const docData = new FormData();
                 docData.append('uploadId', uploadId);
                 docData.append('uploadName', uploadName);
@@ -205,7 +205,7 @@ function UpdateEmployee(props) {
                   setFieldValue('designation', e.target.value, true);
                 }}
               >
-                {designations && designations.length > 0 && designations.map((item) => (
+                {designations && designations?.length > 0 && designations?.map((item) => (
                   <MenuItem key={item._id} value={item.name}>
                     {item.name}
                   </MenuItem>
@@ -341,7 +341,7 @@ function UpdateEmployee(props) {
                   setFieldValue('employmentType', e.target.value, true);
                 }}
               >
-                {global.employmentTypes.map((type) => (
+                {global.employmentTypes?.map((type) => (
                   <MenuItem key={type.value} value={type.value}>
                     {type.label}
                   </MenuItem>
@@ -363,7 +363,7 @@ function UpdateEmployee(props) {
                 renderValue={(selected) => (selected ? selected.join(', ') : '')}
                 label="Languages"
               >
-                {global.languages.map((item) => (
+                {global.languages?.map((item) => (
                   <MenuItem key={item} value={item}>
                     <Checkbox checked={values.languages && values.languages.indexOf(item) > -1} />
                     <ListItemText primary={item} />
@@ -411,7 +411,7 @@ function UpdateEmployee(props) {
                   </Button>
                 </label>
                 <Stack spacing={0.5}>
-                  {documents.map((doc, index) => (
+                  {documents?.map((doc, index) => (
                     <Typography key={index} variant="caption">
                       {doc.name}
                     </Typography>
@@ -439,3 +439,5 @@ UpdateEmployee.propTypes = {
 };
 
 export default UpdateEmployee;
+
+

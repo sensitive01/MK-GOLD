@@ -91,7 +91,7 @@ function Announcements() {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelecteds = data.map((n) => n._id);
+      const newSelecteds = data?.map((n) => n._id);
       setSelected(newSelecteds);
       return;
     }
@@ -104,11 +104,11 @@ function Announcements() {
     if (selectedIndex === -1) {
       newSelected = newSelected.concat(selected, id);
     } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected.slice(1));
-    } else if (selectedIndex === selected.length - 1) {
-      newSelected = newSelected.concat(selected.slice(0, -1));
+      newSelected = newSelected.concat(selected?.slice(1));
+    } else if (selectedIndex === selected?.length - 1) {
+      newSelected = newSelected.concat(selected?.slice(0, -1));
     } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(selected.slice(0, selectedIndex), selected.slice(selectedIndex + 1));
+      newSelected = newSelected.concat(selected?.slice(0, selectedIndex), selected?.slice(selectedIndex + 1));
     }
     setSelected(newSelected);
   };
@@ -138,8 +138,8 @@ function Announcements() {
     setOpen(null);
   };
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data.length) : 0;
-  const filteredData = data.filter((item) =>
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
+  const filteredData = data?.filter((item) =>
     item.title?.toLowerCase().includes(filterName.toLowerCase())
   );
 
@@ -180,7 +180,7 @@ function Announcements() {
 
           <Card>
             <UserListToolbar
-              numSelected={selected.length}
+              numSelected={selected?.length}
               filterName={filterName}
               onFilterName={handleFilterByName}
               placeholder="Search announcements..."
@@ -193,13 +193,13 @@ function Announcements() {
                     order={order}
                     orderBy={orderBy}
                     headLabel={TABLE_HEAD}
-                    rowCount={data.length}
-                    numSelected={selected.length}
+                    rowCount={data?.length || 0}
+                    numSelected={selected?.length}
                     onRequestSort={handleRequestSort}
                     onSelectAllClick={handleSelectAllClick}
                   />
                   <TableBody>
-                    {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
+                    {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
                       const { _id, title, targetUserType, notificationType, isActive, expiryDate, file } = row;
                       const selectedData = selected.indexOf(_id) !== -1;
 
@@ -251,7 +251,7 @@ function Announcements() {
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"
-              count={data.length}
+              count={data?.length || 0}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}
@@ -326,3 +326,8 @@ function Announcements() {
 }
 
 export default Announcements;
+
+
+
+
+

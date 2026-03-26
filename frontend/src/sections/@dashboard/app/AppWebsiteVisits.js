@@ -17,7 +17,7 @@ AppWebsiteVisits.propTypes = {
 export default function AppWebsiteVisits({ title, subheader, chartLabels, chartData, ...other }) {
   const chartOptions = useChart({
     plotOptions: { bar: { columnWidth: '16%' } },
-    fill: { type: chartData.map((i) => i.fill) },
+    fill: { type: chartData?.map((i) => i.fill) },
     labels: chartLabels,
     xaxis: { type: 'datetime' },
     tooltip: {
@@ -44,3 +44,4 @@ export default function AppWebsiteVisits({ title, subheader, chartLabels, chartD
     </Card>
   );
 }
+

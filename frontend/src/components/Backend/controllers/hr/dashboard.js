@@ -1,7 +1,7 @@
 const employeeService = require("../../services/employee");
 
 async function get(req, res) {
-  const date = new Date().toISOString().slice(0, 10);
+  const date = new Date().toISOString()?.slice(0, 10);
   const totalPresent = await employeeService.aggregate([
     {
       $lookup: {
@@ -134,3 +134,4 @@ async function get(req, res) {
 }
 
 module.exports = { get };
+

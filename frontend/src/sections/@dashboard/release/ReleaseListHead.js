@@ -49,7 +49,7 @@ export default function ReleaseListHead({
             onChange={onSelectAllClick}
           />
         </TableCell>
-        {headLabel.map((headCell) => (
+        {headLabel?.map((headCell) => (
           <TableCell
             key={headCell.id}
             align={headCell.alignRight ? 'right' : 'left'}
@@ -72,3 +72,4 @@ export default function ReleaseListHead({
     </TableHead>
   );
 }
+

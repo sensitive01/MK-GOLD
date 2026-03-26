@@ -18,7 +18,7 @@ function UpdateFund(props) {
   useEffect(() => {
     getBranch().then((data) => {
       setBranches(data.data);
-      data.data.forEach((e) => {
+      data.data?.forEach((e) => {
         if (e.isHeadOffice === 'yes') {
           setHeadOffice(e);
         }
@@ -140,7 +140,7 @@ function UpdateFund(props) {
                 onChange={handleChange}
                 disabled
               >
-                {branches.map((e) => (
+                {branches?.map((e) => (
                   <MenuItem key={e._id} value={e._id}>
                     {e.branchId} {e.branchName}
                   </MenuItem>
@@ -161,7 +161,7 @@ function UpdateFund(props) {
                 onChange={handleChange}
                 disabled={isReadOnly}
               >
-                {branches.map((e) => (
+                {branches?.map((e) => (
                   <MenuItem key={e._id} value={e._id}>
                     {e.branchId} {e.branchName}
                   </MenuItem>
@@ -203,3 +203,5 @@ function UpdateFund(props) {
 }
 
 export default UpdateFund;
+
+

@@ -474,7 +474,7 @@ async function calculateClosingBalance(query = {}) {
       { $sort: { createdAt: -1 } },
     ]).exec();
 
-    if (data.length) {
+    if (data?.length) {
       await Fund.create({
         from: query._id,
         to: query._id,
@@ -493,3 +493,4 @@ async function calculateClosingBalance(query = {}) {
 }
 
 module.exports = { find, calculateClosingBalance };
+

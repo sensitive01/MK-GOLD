@@ -41,7 +41,7 @@ export default function LoginForm() {
 
   if (auth.isAuthenticated === true) {
     const userType = auth.user.userType?.toLowerCase();
-    if (userType === 'admin') {
+    if (userType === 'admin' || userType === 'subadmin') {
       return <Navigate to="/admin/dashboard" />;
     }
     if (userType === 'hr') {

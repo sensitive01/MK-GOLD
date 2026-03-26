@@ -108,7 +108,7 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
     style.width = 800;
   }
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -138,21 +138,53 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
     fetchCustomer();
   }, [fetchCustomer]);
 
+  useEffect(() => {
+    if (props.autoOpenEdit && props.selectedUser) {
+      const e = props.selectedUser;
+      setOpenId(e._id);
+      setValues({
+        name: e.name || '',
+        phoneNumber: e.phoneNumber || '',
+        alternatePhoneNumber: e.alternatePhoneNumber || '',
+        email: e.email || '',
+        dob: e.dob || null,
+        gender: e.gender || '',
+        employmentType: e.employmentType || '',
+        organisation: e.organisation || '',
+        annualIncome: e.annualIncome || '',
+        maritalStatus: e.maritalStatus || '',
+        source: e.source || '',
+        status: e.status || 'active',
+        chooseId: e.chooseId || '',
+        idNo: e.idNo || '',
+      });
+      // Fetch profile image if exists
+      const profileImg = e.profileImage?.file;
+      if (profileImg) {
+        setImg(`${global.baseURL}/${profileImg}`);
+      } else {
+        setImg(null);
+      }
+      setCustomerModal(true);
+      props.setAutoOpenEdit(false);
+    }
+  }, [props.autoOpenEdit, props.selectedUser, props.setAutoOpenEdit, setValues, setImg]);
+
   // Form validation
   const schema = Yup.object({
     name: Yup.string().required('Name is required'),
     phoneNumber: Yup.string()
       .required('Phone is required')
       .matches(/^[0-9]+$/, 'Must be only digits')
-      .length(10),
+      ?.length(10),
     alternatePhoneNumber: Yup.string()
       .matches(/^[0-9]+$/, 'Must be only digits')
-      .length(10),
+      ?.length(10),
     email: Yup.string().required('Email id is required').email(),
     dob: Yup.string().required('DOB is required'),
     gender: Yup.string().required('Gender is required'),
-    otp: Yup.string().length(6),
-    altOtp: Yup.string().length(6),
+    otp: Yup.string()?.length(6),
+    altOtp: Yup.string()?.length(6),
     employmentType: Yup.string().required('Employment type is required'),
     organisation: Yup.string().required('Organisation is required'),
     annualIncome: Yup.string().required('Annual income is required'),
@@ -191,6 +223,7 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
       idNo: '',
       uploadId: {},
     },
+    enableReinitialize: true,
     validationSchema: schema,
     onSubmit: async (values) => {
       /*
@@ -225,6 +258,30 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
         source: values.source,
         status: values.status,
       };
+
+      if (openId) {
+        updateCustomer(openId, payload).then((data) => {
+          if (data.status === false) {
+            setNotify({
+              open: true,
+              message: data.message ?? 'Customer not updated',
+              severity: 'error',
+            });
+          } else {
+            fetchCustomer();
+            setCustomerModal(false);
+            setOpenId(null);
+            resetForm();
+            setNotify({
+              open: true,
+              message: 'Customer updated',
+              severity: 'success',
+            });
+          }
+        });
+        return;
+      }
+
       createCustomer(payload).then((data) => {
         if (data.status === false) {
           setNotify({
@@ -297,7 +354,12 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
           <Button
             variant="contained"
             startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => setCustomerModal(true)}
+            onClick={() => {
+              setOpenId(null);
+              resetForm();
+              setImg(null);
+              setCustomerModal(true);
+            }}
           >
             New Customer
           </Button>
@@ -338,6 +400,43 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
                     <TableCell align="left">
                       <Button
                         variant="contained"
+                        size="small"
+                        sx={{ mr: 1 }}
+                        startIcon={<Iconify icon="eva:edit-fill" />}
+                        onClick={() => {
+                          setOpenId(e._id);
+                          setValues({
+                            name: e.name || '',
+                            phoneNumber: e.phoneNumber || '',
+                            alternatePhoneNumber: e.alternatePhoneNumber || '',
+                            email: e.email || '',
+                            dob: e.dob || null,
+                            gender: e.gender || '',
+                            employmentType: e.employmentType || '',
+                            organisation: e.organisation || '',
+                            annualIncome: e.annualIncome || '',
+                            maritalStatus: e.maritalStatus || '',
+                            source: e.source || '',
+                            status: e.status || 'active',
+                            chooseId: e.chooseId || '',
+                            idNo: e.idNo || '',
+                          });
+                          // Fetch profile image if exists
+                          const profileImg = e.profileImage?.file;
+                          if (profileImg) {
+                            setImg(`${global.baseURL}/${profileImg}`);
+                          } else {
+                            setImg(null);
+                          }
+                          setCustomerModal(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        color="error"
                         startIcon={<DeleteIcon />}
                         onClick={() => {
                           setOpenId(e._id);
@@ -354,7 +453,7 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
                     <TableCell colSpan={7} />
                   </TableRow>
                 )}
-                {data.length === 0 && (
+                {data?.length === 0 && (
                   <TableRow>
                     <TableCell align="center" colSpan={7} sx={{ py: 3 }}>
                       <Paper
@@ -374,7 +473,7 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data.length}
+            count={data?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -411,7 +510,7 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
       >
         <Box sx={style}>
           <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 3 }}>
-            Add Customer
+            {openId ? 'Edit Customer' : 'Add Customer'}
             <Button
               sx={{ color: '#222', float: 'right' }}
               startIcon={<CloseIcon />}
@@ -768,3 +867,5 @@ Customer.propTypes = {
 };
 
 export default Customer;
+
+

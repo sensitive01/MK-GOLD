@@ -37,9 +37,9 @@ export default function CustomerDetail({ id }) {
       // Fetch files
       findFile({ uploadId: id, uploadName: 'customer' }).then((fileData) => {
         if (fileData.status) {
-          const photoFile = fileData.data.find((f) => f.uploadType === 'profile_image');
-          const sigFile = fileData.data.find((f) => f.uploadType === 'signature');
-          const docFiles = fileData.data.filter((f) => f.uploadType === 'upload_id');
+          const photoFile = fileData.data?.find((f) => f.uploadType === 'profile_image');
+          const sigFile = fileData.data?.find((f) => f.uploadType === 'signature');
+          const docFiles = fileData.data?.filter((f) => f.uploadType === 'upload_id');
           setPhoto(photoFile);
           setSignature(sigFile);
           setDocuments(docFiles);
@@ -52,7 +52,7 @@ export default function CustomerDetail({ id }) {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
 
-    const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data?.bank.length) : 0;
+    const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data?.bank?.length) : 0;
     const handleChangePage = (event, newPage) => {
       setPage(newPage);
     };
@@ -122,7 +122,7 @@ export default function CustomerDetail({ id }) {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
 
-    const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data?.address.length) : 0;
+    const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data?.address?.length) : 0;
     const handleChangePage = (event, newPage) => {
       setPage(newPage);
     };
@@ -274,8 +274,8 @@ export default function CustomerDetail({ id }) {
                   <Typography variant="subtitle2" color="text.secondary">
                     ID Document
                   </Typography>
-                  {documents.length > 0 ? (
-                    documents.map((doc, index) => (
+                  {documents?.length > 0 ? (
+                    documents?.map((doc, index) => (
                       <Card key={index} variant="outlined" sx={{ p: 1, mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Typography variant="body2" noWrap sx={{ maxWidth: 100 }}>
                           {doc.documentType || 'ID Document'}
@@ -302,3 +302,5 @@ export default function CustomerDetail({ id }) {
     </>
   );
 }
+
+

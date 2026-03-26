@@ -120,7 +120,7 @@ function UpdateGoldRate(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                 {data.map((e) => (
+                 {data?.map((e) => (
                   <MenuItem key={e} value={e}>
                     {e}
                   </MenuItem>
@@ -146,3 +146,4 @@ UpdateGoldRate.propTypes = {
 };
 
 export default UpdateGoldRate;
+

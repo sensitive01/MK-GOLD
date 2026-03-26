@@ -125,6 +125,13 @@ const Sales = mongoose.model(
         required: true,
         default: "pending",
       },
+      actionBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "employees",
+      },
+      actionAt: {
+        type: Date,
+      },
     },
     { timestamps: true }
   )

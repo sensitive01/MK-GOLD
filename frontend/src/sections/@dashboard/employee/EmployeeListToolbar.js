@@ -4,6 +4,7 @@ import { styled, alpha } from '@mui/material/styles';
 import { Toolbar, Tooltip, IconButton, Typography, OutlinedInput, InputAdornment } from '@mui/material';
 // component
 import Iconify from '../../../components/iconify';
+import global from '../../../utils/global';
 
 // ----------------------------------------------------------------------
 
@@ -37,9 +38,10 @@ EmployeeListToolbar.propTypes = {
   numSelected: PropTypes.number,
   filterName: PropTypes.string,
   onFilterName: PropTypes.func,
+  userType: PropTypes.string,
 };
 
-export default function EmployeeListToolbar({ handleDelete, numSelected, filterName, onFilterName }) {
+export default function EmployeeListToolbar({ handleDelete, numSelected, filterName, onFilterName, userType }) {
   return (
     <StyledRoot
       sx={{
@@ -66,7 +68,7 @@ export default function EmployeeListToolbar({ handleDelete, numSelected, filterN
         />
       )}
 
-      {numSelected > 0 ? (
+      {numSelected > 0 && global.canDelete(userType) ? (
         <Tooltip title="Delete">
           <IconButton
             onClick={() => {

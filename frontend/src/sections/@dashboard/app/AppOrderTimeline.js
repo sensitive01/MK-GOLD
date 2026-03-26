@@ -26,8 +26,8 @@ export default function AppOrderTimeline({ title, subheader, list, ...other }) {
         }}
       >
         <Timeline>
-          {list.map((item, index) => (
-            <OrderItem key={item.id} item={item} isLast={index === list.length - 1} />
+          {list?.map((item, index) => (
+            <OrderItem key={item.id} item={item} isLast={index === list?.length - 1} />
           ))}
         </Timeline>
       </CardContent>
@@ -73,3 +73,4 @@ function OrderItem({ item, isLast }) {
     </TimelineItem>
   );
 }
+

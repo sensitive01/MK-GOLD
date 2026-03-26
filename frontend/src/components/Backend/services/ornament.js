@@ -47,7 +47,7 @@ async function find(query = {}) {
       delete query.movedAt;
     }
 
-    if (and.length > 0) {
+    if (and?.length > 0) {
       query = {
         $and: and,
       };
@@ -130,7 +130,7 @@ async function getLatestPrint(query = {}) {
       { $limit: 1 },
     ]).exec();
 
-    if (latest.length == 0) {
+    if (latest?.length == 0) {
       throw new Error("No data found");
     }
 
@@ -245,7 +245,7 @@ async function update(payload) {
     }
     if (payload.id) {
       if (Array.isArray(payload.id)) {
-        payload.id.map(async (id) => {
+        payload.id?.map(async (id) => {
           await Sale.updateMany(
             {
               "ornaments._id": new mongoose.Types.ObjectId(id),
@@ -276,3 +276,4 @@ async function update(payload) {
 }
 
 module.exports = { find, update, groupByBranchAndMovedAt, getLatestPrint };
+

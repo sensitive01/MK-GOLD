@@ -229,7 +229,7 @@ function getUserType(req, res, next) {
 }
 
 function getBranchUser(req, res, next) {
-  User.find({ username: req.body.username }, { employee: 1 })
+  User?.find({ username: req.body.username }, { employee: 1 })
     .populate("employee")
     .then(function (data) {
       return res.json({
@@ -248,3 +248,4 @@ function getBranchUser(req, res, next) {
 }
 
 module.exports = { login, verifyLoginOtp, getUserType, getBranchUser };
+

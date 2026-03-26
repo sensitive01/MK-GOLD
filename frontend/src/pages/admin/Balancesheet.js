@@ -80,7 +80,7 @@ function getComparator(order, orderBy) {
 }
 
 function applySortFilter(array, comparator, query) {
-  const stabilizedThis = array.map((el, index) => [el, index]);
+  const stabilizedThis = array?.map((el, index) => [el, index]) || [];
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) return order;
@@ -89,7 +89,7 @@ function applySortFilter(array, comparator, query) {
   if (query) {
     return filter(array, (row) => row.branchName?.toLowerCase()?.indexOf(query.toLowerCase()) !== -1);
   }
-  return stabilizedThis.map((el) => el[0]);
+  return stabilizedThis?.map((el) => el[0]);
 }
 
 export default function Balancesheet() {
@@ -187,9 +187,9 @@ export default function Balancesheet() {
     setFilterOpen(false);
   };
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data.length) : 0;
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
   const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
-  const isNotFound = !filteredData.length && !!filterName;
+  const isNotFound = !filteredData?.length && !!filterName;
 
   function AlertComponent(props, ref) {
     return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -244,7 +244,7 @@ export default function Balancesheet() {
         <p style={{ color: '#fff' }}>
           From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
           {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}, Branch:{' '}
-          {branches.find((e) => e._id === values.branch)?.branchName}
+          {branches?.find((e) => e._id === values.branch)?.branchName}
         </p>
 
         <Card>
@@ -255,7 +255,7 @@ export default function Balancesheet() {
               <Table>
                 <ListHead order={order} orderBy={orderBy} headLabel={TABLE_HEAD} onRequestSort={handleRequestSort} />
                 <TableBody>
-                  {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
+                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
                     const {
                       _id,
                       branchName,
@@ -288,7 +288,7 @@ export default function Balancesheet() {
                       <TableCell colSpan={6} />
                     </TableRow>
                   )}
-                  {filteredData.length === 0 && (
+                  {filteredData?.length === 0 && (
                     <TableRow>
                       <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                         <Paper
@@ -303,7 +303,7 @@ export default function Balancesheet() {
                   )}
                 </TableBody>
 
-                {filteredData.length > 0 && isNotFound && (
+                {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
                       <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
@@ -333,7 +333,7 @@ export default function Balancesheet() {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data.length}
+            count={data?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -366,7 +366,7 @@ export default function Balancesheet() {
                     onBlur={handleBlur}
                     onChange={handleChange}
                   >
-                    {branches.map((e) => (
+                    {branches?.map((e) => (
                       <MenuItem key={e._id} value={e._id}>
                         {e.branchId} {e.branchName}
                       </MenuItem>
@@ -439,3 +439,7 @@ export default function Balancesheet() {
     </>
   );
 }
+
+
+
+

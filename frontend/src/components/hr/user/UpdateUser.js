@@ -43,7 +43,7 @@ function UpdateUser(props) {
     validationSchema: schema,
     onSubmit: (values) => {
       if (['branch', 'assistant_branch_manager', 'branch_executive'].includes(values.userType)) {
-        values.username = employees.find((e) => e._id === values.employee)?.phoneNumber ?? null;
+        values.username = employees?.find((e) => e._id === values.employee)?.phoneNumber ?? null;
         values.password = 'no-password';
       }
       updateUser(props.id, values).then((data) => {
@@ -76,10 +76,10 @@ function UpdateUser(props) {
         setValues({ ...data.data, employee: data.data?.employee?._id, branch: data.data?.branch?._id });
         getLoginNotCreatedEmployee().then((employee) => {
           const employees = [...employee.data];
-          if (data.data.employee && !employees.find((e) => e._id === data.data.employee._id)) {
+          if (data.data.employee && !employees?.find((e) => e._id === data.data.employee._id)) {
             employees.push(data.data.employee);
           }
-          setEmloyees(employees.filter((e) => e?._id));
+          setEmloyees(employees?.filter((e) => e?._id));
         });
       });
     }
@@ -107,7 +107,7 @@ function UpdateUser(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                {global.userTypes.map((type) => (
+                {global.userTypes?.map((type) => (
                   <MenuItem key={type.value} value={type.value}>
                     {type.label}
                   </MenuItem>
@@ -128,7 +128,7 @@ function UpdateUser(props) {
                   onBlur={handleBlur}
                   onChange={handleChange}
                 >
-                  {branches.map((e) => (
+                  {branches?.map((e) => (
                     <MenuItem value={e._id} key={e._id}>
                       {e.branchId} {e.branchName}
                     </MenuItem>
@@ -174,7 +174,7 @@ function UpdateUser(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                {employees.map((e) => (
+                {employees?.map((e) => (
                   <MenuItem value={e._id}>
                     {e.employeeId} {e.name}
                   </MenuItem>
@@ -194,3 +194,5 @@ function UpdateUser(props) {
 }
 
 export default UpdateUser;
+
+

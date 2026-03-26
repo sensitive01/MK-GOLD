@@ -55,7 +55,7 @@ function CreateUser(props) {
     onSubmit: (values) => {
       const payload = { ...values };
       if (['branch', 'assistant_branch_manager', 'branch_executive'].includes(payload.userType)) {
-        payload.username = employees.find((e) => e._id === payload.employee)?.phoneNumber ?? null;
+        payload.username = employees?.find((e) => e._id === payload.employee)?.phoneNumber ?? null;
         payload.password = 'no-password';
       } else {
         delete payload.branch;
@@ -105,7 +105,7 @@ function CreateUser(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                {global.userTypes.map((type) => (
+                {global.userTypes?.map((type) => (
                   <MenuItem key={type.value} value={type.value}>
                     {type.label}
                   </MenuItem>
@@ -126,7 +126,7 @@ function CreateUser(props) {
                   onBlur={handleBlur}
                   onChange={handleChange}
                 >
-                  {branches.map((e) => (
+                  {branches?.map((e) => (
                     <MenuItem value={e._id} key={e._id}>
                       {e.branchId} {e.branchName}
                     </MenuItem>
@@ -170,7 +170,7 @@ function CreateUser(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                {employees.map((e) => (
+                {employees?.map((e) => (
                   <MenuItem value={e._id} key={e._id}>
                     {e.employeeId} {e.name}
                   </MenuItem>
@@ -190,3 +190,5 @@ function CreateUser(props) {
 }
 
 export default CreateUser;
+
+

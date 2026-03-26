@@ -88,7 +88,7 @@ export default function ShopFilterSidebar({ openFilter, onOpenFilter, onCloseFil
                 Gender
               </Typography>
               <FormGroup>
-                {FILTER_GENDER_OPTIONS.map((item) => (
+                {FILTER_GENDER_OPTIONS?.map((item) => (
                   <FormControlLabel key={item} control={<Checkbox />} label={item} />
                 ))}
               </FormGroup>
@@ -99,7 +99,7 @@ export default function ShopFilterSidebar({ openFilter, onOpenFilter, onCloseFil
                 Category
               </Typography>
               <RadioGroup>
-                {FILTER_CATEGORY_OPTIONS.map((item) => (
+                {FILTER_CATEGORY_OPTIONS?.map((item) => (
                   <FormControlLabel key={item} value={item} control={<Radio />} label={item} />
                 ))}
               </RadioGroup>
@@ -123,7 +123,7 @@ export default function ShopFilterSidebar({ openFilter, onOpenFilter, onCloseFil
                 Price
               </Typography>
               <RadioGroup>
-                {FILTER_PRICE_OPTIONS.map((item) => (
+                {FILTER_PRICE_OPTIONS?.map((item) => (
                   <FormControlLabel key={item.value} value={item.value} control={<Radio />} label={item.label} />
                 ))}
               </RadioGroup>
@@ -134,7 +134,7 @@ export default function ShopFilterSidebar({ openFilter, onOpenFilter, onCloseFil
                 Rating
               </Typography>
               <RadioGroup>
-                {FILTER_RATING_OPTIONS.map((item, index) => (
+                {FILTER_RATING_OPTIONS?.map((item, index) => (
                   <FormControlLabel
                     key={item}
                     value={item}
@@ -178,3 +178,4 @@ export default function ShopFilterSidebar({ openFilter, onOpenFilter, onCloseFil
     </>
   );
 }
+

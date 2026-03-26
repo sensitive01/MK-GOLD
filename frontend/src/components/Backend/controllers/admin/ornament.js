@@ -4,7 +4,7 @@ async function find(req, res) {
   res.json({
     status: true,
     message: "",
-    data: await ornamentService.find(req.body ?? {}),
+    data: await ornamentService?.find(req.body ?? {}),
   });
 }
 
@@ -33,3 +33,4 @@ async function update(req, res) {
 }
 
 module.exports = { find, update, groupByBranchAndMovedAt };
+
