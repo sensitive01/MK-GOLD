@@ -539,7 +539,17 @@ export default function SaleDetail({ id, setNotify }) {
                         </TableCell>
                       </TableRow>
                       <TableRow tabIndex={-1}>
-                        <TableCell align="left">Status: {data.status}</TableCell>
+                        <TableCell align="left">Status: {sentenceCase(data.status || '')}</TableCell>
+                        {data.actionBy && (
+                          <TableCell align="left">
+                            By: {data.actionBy.name} ({data.actionBy.employeeId})
+                          </TableCell>
+                        )}
+                        {data.actionAt && (
+                          <TableCell align="left">
+                            At: {moment(data.actionAt).format('YYYY-MM-DD HH:mm:ss')}
+                          </TableCell>
+                        )}
                       </TableRow>
                     </TableBody>
                   </Table>

@@ -111,6 +111,9 @@ export default function Sale() {
   const [selected, setSelected] = useState([]);
   const [orderBy, setOrderBy] = useState(null);
   const [filterName, setFilterName] = useState('');
+  const [openLogModal, setOpenLogModal] = useState(false);
+  const handleOpenLogModal = () => setOpenLogModal(true);
+  const handleCloseLogModal = () => setOpenLogModal(false);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
@@ -488,7 +491,7 @@ export default function Sale() {
                         <TableCell align="left">{branch?.branchName}</TableCell>
                         <TableCell align="left">{sentenceCase(purchaseType)}</TableCell>
                         <TableCell align="left">
-                          <Status status={status} _id={_id} actionBy={rowBranch?.actionBy || row.actionBy} actionAt={row.actionAt} />
+                          <Status status={status} _id={_id} actionBy={row.actionBy} actionAt={row.actionAt} />
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">
@@ -648,6 +651,15 @@ export default function Sale() {
           Print
         </MenuItem>
         <MenuItem
+          onClick={() => {
+            setOpen(null);
+            handleOpenLogModal();
+          }}
+        >
+          <Iconify icon={'material-symbols:history'} sx={{ mr: 2 }} />
+          Approval Log
+        </MenuItem>
+        <MenuItem
           sx={{ color: 'error.main' }}
           onClick={() => {
             setOpen(null);
@@ -802,6 +814,48 @@ export default function Sale() {
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
       </Backdrop>
+
+      <Dialog open={openLogModal} onClose={handleCloseLogModal}>
+        <DialogTitle>Approval Log</DialogTitle>
+        <DialogContent dividers>
+          {data?.find((s) => s._id === openId) ? (
+            (() => {
+              const sale = data.find((s) => s._id === openId);
+              return (
+                <Box sx={{ minWidth: 300, py: 1 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Status: <span style={{ color: sale.status === 'approved' ? 'green' : sale.status === 'rejected' ? 'red' : 'orange' }}>
+                      {sentenceCase(sale.status || 'pending')}
+                    </span>
+                  </Typography>
+                  {sale.actionBy ? (
+                    <>
+                      <Typography variant="body2" sx={{ mt: 2 }}>
+                        <strong>Action By:</strong> {sale.actionBy.name}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Employee ID:</strong> {sale.actionBy.employeeId}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Timestamp:</strong> {moment(sale.actionAt).format('YYYY-MM-DD HH:mm:ss')}
+                      </Typography>
+                    </>
+                  ) : (
+                    <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic', color: 'text.secondary' }}>
+                      No detailed log available for this record.
+                    </Typography>
+                  )}
+                </Box>
+              );
+            })()
+          ) : (
+            <Typography>Loading...</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseLogModal}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

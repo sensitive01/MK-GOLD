@@ -54,6 +54,7 @@ function CreateSale(props) {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [selectedBank, setSelectedBank] = useState(null);
   const [selectedRelease, setSelectedRelease] = useState([]);
+  const [statusLog, setStatusLog] = useState(null);
   const payload = {
     employee: auth.user._id,
     customer: selectedUser?._id,
@@ -103,6 +104,13 @@ function CreateSale(props) {
           setOrnaments(sale.ornaments);
           setSelectedBank(sale.bank);
           setSelectedRelease(sale.release);
+          if (sale.actionBy) {
+            setStatusLog({
+              by: sale.actionBy,
+              at: sale.actionAt,
+              status: sale.status,
+            });
+          }
           // Set step to 3 to skip customer/address selection if already present
           setStep(3);
         } else {
@@ -236,6 +244,13 @@ function CreateSale(props) {
           <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 1 }}>
             Billing Details {props.id ? `(Editing: ${props.id})` : ''}
           </Typography>
+          {statusLog && (
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
+              Current Status: <strong>{sentenceCase(statusLog.status)}</strong> 
+              {statusLog.by && ` by ${statusLog.by.name} (${statusLog.by.employeeId})`}
+              {statusLog.at && ` at ${moment(statusLog.at).format('YYYY-MM-DD HH:mm:ss')}`}
+            </Typography>
+          )}
           <Box sx={{ mb: 3, p: 2, bgcolor: 'background.neutral', borderRadius: 1 }}>
             <Typography variant="subtitle1" color="primary">
               Selected Customer: <strong>{selectedUser?.name}</strong> ({selectedUser?.phoneNumber})

@@ -205,6 +205,18 @@ export default function SalePrint({ id }) {
             </tbody>
           </table>
         </div>
+        <div style={{ display: 'block', margin: '20px 0' }}>
+          {data.actionBy && (
+            <div style={{ marginTop: '10px', fontSize: '12px' }}>
+              <b>Approved By:</b> {data.actionBy.name} ({data.actionBy.employeeId})
+            </div>
+          )}
+          {data.actionAt && (
+            <div style={{ marginTop: '5px', fontSize: '12px' }}>
+              <b>Approved At:</b> {new Date(data.actionAt).toLocaleString()}
+            </div>
+          )}
+        </div>
         <hr style={{ border: '0', borderBottom: '1px solid white' }} />
         <div style={{ textAlign: 'center', margin: '20px 0' }}>
           Thanks For your billing

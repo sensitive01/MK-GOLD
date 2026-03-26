@@ -110,7 +110,6 @@ async function find(query = {}) {
           branch: { $first: "$branch" },
           customer: { $first: "$customer" },
           bank: { $first: "$bank" },
-          actionBy: { $first: "$actionBy" },
         },
       },
       {
@@ -206,7 +205,6 @@ async function findById(id) {
           branch: { $first: "$branch" },
           customer: { $first: "$customer" },
           bank: { $first: "$bank" },
-          actionBy: { $first: "$actionBy" },
         },
       },
       {

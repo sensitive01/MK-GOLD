@@ -77,7 +77,6 @@ async function find(query = {}) {
         $addFields: {
           branch: { $first: "$branch" },
           customer: { $first: "$customer" },
-          actionBy: { $first: "$actionBy" },
         },
       },
       {
