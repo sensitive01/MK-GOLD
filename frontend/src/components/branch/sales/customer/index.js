@@ -57,7 +57,8 @@ const style = {
   overflow: 'auto',
 };
 
-function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
+function Customer(props) {
+  const { step, setStep, setNotify, selectedUser, setSelectedUser } = props;
   const auth = useSelector((state) => state.auth);
   const [branch, setBranch] = useState({});
   const [token, setToken] = useState(null);
@@ -138,37 +139,7 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
     fetchCustomer();
   }, [fetchCustomer]);
 
-  useEffect(() => {
-    if (props.autoOpenEdit && props.selectedUser) {
-      const e = props.selectedUser;
-      setOpenId(e._id);
-      setValues({
-        name: e.name || '',
-        phoneNumber: e.phoneNumber || '',
-        alternatePhoneNumber: e.alternatePhoneNumber || '',
-        email: e.email || '',
-        dob: e.dob || null,
-        gender: e.gender || '',
-        employmentType: e.employmentType || '',
-        organisation: e.organisation || '',
-        annualIncome: e.annualIncome || '',
-        maritalStatus: e.maritalStatus || '',
-        source: e.source || '',
-        status: e.status || 'active',
-        chooseId: e.chooseId || '',
-        idNo: e.idNo || '',
-      });
-      // Fetch profile image if exists
-      const profileImg = e.profileImage?.file;
-      if (profileImg) {
-        setImg(`${global.baseURL}/${profileImg}`);
-      } else {
-        setImg(null);
-      }
-      setCustomerModal(true);
-      props.setAutoOpenEdit(false);
-    }
-  }, [props.autoOpenEdit, props.selectedUser, props.setAutoOpenEdit, setValues, setImg]);
+
 
   // Form validation
   const schema = Yup.object({
@@ -231,7 +202,7 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
       const res = await verifyOtp({ otp: values.otp, token });
       if (res.status === true || res.status === false) { // Simple bypass for now as per "hide functionality"
         // ... handled below
-      }
+        }
       */
       if (!img) {
         setNotify({
@@ -328,6 +299,38 @@ function Customer({ step, setStep, setNotify, selectedUser, setSelectedUser }) {
       });
     },
   });
+
+  useEffect(() => {
+    if (props.autoOpenEdit && props.selectedUser) {
+      const e = props.selectedUser;
+      setOpenId(e._id);
+      setValues({
+        name: e.name || '',
+        phoneNumber: e.phoneNumber || '',
+        alternatePhoneNumber: e.alternatePhoneNumber || '',
+        email: e.email || '',
+        dob: e.dob || null,
+        gender: e.gender || '',
+        employmentType: e.employmentType || '',
+        organisation: e.organisation || '',
+        annualIncome: e.annualIncome || '',
+        maritalStatus: e.maritalStatus || '',
+        source: e.source || '',
+        status: e.status || 'active',
+        chooseId: e.chooseId || '',
+        idNo: e.idNo || '',
+      });
+      // Fetch profile image if exists
+      const profileImg = e.profileImage?.file;
+      if (profileImg) {
+        setImg(`${global.baseURL}/${profileImg}`);
+      } else {
+        setImg(null);
+      }
+      setCustomerModal(true);
+      props.setAutoOpenEdit(false);
+    }
+  }, [props.autoOpenEdit, props.selectedUser, props.setAutoOpenEdit, setValues, setImg]);
 
   const handleSelect = (user) => {
     if (selectedUser && selectedUser._id === user._id) {

@@ -18,6 +18,7 @@ import {
   TablePagination,
   TableHead,
   Modal,
+  Checkbox,
   Paper,
 } from '@mui/material';
 import { sentenceCase } from 'change-case';
@@ -49,7 +50,8 @@ const style = {
   overflow: 'auto',
 };
 
-function Address({ step, setStep, setNotify, selectedUser }) {
+function Address(props) {
+  const { step, setStep, setNotify, selectedUser } = props;
   const [data, setData] = useState([]);
   const [openId, setOpenId] = useState(null);
   const [addressModal, setAddressModal] = useState(false);
@@ -189,6 +191,7 @@ function Address({ step, setStep, setNotify, selectedUser }) {
             <Table>
               <TableHead>
                 <TableRow>
+                  <TableCell align="left" />
                   <TableCell align="left">Address</TableCell>
                   <TableCell align="left">Landmark</TableCell>
                   <TableCell align="left">Pincode</TableCell>
@@ -199,6 +202,18 @@ function Address({ step, setStep, setNotify, selectedUser }) {
               <TableBody>
                 {data?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e) => (
                   <TableRow hover key={e._id} tabIndex={-1}>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        checked={props.selectedAddress?._id === e._id}
+                        onChange={() => {
+                          if (props.selectedAddress?._id === e._id) {
+                            props.setSelectedAddress(null);
+                          } else {
+                            props.setSelectedAddress(e);
+                          }
+                        }}
+                      />
+                    </TableCell>
                     <TableCell align="left">{sentenceCase(e.address)}</TableCell>
                     <TableCell align="left">{sentenceCase(e.landmark)}</TableCell>
                     <TableCell align="left">{e.pincode}</TableCell>
@@ -263,6 +278,12 @@ function Address({ step, setStep, setNotify, selectedUser }) {
               setNotify({
                 open: true,
                 message: 'Please add address',
+                severity: 'info',
+              });
+            } else if (!props.selectedAddress) {
+              setNotify({
+                open: true,
+                message: 'Please select an address',
                 severity: 'info',
               });
             } else {
@@ -508,6 +529,8 @@ Address.propTypes = {
   setStep: PropTypes.func,
   setNotify: PropTypes.func,
   selectedUser: PropTypes.object,
+  selectedAddress: PropTypes.object,
+  setSelectedAddress: PropTypes.func,
 };
 
 export default Address;

@@ -1,4 +1,6 @@
 import {
+  Box,
+  Button,
   TextField,
   Typography,
   FormControl,
@@ -49,6 +51,7 @@ function CreateSale(props) {
   const [proofDocument, setProofDocument] = useState([]);
   const [step, setStep] = useState(1);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedAddress, setSelectedAddress] = useState(null);
   const [selectedBank, setSelectedBank] = useState(null);
   const [selectedRelease, setSelectedRelease] = useState([]);
   const payload = {
@@ -96,6 +99,7 @@ function CreateSale(props) {
           });
           setBranch(sale.branch);
           setSelectedUser(sale.customer);
+          setSelectedAddress(sale.customer?.address?.[0]);
           setOrnaments(sale.ornaments);
           setSelectedBank(sale.bank);
           setSelectedRelease(sale.release);
@@ -211,7 +215,14 @@ function CreateSale(props) {
         {...props}
       />
 
-      <Address step={step} setStep={setStep} selectedUser={selectedUser} {...props} />
+      <Address
+        step={step}
+        setStep={setStep}
+        selectedUser={selectedUser}
+        selectedAddress={selectedAddress}
+        setSelectedAddress={setSelectedAddress}
+        {...props}
+      />
 
       <form
         onSubmit={(e) => {
@@ -240,9 +251,11 @@ function CreateSale(props) {
                 Edit Profile
               </Button>
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Address: {selectedAddress?.houseNo}, {selectedAddress?.streetName}, {selectedAddress?.city}, {selectedAddress?.pincode}
-            </Typography>
+            {selectedAddress && (
+              <Typography variant="body2" color="text.secondary">
+                Address: {selectedAddress?.houseNo || selectedAddress?.address}, {selectedAddress?.streetName || selectedAddress?.area}, {selectedAddress?.city}, {selectedAddress?.pincode}
+              </Typography>
+            )}
           </Box>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={4}>
