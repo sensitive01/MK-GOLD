@@ -84,12 +84,34 @@ async function find(query = {}) {
           from: "employees",
           localField: "actionBy",
           foreignField: "_id",
-          as: "actionBy",
+          as: "actionByEmp",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "actionBy",
+          foreignField: "_id",
+          as: "actionByUser",
         },
       },
       {
         $addFields: {
-          actionBy: { $first: "$actionBy" },
+          actionBy: { $ifNull: [{ $first: "$actionByEmp" }, { $first: "$actionByUser" }] },
+        },
+      },
+      {
+        $addFields: {
+          actionBy: {
+            $cond: {
+              if: { $eq: [{ $type: "$actionBy.username" }, "string"] },
+              then: {
+                name: "$actionBy.username",
+                employeeId: "ADMIN-USER",
+              },
+              else: "$actionBy",
+            },
+          },
         },
       },
       {
@@ -104,7 +126,68 @@ async function find(query = {}) {
 
 async function findById(id) {
   try {
-    return await Release.findById(id).populate("actionBy").exec();
+    const results = await Release.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      {
+        $lookup: {
+          from: "branches",
+          localField: "branch",
+          foreignField: "_id",
+          as: "branch",
+        },
+      },
+      {
+        $lookup: {
+          from: "customers",
+          localField: "customer",
+          foreignField: "_id",
+          as: "customer",
+        },
+      },
+      {
+        $addFields: {
+          branch: { $first: "$branch" },
+          customer: { $first: "$customer" },
+        },
+      },
+      {
+        $lookup: {
+          from: "employees",
+          localField: "actionBy",
+          foreignField: "_id",
+          as: "actionByEmp",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "actionBy",
+          foreignField: "_id",
+          as: "actionByUser",
+        },
+      },
+      {
+        $addFields: {
+          actionBy: { $ifNull: [{ $first: "$actionByEmp" }, { $first: "$actionByUser" }] },
+        },
+      },
+      {
+        $addFields: {
+          actionBy: {
+            $cond: {
+              if: { $eq: [{ $type: "$actionBy.username" }, "string"] },
+              then: {
+                name: "$actionBy.username",
+                employeeId: "ADMIN-USER",
+              },
+              else: "$actionBy",
+            },
+          },
+        },
+      },
+      { $limit: 1 },
+    ]).exec();
+    return results[0];
   } catch (err) {
     throw err;
   }
@@ -129,6 +212,21 @@ async function update(id, payload) {
   }
 }
 
+async function updateWithLog(id, setData, logEntry) {
+  try {
+    return await Release.findByIdAndUpdate(
+      id,
+      {
+        $set: setData,
+        $push: { actionLog: logEntry },
+      },
+      { returnDocument: "after" }
+    ).exec();
+  } catch (err) {
+    throw err;
+  }
+}
+
 async function remove(id) {
   try {
     return await Release.deleteMany({
@@ -141,4 +239,4 @@ async function remove(id) {
   }
 }
 
-module.exports = { find, findById, create, update, remove };
+module.exports = { find, findById, create, update, updateWithLog, remove };

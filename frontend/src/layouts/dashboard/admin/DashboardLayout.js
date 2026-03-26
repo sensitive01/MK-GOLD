@@ -37,15 +37,17 @@ export default function DashboardLayout() {
   const [open, setOpen] = useState(false);
 
   return (
-    <StyledRoot>
+    <>
       <NotificationDisplay />
-      <Header onOpenNav={() => setOpen(true)} />
+      <StyledRoot sx={{ display: 'flex' }}>
+        <Header onOpenNav={() => setOpen(true)} />
 
-      <Nav openNav={open} onCloseNav={() => setOpen(false)} />
+        <Nav openNav={open} onCloseNav={() => setOpen(false)} />
 
-      <Main>
-        <Outlet />
-      </Main>
-    </StyledRoot>
+        <Main>
+          <Outlet />
+        </Main>
+      </StyledRoot>
+    </>
   );
 }

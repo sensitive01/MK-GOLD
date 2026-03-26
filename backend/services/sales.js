@@ -40,7 +40,8 @@ async function find(query = {}) {
     } else {
       delete query.customer;
     }
-    return await Sales.aggregate([
+    const results = await Sales.aggregate([
+      // ... (existing aggregation stages here)
       {
         $match: query,
       },
@@ -117,12 +118,99 @@ async function find(query = {}) {
           from: "employees",
           localField: "actionBy",
           foreignField: "_id",
-          as: "actionBy",
+          as: "actionByEmp",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "actionBy",
+          foreignField: "_id",
+          as: "actionByUser",
         },
       },
       {
         $addFields: {
-          actionBy: { $first: "$actionBy" },
+          actionBy: { $ifNull: [{ $first: "$actionByEmp" }, { $first: "$actionByUser" }] },
+        },
+      },
+      {
+        $addFields: {
+          actionBy: {
+            $cond: {
+              if: { $eq: [{ $type: "$actionBy.username" }, "string"] },
+              then: {
+                name: "$actionBy.username",
+                employeeId: "ADMIN-USER",
+              },
+              else: "$actionBy",
+            },
+          },
+        },
+      },
+      // Resolve actionLog performers
+      {
+        $lookup: {
+          from: "employees",
+          localField: "actionLog.performedBy",
+          foreignField: "_id",
+          as: "_logEmployees",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "actionLog.performedBy",
+          foreignField: "_id",
+          as: "_logUsers",
+        },
+      },
+      {
+        $addFields: {
+          actionLog: {
+            $map: {
+              input: { $ifNull: ["$actionLog", []] },
+              as: "log",
+              in: {
+                action: "$$log.action",
+                performedBy: "$$log.performedBy",
+                performedAt: "$$log.performedAt",
+                performerName: {
+                  $let: {
+                    vars: {
+                      emp: {
+                        $arrayElemAt: [
+                          { $filter: { input: "$_logEmployees", as: "e", cond: { $eq: ["$$e._id", "$$log.performedBy"] } } },
+                          0,
+                        ],
+                      },
+                      usr: {
+                        $arrayElemAt: [
+                          { $filter: { input: "$_logUsers", as: "u", cond: { $eq: ["$$u._id", "$$log.performedBy"] } } },
+                          0,
+                        ],
+                      },
+                    },
+                    in: {
+                      $cond: {
+                        if: "$$emp",
+                        then: { name: "$$emp.name", employeeId: "$$emp.employeeId" },
+                        else: { name: { $ifNull: ["$$usr.username", "System"] }, employeeId: "ADMIN-USER" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _logEmployees: 0,
+          _logUsers: 0,
+          actionByEmp: 0,
+          actionByUser: 0,
         },
       },
       {
@@ -130,6 +218,7 @@ async function find(query = {}) {
       },
       { $sort: { createdAt: -1 } },
     ]).exec();
+    return results;
   } catch (err) {
     throw err;
   }
@@ -212,12 +301,36 @@ async function findById(id) {
           from: "employees",
           localField: "actionBy",
           foreignField: "_id",
-          as: "actionBy",
+          as: "actionByEmp",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "actionBy",
+          foreignField: "_id",
+          as: "actionByUser",
         },
       },
       {
         $addFields: {
-          actionBy: { $first: "$actionBy" },
+          actionBy: {
+            $ifNull: [{ $first: "$actionByEmp" }, { $first: "$actionByUser" }],
+          },
+        },
+      },
+      {
+        $addFields: {
+          actionBy: {
+            $cond: {
+              if: { $eq: [{ $type: "$actionBy.username" }, "string"] },
+              then: {
+                name: "$actionBy.username",
+                employeeId: "ADMIN-USER",
+              },
+              else: "$actionBy",
+            },
+          },
         },
       },
       { $limit: 1 },
@@ -266,6 +379,21 @@ async function update(id, payload) {
     return await Sales.findByIdAndUpdate(id, payload, {
       returnDocument: "after",
     }).exec();
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function updateWithLog(id, setData, logEntry) {
+  try {
+    return await Sales.findByIdAndUpdate(
+      id,
+      {
+        $set: setData,
+        $push: { actionLog: logEntry },
+      },
+      { returnDocument: "after" }
+    ).exec();
   } catch (err) {
     throw err;
   }
@@ -481,6 +609,7 @@ module.exports = {
   aggregate,
   create,
   update,
+  updateWithLog,
   remove,
   branchConsolidatedSaleReport,
   adminConsolidatedSaleReport,

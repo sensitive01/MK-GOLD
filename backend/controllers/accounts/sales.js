@@ -27,14 +27,29 @@ async function findById(req, res) {
 async function update(req, res) {
   try {
     if (req.body.status) {
-      req.body.actionBy = req.user.employee || req.user._id;
-      req.body.actionAt = new Date();
+      const performerId = req.user.employee || req.user._id;
+      const logEntry = {
+        action: req.body.status,
+        performedBy: performerId,
+        performedAt: new Date(),
+      };
+      const result = await salesService.updateWithLog(req.params.id, {
+        status: req.body.status,
+        actionBy: performerId,
+        actionAt: new Date(),
+      }, logEntry);
+      res.json({
+        status: true,
+        message: "",
+        data: result,
+      });
+    } else {
+      res.json({
+        status: true,
+        message: "",
+        data: await salesService.update(req.params.id, req.body),
+      });
     }
-    res.json({
-      status: true,
-      message: "",
-      data: await salesService.update(req.params.id, req.body),
-    });
   } catch (err) {
     res.json({
       status: false,

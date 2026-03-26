@@ -69,6 +69,13 @@ const Release = mongoose.model(
       actionAt: {
         type: Date,
       },
+      actionLog: [
+        {
+          action: { type: String },
+          performedBy: { type: mongoose.Schema.Types.ObjectId },
+          performedAt: { type: Date, default: Date.now },
+        },
+      ],
     },
     { timestamps: true }
   )

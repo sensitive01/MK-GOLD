@@ -265,12 +265,7 @@ export default function Release() {
           >
             {sentenceCase(props.status)}
           </Label>
-          {props.actionBy && (
-            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', minWidth: 120 }}>
-              By: {props.actionBy.name} ({props.actionBy.employeeId})<br />
-              At: {moment(props.actionAt).format('YYYY-MM-DD HH:mm:ss')}
-            </Typography>
-          )}
+
           {isPrivileged && (
             <Button
               size="small"

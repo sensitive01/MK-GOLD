@@ -233,7 +233,7 @@ export default function Leads() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
+      <Container maxWidth={false} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Leads Management

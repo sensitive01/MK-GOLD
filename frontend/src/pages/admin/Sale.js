@@ -23,6 +23,7 @@ import {
     Snackbar,
     Stack,
     Table,
+    TableHead,
     TableBody,
     TableCell,
     TableContainer,
@@ -309,12 +310,7 @@ export default function Sale() {
           >
             {sentenceCase(props.status)}
           </Label>
-          {props.actionBy && (
-            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', minWidth: 120 }}>
-              By: {props.actionBy.name} ({props.actionBy.employeeId})<br />
-              At: {moment(props.actionAt).format('YYYY-MM-DD HH:mm:ss')}
-            </Typography>
-          )}
+
           {isPrivileged && (
             <Button
               size="small"
@@ -409,7 +405,7 @@ export default function Sale() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
+      <Container maxWidth={false} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Sale
@@ -466,10 +462,9 @@ export default function Sale() {
             }}
           />
 
-          <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
-                <SaleListHead
+          <TableContainer sx={{ minWidth: 800 }}>
+            <Table>
+              <SaleListHead
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
@@ -559,7 +554,6 @@ export default function Sale() {
                 )}
               </Table>
             </TableContainer>
-          </Scrollbar>
 
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
@@ -861,27 +855,40 @@ export default function Sale() {
             (() => {
               const sale = data.find((s) => s._id === saleIdToEdit);
               return (
-                <Box sx={{ minWidth: 300, py: 1 }}>
+                <Box sx={{ minWidth: 400, py: 1 }}>
                   <Typography variant="subtitle2" gutterBottom>
-                    Status: <span style={{ color: sale.status === 'approved' ? 'green' : sale.status === 'rejected' ? 'red' : 'orange' }}>
+                    Current Status: <span style={{ color: sale.status === 'approved' ? 'green' : sale.status === 'rejected' ? 'red' : 'orange' }}>
                       {sentenceCase(sale.status || 'pending')}
                     </span>
                   </Typography>
-                  {sale.actionBy ? (
-                    <>
-                      <Typography variant="body2" sx={{ mt: 2 }}>
-                        <strong>Action By:</strong> {sale.actionBy.name}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>Employee ID:</strong> {sale.actionBy.employeeId}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>Timestamp:</strong> {moment(sale.actionAt).format('YYYY-MM-DD HH:mm:ss')}
-                      </Typography>
-                    </>
+                  {sale.actionLog && sale.actionLog.length > 0 ? (
+                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee', mt: 2 }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                            <TableCell><strong>Employee ID</strong></TableCell>
+                            <TableCell><strong>Name</strong></TableCell>
+                            <TableCell><strong>Action</strong></TableCell>
+                            <TableCell><strong>Timestamp</strong></TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {sale.actionLog.map((log, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell>{log.performerName?.employeeId || 'N/A'}</TableCell>
+                              <TableCell>{log.performerName?.name || 'System'}</TableCell>
+                              <TableCell sx={{ color: log.action === 'approved' ? 'green' : log.action === 'rejected' ? 'red' : 'orange', fontWeight: 'bold', textTransform: 'capitalize' }}>
+                                {log.action}
+                              </TableCell>
+                              <TableCell>{moment(log.performedAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
                   ) : (
                     <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic', color: 'text.secondary' }}>
-                      No detailed log available for this record.
+                      No action history available for this record.
                     </Typography>
                   )}
                 </Box>
