@@ -37,9 +37,10 @@ GoldRateListToolbar.propTypes = {
   numSelected: PropTypes.number,
   filterName: PropTypes.string,
   onFilterName: PropTypes.func,
+  hideDelete: PropTypes.bool,
 };
 
-export default function GoldRateListToolbar({ handleDelete, numSelected, filterName, onFilterName }) {
+export default function GoldRateListToolbar({ handleDelete, numSelected, filterName, onFilterName, hideDelete }) {
   return (
     <StyledRoot
       sx={{
@@ -66,7 +67,7 @@ export default function GoldRateListToolbar({ handleDelete, numSelected, filterN
         />
       )}
 
-      {numSelected > 0 ? (
+      {numSelected > 0 && !hideDelete ? (
         <Tooltip title="Delete">
           <IconButton
             onClick={() => {

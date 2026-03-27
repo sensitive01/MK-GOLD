@@ -22,7 +22,7 @@ async function create(req, res) {
     if ((!req.body.branch || req.body.branch === "" || req.body.branch === "null") && req.user && req.user.branch) {
         req.body.branch = req.user.branch?._id || req.user.branch;
     }
-    let createdData = await leaveService.create(req.body);
+    let createdData = await leaveService.create(req.body, req.user);
     res.json({
       status: true,
       message: "Leave Applied Successfully!",
@@ -45,7 +45,7 @@ async function update(req, res) {
     res.json({
       status: true,
       message: "",
-      data: await leaveService.update(req.params.id, req.body),
+      data: await leaveService.update(req.params.id, req.body, req.user),
     });
   } catch (err) {
     res.json({

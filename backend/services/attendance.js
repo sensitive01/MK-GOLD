@@ -4,17 +4,25 @@ const Payprocess = require("../models/payprocess");
 const Leave = require("../models/leave");
 const User = require("../models/user");
 const mongoose = require("mongoose");
+Attendance.schema.add({
+  loginTime: {
+    type: Date,
+  },
+  logoutTime: {
+    type: Date,
+  },
+});
 
 async function find(query = {}, user = null) {
   try {
     const userType = user?.userType?.toLowerCase();
     if (
-      userType === "branch" ||
-      userType === "assistant_branch_manager" ||
-      userType === "branch_executive" ||
-      userType === "telecalling"
+      ["branch", "assistant_branch_manager", "branch_executive", "telecalling", "finance", "accounts", "operations"].includes(userType)
     ) {
-      query.branch = user.branch?._id || user.branch;
+      const bId = user.branch?._id || user.branch;
+      if (bId) {
+          query.branch = bId;
+      }
       
       // If it's a sub-role, only show their own attendance
       if (userType !== "branch") {
@@ -32,7 +40,7 @@ async function find(query = {}, user = null) {
         new Date(query.createdAt["$lte"]).toISOString().replace(/T.*Z/, "T23:59:59Z")
       );
     }
-    return await Attendance.aggregate([
+    return await Attendance.collection.aggregate([
       { $match: query },
       {
         $lookup: {
@@ -57,7 +65,7 @@ async function find(query = {}, user = null) {
         },
       },
       { $sort: { createdAt: -1 } },
-    ]).exec();
+    ]).toArray();
   } catch (err) {
     throw err;
   }
@@ -123,9 +131,10 @@ async function create(payload) {
 
 async function update(id, payload) {
   try {
-    return await Attendance.findByIdAndUpdate(id, payload, {
-      returnDocument: "after",
-    }).exec();
+    const filter = { _id: new mongoose.Types.ObjectId(id) };
+    const update = { $set: payload };
+    await Attendance.collection.updateOne(filter, update);
+    return await Attendance.collection.findOne(filter);
   } catch (err) {
     throw err;
   }
@@ -461,9 +470,11 @@ async function branchStats(branchId, employeeId = null) {
     }
 
     const presentQuery = {
-      branch: branchId,
       attendanceDate: { $gte: startOfDay, $lte: endOfDay }
     };
+    if (branchId) {
+        presentQuery.branch = branchId;
+    }
     if (employeeId) {
       presentQuery.employee = employeeId;
     }

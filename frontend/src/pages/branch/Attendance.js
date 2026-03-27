@@ -24,6 +24,8 @@ import {
     TableContainer,
     TablePagination,
     TableRow,
+    Tabs,
+    Tab,
     Typography,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
@@ -35,18 +37,8 @@ import Scrollbar from '../../components/scrollbar';
 // sections
 import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashboard/attendance';
 // mock
-import { deleteAttendanceById, getAttendance, getBranchAttendanceStats } from '../../apis/branch/attendance';
+import { deleteAttendanceById, getAttendance, getBranchAttendanceStats, updateAttendance } from '../../apis/branch/attendance';
 import global from '../../utils/global';
-
-// ----------------------------------------------------------------------
-
-const TABLE_HEAD = [
-  { id: 'employeeId', label: 'Employee Id', alignRight: false },
-  { id: 'employeeName', label: 'Employee Name', alignRight: false },
-  { id: 'attendance', label: 'Employee Photo', alignRight: false },
-  { id: 'createdAt', label: 'Date', alignRight: false },
-  { id: '' },
-];
 
 // ----------------------------------------------------------------------
 
@@ -95,7 +87,32 @@ export default function Attendance() {
   const [data, setData] = useState([]);
   const [stats, setStats] = useState({ total: 0, present: 0, absent: 0 });
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [openLogoutModal, setOpenLogoutModal] = useState(false);
+  const [logoutId, setLogoutId] = useState(null);
   const [deleteType, setDeleteType] = useState('single');
+  const [currentTab, setCurrentTab] = useState('all_attendance');
+  
+  const userType = auth.user.userType?.toLowerCase();
+  const isManager = ['branch', 'assistant_branch_manager'].includes(userType);
+  const isHRAdmin = ['hr', 'admin'].includes(userType);
+
+  const handleLogout = (id) => {
+    setLogoutId(id);
+    setOpenLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    updateAttendance(logoutId, { logoutTime: new Date() }).then(() => {
+      fetchData();
+      setOpenLogoutModal(false);
+      setNotify({
+        open: true,
+        message: 'Logout marked successfully!',
+        severity: 'success',
+      });
+    });
+  };
+
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
 
@@ -106,16 +123,18 @@ export default function Attendance() {
   });
 
   const fetchData = useCallback(
-    (
-      query = {
-        createdAt: {
+    (query = {}) => {
+      if (currentTab === 'my_attendance') {
+        query.employee = auth.user.employee?._id || auth.user.employee;
+      } else {
+        query.createdAt = {
           $gte: moment()?.format("YYYY-MM-DD"),
           $lte: moment()?.format("YYYY-MM-DD"),
-        },
+        };
       }
-    ) => {
+      
       getAttendance(query).then((data) => {
-        setData(data.data);
+        setData(data.data || []);
         setOpenBackdrop(false);
       });
       getBranchAttendanceStats().then((data) => {
@@ -124,12 +143,12 @@ export default function Attendance() {
         }
       });
     },
-    []
+    [currentTab, auth.user.employee]
   );
 
   useEffect(() => {
     fetchData();
-  }, [fetchData, toggleContainer]);
+  }, [fetchData, toggleContainer, currentTab]);
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -208,6 +227,17 @@ export default function Attendance() {
     });
   };
 
+  const TABLE_HEAD = [
+    ...(currentTab === 'all_attendance' ? [
+        { id: 'employeeId', label: 'Employee Id', alignRight: false },
+        { id: 'employeeName', label: 'Employee Name', alignRight: false },
+    ] : []),
+    { id: 'attendance', label: 'Photo', alignRight: false },
+    { id: 'loginTime', label: 'Login Time', alignRight: false },
+    { id: 'logoutTime', label: 'Logout Time', alignRight: false },
+    { id: '' },
+  ];
+
   const style = {
     position: 'absolute',
     top: '50%',
@@ -255,41 +285,58 @@ export default function Attendance() {
       </Snackbar>
 
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
+          <Typography variant="h4" sx={{ color: '#fff' }}>
             Attendance
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-              setToggleContainerType('create');
+          {currentTab === 'my_attendance' && (
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setToggleContainer(!toggleContainer);
+                setToggleContainerType('create');
+              }}
+            >
+              Mark Attendance
+            </Button>
+          )}
+        </Stack>
+
+        <Box sx={{ mb: 3 }}>
+          <Tabs
+            value={currentTab}
+            onChange={(event, newValue) => setCurrentTab(newValue)}
+            sx={{
+              '& .MuiTab-root': { color: 'white', opacity: 0.7 },
+              '& .Mui-selected': { color: 'white !important', opacity: 1 },
+              '& .MuiTabs-indicator': { backgroundColor: 'white' },
             }}
           >
-            New Attendance
-          </Button>
-        </Stack>
+            {(isManager || isHRAdmin) && <Tab value="all_attendance" label="All Attendance" />}
+            <Tab value="my_attendance" label="My Attendance" />
+          </Tabs>
+        </Box>
 
         <Grid container spacing={3} mb={5}>
           <Grid item xs={12} sm={4}>
             <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
               <Typography variant="h6">
-                {(auth.user.userType === 'assistant_branch_manager' || auth.user.userType === 'branch_executive' || auth.user.userType === 'telecalling') ? 'Current Month Attendance' : 'Total Employees'}
+                {currentTab === 'my_attendance' ? 'Current Month Attendance' : 'Total Employees'}
               </Typography>
-              <Typography variant="h4">{stats.total}</Typography>
+              <Typography variant="h4">{stats?.total || 0}</Typography>
             </Card>
           </Grid>
           <Grid item xs={12} sm={4}>
             <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
               <Typography variant="h6">Present Today</Typography>
-              <Typography variant="h4">{stats.present}</Typography>
+              <Typography variant="h4">{stats?.present || 0}</Typography>
             </Card>
           </Grid>
           <Grid item xs={12} sm={4}>
             <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'error.main', color: 'white' }}>
               <Typography variant="h6">Absent Today</Typography>
-              <Typography variant="h4">{stats.absent}</Typography>
+              <Typography variant="h4">{stats?.absent || 0}</Typography>
             </Card>
           </Grid>
         </Grid>
@@ -319,7 +366,7 @@ export default function Attendance() {
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, employee, attendance, createdAt } = row;
+                    const { _id, employee, attendance, createdAt, loginTime, logoutTime } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -327,13 +374,17 @@ export default function Attendance() {
                         <TableCell padding="checkbox">
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
-                        <TableCell align="left">{employee?.employeeId}</TableCell>
-                        <TableCell align="left">{employee?.name}</TableCell>
+                        {currentTab === 'all_attendance' && (
+                          <>
+                            <TableCell align="left">{employee?.employeeId}</TableCell>
+                            <TableCell align="left">{employee?.name}</TableCell>
+                          </>
+                        )}
                         <TableCell align="left">
                           {attendance?.uploadedFile ? (
                             <img
                               key={attendance._id ?? _id}
-                              src={`${global.baseURL}/${attendance?.uploadedFile}`}
+                              src={attendance?.uploadedFile?.startsWith('http') ? attendance.uploadedFile : `${global.baseURL}/${attendance?.uploadedFile}`}
                               alt="attendance"
                               style={{ width: '80px' }}
                             />
@@ -341,7 +392,28 @@ export default function Attendance() {
                             'No Image'
                           )}
                         </TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                        <TableCell align="left">{moment(loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}</TableCell>
+                        <TableCell align="left">
+                          {logoutTime ? (
+                            moment(logoutTime).format('DD-MM-YYYY HH:mm:ss')
+                          ) : (
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => handleLogout(_id)}
+                              sx={{
+                                color: 'error.main',
+                                borderColor: 'error.main',
+                                '&:hover': {
+                                  bgcolor: 'rgba(255, 0, 0, 0.08)',
+                                  borderColor: 'error.dark',
+                                },
+                              }}
+                            >
+                              Logout
+                            </Button>
+                          )}
+                        </TableCell>
                         <TableCell align="right">
                           <IconButton
                             size="large"
@@ -365,11 +437,7 @@ export default function Attendance() {
                   {filteredData?.length === 0 && (
                     <TableRow>
                       <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
-                          }}
-                        >
+                        <Paper sx={{ textAlign: 'center' }}>
                           <Typography paragraph>No data in table</Typography>
                         </Paper>
                       </TableCell>
@@ -381,15 +449,8 @@ export default function Attendance() {
                   <TableBody>
                     <TableRow>
                       <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
-                          }}
-                        >
-                          <Typography variant="h6" paragraph>
-                            Not found
-                          </Typography>
-
+                        <Paper sx={{ textAlign: 'center' }}>
+                          <Typography variant="h6" paragraph>Not found</Typography>
                           <Typography variant="body2">
                             No results found for &nbsp;
                             <strong>&quot;{filterName}&quot;</strong>.
@@ -420,14 +481,12 @@ export default function Attendance() {
         <Container maxWidth="xl">
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
             <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-              Create Attendance
+              Mark Attendance
             </Typography>
             <Button
               variant="contained"
               startIcon={<Iconify icon="mdi:arrow-left" />}
-              onClick={() => {
-                setToggleContainer(!toggleContainer);
-              }}
+              onClick={() => setToggleContainer(!toggleContainer)}
             >
               Back
             </Button>
@@ -445,13 +504,8 @@ export default function Attendance() {
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         PaperProps={{
           sx: {
-            p: 1,
-            width: 140,
-            '& .MuiMenuItem-root': {
-              px: 1,
-              typography: 'body2',
-              borderRadius: 0.75,
-            },
+            p: 1, width: 140,
+            '& .MuiMenuItem-root': { px: 1, typography: 'body2', borderRadius: 0.75 },
           },
         }}
       >
@@ -468,36 +522,33 @@ export default function Attendance() {
         </MenuItem>
       </Popover>
 
-      <Modal
-        open={openDeleteModal}
-        onClose={handleCloseDeleteModal}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
+      <Modal open={openDeleteModal} onClose={handleCloseDeleteModal}>
         <Box sx={style}>
-          <Typography id="modal-modal-title" variant="h6" component="h2">
-            Delete
-          </Typography>
-          <Typography id="modal-modal-description" sx={{ mt: 3 }}>
-            Do you want dates delete?
-          </Typography>
-          <Stack direction="row" alignItems="center" spacing={2} mt={3}>
+          <Typography variant="h6">Delete Confirmation</Typography>
+          <Typography sx={{ mt: 3 }}>Do you want to delete this record?</Typography>
+          <Stack direction="row" spacing={2} mt={3}>
             <Button
               variant="contained"
               color="error"
               onClick={() => {
-                if (deleteType === 'single') {
-                  handleDelete();
-                } else {
-                  handleDeleteSelected();
-                }
+                if (deleteType === 'single') handleDelete();
+                else handleDeleteSelected();
               }}
             >
               Delete
             </Button>
-            <Button variant="contained" onClick={handleCloseDeleteModal}>
-              Close
-            </Button>
+            <Button variant="contained" onClick={handleCloseDeleteModal}>Close</Button>
+          </Stack>
+        </Box>
+      </Modal>
+
+      <Modal open={openLogoutModal} onClose={() => setOpenLogoutModal(false)}>
+        <Box sx={style}>
+          <Typography variant="h6">Logout Confirmation</Typography>
+          <Typography sx={{ mt: 3 }}>Are you sure you want to mark logout?</Typography>
+          <Stack direction="row" spacing={2} mt={3}>
+            <Button variant="contained" color="error" onClick={confirmLogout}>Logout</Button>
+            <Button variant="contained" onClick={() => setOpenLogoutModal(false)}>Cancel</Button>
           </Stack>
         </Box>
       </Modal>
@@ -508,7 +559,3 @@ export default function Attendance() {
     </>
   );
 }
-
-
-
-

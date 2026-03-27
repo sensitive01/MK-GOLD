@@ -148,6 +148,7 @@ export default function Router() {
         { path: 'sale', element: <AccountsSale /> },
         { path: 'balancesheet', element: <AccountsBalancesheet /> },
         { path: 'leave', element: <AccountsLeave /> },
+        { path: 'attendance', element: <BranchAttendance /> },
       ],
     },
     {
@@ -196,6 +197,8 @@ export default function Router() {
       children: [
         { element: <Navigate to="/operations/dashboard" />, index: true },
         { path: 'dashboard', element: <OperationsDashboard /> },
+        { path: 'leave', element: <BranchLeave /> },
+        { path: 'attendance', element: <BranchAttendance /> },
       ],
     },
     {
@@ -208,6 +211,14 @@ export default function Router() {
       children: [
         { element: <Navigate to="/finance/dashboard" />, index: true },
         { path: 'dashboard', element: <FinanceDashboard /> },
+        { path: 'gold-rate', element: <AccountsGoldRate /> },
+        { path: 'branch', element: <AccountsBranch /> },
+        { path: 'fund', element: <AccountsFund /> },
+        { path: 'expense', element: <AccountsExpense /> },
+        { path: 'sale', element: <AccountsSale /> },
+        { path: 'balancesheet', element: <AccountsBalancesheet /> },
+        { path: 'leave', element: <AccountsLeave /> },
+        { path: 'attendance', element: <BranchAttendance /> },
       ],
     },
     {

@@ -84,14 +84,14 @@ async function remove(req, res) {
 async function getStats(req, res) {
   try {
     const branchId = req.user.branch?._id || req.user.branch;
-    if (!branchId) {
-      return res.json({ status: false, message: "Branch ID not found" });
-    }
-    
-    let employeeId = null;
     const type = req.user.userType?.toLowerCase();
-    if (type === "assistant_branch_manager" || type === "branch_executive" || type === "telecalling") {
+    let employeeId = null;
+    if (["assistant_branch_manager", "branch_executive", "telecalling", "finance", "accounts", "operations"].includes(type)) {
       employeeId = req.user.employee?._id || req.user.employee;
+    }
+
+    if (!branchId && !employeeId) {
+      return res.json({ status: false, message: "No branch or employee ID found", data: { total: 0, present: 0, absent: 0 } });
     }
     
     const stats = await attendanceService.branchStats(branchId, employeeId);

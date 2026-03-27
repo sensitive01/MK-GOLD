@@ -3,9 +3,8 @@ const fileUploadService = require("../../services/fileupload");
 
 async function find(req, res) {
   const query = req.body ?? {};
-  if (req.user && req.user.employee) {
-    query.employee = req.user.employee;
-  }
+  // Removed restrictive query.employee = req.user.employee overwrite here.
+  // The leaveService now handles role-based filtering (Manager sees branch, employees see self) correctly.
   res.json({
     status: true,
     message: "",
@@ -31,7 +30,7 @@ async function create(req, res) {
         req.body.branch = req.user.branch?._id || req.user.branch;
       }
     }
-    let createdData = await leaveService.create(req.body);
+    let createdData = await leaveService.create(req.body, req.user);
     res.json({
       status: true,
       message: "Leave Applied Successfully!",
@@ -52,7 +51,7 @@ async function create(req, res) {
 async function update(req, res) {
   try {
     const previousLeave = await leaveService.findById(req.params.id);
-    const updatedLeave = await leaveService.update(req.params.id, req.body);
+    const updatedLeave = await leaveService.update(req.params.id, req.body, req.user);
     
     // Notification logic for BM approval moving to HR
     if (req.user && req.user.userType?.toLowerCase() === "branch" && req.body.bmStatus === "approved") {

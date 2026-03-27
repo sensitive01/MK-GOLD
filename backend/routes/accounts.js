@@ -14,7 +14,7 @@ const profile = require("../controllers/accounts/profile");
 const balancesheet = require("../controllers/accounts/balancesheet");
 const leave = require("../controllers/accounts/leave");
 const fileUpload = require("../controllers/accounts/fileupload");
-const { isAccounts } = require("../middlewares/authorization");
+const { isAccounts, notFinance } = require("../middlewares/authorization");
 const multer = require("../config/multer");
 
 accountsRouter.get("/", function (req, res, next) {
@@ -26,9 +26,9 @@ accountsRouter.get("/dashboard/get", dashboard.get);
 accountsRouter.get("/goldrate/get", goldRate.find);
 accountsRouter.post("/goldrate/get", goldRate.find);
 accountsRouter.get("/goldrate/get/:id", goldRate.findById);
-accountsRouter.post("/goldrate/create", goldRate.create);
-accountsRouter.post("/goldrate/update/:id", goldRate.update);
-accountsRouter.post("/goldrate/delete/:id", goldRate.remove);
+accountsRouter.post("/goldrate/create", notFinance, goldRate.create);
+accountsRouter.post("/goldrate/update/:id", notFinance, goldRate.update);
+accountsRouter.post("/goldrate/delete/:id", notFinance, goldRate.remove);
 
 accountsRouter.get("/branch/get", branch.find);
 accountsRouter.post("/branch/get", branch.find);

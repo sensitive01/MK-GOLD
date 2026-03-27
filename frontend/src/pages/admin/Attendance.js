@@ -1,5 +1,6 @@
 import { filter } from 'lodash';
 import { forwardRef, useEffect, useRef, useState, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
@@ -25,6 +26,8 @@ import {
     TableContainer,
     TablePagination,
     TableRow,
+    Tabs,
+    Tab,
     TextField,
     Typography,
 } from '@mui/material';
@@ -49,16 +52,6 @@ import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashb
 // mock
 import { deleteAttendanceById, getAttendance } from '../../apis/admin/attendance';
 import global from '../../utils/global';
-
-// ----------------------------------------------------------------------
-
-const TABLE_HEAD = [
-  { id: 'employeeId', label: 'Employee Id', alignRight: false },
-  { id: 'employeeName', label: 'Employee Name', alignRight: false },
-  { id: 'attendance', label: 'Employee Photo', alignRight: false },
-  { id: 'createdAt', label: 'Date', alignRight: false },
-  { id: '' },
-];
 
 // ----------------------------------------------------------------------
 
@@ -92,6 +85,7 @@ function applySortFilter(array, comparator, query) {
 }
 
 export default function Attendance() {
+  const auth = useSelector((state) => state.auth);
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
@@ -101,10 +95,11 @@ export default function Attendance() {
   const [orderBy, setOrderBy] = useState(null);
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [toggleContainer] = useState(false);
   const [data, setData] = useState([]);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
+  const [currentTab, setCurrentTab] = useState('all_attendance');
+  
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
   const [filterOpen, setFilterOpen] = useState(null);
@@ -144,25 +139,26 @@ export default function Attendance() {
   });
 
   const fetchData = useCallback(
-    (
-      query = {
-        createdAt: {
-          $gte: values.fromDate ?? moment()?.format("YYYY-MM-DD"),
-          $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
-        },
+    (query = {}) => {
+      if (currentTab === 'my_attendance') {
+        query.employee = auth.user.employee?._id || auth.user.employee;
+      } else if (!query.createdAt) {
+          query.createdAt = {
+            $gte: values.fromDate ?? moment()?.format("YYYY-MM-DD"),
+            $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
+          };
       }
-    ) => {
       getAttendance(query).then((data) => {
-        setData(data.data);
+        setData(data.data || []);
         setOpenBackdrop(false);
       });
     },
-    [values.fromDate, values.toDate]
+    [currentTab, auth.user.employee, values.fromDate, values.toDate]
   );
 
   useEffect(() => {
     fetchData();
-  }, [toggleContainer, fetchData]);
+  }, [fetchData]);
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -256,13 +252,16 @@ export default function Attendance() {
     FileSaver.saveAs(data, `${fileName}.xlsx`);
   };
 
-  const handleFilterOpen = () => {
-    setFilterOpen(true);
-  };
-
-  const handleFilterClose = () => {
-    setFilterOpen(false);
-  };
+  const TABLE_HEAD = [
+    ...(currentTab === 'all_attendance' ? [
+        { id: 'employeeId', label: 'Employee Id', alignRight: false },
+        { id: 'employeeName', label: 'Employee Name', alignRight: false },
+    ] : []),
+    { id: 'attendance', label: 'Photo', alignRight: false },
+    { id: 'loginTime', label: 'Login Time', alignRight: false },
+    { id: 'logoutTime', label: 'Logout Time', alignRight: false },
+    { id: '' },
+  ];
 
   const style = {
     position: 'absolute',
@@ -289,183 +288,131 @@ export default function Attendance() {
       </Helmet>
 
       <Snackbar
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         open={notify.open}
-        onClose={() => {
-          setNotify({ ...notify, open: false });
-        }}
+        onClose={() => setNotify({ ...notify, open: false })}
         autoHideDuration={3000}
       >
-        <Alert
-          onClose={() => {
-            setNotify({ ...notify, open: false });
-          }}
-          severity={notify.severity}
-          sx={{ width: '100%', color: 'white' }}
-        >
+        <Alert onClose={() => setNotify({ ...notify, open: false })} severity={notify.severity} sx={{ width: '100%', color: 'white' }}>
           {notify.message}
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+      <Container maxWidth="xl">
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
+          <Typography variant="h4" sx={{ color: '#fff' }}>
             Attendance
           </Typography>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
-              onClick={handleFilterOpen}
-            >
-              Filter
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="carbon:document-export" />}
-              onClick={() => {
-                handleExport(
-                  data?.map((e) => ({
-                    EmployeeId: e?.employee?.employeeId,
-                    EmployeeName: e?.employee?.name,
-                    Date: e.createdAt,
-                  })),
-                  'Attandance'
-                );
-              }}
-            >
-              Export
-            </Button>
-          </Stack>
         </Stack>
 
-        <p style={{ color: '#fff' }}>
-          From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
-          {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
-        </p>
-
         <Card>
-          <AttendanceListToolbar
-            numSelected={selected?.length}
-            filterName={filterName}
-            onFilterName={handleFilterByName}
-            handleDelete={() => {
-              setDeleteType('selected');
-              handleOpenDeleteModal();
-            }}
-          />
+          <Box sx={{ width: '100%' }}>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Tabs value={currentTab} onChange={(e, v) => setCurrentTab(v)} aria-label="attendance tabs">
+                <Tab value="all_attendance" label="All Attendance" />
+                <Tab value="my_attendance" label="My Attendance" />
+              </Tabs>
+            </Box>
+            
+            <Box sx={{ p: 3 }}>
+              {currentTab === 'all_attendance' && (
+                <Button variant="contained" startIcon={<Iconify icon="material-symbols:filter-alt-off" />} onClick={() => setFilterOpen(true)} sx={{ float: 'right', mx: '10px' }}>
+                  Filter
+                </Button>
+              )}
+              <Button variant="contained" startIcon={<Iconify icon="carbon:document-export" />} onClick={() => {
+                handleExport(data?.map(e => ({ EmployeeId: e?.employee?.employeeId, EmployeeName: e?.employee?.name, Date: e.createdAt })), 'Attendance');
+              }} sx={{ float: 'right' }}>
+                Export
+              </Button>
 
-          <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
-                <AttendanceListHead
-                  order={order}
-                  orderBy={orderBy}
-                  headLabel={TABLE_HEAD}
-                  rowCount={data?.length || 0}
-                  numSelected={selected?.length}
-                  onRequestSort={handleRequestSort}
-                  onSelectAllClick={handleSelectAllClick}
-                />
-                <TableBody>
-                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, employee, attendance, createdAt } = row;
-                    const selectedData = selected.indexOf(_id) !== -1;
+              {currentTab === 'all_attendance' && (
+                <p style={{ color: '#fff' }}>
+                  From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date: {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
+                </p>
+              )}
 
-                    return (
-                      <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                        </TableCell>
-                        <TableCell align="left">{employee?.employeeId}</TableCell>
-                        <TableCell align="left">{employee?.name}</TableCell>
-                        <TableCell align="left">
-                          {attendance?.uploadedFile ? (
-                            <img
-                              key={attendance._id ?? _id}
-                              src={`${global.baseURL}/${attendance?.uploadedFile}`}
-                              alt="attendance"
-                              style={{ width: '80px' }}
-                            />
-                          ) : (
-                            'No Image'
-                          )}
-                        </TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            size="large"
-                            color="inherit"
-                            onClick={(e) => {
-                              setOpenId(_id);
-                              handleOpenMenu(e);
-                            }}
-                          >
-                            <Iconify icon={'eva:more-vertical-fill'} />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {emptyRows > 0 && (
-                    <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={6} />
-                    </TableRow>
-                  )}
-                  {filteredData?.length === 0 && (
-                    <TableRow>
-                      <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
-                          }}
-                        >
-                          <Typography paragraph>No data in table</Typography>
-                        </Paper>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
+              <AttendanceListToolbar
+                numSelected={selected?.length}
+                filterName={filterName}
+                onFilterName={handleFilterByName}
+                handleDelete={() => { setDeleteType('selected'); handleOpenDeleteModal(); }}
+              />
 
-                {filteredData?.length > 0 && isNotFound && (
-                  <TableBody>
-                    <TableRow>
-                      <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
-                          }}
-                        >
-                          <Typography variant="h6" paragraph>
-                            Not found
-                          </Typography>
+              <Scrollbar>
+                <TableContainer sx={{ minWidth: 800 }}>
+                  <Table>
+                    <AttendanceListHead
+                      order={order}
+                      orderBy={orderBy}
+                      headLabel={TABLE_HEAD}
+                      rowCount={data?.length || 0}
+                      numSelected={selected?.length}
+                      onRequestSort={handleRequestSort}
+                      onSelectAllClick={handleSelectAllClick}
+                    />
+                    <TableBody>
+                      {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
+                        const { _id, employee, attendance, createdAt } = row;
+                        const selectedData = selected.indexOf(_id) !== -1;
+                        return (
+                          <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
+                            <TableCell padding="checkbox">
+                              <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                            </TableCell>
+                            {currentTab === 'all_attendance' && (
+                              <>
+                                <TableCell align="left">{employee?.employeeId}</TableCell>
+                                <TableCell align="left">{employee?.name}</TableCell>
+                              </>
+                            )}
+                            <TableCell align="left">
+                              {attendance?.uploadedFile ? (
+                                <img src={attendance?.uploadedFile?.startsWith('http') ? attendance.uploadedFile : `${global.baseURL}/${attendance?.uploadedFile}`} alt="attendance" style={{ width: '80px' }} />
+                              ) : 'No Image'}
+                            </TableCell>
+                            <TableCell align="left">{moment(row?.loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}</TableCell>
+                            <TableCell align="left">{row.logoutTime ? moment(row.logoutTime).format('DD-MM-YYYY HH:mm:ss') : 'N/A'}</TableCell>
+                            <TableCell align="right">
+                              <IconButton size="large" color="inherit" onClick={(e) => { setOpenId(_id); handleOpenMenu(e); }}>
+                                <Iconify icon={'eva:more-vertical-fill'} />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {emptyRows > 0 && <TableRow style={{ height: 53 * emptyRows }}><TableCell colSpan={6} /></TableRow>}
+                      {filteredData?.length === 0 && (
+                        <TableRow><TableCell align="center" colSpan={6} sx={{ py: 3 }}><Paper sx={{ textAlign: 'center' }}><Typography paragraph>No data in table</Typography></Paper></TableCell></TableRow>
+                      )}
+                    </TableBody>
+                    {filteredData?.length > 0 && isNotFound && (
+                      <TableBody>
+                        <TableRow>
+                          <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
+                            <Paper sx={{ textAlign: 'center' }}>
+                              <Typography variant="h6" paragraph>Not found</Typography>
+                              <Typography variant="body2">No results found for <strong>&quot;{filterName}&quot;</strong>.</Typography>
+                            </Paper>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    )}
+                  </Table>
+                </TableContainer>
+              </Scrollbar>
 
-                          <Typography variant="body2">
-                            No results found for &nbsp;
-                            <strong>&quot;{filterName}&quot;</strong>.
-                            <br /> Try checking for typos or using complete words.
-                          </Typography>
-                        </Paper>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                )}
-              </Table>
-            </TableContainer>
-          </Scrollbar>
-
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={data?.length || 0}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-          />
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25]}
+                component="div"
+                count={data?.length || 0}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+              />
+            </Box>
+          </Box>
         </Card>
       </Container>
 
@@ -475,88 +422,37 @@ export default function Attendance() {
         onClose={handleCloseMenu}
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        PaperProps={{
-          sx: {
-            p: 1,
-            width: 140,
-            '& .MuiMenuItem-root': {
-              px: 1,
-              typography: 'body2',
-              borderRadius: 0.75,
-            },
-          },
-        }}
+        PaperProps={{ sx: { p: 1, width: 140, '& .MuiMenuItem-root': { px: 1, typography: 'body2', borderRadius: 0.75 } } }}
       >
-        <MenuItem
-          sx={{ color: 'error.main' }}
-          onClick={() => {
-            setOpen(null);
-            setDeleteType('single');
-            handleOpenDeleteModal();
-          }}
-        >
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-          Delete
+        <MenuItem sx={{ color: 'error.main' }} onClick={() => { setOpen(null); setDeleteType('single'); handleOpenDeleteModal(); }}>
+          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} /> Delete
         </MenuItem>
       </Popover>
 
-      <Modal
-        open={openDeleteModal}
-        onClose={handleCloseDeleteModal}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
+      <Modal open={openDeleteModal} onClose={handleCloseDeleteModal}>
         <Box sx={style}>
-          <Typography id="modal-modal-title" variant="h6" component="h2">
-            Delete
-          </Typography>
-          <Typography id="modal-modal-description" sx={{ mt: 3 }}>
-            Do you want dates delete?
-          </Typography>
-          <Stack direction="row" alignItems="center" spacing={2} mt={3}>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => {
-                if (deleteType === 'single') {
-                  handleDelete();
-                } else {
-                  handleDeleteSelected();
-                }
-              }}
-            >
-              Delete
-            </Button>
-            <Button variant="contained" onClick={handleCloseDeleteModal}>
-              Close
-            </Button>
+          <Typography variant="h6">Delete Confirmation</Typography>
+          <Typography sx={{ mt: 3 }}>Do you want to delete this record?</Typography>
+          <Stack direction="row" spacing={2} mt={3}>
+            <Button variant="contained" color="error" onClick={() => { if (deleteType === 'single') handleDelete(); else handleDeleteSelected(); }}>Delete</Button>
+            <Button variant="contained" onClick={handleCloseDeleteModal}>Close</Button>
           </Stack>
         </Box>
       </Modal>
 
-      <Dialog open={filterOpen} onClose={handleFilterClose}>
-        <form
-          ref={form}
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmit(e);
-          }}
-          autoComplete="off"
-        >
+      <Dialog open={filterOpen} onClose={() => setFilterOpen(false)}>
+        <form ref={form} onSubmit={(e) => { e.preventDefault(); handleSubmit(e); }} autoComplete="off">
           <DialogTitle>Filter</DialogTitle>
           <DialogContent>
             <Grid container spacing={3} sx={{ p: 1 }}>
               <Grid item xs={12} sm={6}>
                 <FormControl sx={{ minWidth: 120 }}>
-                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
+                  <LocalizationProvider dateAdapter={AdapterMoment}>
                     <DesktopDatePicker
-                      label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
+                      label="From Date"
                       inputFormat="MM/DD/YYYY"
-                      name="fromDate"
                       value={values.fromDate}
-                      onChange={(value) => {
-                        setFieldValue('fromDate', value, true);
-                      }}
+                      onChange={(v) => setFieldValue('fromDate', v)}
                       renderInput={(params) => <TextField {...params} fullWidth />}
                     />
                   </LocalizationProvider>
@@ -564,15 +460,12 @@ export default function Attendance() {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl sx={{ minWidth: 120 }}>
-                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
+                  <LocalizationProvider dateAdapter={AdapterMoment}>
                     <DesktopDatePicker
-                      label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
+                      label="To Date"
                       inputFormat="MM/DD/YYYY"
-                      name="toDate"
                       value={values.toDate}
-                      onChange={(value) => {
-                        setFieldValue('toDate', value, true);
-                      }}
+                      onChange={(v) => setFieldValue('toDate', v)}
                       renderInput={(params) => <TextField {...params} fullWidth />}
                     />
                   </LocalizationProvider>
@@ -581,28 +474,9 @@ export default function Attendance() {
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => {
-                setFilterOpen(false);
-                resetForm();
-                fetchData({
-                  createdAt: {
-                    $gte: moment()?.format("YYYY-MM-DD"),
-                    $lte: moment()?.format("YYYY-MM-DD"),
-                  },
-                });
-              }}
-            >
-              Clear
-            </Button>
-            <Button variant="contained" onClick={handleFilterClose}>
-              Close
-            </Button>
-            <Button variant="contained" type="submit">
-              Filter
-            </Button>
+            <Button variant="contained" color="error" onClick={() => { setFilterOpen(false); resetForm(); fetchData({ createdAt: { $gte: moment().format("YYYY-MM-DD"), $lte: moment().format("YYYY-MM-DD") } }); }}>Clear</Button>
+            <Button variant="contained" onClick={() => setFilterOpen(false)}>Close</Button>
+            <Button variant="contained" type="submit">Filter</Button>
           </DialogActions>
         </form>
       </Dialog>
@@ -613,7 +487,3 @@ export default function Attendance() {
     </>
   );
 }
-
-
-
-

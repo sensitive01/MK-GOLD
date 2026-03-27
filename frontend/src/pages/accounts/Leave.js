@@ -9,6 +9,7 @@ import {
     Button,
     Card,
     Checkbox,
+    Chip,
     CircularProgress,
     Container,
     IconButton,
@@ -22,11 +23,16 @@ import {
     TableBody,
     TableCell,
     TableContainer,
+    TableHead,
     TablePagination,
     TableRow,
     Typography,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
 import moment from 'moment';
 // components
 import { CreateLeave, UpdateLeave } from '../../components/accounts/leave';
@@ -101,6 +107,7 @@ export default function Leave() {
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
+  const [logModal, setLogModal] = useState({ open: false, logs: [] });
 
   const [notify, setNotify] = useState({
     open: false,
@@ -457,6 +464,17 @@ export default function Leave() {
         <MenuItem
           onClick={() => {
             setOpen(null);
+            const row = data?.find((d) => d._id === openId);
+            setLogModal({ open: true, logs: row?.actionLog || [] });
+          }}
+        >
+          <Iconify icon={'eva:file-text-fill'} sx={{ mr: 2 }} />
+          View Logs
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
             setToggleContainerType('update');
             setToggleContainer(!toggleContainer);
           }}
@@ -511,6 +529,66 @@ export default function Leave() {
           </Stack>
         </Box>
       </Modal>
+
+      {/* Action Log Modal */}
+      <Dialog
+        open={logModal.open}
+        onClose={() => setLogModal({ open: false, logs: [] })}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 'bold' }}>Leave Action Log</DialogTitle>
+        <DialogContent>
+          {logModal.logs?.length > 0 ? (
+            <TableContainer component={Paper} sx={{ mt: 1 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                    <TableCell sx={{ fontWeight: 'bold' }}>#</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Action</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Performed By</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Role</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Date & Time</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {logModal.logs.map((log, index) => (
+                    <TableRow key={index} hover>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={sentenceCase((log.action || '').replace(/_/g, ' '))}
+                          color={
+                            (log.action?.includes('approved') && 'success') ||
+                            (log.action?.includes('rejected') && 'error') ||
+                            'info'
+                          }
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>{log.performedByName || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Chip label={sentenceCase(log.role || 'N/A')} size="small" />
+                      </TableCell>
+                      <TableCell>{moment(log.performedAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Typography sx={{ mt: 2, textAlign: 'center', color: 'text.secondary' }}>
+              No action logs available
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" onClick={() => setLogModal({ open: false, logs: [] })}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />

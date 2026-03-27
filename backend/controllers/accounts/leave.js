@@ -35,7 +35,7 @@ async function create(req, res) {
       }
     }
     
-    let createdData = await leaveService.create(req.body);
+    let createdData = await leaveService.create(req.body, req.user);
     res.json({
       status: true,
       message: "Leave Applied Successfully!",
@@ -58,7 +58,7 @@ async function update(req, res) {
     res.json({
       status: true,
       message: "Leave Updated Successfully!",
-      data: await leaveService.update(req.params.id, req.body),
+      data: await leaveService.update(req.params.id, req.body, req.user),
     });
   } catch (err) {
     res.json({

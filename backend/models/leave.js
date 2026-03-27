@@ -35,6 +35,15 @@ const Leave = mongoose.model(
         type: String,
         default: "pending", // pending, approved, rejected
       },
+      actionLog: [
+        {
+          action: { type: String }, // requested, bm_approved, bm_rejected, hr_approved, hr_rejected, approved, rejected
+          performedBy: { type: mongoose.Schema.Types.ObjectId, ref: "employees" },
+          performedByName: { type: String },
+          role: { type: String }, // admin, branch, hr, accounts
+          performedAt: { type: Date, default: Date.now },
+        },
+      ],
     },
     { timestamps: true }
   )

@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 // mocks_
 import account from '../../../../_mock/account';
 import { logout } from '../../../../features/authSlice';
+import { sentenceCase } from 'change-case';
 
 // ----------------------------------------------------------------------
 
@@ -80,10 +81,10 @@ export default function AccountPopover() {
       >
         <Box sx={{ my: 1.5, px: 2.5 }}>
           <Typography variant="subtitle2" noWrap>
-            {auth.user.username ?? null}
+            {auth.user.employee?.name || auth.user.username || 'User'}
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
-            {account.user?.email ?? null}
+            {sentenceCase(auth.user.userType || '')}
           </Typography>
         </Box>
 

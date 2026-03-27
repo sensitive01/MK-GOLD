@@ -50,6 +50,9 @@ export default function LoginForm() {
     if (userType === 'accounts') {
       return <Navigate to="/accounts/dashboard" />;
     }
+    if (userType === 'finance') {
+      return <Navigate to="/finance/dashboard" />;
+    }
     if (
       userType === 'branch' ||
       userType === 'assistant_branch_manager' ||

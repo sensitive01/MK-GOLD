@@ -22,7 +22,7 @@ async function update(req, res) {
     res.json({
       status: true,
       message: "",
-      data: await leaveService.update(req.params.id, req.body),
+      data: await leaveService.update(req.params.id, req.body, req.user),
     });
   } catch (err) {
     res.json({

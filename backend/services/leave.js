@@ -1,14 +1,22 @@
 const Leave = require("../models/leave");
 const User = require("../models/user");
+const Employee = require("../models/employee");
 const { sendEmail } = require("./mailer");
 
 async function find(query = {}, user = null) {
   try {
-    if (user && user.userType?.toLowerCase() === "branch") {
-      query.branch = user.branch?._id || user.branch;
-    } else if (user && user.userType?.toLowerCase() === "hr") {
-      // HR only sees leaves already approved by BM
-      query.bmStatus = "approved";
+    const type = user?.userType?.toLowerCase();
+    if (["branch", "assistant_branch_manager", "branch_executive", "telecalling", "finance", "accounts", "operations"].includes(type)) {
+      const bId = user.branch?._id || user.branch;
+      if (bId) {
+        query.branch = bId;
+      }
+      // If it's a sub-role (employee), only show their own leaves
+      if (type !== "branch") {
+        query.employee = user.employee?._id || user.employee;
+      }
+    } else if (type === "hr") {
+      // HR can see all leaves.
     }
 
     if (query.createdAt && "$gte" in query.createdAt) {
@@ -42,13 +50,34 @@ async function findById(id) {
   }
 }
 
-async function create(payload) {
+// Helper to get employee name from user object
+async function _getPerformerName(user) {
+  try {
+    if (user?.employee) {
+      const empId = user.employee?._id || user.employee;
+      const emp = await Employee.findById(empId);
+      return emp?.name || "Unknown";
+    }
+    return "System";
+  } catch {
+    return "Unknown";
+  }
+}
+
+async function create(payload, user = null) {
   try {
     // If branch is missing, null, or empty string, try to find it from the employee's user profile
     if ((!payload.branch || payload.branch === "" || payload.branch === "null") && payload.employee) {
-      const user = await User.findOne({ employee: payload.employee }).exec();
-      if (user && user.branch) {
-        payload.branch = user.branch;
+      // Try to find branch from User record first
+      const userRecord = await User.findOne({ employee: payload.employee }).exec();
+      if (userRecord && userRecord.branch) {
+        payload.branch = userRecord.branch;
+      } else {
+        // Fallback: Try to find branch from Employee record directly
+        const empRecord = await Employee.findById(payload.employee).exec();
+        if (empRecord && empRecord.branch) {
+          payload.branch = empRecord.branch;
+        }
       }
     }
     
@@ -56,6 +85,21 @@ async function create(payload) {
     if (payload.branch === "" || payload.branch === "null") {
       delete payload.branch;
     }
+
+    // Add 'requested' action log entry
+    const performerName = user ? await _getPerformerName(user) : "Unknown";
+    const performerId = user?.employee?._id || user?.employee || null;
+    const performerRole = user?.userType || "unknown";
+
+    payload.actionLog = [
+      {
+        action: "requested",
+        performedBy: performerId,
+        performedByName: performerName,
+        role: performerRole,
+        performedAt: new Date(),
+      },
+    ];
 
     let leave = new Leave(payload);
     const createdLeave = await leave.save();
@@ -77,9 +121,43 @@ async function create(payload) {
   }
 }
 
-async function update(id, payload) {
+async function update(id, payload, user = null) {
   try {
     const previousLeave = await Leave.findById(id).populate("branch").populate("employee");
+
+    // Build action log entry based on what changed
+    let logAction = null;
+    if (payload.bmStatus && payload.bmStatus !== previousLeave.bmStatus) {
+      logAction = payload.bmStatus === "approved" ? "bm_approved" : "bm_rejected";
+    }
+    if (payload.hrStatus && payload.hrStatus !== previousLeave.hrStatus) {
+      logAction = payload.hrStatus === "approved" ? "hr_approved" : "hr_rejected";
+    }
+    if (payload.status && payload.status !== previousLeave.status && !logAction) {
+      logAction = payload.status; // approved / rejected
+    }
+
+    // Push action log if there's a meaningful action
+    if (logAction && user) {
+      const performerName = await _getPerformerName(user);
+      const performerId = user?.employee?._id || user?.employee || null;
+      const performerRole = user?.userType?.toLowerCase() || "unknown";
+
+      // If overall status is being set to approved/rejected, also set hrStatus if not present in payload
+      if (payload.status && !payload.hrStatus && ["admin", "hr"].includes(performerRole)) {
+        payload.hrStatus = payload.status;
+      }
+
+      if (!payload.$push) payload.$push = {};
+      payload.$push.actionLog = {
+        action: logAction,
+        performedBy: performerId,
+        performedByName: performerName,
+        role: performerRole,
+        performedAt: new Date(),
+      };
+    }
+
     const updatedLeave = await Leave.findByIdAndUpdate(id, payload, {
       returnDocument: "after",
     }).populate("branch").populate("employee").exec();

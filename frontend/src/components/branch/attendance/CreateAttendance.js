@@ -39,7 +39,7 @@ function CreateAttendance(props) {
 
   const { handleSubmit, handleChange, handleBlur, values, touched, errors, setValues, resetForm } = useFormik({
     initialValues: {
-      employee: auth.user.employee._id,
+      employee: auth.user?.employee?._id || auth.user?.employee || '',
     },
     validationSchema: schema,
     onSubmit: (values) => {
@@ -102,7 +102,7 @@ function CreateAttendance(props) {
             xs={12}
             sm={12}
             sx={{
-              display: ['assistant_branch_manager', 'branch_executive', 'telecalling'].includes(auth.user.userType) ? 'none' : 'block',
+              display: ['assistant_branch_manager', 'branch_executive', 'telecalling', 'finance', 'accounts', 'operations'].includes(auth.user.userType?.toLowerCase()) ? 'none' : 'block',
             }}
           >
             <FormControl fullWidth error={touched.employee && errors.employee && true}>
@@ -117,7 +117,7 @@ function CreateAttendance(props) {
                 onChange={(e) => {
                   setValues({ ...values, employee: e.target.value });
                 }}
-                disabled={['assistant_branch_manager', 'branch_executive', 'telecalling'].includes(auth.user.userType)}
+                disabled={['assistant_branch_manager', 'branch_executive', 'telecalling', 'finance', 'accounts', 'operations'].includes(auth.user.userType?.toLowerCase())}
               >
                 {employees?.map((e) => (
                   <MenuItem key={e._id} value={e._id}>{e.employeeId} {e.name}</MenuItem>

@@ -1,6 +1,7 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
 import { forwardRef, useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
@@ -9,6 +10,7 @@ import {
     Button,
     Card,
     Checkbox,
+    Chip,
     CircularProgress,
     Container,
     IconButton,
@@ -22,11 +24,18 @@ import {
     TableBody,
     TableCell,
     TableContainer,
+    TableHead,
     TablePagination,
     TableRow,
+    Tabs,
+    Tab,
     Typography,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
 import moment from 'moment';
 // components
 import { CreateLeave, UpdateLeave } from '../../components/branch/leave';
@@ -40,18 +49,7 @@ import { deleteLeaveById, getLeave, updateLeave } from '../../apis/branch/leave'
 
 // ----------------------------------------------------------------------
 
-const TABLE_HEAD = [
-  { id: 'branch', label: 'Branch Id', alignRight: false },
-  { id: 'branch', label: 'Branch Name', alignRight: false },
-  { id: 'employee', label: 'Employee Id', alignRight: false },
-  { id: 'employee', label: 'Employee Name', alignRight: false },
-  { id: 'leaveType', label: 'Leave Type', alignRight: false },
-  { id: 'dates', label: 'Dates', alignRight: false },
-  { id: 'note', label: 'Note', alignRight: false },
-  { id: 'status', label: 'Status', alignRight: false },
-  { id: 'createdAt', label: 'Date', alignRight: false },
-  { id: '' },
-];
+
 
 // ----------------------------------------------------------------------
 
@@ -101,6 +99,26 @@ export default function Leave() {
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
+  const [logModal, setLogModal] = useState({ open: false, logs: [] });
+  const auth = useSelector((state) => state.auth);
+  const userType = auth.user.userType?.toLowerCase();
+  const isManager = userType === 'branch';
+  const [currentTab, setCurrentTab] = useState(isManager ? 'requests' : 'my_leaves');
+
+  const TABLE_HEAD = [
+    { id: 'branchId', label: 'Branch Id', alignRight: false },
+    { id: 'branchName', label: 'Branch Name', alignRight: false },
+    ...(currentTab === 'requests' ? [
+      { id: 'employeeId', label: 'Employee Id', alignRight: false },
+      { id: 'employeeName', label: 'Employee Name', alignRight: false },
+    ] : []),
+    { id: 'leaveType', label: 'Leave Type', alignRight: false },
+    { id: 'dates', label: 'Dates', alignRight: false },
+    { id: 'note', label: 'Note', alignRight: false },
+    { id: 'status', label: 'Status', alignRight: false },
+    { id: 'createdAt', label: 'Date', alignRight: false },
+    { id: '' },
+  ];
 
   const [notify, setNotify] = useState({
     open: false,
@@ -108,23 +126,25 @@ export default function Leave() {
     severity: 'success',
   });
 
-  useEffect(() => {
-    fetchData();
-  }, [toggleContainer]);
-
-  const fetchData = (
-    query = {
-      createdAt: {
-        $gte: moment()?.format("YYYY-MM-DD"),
-        $lte: moment()?.format("YYYY-MM-DD"),
-      },
+  const fetchData = (query = {}) => {
+    if (currentTab === 'my_leaves') {
+      query.employee = auth.user.employee?._id || auth.user.employee;
     }
-  ) => {
     getLeave(query).then((data) => {
-      setData(data.data);
+      let filtered = data.data;
+      if (currentTab === 'requests' && isManager) {
+          // Exclude own leaves from requests list
+          const myIdStr = String(auth.user.employee?._id || auth.user.employee);
+          filtered = data.data.filter(item => String(item.employee?._id || item.employee) !== myIdStr);
+      }
+      setData(filtered);
       setOpenBackdrop(false);
     });
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [toggleContainer, currentTab]); // Re-fetch on tab change
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -270,21 +290,38 @@ export default function Leave() {
       </Snackbar>
 
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
+          <Typography variant="h4" sx={{ color: '#fff' }}>
             Leave
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-              setToggleContainerType('create');
+          {currentTab === 'my_leaves' && (
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setToggleContainer(!toggleContainer);
+                setToggleContainerType('create');
+              }}
+            >
+              New Leave
+            </Button>
+          )}
+        </Stack>
+
+        <Box sx={{ mb: 3 }}>
+          <Tabs
+            value={currentTab}
+            onChange={(event, newValue) => setCurrentTab(newValue)}
+            sx={{
+              '& .MuiTab-root': { color: 'white', opacity: 0.7 },
+              '& .Mui-selected': { color: 'white !important', opacity: 1 },
+              '& .MuiTabs-indicator': { backgroundColor: 'white' },
             }}
           >
-            New Leave
-          </Button>
-        </Stack>
+            {isManager && <Tab value="requests" label="Leave Requests" />}
+            <Tab value="my_leaves" label="My Leaves" />
+          </Tabs>
+        </Box>
 
         <Card>
           <LeaveListToolbar
@@ -321,8 +358,8 @@ export default function Leave() {
                         </TableCell>
                         <TableCell align="left">{branch?.branchId}</TableCell>
                         <TableCell align="left">{branch?.branchName}</TableCell>
-                        <TableCell align="left">{employee?.employeeId}</TableCell>
-                        <TableCell align="left">{employee?.name}</TableCell>
+                        {currentTab === 'requests' && <TableCell align="left">{employee?.employeeId}</TableCell>}
+                        {currentTab === 'requests' && <TableCell align="left">{employee?.name}</TableCell>}
                         <TableCell align="left">{leaveType}</TableCell>
                         <TableCell align="left">
                           {dates?.map((date) => moment(date).format('Y/M/D')).join(', ')}
@@ -488,6 +525,17 @@ export default function Leave() {
         <MenuItem
           onClick={() => {
             setOpen(null);
+            const row = data?.find((d) => d._id === openId);
+            setLogModal({ open: true, logs: row?.actionLog || [] });
+          }}
+        >
+          <Iconify icon={'eva:file-text-fill'} sx={{ mr: 2 }} />
+          View Logs
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
             setToggleContainerType('update');
             setToggleContainer(!toggleContainer);
           }}
@@ -542,6 +590,66 @@ export default function Leave() {
           </Stack>
         </Box>
       </Modal>
+
+      {/* Action Log Modal */}
+      <Dialog
+        open={logModal.open}
+        onClose={() => setLogModal({ open: false, logs: [] })}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 'bold' }}>Leave Action Log</DialogTitle>
+        <DialogContent>
+          {logModal.logs?.length > 0 ? (
+            <TableContainer component={Paper} sx={{ mt: 1 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                    <TableCell sx={{ fontWeight: 'bold' }}>#</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Action</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Performed By</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Role</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Date & Time</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {logModal.logs.map((log, index) => (
+                    <TableRow key={index} hover>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={sentenceCase((log.action || '').replace(/_/g, ' '))}
+                          color={
+                            (log.action?.includes('approved') && 'success') ||
+                            (log.action?.includes('rejected') && 'error') ||
+                            'info'
+                          }
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>{log.performedByName || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Chip label={sentenceCase(log.role || 'N/A')} size="small" />
+                      </TableCell>
+                      <TableCell>{moment(log.performedAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Typography sx={{ mt: 2, textAlign: 'center', color: 'text.secondary' }}>
+              No action logs available
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" onClick={() => setLogModal({ open: false, logs: [] })}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />

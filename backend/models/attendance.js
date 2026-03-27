@@ -12,14 +12,21 @@ const Attendance = mongoose.model(
       attendanceDate: {
         type: Date,
         required: true,
-        default: new Date(),
+        default: () => new Date(),
+      },
+      loginTime: {
+        type: Date,
+        default: () => new Date(),
+      },
+      logoutTime: {
+        type: Date,
       },
       branch: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "branches",
       },
     },
-    { timestamps: true }
+    { timestamps: true, strict: false }
   )
 );
 

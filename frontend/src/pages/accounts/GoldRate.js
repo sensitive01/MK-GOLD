@@ -1,6 +1,7 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
 import { forwardRef, useEffect, useRef, useState, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
@@ -103,6 +104,8 @@ export default function GoldRate() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
+  const auth = useSelector((state) => state.auth);
+  const userType = auth.user?.userType?.toLowerCase();
   const [data, setData] = useState([]);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
@@ -310,16 +313,18 @@ export default function GoldRate() {
             Gold Rate
           </Typography>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="eva:plus-fill" />}
-              onClick={() => {
-                setToggleContainer(!toggleContainer);
-                setToggleContainerType('create');
-              }}
-            >
-              New Gold Rate
-            </Button>
+            {userType !== 'finance' && (
+              <Button
+                variant="contained"
+                startIcon={<Iconify icon="eva:plus-fill" />}
+                onClick={() => {
+                  setToggleContainer(!toggleContainer);
+                  setToggleContainerType('create');
+                }}
+              >
+                New Gold Rate
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
@@ -340,6 +345,7 @@ export default function GoldRate() {
             numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
+            hideDelete={userType === 'finance'}
             handleDelete={() => {
               setDeleteType('selected');
               handleOpenDeleteModal();
@@ -357,6 +363,7 @@ export default function GoldRate() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={userType === 'finance'}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
@@ -365,9 +372,11 @@ export default function GoldRate() {
 
                     return (
                       <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                        </TableCell>
+                        {userType !== 'finance' && (
+                          <TableCell padding="checkbox">
+                            <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                          </TableCell>
+                        )}
 
                         <TableCell align="left">{rate}</TableCell>
 
@@ -377,18 +386,20 @@ export default function GoldRate() {
 
                         <TableCell align="left">{moment(date).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
 
-                        <TableCell align="right">
-                          <IconButton
-                            size="large"
-                            color="inherit"
-                            onClick={(e) => {
-                              setOpenId(_id);
-                              handleOpenMenu(e);
-                            }}
-                          >
-                            <Iconify icon={'eva:more-vertical-fill'} />
-                          </IconButton>
-                        </TableCell>
+                        {userType !== 'finance' && (
+                          <TableCell align="right">
+                            <IconButton
+                              size="large"
+                              color="inherit"
+                              onClick={(e) => {
+                                setOpenId(_id);
+                                handleOpenMenu(e);
+                              }}
+                            >
+                              <Iconify icon={'eva:more-vertical-fill'} />
+                            </IconButton>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}

@@ -24,6 +24,7 @@ GoldRateListHead.propTypes = {
   numSelected: PropTypes.number,
   onRequestSort: PropTypes.func,
   onSelectAllClick: PropTypes.func,
+  hideCheckbox: PropTypes.bool,
 };
 
 export default function GoldRateListHead({
@@ -34,6 +35,7 @@ export default function GoldRateListHead({
   numSelected,
   onRequestSort,
   onSelectAllClick,
+  hideCheckbox,
 }) {
   const createSortHandler = (property) => (event) => {
     onRequestSort(event, property);
@@ -42,13 +44,15 @@ export default function GoldRateListHead({
   return (
     <TableHead>
       <TableRow>
-        <TableCell padding="checkbox">
-          <Checkbox
-            indeterminate={numSelected > 0 && numSelected < rowCount}
-            checked={rowCount > 0 && numSelected === rowCount}
-            onChange={onSelectAllClick}
-          />
-        </TableCell>
+        {!hideCheckbox && (
+          <TableCell padding="checkbox">
+            <Checkbox
+              indeterminate={numSelected > 0 && numSelected < rowCount}
+              checked={rowCount > 0 && numSelected === rowCount}
+              onChange={onSelectAllClick}
+            />
+          </TableCell>
+        )}
         {headLabel?.map((headCell) => (
           <TableCell
             key={headCell.id}

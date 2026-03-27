@@ -15,6 +15,7 @@ import Scrollbar from '../../../../components/scrollbar';
 import NavSection from '../../../../components/nav-section';
 //
 import navConfig from './config';
+import { sentenceCase } from 'change-case';
 
 // ----------------------------------------------------------------------
 
@@ -67,11 +68,11 @@ export default function Nav({ openNav, onCloseNav }) {
 
             <Box sx={{ ml: 2 }}>
               <Typography variant="subtitle2" sx={{ color: '#fff' }}>
-                {auth.user.username ?? null}
+                {auth.user.employee?.name || auth.user.username || 'User'}
               </Typography>
 
               <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                {auth.user.userType ?? null}
+                {sentenceCase(auth.user.userType || '')}
               </Typography>
             </Box>
           </StyledAccount>

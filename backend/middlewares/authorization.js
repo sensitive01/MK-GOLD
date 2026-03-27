@@ -24,7 +24,8 @@ function isHr(req, res, next) {
 }
 
 function isAccounts(req, res, next) {
-  if (req.user?.userType?.toLowerCase() === "accounts") {
+  const userType = req.user?.userType?.toLowerCase();
+  if (userType === "accounts" || userType === "finance" || userType === "operations") {
     return next();
   }
 
@@ -43,6 +44,8 @@ function isBranch(req, res, next) {
     userType === "branch_executive" ||
     userType === "telecalling" ||
     userType === "admin" ||
+    userType === "finance" ||
+    userType === "operations" ||
     userType === "subadmin"
   ) {
     return next();
@@ -67,4 +70,17 @@ function canDelete(req, res, next) {
   });
 }
 
-module.exports = { isAdmin, isHr, isAccounts, isBranch, canDelete };
+function notFinance(req, res, next) {
+  const userType = req.user?.userType?.toLowerCase();
+  if (userType !== "finance") {
+    return next();
+  }
+
+  return res.status(401).json({
+    status: false,
+    message: "Unauthorized: Finance role has read-only access",
+    data: {},
+  });
+}
+
+module.exports = { isAdmin, isHr, isAccounts, isBranch, canDelete, notFinance };
