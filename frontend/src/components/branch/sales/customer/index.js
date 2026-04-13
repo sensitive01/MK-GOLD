@@ -42,6 +42,7 @@ import { findCustomer, createCustomer, deleteCustomerById } from '../../../../ap
 import { createFile } from '../../../../apis/branch/fileupload';
 // import { getBranchByBranchId } from '../../../../apis/branch/branch';
 import Scrollbar from '../../../scrollbar';
+import { getEnquiryByMkgId } from '../../../../apis/branch/qrEnquiry';
 
 const style = {
   position: 'absolute',
@@ -73,6 +74,8 @@ function Customer(props) {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [width, setWindowWidth] = useState(0);
   const [img, setImg] = useState(null);
+  const [enquiryId, setEnquiryId] = useState('');
+  const [fetchingEnquiry, setFetchingEnquiry] = useState(false);
   const webcamRef = useRef(null);
 
   useEffect(() => {
@@ -138,6 +141,27 @@ function Customer(props) {
   useEffect(() => {
     fetchCustomer();
   }, [fetchCustomer]);
+
+  const handleFetchEnquiry = async () => {
+    if (!enquiryId) return;
+    setFetchingEnquiry(true);
+    try {
+      const res = await getEnquiryByMkgId(enquiryId);
+      if (res.status) {
+        setValues({
+          ...values,
+          name: res.data.name || values.name,
+          phoneNumber: res.data.phoneNumber || values.phoneNumber,
+        });
+        setNotify({ open: true, message: 'Enquiry details fetched', severity: 'success' });
+      } else {
+        setNotify({ open: true, message: res.message, severity: 'error' });
+      }
+    } catch (error) {
+        setNotify({ open: true, message: 'Fetch failed', severity: 'error' });
+    }
+    setFetchingEnquiry(false);
+  };
 
 
 
@@ -528,6 +552,24 @@ function Customer(props) {
             autoComplete="off"
           >
             <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <Stack direction="row" spacing={2} alignItems="center">
+                    <TextField
+                        size="small"
+                        label="Customer ID (e.g. MK123A)"
+                        value={enquiryId}
+                        onChange={(e) => setEnquiryId(e.target.value)}
+                        sx={{ maxWidth: 300 }}
+                    />
+                    <LoadingButton
+                        loading={fetchingEnquiry}
+                        variant="outlined"
+                        onClick={handleFetchEnquiry}
+                    >
+                        Fetch Detail
+                    </LoadingButton>
+                </Stack>
+              </Grid>
               <Grid item xs={12} md={4}>
                 <TextField
                   name="name"

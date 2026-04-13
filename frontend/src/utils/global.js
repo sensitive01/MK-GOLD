@@ -1,6 +1,6 @@
 export default {
   // baseURL: 'http://localhost:4998',
-  baseURL: 'https://mk-gold.onrender.com',
+  baseURL: import.meta.env.VITE_API_URL,
   states: [
     'Andaman and Nicobar Islands',
     'Andhra Pradesh',

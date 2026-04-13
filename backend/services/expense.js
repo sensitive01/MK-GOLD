@@ -12,10 +12,59 @@ async function find(query = {}) {
         new Date(query.createdAt["$lte"]).toISOString().replace(/T.*Z/, "T23:59:59Z")
       );
     }
-    return await Expense.find(query)
-      .populate("branch")
-      .sort({ createdAt: -1 })
-      .exec();
+    
+    // Convert string IDs to ObjectIds for aggregation
+    if (query.branch && typeof query.branch === 'string') {
+      const mongoose = require("mongoose");
+      query.branch = new mongoose.Types.ObjectId(query.branch);
+    }
+    if (query._id && typeof query._id === 'string') {
+      const mongoose = require("mongoose");
+      query._id = new mongoose.Types.ObjectId(query._id);
+    }
+
+    return await Expense.aggregate([
+      { $match: query },
+      {
+        $lookup: {
+          from: "branches",
+          localField: "branch",
+          foreignField: "_id",
+          as: "branch",
+        },
+      },
+      { $unwind: { path: "$branch", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "fileuploads",
+          let: { expenseId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { 
+                      $eq: [
+                        { $toObjectId: "$uploadId" }, 
+                        "$$expenseId"
+                      ] 
+                    },
+                    { $eq: ["$uploadName", "expense"] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: "attachments",
+        },
+      },
+      {
+        $addFields: {
+          imageLink: { $arrayElemAt: ["$attachments.uploadedFile", 0] }
+        }
+      },
+      { $sort: { createdAt: -1 } },
+    ]).exec();
   } catch (err) {
     throw err;
   }
@@ -23,7 +72,49 @@ async function find(query = {}) {
 
 async function findById(id) {
   try {
-    return await Expense.findById(id).populate("branch").exec();
+    const mongoose = require("mongoose");
+    const results = await Expense.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      {
+        $lookup: {
+          from: "branches",
+          localField: "branch",
+          foreignField: "_id",
+          as: "branch",
+        },
+      },
+      { $unwind: { path: "$branch", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "fileuploads",
+          let: { expenseId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { 
+                      $eq: [
+                        { $toObjectId: "$uploadId" }, 
+                        "$$expenseId"
+                      ] 
+                    },
+                    { $eq: ["$uploadName", "expense"] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: "attachments",
+        },
+      },
+      {
+        $addFields: {
+          imageLink: { $arrayElemAt: ["$attachments.uploadedFile", 0] }
+        }
+      },
+    ]).exec();
+    return results[0] || null;
   } catch (err) {
     throw err;
   }

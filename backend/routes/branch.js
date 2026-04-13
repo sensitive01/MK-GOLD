@@ -19,6 +19,7 @@ const leave = require("../controllers/branch/leave");
 const report = require("../controllers/branch/report");
 const balancesheet = require("../controllers/branch/balancesheet");
 const lead = require("../controllers/branch/lead");
+const qrEnquiry = require("../controllers/qrEnquiry");
 const fileUpload = require("../controllers/branch/fileupload");
 const { isBranch } = require("../middlewares/authorization");
 const multer = require("../config/multer");
@@ -136,6 +137,8 @@ branchRouter.post(
   fileUpload.create
 );
 branchRouter.post("/file-upload/delete/:id", fileUpload.remove);
+
+branchRouter.get("/qr-enquiry/get-by-mkgid/:mkgId", qrEnquiry.findByMkgId);
 
 branchRouter.get("/profile", profile.get);
 branchRouter.post("/profile/change-password", profile.changePassword);

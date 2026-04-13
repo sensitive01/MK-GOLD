@@ -24,6 +24,8 @@ import AdminBalancesheet from './pages/admin/Balancesheet';
 import AdminOrnament from './pages/admin/Ornament';
 import AdminDesignation from './pages/admin/Designation';
 import AdminAnnouncement from './pages/admin/Announcements';
+import AdminQREnquiry from './pages/admin/QREnquiry';
+import PublicEnquiry from './pages/PublicEnquiry';
 
 // New Roles
 import MasterDashboardLayout from './layouts/dashboard/master';
@@ -111,6 +113,7 @@ export default function Router() {
         { path: 'balancesheet', element: <AdminBalancesheet /> },
         { path: 'designation', element: <AdminDesignation /> },
         { path: 'announcement', element: <AdminAnnouncement /> },
+        { path: 'qr-enquiry', element: <AdminQREnquiry /> },
       ],
     },
     {
@@ -240,6 +243,10 @@ export default function Router() {
     {
       path: '/login',
       element: <LoginPage />,
+    },
+    {
+      path: '/enquiry/:branchId',
+      element: <PublicEnquiry />,
     },
     {
       element: <ErrorPageLayout />,

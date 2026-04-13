@@ -25,6 +25,12 @@ const Expense = mongoose.model(
         type: String,
         required: true,
       },
+      attachments: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "fileuploads",
+        },
+      ],
     },
     { timestamps: true }
   )

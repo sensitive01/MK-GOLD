@@ -15,6 +15,7 @@ var accountsRouter = require("./routes/accounts");
 var branchRouter = require("./routes/branch");
 var customerRouter = require("./routes/customer");
 var announcementRouter = require("./routes/announcement");
+var publicRouter = require("./routes/public");
 
 var app = express();
 
@@ -37,6 +38,7 @@ app.use("/api/v1.0/accounts", accountsRouter);
 app.use("/api/v1.0/branch", branchRouter);
 app.use("/api/v1.0/customer", customerRouter);
 app.use("/api/v1.0/announcement", announcementRouter);
+app.use("/api/v1.0/public", publicRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

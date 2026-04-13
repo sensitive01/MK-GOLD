@@ -46,6 +46,7 @@ const TABLE_HEAD = [
   { id: 'branch', label: 'Branch Id', alignRight: false },
   { id: 'branch', label: 'Branch Name', alignRight: false },
   { id: 'note', label: 'Note', alignRight: false },
+  { id: 'attachments', label: 'Attachments', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
@@ -303,6 +304,26 @@ export default function Expense() {
                         <TableCell align="left">{branch?.branchName}</TableCell>
                         <TableCell align="left">{note}</TableCell>
                         <TableCell align="left">
+                          {row.attachments && row.attachments.length > 0 ? (
+                            <Stack direction="row" spacing={0.5}>
+                              {row.attachments.map((file, index) => (
+                                <IconButton
+                                  key={index}
+                                  size="small"
+                                  color="primary"
+                                  component="a"
+                                  href={file.uploadedFile}
+                                  target="_blank"
+                                >
+                                  <Iconify icon="mdi:file-eye" />
+                                </IconButton>
+                              ))}
+                            </Stack>
+                          ) : (
+                            'None'
+                          )}
+                        </TableCell>
+                        <TableCell align="left">
                           <Label
                             color={
                               (status === 'approved' && 'success') || (status === 'rejected' && 'error') || 'warning'
@@ -392,7 +413,7 @@ export default function Expense() {
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Create Expense
+            
           </Typography>
           <Button
             variant="contained"

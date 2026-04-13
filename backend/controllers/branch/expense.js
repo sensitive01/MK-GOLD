@@ -18,10 +18,14 @@ async function findById(req, res) {
 
 async function create(req, res) {
   try {
+    let createdData = await expenseService.create(req.body);
     res.json({
       status: true,
       message: "",
-      data: await expenseService.create(req.body),
+      data: {
+        data: createdData,
+        fileUpload: { uploadId: createdData._id, uploadName: "expense" },
+      },
     });
   } catch (err) {
     res.json({

@@ -27,11 +27,20 @@ async function findById(id) {
 
 async function create(payload) {
   try {
+    if (!payload.uploadedFile) {
+      throw new Error("No file uploaded or file rejected by storage engine");
+    }
     // With cloudinary storage, multer provides the URL in req.file.path
-    payload.uploadedFile = payload.uploadedFile.path; 
+    payload.uploadedFile = payload.uploadedFile.path || payload.uploadedFile.secure_url; 
+    
+    if (!payload.uploadedFile) {
+      throw new Error("Cloudinary did not return a valid file path");
+    }
+
     let fileupload = new fileUpload(payload);
     return await fileupload.save();
   } catch (err) {
+    console.error("FileUpload Service Error:", err);
     throw err;
   }
 }

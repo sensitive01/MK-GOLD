@@ -40,6 +40,7 @@ import { BranchListHead, BranchListToolbar } from '../../sections/@dashboard/bra
 // mock
 import { deleteBranchById, getBranch, updateBranch } from '../../apis/admin/branch';
 import global from '../../utils/global';
+import { QRCodeSVG } from 'qrcode.react';
 
 // ----------------------------------------------------------------------
 
@@ -102,6 +103,8 @@ export default function Branch() {
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
+  const [openQrModal, setOpenQrModal] = useState(false);
+  const [qrBranch, setQrBranch] = useState(null);
 
   const [notify, setNotify] = useState({
     open: false,
@@ -527,6 +530,18 @@ export default function Branch() {
             Delete
           </MenuItem>
         )}
+
+        <MenuItem
+          onClick={() => {
+            const selectedBranch = data.find((b) => b._id === openId);
+            setQrBranch(selectedBranch);
+            setOpen(null);
+            setOpenQrModal(true);
+          }}
+        >
+          <Iconify icon={'mdi:qrcode'} sx={{ mr: 2 }} />
+          Show QR
+        </MenuItem>
       </Popover>
 
       <Modal
@@ -557,6 +572,66 @@ export default function Branch() {
               Delete
             </Button>
             <Button variant="contained" onClick={handleCloseDeleteModal}>
+              Close
+            </Button>
+          </Stack>
+        </Box>
+      </Modal>
+
+      <Modal
+        open={openQrModal}
+        onClose={() => setOpenQrModal(false)}
+        aria-labelledby="qr-modal-title"
+      >
+        <Box sx={{ ...style, textAlign: 'center' }}>
+          <Typography id="qr-modal-title" variant="h5" sx={{ mb: 2 }}>
+            Branch QR Code
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 3 }}>
+            Scan this to navigate to the customer enquiry page for <strong>{qrBranch?.branchName}</strong>
+          </Typography>
+          
+          <Box id="branch-qr-id" sx={{ p: 2, bgcolor: '#fff', display: 'inline-block', borderRadius: 2 }}>
+            <QRCodeSVG 
+               value={`${window.location.origin}/enquiry/${qrBranch?._id}`} 
+               size={256}
+               level="H"
+               includeMargin
+            />
+          </Box>
+          
+          <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary' }}>
+            {`${window.location.origin}/enquiry/${qrBranch?._id}`}
+          </Typography>
+
+          <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
+            <Button
+              variant="contained"
+              fullWidth
+              color="secondary"
+              startIcon={<Iconify icon="mdi:download" />}
+              onClick={() => {
+                const svg = document.querySelector('#branch-qr-id svg');
+                const svgData = new XMLSerializer().serializeToString(svg);
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = () => {
+                  canvas.width = img.width;
+                  canvas.height = img.height;
+                  ctx.drawImage(img, 0, 0);
+                  const pngFile = canvas.toDataURL('image/png');
+                  const downloadLink = document.createElement('a');
+                  downloadLink.download = `QR_${qrBranch.branchName}.png`;
+                  downloadLink.href = `${pngFile}`;
+                  downloadLink.click();
+                };
+                img.src = `data:image/svg+xml;base64,${btoa(svgData)}`;
+              }}
+            >
+              Download PNG
+            </Button>
+            <Button variant="outlined" fullWidth onClick={() => setOpenQrModal(false)}>
               Close
             </Button>
           </Stack>

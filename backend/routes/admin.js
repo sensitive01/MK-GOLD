@@ -33,6 +33,7 @@ const melting = require("../controllers/admin/melting");
 const locker = require("../controllers/admin/locker");
 const announcement = require("../controllers/admin/announcement");
 const designation = require("../controllers/admin/designation");
+const qrEnquiry = require("../controllers/qrEnquiry");
 
 const { isAdmin, canDelete } = require("../middlewares/authorization");
 const multer = require("../config/multer");
@@ -225,6 +226,8 @@ adminRouter.get(
 adminRouter.post("/support-reply/create", supportReply.create);
 adminRouter.post("/support-reply/update/:id", supportReply.update);
 adminRouter.post("/support-reply/delete/:id", canDelete, supportReply.remove);
+adminRouter.get("/qr-enquiry/get", qrEnquiry.getEnquiries);
+adminRouter.post("/qr-enquiry/get", qrEnquiry.getEnquiries);
 
 router.use(
   function (req, res, next) {

@@ -1,4 +1,4 @@
-import { TextField, Card, Grid } from '@mui/material';
+import { TextField, Card, Grid, Typography, Button, Stack, IconButton } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import { useEffect, useState, useRef } from 'react';
 import { useFormik } from 'formik';
@@ -6,11 +6,15 @@ import * as Yup from 'yup';
 import { useSelector } from 'react-redux';
 import { createExpense } from '../../../apis/branch/expense';
 import { getBranchByBranchId } from '../../../apis/branch/branch';
+import { createFile } from '../../../apis/branch/fileupload';
+import Iconify from '../../../components/iconify';
 
 function CreateExpense(props) {
   const auth = useSelector((state) => state.auth);
   const form = useRef();
   const [branch, setBranch] = useState({});
+  const [attachments, setAttachments] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setBranch(auth.user.branch);
@@ -33,6 +37,7 @@ function CreateExpense(props) {
     },
     validationSchema: schema,
     onSubmit: (values) => {
+      setLoading(true);
       values.branch = branch?._id;
       createExpense(values).then((data) => {
         if (data.status === false) {
@@ -41,19 +46,65 @@ function CreateExpense(props) {
             message: 'Expense not created',
             severity: 'error',
           });
+          setLoading(false);
         } else {
-          props.setToggleContainer(false);
-          form.current.reset();
-          resetForm();
-          props.setNotify({
-            open: true,
-            message: 'Expense created',
-            severity: 'success',
-          });
+          // Upload Attachments if any
+          if (attachments && attachments.length > 0) {
+            const uploadId = data.data?.fileUpload?.uploadId || data.data?.data?._id || data.data?._id || data._id;
+            const uploadPromises = attachments.map((file) => {
+              const formData = new FormData();
+              formData.append('uploadId', uploadId);
+              formData.append('uploadName', 'expense');
+              formData.append('uploadType', 'attachment');
+              formData.append('uploadedFile', file);
+              return createFile(formData).then(res => {
+                if (!res.status) {
+                  console.error(`Upload failed for ${file.name}:`, res.message);
+                  throw new Error(res.message);
+                }
+                return res;
+              });
+            });
+
+            Promise.all(uploadPromises).then(() => {
+              finishSubmit();
+            }).catch(() => {
+              props.setNotify({
+                open: true,
+                message: 'Expense created, but some attachments failed to upload',
+                severity: 'warning',
+              });
+              finishSubmit();
+            });
+          } else {
+            finishSubmit();
+          }
         }
       });
     },
   });
+
+  const finishSubmit = () => {
+    setLoading(false);
+    props.setToggleContainer(false);
+    form.current.reset();
+    resetForm();
+    setAttachments([]);
+    props.setNotify({
+      open: true,
+      message: 'Expense created',
+      severity: 'success',
+    });
+  };
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    setAttachments((prev) => [...prev, ...files]);
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
 
   return (
     <Card sx={{ p: 4, my: 4 }}>
@@ -99,8 +150,57 @@ function CreateExpense(props) {
               onChange={handleChange}
             />
           </Grid>
+
           <Grid item xs={12}>
-            <LoadingButton size="large" type="submit" variant="contained">
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Attachments
+            </Typography>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <input
+                type="file"
+                multiple
+                id="expense-attachments"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
+              <label htmlFor="expense-attachments">
+                <Button variant="outlined" component="span" startIcon={<Iconify icon="mdi:paperclip" />}>
+                  Choose Files
+                </Button>
+              </label>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                {attachments.length} file(s) selected
+              </Typography>
+            </Stack>
+
+            {attachments.length > 0 && (
+              <Stack direction="row" flexWrap="wrap" spacing={1} sx={{ mt: 2 }}>
+                {attachments.map((file, index) => (
+                  <Card
+                    key={index}
+                    sx={{
+                      p: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      bgcolor: 'background.neutral',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                    }}
+                  >
+                    <Typography variant="caption" noWrap sx={{ maxWidth: 150, mr: 1 }}>
+                      {file.name}
+                    </Typography>
+                    <IconButton size="small" onClick={() => removeAttachment(index)} color="error">
+                      <Iconify icon="mdi:close-circle" />
+                    </IconButton>
+                  </Card>
+                ))}
+              </Stack>
+            )}
+          </Grid>
+
+          <Grid item xs={12}>
+            <LoadingButton size="large" type="submit" variant="contained" loading={loading}>
               Save
             </LoadingButton>
           </Grid>

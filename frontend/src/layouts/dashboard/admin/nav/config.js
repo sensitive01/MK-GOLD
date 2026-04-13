@@ -10,6 +10,7 @@ import SellIcon from '@mui/icons-material/Sell';
 import SafetyCheckIcon from '@mui/icons-material/SafetyCheck';
 import RequestPageIcon from '@mui/icons-material/RequestPage';
 import CampaignIcon from '@mui/icons-material/Campaign';
+import QrCodeIcon from '@mui/icons-material/QrCode';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -112,6 +113,11 @@ const navConfig = [
     title: 'Announcement',
     path: '/admin/announcement',
     icon: <CampaignIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'QR Enquiries',
+    path: '/admin/qr-enquiry',
+    icon: <QrCodeIcon sx={{ width: 1, height: 1 }} />,
   },
 ];
 

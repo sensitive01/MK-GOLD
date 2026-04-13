@@ -11,12 +11,16 @@ import { useSelector } from 'react-redux';
 import { createCustomer } from '../../../apis/branch/customer';
 import { getBranchByBranchId } from '../../../apis/branch/branch';
 import { createFile } from '../../../apis/branch/fileupload';
+import { getEnquiryByMkgId } from '../../../apis/branch/qrEnquiry';
+import Stack from '@mui/material/Stack';
 
 function CreateCustomer({ setToggleContainer, setNotify }) {
   const auth = useSelector((state) => state.auth);
   const [branch, setBranch] = useState({});
   const [token, setToken] = useState(null);
   const [altToken, setAltToken] = useState(null);
+  const [enquiryId, setEnquiryId] = useState('');
+  const [fetchingEnquiry, setFetchingEnquiry] = useState(false);
   const [img, setImg] = useState(null);
   const webcamRef = useRef(null);
   const form = useRef();
@@ -191,6 +195,28 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
     },
   });
 
+  const handleFetchEnquiry = async () => {
+    if (!enquiryId) return;
+    setFetchingEnquiry(true);
+    try {
+      const res = await getEnquiryByMkgId(enquiryId);
+      if (res.status) {
+        setValues({
+          ...values,
+          name: res.data.name || values.name,
+          phoneNumber: res.data.phoneNumber || values.phoneNumber,
+          pincode: res.data.pincode || values.pincode,
+        });
+        setNotify({ open: true, message: 'Enquiry details fetched', severity: 'success' });
+      } else {
+        setNotify({ open: true, message: res.message, severity: 'error' });
+      }
+    } catch (error) {
+        setNotify({ open: true, message: 'Fetch failed', severity: 'error' });
+    }
+    setFetchingEnquiry(false);
+  };
+
   return (
     <Card sx={{ p: 4, my: 4 }}>
       <form
@@ -202,6 +228,24 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         autoComplete="off"
       >
         <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Stack direction="row" spacing={2} alignItems="center">
+                <TextField
+                    size="small"
+                    label="Customer ID (e.g. MK123A)"
+                    value={enquiryId}
+                    onChange={(e) => setEnquiryId(e.target.value)}
+                    sx={{ maxWidth: 300 }}
+                />
+                <LoadingButton
+                    loading={fetchingEnquiry}
+                    variant="outlined"
+                    onClick={handleFetchEnquiry}
+                >
+                    Fetch Detail
+                </LoadingButton>
+            </Stack>
+          </Grid>
           <Grid item xs={12} sm={4}>
             <TextField
               name="name"
