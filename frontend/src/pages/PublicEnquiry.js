@@ -79,8 +79,10 @@ const translations = {
     pledged: 'Pledged Gold',
     weight: 'Total Gross Weight (gms)',
     pincode: 'Pincode',
-    success: 'Registration Successful!',
-    customerId: 'Your Customer ID:',
+    success: 'Thank you! Submission successful.',
+    alreadyExists: 'You are already registered!',
+    contactBranch: 'Please contact the branch for further processing.',
+    customerId: 'Your Customer ID',
     autoClose: 'Redirecting in {sec} seconds...',
     branchNotFound: 'Branch Information Not Found',
   },
@@ -97,8 +99,10 @@ const translations = {
     pledged: 'ಅಡಮಾನವಿಟ್ಟ ಚಿನ್ನ',
     weight: 'ಒಟ್ಟು ತೂಕ (ಗ್ರಾಂ)',
     pincode: 'ಪಿನ್ ಕೋಡ್',
-    success: 'ನೋಂದಣಿ ಯಶಸ್ವಿಯಾಗಿದೆ!',
-    customerId: 'ಗ್ರಾಹಕರ ಐಡಿ:',
+    success: 'ಧನ್ಯವಾದಗಳು! ಸಲ್ಲಿಕೆ ಯಶಸ್ವಿಯಾಗಿದೆ.',
+    alreadyExists: 'ನೀವು ಈಗಾಗಲೇ ನೋಂದಾಯಿಸಿಕೊಂಡಿದ್ದೀರಿ!',
+    contactBranch: 'ಹೆಚ್ಚಿನ ಪ್ರಕ್ರಿಯೆಗಾಗಿ ದಯವಿಟ್ಟು ಶಾಖೆಯನ್ನು ಸಂಪರ್ಕಿಸಿ.',
+    customerId: 'ನಿಮ್ಮ ಗ್ರಾಹಕರ ಐಡಿ',
     autoClose: '{sec} ಸೆಕೆಂಡುಗಳಲ್ಲಿ ಮರುನಿರ್ದೇಶಿಸಲಾಗುತ್ತಿದೆ...',
     branchNotFound: 'ಶಾಖೆಯ ಮಾಹಿತಿ ಕಂಡುಬಂದಿಲ್ಲ',
   },
@@ -113,6 +117,7 @@ export default function PublicEnquiry() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
   const [generatedId, setGeneratedId] = useState('');
   const [countdown, setCountdown] = useState(10);
   const [formData, setFormData] = useState({
@@ -159,6 +164,9 @@ export default function PublicEnquiry() {
       });
       if (res.data.status) {
         setGeneratedId(res.data.data.mkgCustomerId);
+        if (res.data.alreadyExists) {
+            setAlreadyRegistered(true);
+        }
         setSuccess(true);
       } else {
         setError(res.data.message);
@@ -230,12 +238,22 @@ export default function PublicEnquiry() {
                 textAlign: 'center',
               }}
             >
-              {success ? (
+               {success ? (
                  <Box sx={{ py: 3 }}>
-                    <Iconify icon="mdi:check-circle" sx={{ color: 'success.main', width: 80, height: 80, mb: 3 }} />
-                    <Typography variant="h3" gutterBottom sx={{ color: 'success.darker', fontWeight: 'bold' }}>
-                        {t.success}
+                    <Iconify 
+                        icon={alreadyRegistered ? "mdi:alert-circle" : "mdi:check-circle"} 
+                        sx={{ color: alreadyRegistered ? 'warning.main' : 'success.main', width: 80, height: 80, mb: 3 }} 
+                    />
+                    <Typography variant="h3" gutterBottom sx={{ color: alreadyRegistered ? 'warning.dark' : 'success.darker', fontWeight: 'bold' }}>
+                        {alreadyRegistered ? t.alreadyExists : t.success}
                     </Typography>
+                    
+                    {alreadyRegistered && (
+                        <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+                            {t.contactBranch}
+                        </Typography>
+                    )}
+
                     <Box sx={{ bgcolor: 'primary.lighter', p: 3, borderRadius: 2, mb: 4, border: '1px dashed #8A1B9F' }}>
                         <Typography variant="subtitle2" color="primary.darker" sx={{ mb: 1 }}>
                             {t.customerId}

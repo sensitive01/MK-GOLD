@@ -19,8 +19,18 @@ async function sendOtp(req, res) {
 async function verifyAndSubmit(req, res) {
   try {
     const { phoneNumber, otp, skipOtp, ...formData } = req.body;
-    console.log("Submission body:", req.body);
     
+    // Check if an enquiry already exists for this phone number
+    const existing = await qrService.findOne({ phoneNumber });
+    if (existing) {
+        return res.json({ 
+            status: true, 
+            alreadyExists: true,
+            message: "You are already registered.",
+            data: existing 
+        });
+    }
+
     // OTP verification removed as per user request
     const result = await qrService.create({ ...formData, phoneNumber });
     res.json({ status: true, data: result });
