@@ -139,6 +139,7 @@ branchRouter.post(
 branchRouter.post("/file-upload/delete/:id", fileUpload.remove);
 
 branchRouter.get("/qr-enquiry/get-by-mkgid/:mkgId", qrEnquiry.findByMkgId);
+branchRouter.post("/qr-enquiry/get", qrEnquiry.getEnquiries);
 
 branchRouter.get("/profile", profile.get);
 branchRouter.post("/profile/change-password", profile.changePassword);

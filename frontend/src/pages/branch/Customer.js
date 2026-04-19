@@ -34,6 +34,7 @@ import { CreateCustomer, CustomerDetail } from '../../components/branch/customer
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
+import global from '../../utils/global';
 // sections
 import { CustomerListHead, CustomerListToolbar } from '../../sections/@dashboard/customer';
 // mock
@@ -312,7 +313,7 @@ export default function Customer() {
                         </TableCell>
                         <TableCell align="left">{sentenceCase(name ?? '')}</TableCell>
                         <TableCell align="left">{email}</TableCell>
-                        <TableCell align="left">{phoneNumber}</TableCell>
+                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
                         <TableCell align="left">{sentenceCase(gender ?? '')}</TableCell>
                         <TableCell align="left">
                           <Label

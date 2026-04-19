@@ -31,6 +31,7 @@ import moment from 'moment';
 // components
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
+import global from '../../utils/global';
 // sections
 import { OTPListHead, OTPListToolbar } from '../../sections/@dashboard/otp';
 // mock
@@ -284,7 +285,7 @@ export default function OTP() {
                         <TableCell padding="checkbox">
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
-                        <TableCell align="left">{phoneNumber}</TableCell>
+                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
                         <TableCell align="left">{sentenceCase(type)}</TableCell>
                         <TableCell align="left">{otp}</TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>

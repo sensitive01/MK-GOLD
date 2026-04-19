@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { Button } from '@mui/material';
 import { getSalesById } from '../../../apis/accounts/sales';
 import Iconify from '../../iconify';
+import global from '../../../utils/global';
 
 export default function SalePrint({ id }) {
   const [data, setData] = useState({});
@@ -61,7 +62,7 @@ export default function SalePrint({ id }) {
               </tr>
               <tr>
                 <th>Contact :</th>
-                <td>{data?.customer?.phoneNumber}</td>
+                <td>{global.maskPhoneNumber(data?.customer?.phoneNumber)}</td>
               </tr>
               <tr>
                 <th>Address :</th>

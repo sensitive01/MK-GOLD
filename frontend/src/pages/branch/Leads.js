@@ -284,7 +284,7 @@ export default function Leads() {
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
                         <TableCell align="left">{name}</TableCell>
-                        <TableCell align="left">{mobile}</TableCell>
+                        <TableCell align="left">{global.maskPhoneNumber(mobile)}</TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{category}</TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{type}</TableCell>
                         <TableCell align="left">

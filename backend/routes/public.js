@@ -5,6 +5,7 @@ const branchService = require("../services/branch");
 
 // Public endpoints for QR scanning
 router.post("/qr-enquiry/send-otp", qrController.sendOtp);
+router.post("/qr-enquiry/verify-otp", qrController.verifyOtp);
 router.post("/qr-enquiry/submit", qrController.verifyAndSubmit);
 
 // Get branch info anonymously for the public page

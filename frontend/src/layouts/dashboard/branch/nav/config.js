@@ -5,6 +5,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import SellIcon from '@mui/icons-material/Sell';
 import RequestPageIcon from '@mui/icons-material/RequestPage';
+import QrCodeIcon from '@mui/icons-material/QrCode';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -13,6 +14,7 @@ import SvgColor from '../../../../components/svg-color';
 const icon = (name) => <SvgColor src={`/assets/icons/navbar/${name}.svg`} sx={{ width: 1, height: 1 }} />;
 
 const navConfig = [
+// ... (keep all indices)
   {
     title: 'Dashboard',
     path: '/branch/dashboard',
@@ -42,6 +44,11 @@ const navConfig = [
     title: 'Leads',
     path: '/branch/leads',
     icon: icon('ic_user'),
+  },
+  {
+    title: 'QR Enquiries',
+    path: '/branch/qr-enquiry',
+    icon: <QrCodeIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Employee',

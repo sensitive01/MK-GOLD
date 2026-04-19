@@ -17,6 +17,10 @@ const QREnquiry = mongoose.model(
         type: String,
         required: true,
       },
+      email: {
+        type: String,
+        required: true,
+      },
       pincode: {
         type: String,
         required: true,

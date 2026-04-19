@@ -12,6 +12,7 @@ import {
   Alert,
   ToggleButton,
   ToggleButtonGroup,
+  InputAdornment,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { LoadingButton } from '@mui/lab';
@@ -73,6 +74,7 @@ const translations = {
     formSubtitle: 'Please enter your details below',
     name: 'Full Name',
     phone: 'Phone Number',
+    email: 'Email ID',
     submit: 'Submit Enquiry',
     type: 'Gold Type',
     physical: 'Physical Gold',
@@ -85,6 +87,16 @@ const translations = {
     customerId: 'Your Customer ID',
     autoClose: 'Redirecting in {sec} seconds...',
     branchNotFound: 'Branch Information Not Found',
+    sendOtp: 'Send OTP',
+    enterOtp: 'Enter OTP',
+    sent: 'Sent',
+    otpRequired: 'Please enter the OTP',
+    invalidPhone: 'Please enter a valid phone number',
+    resendOtp: 'Resend OTP',
+    resendOtpIn: 'Resend in {sec}s',
+    verifyOtp: 'Verify',
+    verified: 'Verified',
+    invalidOtp: 'Invalid OTP',
   },
   kn: {
     welcome: 'MK ಗೋಲ್ಡ್ ವರ್ಲ್ಡ್‌ಗೆ ಸುಸ್ವಾಗತ',
@@ -93,6 +105,7 @@ const translations = {
     formSubtitle: 'ದಯವಿಟ್ಟು ನಿಮ್ಮ ವಿವರಗಳನ್ನು ಕೆಳಗೆ ನಮೂದಿಸಿ',
     name: 'ಪೂರ್ಣ ಹೆಸರು',
     phone: 'ಫೋನ್ ಸಂಖ್ಯೆ',
+    email: 'ಇಮೇಲ್ ಐಡಿ',
     submit: 'ವಿಚಾರಣೆ ಸಲ್ಲಿಸಿ',
     type: 'ಚಿನ್ನದ ವಿಧ',
     physical: 'ಭೌತಿಕ ಚಿನ್ನ',
@@ -105,6 +118,16 @@ const translations = {
     customerId: 'ನಿಮ್ಮ ಗ್ರಾಹಕರ ಐಡಿ',
     autoClose: '{sec} ಸೆಕೆಂಡುಗಳಲ್ಲಿ ಮರುನಿರ್ದೇಶಿಸಲಾಗುತ್ತಿದೆ...',
     branchNotFound: 'ಶಾಖೆಯ ಮಾಹಿತಿ ಕಂಡುಬಂದಿಲ್ಲ',
+    sendOtp: 'OTP ಕಳುಹಿಸಿ',
+    enterOtp: 'OTP ನಮೂದಿಸಿ',
+    sent: 'ಕಳುಹಿಸಲಾಗಿದೆ',
+    otpRequired: 'ದಯವಿಟ್ಟು OTP ಅನ್ನು ನಮೂದಿಸಿ',
+    invalidPhone: 'ದಯವಿಟ್ಟು ಮಾನ್ಯವಾದ ಫೋನ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ',
+    resendOtp: 'OTP ಮತ್ತೆ ಕಳುಹಿಸಿ',
+    resendOtpIn: '{sec}s ನಲ್ಲಿ ಮತ್ತೆ ಕಳುಹಿಸಿ',
+    verifyOtp: 'ಪರಿಶೀಲಿಸಿ',
+    verified: 'ಪರಿಶೀಲಿಸಲಾಗಿದೆ',
+    invalidOtp: 'ಅಸಿಂಧು OTP',
   },
 };
 
@@ -123,12 +146,29 @@ export default function PublicEnquiry() {
   const [formData, setFormData] = useState({
     name: '',
     phoneNumber: '',
+    email: '',
     type: 'physical',
     grossWeight: '',
     pincode: '',
   });
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
 
   const t = translations[lang];
+
+  useEffect(() => {
+    let interval;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   useEffect(() => {
     axios.get(`${global.baseURL}/api/v1.0/public/branch/${branchId}`)
@@ -148,19 +188,69 @@ export default function PublicEnquiry() {
     }
   }, [success, countdown]);
 
+  const handleSendOtp = async () => {
+    if (!formData.phoneNumber || formData.phoneNumber.length < 10) {
+      setError(t.invalidPhone);
+      return;
+    }
+    setSendingOtp(true);
+    setError('');
+    try {
+      const res = await axios.post(`${global.baseURL}/api/v1.0/public/qr-enquiry/send-otp`, {
+        phoneNumber: formData.phoneNumber
+      });
+      if (res.data.status) {
+        setOtpSent(true);
+        setResendTimer(60);
+      } else {
+        setError(res.data.message);
+      }
+    } catch (err) {
+      setError('Failed to send OTP');
+    }
+    setSendingOtp(false);
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp) {
+      setError(t.otpRequired);
+      return;
+    }
+    setVerifyingOtp(true);
+    setError('');
+    try {
+      const res = await axios.post(`${global.baseURL}/api/v1.0/public/qr-enquiry/verify-otp`, {
+        phoneNumber: formData.phoneNumber,
+        otp
+      });
+      if (res.data.status) {
+        setOtpVerified(true);
+      } else {
+        setError(res.data.message);
+      }
+    } catch (err) {
+      setError(t.invalidOtp);
+    }
+    setVerifyingOtp(false);
+  };
+
   const handleSubmit = async () => {
-    if (!formData.name || !formData.phoneNumber || !formData.grossWeight) {
+    if (!formData.name || !formData.phoneNumber || !formData.grossWeight || !formData.email) {
         setError(lang === 'en' ? 'Please fill all required fields' : 'ದಯವಿಟ್ಟು ಎಲ್ಲಾ ಅಗತ್ಯವಿರುವ ವಿವರಗಳನ್ನು ಭರ್ತಿ ಮಾಡಿ');
+        return;
+    }
+    if (!otp || !otpVerified) {
+        setError(lang === 'en' ? 'Please verify your OTP first' : 'ಮೊದಲು ನಿಮ್ಮ OTP ಅನ್ನು ಪರಿಶೀಲಿಸಿ');
         return;
     }
     setSubmitting(true);
     setError('');
     try {
-      // Note: Backend controller needs update to handle submission without OTP
       const res = await axios.post(`${global.baseURL}/api/v1.0/public/qr-enquiry/submit`, {
         ...formData,
+        otp,
         branch: branch._id,
-        skipOtp: true, // Signal to backend to skip OTP check
+        skipOtp: false, 
       });
       if (res.data.status) {
         setGeneratedId(res.data.data.mkgCustomerId);
@@ -284,8 +374,14 @@ export default function PublicEnquiry() {
                   <Typography variant="h4" gutterBottom sx={{ mb: 1, color: '#8A1B9F', fontWeight: 'bold' }}>
                     {branch.branchName}
                   </Typography>
-                  <Typography variant="body2" sx={{ mb: 4, color: 'text.secondary' }}>
-                    {t.formSubtitle}
+                  <Typography variant="body2" sx={{ color: 'text.secondary', mb: 4 }}>
+                    {otpSent ? (
+                      <>
+                        {t.enterOtpSentTo} <strong>{global.maskPhoneNumber(formData.phoneNumber)}</strong>
+                      </>
+                    ) : (
+                      t.formSubtitle
+                    )}
                   </Typography>
 
                   <Stack spacing={3}>
@@ -304,10 +400,95 @@ export default function PublicEnquiry() {
                         value={formData.phoneNumber}
                         onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                         type="tel"
+                        disabled={otpSent}
                         InputProps={{
-                            startAdornment: <Iconify icon="mdi:phone" sx={{ mr: 1, color: 'text.disabled' }} />,
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <Iconify icon="mdi:phone" sx={{ color: 'text.disabled' }} />
+                                </InputAdornment>
+                            ),
+                            endAdornment: (
+                                <InputAdornment position="end">
+                                    <Button 
+                                        variant="contained"
+                                        size="small" 
+                                        onClick={handleSendOtp} 
+                                        disabled={sendingOtp || otpSent || !formData.phoneNumber}
+                                        sx={{ 
+                                            minWidth: 'auto',
+                                            whiteSpace: 'nowrap',
+                                            bgcolor: !otpSent ? '#8A1B9F' : 'success.main',
+                                            color: '#fff',
+                                            '&:hover': { bgcolor: !otpSent ? '#711683' : 'success.dark' },
+                                            px: 2,
+                                            mr: -0.5
+                                        }}
+                                    >
+                                        {sendingOtp ? <CircularProgress size={20} color="inherit" /> : (otpSent ? t.sent : t.sendOtp)}
+                                    </Button>
+                                </InputAdornment>
+                            )
                         }}
                     />
+
+                    <TextField
+                        fullWidth
+                        label={t.email}
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        type="email"
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <Iconify icon="mdi:email" sx={{ color: 'text.disabled' }} />
+                                </InputAdornment>
+                            ),
+                        }}
+                    />
+
+                    {otpSent && (
+                        <TextField
+                            fullWidth
+                            label={t.enterOtp}
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                            type="number"
+                            disabled={otpVerified}
+                            InputProps={{
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        {otpVerified ? (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main', mr: 1 }}>
+                                                <Iconify icon="mdi:check-circle" sx={{ mr: 0.5 }} />
+                                                <Typography variant="body2" fontWeight="bold">{t.verified}</Typography>
+                                            </Box>
+                                        ) : (
+                                            <>
+                                                <Button
+                                                    size="small"
+                                                    variant="contained"
+                                                    color="primary"
+                                                    onClick={handleVerifyOtp}
+                                                    disabled={verifyingOtp || !otp}
+                                                    sx={{ textTransform: 'none', mr: 1, minWidth: 'auto', px: 1.5, boxShadow: 'none' }}
+                                                >
+                                                    {verifyingOtp ? <CircularProgress size={16} color="inherit" /> : t.verifyOtp}
+                                                </Button>
+                                                <Button
+                                                    size="small"
+                                                    onClick={handleSendOtp}
+                                                    disabled={resendTimer > 0 || sendingOtp}
+                                                    sx={{ textTransform: 'none' }}
+                                                >
+                                                    {resendTimer > 0 ? t.resendOtpIn.replace('{sec}', resendTimer) : t.resendOtp}
+                                                </Button>
+                                            </>
+                                        )}
+                                    </InputAdornment>
+                                )
+                            }}
+                        />
+                    )}
 
                     <TextField
                         fullWidth

@@ -306,7 +306,7 @@ export default function Employee() {
                         <TableCell align="left">{email}</TableCell>
                         <TableCell align="left">{gender}</TableCell>
                         <TableCell align="left">{sentenceCase(designation)}</TableCell>
-                        <TableCell align="left">{phoneNumber}</TableCell>
+                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
                         <TableCell align="left">
                           <Label color={(status !== 'active' && 'error') || 'success'}>{sentenceCase(status)}</Label>
                         </TableCell>

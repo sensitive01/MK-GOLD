@@ -370,7 +370,7 @@ export default function SaleDetail({ id }) {
                       </TableCell>
                       <TableCell align="left">Customer Name: {data?.customer?.name}</TableCell>
                       <TableCell align="left">Customer Email: {data?.customer?.email}</TableCell>
-                      <TableCell align="left">Customer Phone Number: {data?.customer?.phoneNumber}</TableCell>
+                      <TableCell align="left">Customer Phone Number: {global.maskPhoneNumber(data?.customer?.phoneNumber)}</TableCell>
                     </TableRow>
                   </TableBody>
                   <TableBody>

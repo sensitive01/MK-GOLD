@@ -68,6 +68,7 @@ import BranchReport from './pages/branch/Report';
 import BranchBalancesheet from './pages/branch/Balancesheet';
 import BranchOrnament from './pages/branch/Ornament';
 import BranchEmployee from './pages/branch/BranchEmployee';
+import BranchQREnquiry from './pages/branch/QREnquiry';
 
 // ----------------------------------------------------------------------
 
@@ -176,6 +177,7 @@ export default function Router() {
         { path: 'balancesheet', element: <BranchBalancesheet /> },
         { path: 'ornament', element: <BranchOrnament /> },
         { path: 'employee', element: <BranchEmployee /> },
+        { path: 'qr-enquiry', element: <BranchQREnquiry /> },
       ],
     },
     {

@@ -363,7 +363,7 @@ export default function Customer() {
                         <TableCell align="left">{sentenceCase(branch?.branchName ?? '')}</TableCell>
                         <TableCell align="left">{sentenceCase(name ?? '')}</TableCell>
                         <TableCell align="left">{email}</TableCell>
-                        <TableCell align="left">{phoneNumber}</TableCell>
+                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
                         <TableCell align="left">{sentenceCase(gender ?? '')}</TableCell>
                         <TableCell align="left">
                           <Label

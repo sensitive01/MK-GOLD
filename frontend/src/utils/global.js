@@ -129,4 +129,11 @@ export default {
   canDelete: (userType) => {
     return userType?.toLowerCase() !== 'subadmin';
   },
+  maskPhoneNumber: (phone) => {
+    if (!phone || phone.length < 4) return phone;
+    const first2 = phone.substring(0, 2);
+    const last2 = phone.substring(phone.length - 2);
+    const masked = '********';
+    return `${first2}${masked}${last2}`;
+  },
 };

@@ -7,10 +7,29 @@ async function sendOtp(req, res) {
     const { phoneNumber } = req.body;
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
     
-    await otpService.create({ phoneNumber, otp });
+    await otpService.create({ phoneNumber, otp, type: 'enquiry' });
     await smsService.sendOtpSms(phoneNumber, otp);
 
     res.json({ status: true, message: "OTP sent successfully" });
+  } catch (err) {
+    res.json({ status: false, message: err.message });
+  }
+}
+
+async function verifyOtp(req, res) {
+  try {
+    const { phoneNumber, otp } = req.body;
+    if (!otp) {
+        return res.json({ status: false, message: "OTP is required" });
+    }
+    const otpRecord = await otpService.findOne({ phoneNumber, otp, type: 'enquiry' });
+    if (!otpRecord) {
+        return res.json({ status: false, message: "Invalid OTP" });
+    }
+    
+    // Once verified, we can choose to delete it, or keep it so verifyAndSubmit can check it again
+    // For a two-step process, it's safer to just confirm it's valid here
+    res.json({ status: true, message: "OTP Verified" });
   } catch (err) {
     res.json({ status: false, message: err.message });
   }
@@ -31,7 +50,18 @@ async function verifyAndSubmit(req, res) {
         });
     }
 
-    // OTP verification removed as per user request
+    if (!skipOtp) {
+      if (!otp) {
+        return res.json({ status: false, message: "OTP is required" });
+      }
+      const otpRecord = await otpService.findOne({ phoneNumber, otp, type: 'enquiry' });
+      if (!otpRecord) {
+        return res.json({ status: false, message: "Invalid OTP" });
+      }
+      // Remove used OTP
+      await otpService.remove(otpRecord._id.toString());
+    }
+
     const result = await qrService.create({ ...formData, phoneNumber });
     res.json({ status: true, data: result });
   } catch (err) {
@@ -60,4 +90,4 @@ async function findByMkgId(req, res) {
   }
 }
 
-module.exports = { sendOtp, verifyAndSubmit, getEnquiries, findByMkgId };
+module.exports = { sendOtp, verifyOtp, verifyAndSubmit, getEnquiries, findByMkgId };
