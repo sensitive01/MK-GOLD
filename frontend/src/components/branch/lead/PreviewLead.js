@@ -118,7 +118,7 @@ function PreviewLead(props) {
         </Grid>
         <Grid item xs={12} sm={6}>
           <Typography variant="subtitle2" color="textSecondary">Mobile</Typography>
-          <Typography variant="body1">{data.mobile}</Typography>
+          <Typography variant="body1">{global.maskPhoneNumber(data.mobile)}</Typography>
         </Grid>
         <Grid item xs={12}>
           <Typography variant="subtitle2" color="textSecondary">Address</Typography>

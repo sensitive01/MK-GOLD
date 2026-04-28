@@ -48,6 +48,7 @@ import * as Yup from 'yup';
 import PropTypes from 'prop-types';
 // components
 import { SaleDetail, SalePrint } from '../../components/accounts/sales';
+import global from '../../utils/global';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
@@ -444,7 +445,7 @@ export default function Sale() {
         <p style={{ color: '#fff' }}>
           From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
           {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}, Branch:{' '}
-          {branches?.find((e) => e._id === values.branch)?.branchName}, Phone Number: {values.phoneNumber}
+          {branches?.find((e) => e._id === values.branch)?.branchName}, Phone Number: {global.maskPhoneNumber(values.phoneNumber)}
         </p>
 
         <Card>

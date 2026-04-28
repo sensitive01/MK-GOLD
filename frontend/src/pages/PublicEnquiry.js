@@ -189,7 +189,7 @@ export default function PublicEnquiry() {
   }, [success, countdown]);
 
   const handleSendOtp = async () => {
-    if (!formData.phoneNumber || formData.phoneNumber.length < 10) {
+    if (!formData.phoneNumber || !/^[6-9]\d{9}$/.test(formData.phoneNumber)) {
       setError(t.invalidPhone);
       return;
     }
@@ -398,7 +398,10 @@ export default function PublicEnquiry() {
                         fullWidth
                         label={t.phone}
                         value={formData.phoneNumber}
-                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setFormData({ ...formData, phoneNumber: val });
+                        }}
                         type="tel"
                         disabled={otpSent}
                         InputProps={{

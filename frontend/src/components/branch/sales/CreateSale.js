@@ -40,6 +40,7 @@ import Ornament from './ornament';
 import ProofDocument from './proof';
 import Scrollbar from '../../scrollbar';
 import { createFile } from '../../../apis/branch/fileupload';
+import global from '../../../utils/global';
 
 
 function CreateSale(props) {
@@ -253,7 +254,7 @@ function CreateSale(props) {
           )}
           <Box sx={{ mb: 3, p: 2, bgcolor: 'background.neutral', borderRadius: 1 }}>
             <Typography variant="subtitle1" color="primary">
-              Selected Customer: <strong>{selectedUser?.name}</strong> ({selectedUser?.phoneNumber})
+              Selected Customer: <strong>{selectedUser?.name}</strong> ({global.maskPhoneNumber(selectedUser?.phoneNumber)})
               <Button
                 size="small"
                 variant="outlined"

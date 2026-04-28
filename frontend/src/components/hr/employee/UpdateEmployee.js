@@ -8,8 +8,10 @@ import { useEffect, useState } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { getEmployeeById, updateEmployee } from '../../../apis/hr/employee';
+import global from '../../../utils/global';
 
 function UpdateEmployee(props) {
+  const [focusedField, setFocusedField] = useState(null);
   // Form validation
   const schema = Yup.object({
     name: Yup.string().required('Name is required'),
@@ -20,10 +22,10 @@ function UpdateEmployee(props) {
     employeeId: Yup.string().required('Employee Id is required'),
     phoneNumber: Yup.string()
       .required('Phone is required')
-      .matches(/^[0-9]+$/, 'Must be only digits')
+      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
       ?.length(10),
     alternatePhoneNumber: Yup.string()
-      .matches(/^[0-9]+$/, 'Must be only digits')
+      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
       ?.length(10),
     dob: Yup.string().required('DOB is required'),
     shiftStartTime: Yup.string().required('Login Time is required'),
@@ -167,18 +169,22 @@ function UpdateEmployee(props) {
           <Grid item xs={12} sm={4}>
             <TextField
               name="phoneNumber"
-              value={values.phoneNumber}
+              value={focusedField === 'phoneNumber' ? values.phoneNumber : global.maskPhoneNumber(values.phoneNumber)}
               error={touched.phoneNumber && errors.phoneNumber && true}
               label={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber : 'Phone number'}
               fullWidth
-              onBlur={handleBlur}
+              onFocus={() => setFocusedField('phoneNumber')}
+              onBlur={(e) => {
+                handleBlur(e);
+                setFocusedField(null);
+              }}
               onChange={handleChange}
             />
           </Grid>
           <Grid item xs={12} sm={4}>
             <TextField
               name="alternatePhoneNumber"
-              value={values.alternatePhoneNumber}
+              value={focusedField === 'alternatePhoneNumber' ? values.alternatePhoneNumber : global.maskPhoneNumber(values.alternatePhoneNumber)}
               error={touched.alternatePhoneNumber && errors.alternatePhoneNumber && true}
               label={
                 touched.alternatePhoneNumber && errors.alternatePhoneNumber
@@ -186,7 +192,11 @@ function UpdateEmployee(props) {
                   : 'Alternate phone number'
               }
               fullWidth
-              onBlur={handleBlur}
+              onFocus={() => setFocusedField('alternatePhoneNumber')}
+              onBlur={(e) => {
+                handleBlur(e);
+                setFocusedField(null);
+              }}
               onChange={handleChange}
             />
           </Grid>

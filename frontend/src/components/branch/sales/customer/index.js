@@ -38,8 +38,9 @@ import Webcam from 'react-webcam';
 import PropTypes from 'prop-types';
 import Iconify from '../../../iconify';
 import Label from '../../../label';
-import { findCustomer, createCustomer, deleteCustomerById } from '../../../../apis/branch/customer';
+import { findCustomer, createCustomer, deleteCustomerById, updateCustomer } from '../../../../apis/branch/customer';
 import { createFile } from '../../../../apis/branch/fileupload';
+import global from '../../../../utils/global';
 // import { getBranchByBranchId } from '../../../../apis/branch/branch';
 import Scrollbar from '../../../scrollbar';
 import { getEnquiryByMkgId } from '../../../../apis/branch/qrEnquiry';
@@ -76,6 +77,7 @@ function Customer(props) {
   const [img, setImg] = useState(null);
   const [enquiryId, setEnquiryId] = useState('');
   const [fetchingEnquiry, setFetchingEnquiry] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
   const webcamRef = useRef(null);
 
   useEffect(() => {
@@ -170,10 +172,10 @@ function Customer(props) {
     name: Yup.string().required('Name is required'),
     phoneNumber: Yup.string()
       .required('Phone is required')
-      .matches(/^[0-9]+$/, 'Must be only digits')
+      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
       ?.length(10),
     alternatePhoneNumber: Yup.string()
-      .matches(/^[0-9]+$/, 'Must be only digits')
+      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
       ?.length(10),
     email: Yup.string().required('Email id is required').email(),
     dob: Yup.string().required('DOB is required'),
@@ -413,7 +415,7 @@ function Customer(props) {
                     </TableCell>
                     <TableCell align="left">{sentenceCase(e.name ?? '')}</TableCell>
                     <TableCell align="left">{e.email}</TableCell>
-                    <TableCell align="left">{e.phoneNumber}</TableCell>
+                    <TableCell align="left">{global.maskPhoneNumber(e.phoneNumber)}</TableCell>
                     <TableCell align="left">{sentenceCase(e.gender ?? '')}</TableCell>
                     <TableCell align="left">
                       <Label
@@ -584,11 +586,15 @@ function Customer(props) {
               <Grid item xs={12} md={4}>
                 <TextField
                   name="phoneNumber"
-                  value={values.phoneNumber}
+                  value={focusedField === 'phoneNumber' ? values.phoneNumber : global.maskPhoneNumber(values.phoneNumber)}
+                  onFocus={() => setFocusedField('phoneNumber')}
+                  onBlur={(e) => {
+                    handleBlur(e);
+                    setFocusedField(null);
+                  }}
                   error={touched.phoneNumber && errors.phoneNumber && true}
                   label={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber : 'Phone'}
                   fullWidth
-                  onBlur={handleBlur}
                   onChange={(e) => {
                     handleChange(e);
                   }}
@@ -597,7 +603,12 @@ function Customer(props) {
               <Grid item xs={12} md={4}>
                 <TextField
                   name="alternatePhoneNumber"
-                  value={values.alternatePhoneNumber}
+                  value={focusedField === 'alternatePhoneNumber' ? values.alternatePhoneNumber : global.maskPhoneNumber(values.alternatePhoneNumber)}
+                  onFocus={() => setFocusedField('alternatePhoneNumber')}
+                  onBlur={(e) => {
+                    handleBlur(e);
+                    setFocusedField(null);
+                  }}
                   error={touched.alternatePhoneNumber && errors.alternatePhoneNumber && true}
                   label={
                     touched.alternatePhoneNumber && errors.alternatePhoneNumber
@@ -605,7 +616,6 @@ function Customer(props) {
                       : 'Alt phone'
                   }
                   fullWidth
-                  onBlur={handleBlur}
                   onChange={(e) => {
                     handleChange(e);
                   }}

@@ -13,6 +13,7 @@ import { getBranchByBranchId } from '../../../apis/branch/branch';
 import { createFile } from '../../../apis/branch/fileupload';
 import { getEnquiryByMkgId } from '../../../apis/branch/qrEnquiry';
 import Stack from '@mui/material/Stack';
+import global from '../../../utils/global';
 
 function CreateCustomer({ setToggleContainer, setNotify }) {
   const auth = useSelector((state) => state.auth);
@@ -22,6 +23,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
   const [enquiryId, setEnquiryId] = useState('');
   const [fetchingEnquiry, setFetchingEnquiry] = useState(false);
   const [img, setImg] = useState(null);
+  const [focusedField, setFocusedField] = useState(null);
   const webcamRef = useRef(null);
   const form = useRef();
 
@@ -45,10 +47,10 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
     name: Yup.string().required('Name is required'),
     phoneNumber: Yup.string()
       .required('Phone is required')
-      .matches(/^[0-9]+$/, 'Must be only digits')
+      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
       ?.length(10),
     alternatePhoneNumber: Yup.string()
-      .matches(/^[0-9]+$/, 'Must be only digits')
+      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
       ?.length(10),
     email: Yup.string().required('Email id is required'),
     dob: Yup.string().required('DOB is required'),
@@ -260,24 +262,32 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
           <Grid item xs={12} sm={4}>
             <TextField
               name="phoneNumber"
-              value={values.phoneNumber}
+              value={focusedField === 'phoneNumber' ? values.phoneNumber : global.maskPhoneNumber(values.phoneNumber)}
+              onFocus={() => setFocusedField('phoneNumber')}
+              onBlur={(e) => {
+                handleBlur(e);
+                setFocusedField(null);
+              }}
               error={touched.phoneNumber && errors.phoneNumber && true}
               label={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber : 'Phone'}
               fullWidth
-              onBlur={handleBlur}
               onChange={handleChange}
             />
           </Grid>
           <Grid item xs={12} sm={4}>
             <TextField
               name="alternatePhoneNumber"
-              value={values.alternatePhoneNumber}
+              value={focusedField === 'alternatePhoneNumber' ? values.alternatePhoneNumber : global.maskPhoneNumber(values.alternatePhoneNumber)}
+              onFocus={() => setFocusedField('alternatePhoneNumber')}
+              onBlur={(e) => {
+                handleBlur(e);
+                setFocusedField(null);
+              }}
               error={touched.alternatePhoneNumber && errors.alternatePhoneNumber && true}
               label={
                 touched.alternatePhoneNumber && errors.alternatePhoneNumber ? errors.alternatePhoneNumber : 'Alt Phone'
               }
               fullWidth
-              onBlur={handleBlur}
               onChange={handleChange}
             />
           </Grid>

@@ -18,10 +18,11 @@ import global from '../../../utils/global';
 
 function CreateLead(props) {
   const [file, setFile] = useState(null);
+  const [focusedField, setFocusedField] = useState(null);
 
   const schema = Yup.object({
     name: Yup.string().required('Name is required'),
-    mobile: Yup.string().required('Mobile is required').matches(/^[0-9]{10}$/, 'Must be 10 digits'),
+    mobile: Yup.string().required('Mobile is required').matches(/^[6-9][0-9]{9}$/, 'Invalid Indian mobile number'),
     address: Yup.string(),
     pincode: Yup.string(),
     city: Yup.string(),
@@ -106,8 +107,12 @@ function CreateLead(props) {
               fullWidth
               label="Mobile"
               name="mobile"
-              value={values.mobile}
-              onBlur={handleBlur}
+              value={focusedField === 'mobile' ? values.mobile : global.maskPhoneNumber(values.mobile)}
+              onFocus={() => setFocusedField('mobile')}
+              onBlur={(e) => {
+                handleBlur(e);
+                setFocusedField(null);
+              }}
               onChange={handleChange}
               error={touched.mobile && Boolean(errors.mobile)}
               helperText={touched.mobile && errors.mobile}

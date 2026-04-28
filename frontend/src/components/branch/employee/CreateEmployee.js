@@ -9,10 +9,12 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import moment from 'moment';
 import { createEmployee, getNextEmployeeId } from '../../../apis/branch/employee';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import global from '../../../utils/global';
 
 function CreateEmployee(props) {
   const form = useRef();
+  const [focusedField, setFocusedField] = useState(null);
 
   useEffect(() => {
     getNextEmployeeId().then((data) => {
@@ -32,10 +34,10 @@ function CreateEmployee(props) {
     employeeId: Yup.string().required('Employee Id is required'),
     phoneNumber: Yup.string()
       .required('Phone is required')
-      .matches(/^[0-9]+$/, 'Must be only digits')
+      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
       ?.length(10),
     alternatePhoneNumber: Yup.string()
-      .matches(/^[0-9]+$/, 'Must be only digits')
+      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
       ?.length(10),
     dob: Yup.string().required('DOB is required'),
     shiftStartTime: Yup.string().required('Login Time is required'),
@@ -175,9 +177,13 @@ function CreateEmployee(props) {
               error={touched.phoneNumber && errors.phoneNumber && true}
               label={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber : 'Phone number'}
               fullWidth
-              onBlur={handleBlur}
+              onFocus={() => setFocusedField('phoneNumber')}
+              onBlur={(e) => {
+                handleBlur(e);
+                setFocusedField(null);
+              }}
               onChange={handleChange}
-              value={values.phoneNumber}
+              value={focusedField === 'phoneNumber' ? values.phoneNumber : global.maskPhoneNumber(values.phoneNumber)}
             />
           </Grid>
           <Grid item xs={12} sm={4}>
@@ -190,9 +196,13 @@ function CreateEmployee(props) {
                   : 'Alternate phone number'
               }
               fullWidth
-              onBlur={handleBlur}
+              onFocus={() => setFocusedField('alternatePhoneNumber')}
+              onBlur={(e) => {
+                handleBlur(e);
+                setFocusedField(null);
+              }}
               onChange={handleChange}
-              value={values.alternatePhoneNumber}
+              value={focusedField === 'alternatePhoneNumber' ? values.alternatePhoneNumber : global.maskPhoneNumber(values.alternatePhoneNumber)}
             />
           </Grid>
           <Grid item xs={12} sm={4}>
