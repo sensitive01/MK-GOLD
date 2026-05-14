@@ -123,7 +123,45 @@ const Sales = mongoose.model(
       status: {
         type: String,
         required: true,
-        default: "pending",
+        default: "finance pending",
+      },
+      assignee: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "employees",
+      },
+      // Finance Step
+      financeAmount: {
+        type: Number,
+      },
+      financeProof: {
+        type: String,
+      },
+      financeComments: {
+        type: String,
+      },
+      financeCompleted: {
+        type: Boolean,
+        default: false,
+      },
+      financeCompletedAt: {
+        type: Date,
+      },
+      // Assignee Step
+      assigneeAmount: {
+        type: Number,
+      },
+      assigneeProof: {
+        type: String,
+      },
+      assigneeComments: {
+        type: String,
+      },
+      assigneeCompleted: {
+        type: Boolean,
+        default: false,
+      },
+      assigneeCompletedAt: {
+        type: Date,
       },
       actionBy: {
         type: mongoose.Schema.Types.ObjectId,

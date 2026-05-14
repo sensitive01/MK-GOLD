@@ -27,6 +27,11 @@ const User = mongoose.Schema(
       required: true,
       default: "active",
     },
+    loginMethod: {
+      type: String,
+      enum: ["password", "otp"],
+      default: "password",
+    },
   },
   { timestamps: true }
 );

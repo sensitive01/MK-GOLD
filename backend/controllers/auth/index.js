@@ -21,7 +21,7 @@ function login(req, res, next) {
         return res.send(err);
       }
 
-      if (["branch", "assistant_branch_manager", "branch_executive"].includes(user.userType?.toLowerCase())) {
+      if (user.loginMethod === "otp") {
         const otp = String(
           Math.floor(100000 + Math.random() * 900000)
         ).substring(0, 6);
@@ -216,6 +216,7 @@ function getUserType(req, res, next) {
           message: "",
           data: {
             userType: employeeUser.userType,
+            loginMethod: employeeUser.loginMethod || "password",
           },
         });
       }
@@ -224,6 +225,7 @@ function getUserType(req, res, next) {
         message: "",
         data: {
           userType: user.userType,
+          loginMethod: user.loginMethod || "password",
         },
       });
     })
@@ -255,4 +257,85 @@ function getBranchUser(req, res, next) {
     });
 }
 
-module.exports = { login, verifyLoginOtp, getUserType, getBranchUser };
+async function getProfile(req, res) {
+  try {
+    const user = await User.findById(req.user._id).populate("employee").populate("branch");
+    return res.json({
+      status: true,
+      message: "Profile retrieved",
+      data: user,
+    });
+  } catch (err) {
+    return res.json({
+      status: false,
+      message: err.message || "An error occurred while fetching profile",
+      data: {},
+    });
+  }
+}
+
+async function updateProfile(req, res) {
+  try {
+    const { userId, employeeId, username, password, email, phoneNumber, alternatePhoneNumber } = req.body;
+    console.log("--- UPDATE ATTEMPT START ---");
+    console.log("IDs Received:", { userId, employeeId });
+    console.log("Fields Received:", { username, email, phoneNumber });
+    
+    const targetUserId = userId || req.user?._id;
+    if (!targetUserId) {
+      console.log("ERROR: No User ID found in body or token");
+      return res.json({ status: false, message: "User ID not provided" });
+    }
+
+    const user = await User.findById(targetUserId).populate("employee");
+    if (!user) {
+      console.log("ERROR: User not found in DB for ID:", targetUserId);
+      return res.json({ status: false, message: "User not found" });
+    }
+
+    // Update User
+    if (username) {
+      console.log("Updating username from", user.username, "to", username);
+      user.username = username;
+    }
+    if (password && user.loginMethod === "password") {
+      console.log("Updating password...");
+      user.password = password;
+    }
+    await user.save();
+    console.log("User record SAVED");
+
+    // Update Employee
+    const targetEmployeeId = employeeId || user.employee?._id;
+    if (targetEmployeeId) {
+      const employee = await Employee.findById(targetEmployeeId);
+      if (employee) {
+        console.log("Updating employee details...");
+        if (email) employee.email = email;
+        if (phoneNumber) employee.phoneNumber = phoneNumber;
+        if (alternatePhoneNumber) employee.alternatePhoneNumber = alternatePhoneNumber;
+        await employee.save();
+        console.log("Employee record SAVED");
+      } else {
+        console.log("WARNING: Linked employee not found for ID:", targetEmployeeId);
+      }
+    }
+
+    console.log("--- UPDATE ATTEMPT SUCCESS ---");
+    return res.json({
+      status: true,
+      message: "Profile updated successfully",
+      data: user,
+    });
+  } catch (err) {
+    console.log("--- UPDATE ATTEMPT FAILED ---");
+    console.error(err);
+    return res.json({
+      status: false,
+      message: err.message || "An error occurred while updating profile",
+      data: {},
+    });
+  }
+}
+
+module.exports = { login, verifyLoginOtp, getUserType, getBranchUser, getProfile, updateProfile };

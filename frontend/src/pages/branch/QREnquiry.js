@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Checkbox } from '@mui/material';
 import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -36,6 +37,7 @@ export default function QREnquiry() {
   const [data, setData] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [selected, setSelected] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -46,7 +48,7 @@ export default function QREnquiry() {
     // Filter by user's branch ID
     getQrEnquiries({ branch: user?.branch }).then((res) => {
       if (res.status) {
-        setData(res.data);
+        setData(res.data || []);
       }
     });
   };
@@ -58,6 +60,34 @@ export default function QREnquiry() {
   const handleChangeRowsPerPage = (event) => {
     setPage(0);
     setRowsPerPage(parseInt(event.target.value, 10));
+  };
+
+  const handleSelectAllClick = (event) => {
+    if (event.target.checked) {
+      const newSelecteds = data.map((n) => n._id);
+      setSelected(newSelecteds);
+      return;
+    }
+    setSelected([]);
+  };
+
+  const handleClick = (event, id) => {
+    const selectedIndex = selected.indexOf(id);
+    let newSelected = [];
+
+    if (selectedIndex === -1) {
+      newSelected = newSelected.concat(selected, id);
+    } else if (selectedIndex === 0) {
+      newSelected = newSelected.concat(selected.slice(1));
+    } else if (selectedIndex === selected.length - 1) {
+      newSelected = newSelected.concat(selected.slice(0, -1));
+    } else if (selectedIndex > 0) {
+      newSelected = newSelected.concat(
+        selected.slice(0, selectedIndex),
+        selected.slice(selectedIndex + 1)
+      );
+    }
+    setSelected(newSelected);
   };
 
   return (
@@ -78,35 +108,42 @@ export default function QREnquiry() {
             <TableContainer sx={{ minWidth: 800 }}>
               <Table>
                 <BranchListHead
-                  headLabel={TABLE_HEAD}
-                  rowCount={data.length}
-                  onRequestSort={() => {}}
-                  onSelectAllClick={() => {}}
-                />
+                    headLabel={TABLE_HEAD}
+                    rowCount={data.length}
+                    numSelected={selected.length}
+                    order="asc"
+                    orderBy=""
+                    onRequestSort={() => {}}
+                    onSelectAllClick={handleSelectAllClick}
+                  />
                 <TableBody>
-                  {data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
-                    const { _id, mkgCustomerId, name, phoneNumber, email, type, grossWeight, pincode, createdAt } = row;
+                    {data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
+                      const { _id, mkgCustomerId, name, phoneNumber, email, type, grossWeight, pincode, createdAt } = row;
+                      const isItemSelected = selected.indexOf(_id) !== -1;
 
-                    return (
-                      <TableRow hover key={_id} tabIndex={-1}>
-                        <TableCell align="left" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                          {mkgCustomerId}
-                        </TableCell>
-                        <TableCell align="left">{name}</TableCell>
-                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
-                        <TableCell align="left">{email}</TableCell>
-                        <TableCell align="left" sx={{ textTransform: 'capitalize' }}>
-                          {type}
-                        </TableCell>
-                        <TableCell align="left">{grossWeight}g</TableCell>
-                        <TableCell align="left">{pincode}</TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm')}</TableCell>
-                      </TableRow>
-                    );
-                  })}
+                      return (
+                        <TableRow hover key={_id} tabIndex={-1} selected={isItemSelected}>
+                          <TableCell padding="checkbox">
+                            <Checkbox checked={isItemSelected} onChange={(event) => handleClick(event, _id)} />
+                          </TableCell>
+                          <TableCell align="left" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                            {mkgCustomerId}
+                          </TableCell>
+                          <TableCell align="left">{name}</TableCell>
+                          <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
+                          <TableCell align="left">{email}</TableCell>
+                          <TableCell align="left" sx={{ textTransform: 'capitalize' }}>
+                            {type}
+                          </TableCell>
+                          <TableCell align="left">{grossWeight}g</TableCell>
+                          <TableCell align="left">{pincode}</TableCell>
+                          <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm')}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   {data.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
                         <Paper sx={{ textAlign: 'center' }}>
                           <Typography paragraph>No enquiries found</Typography>
                         </Paper>

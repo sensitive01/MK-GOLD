@@ -57,10 +57,24 @@ const Release = mongoose.model(
         type: String,
         required: true,
       },
+      assignee: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "employees",
+      },
+      isFinanceCompleted: {
+        type: Boolean,
+        default: false,
+      },
+      financePaymentAmount: {
+        type: Number,
+      },
+      financeComments: {
+        type: String,
+      },
       status: {
         type: String,
         required: true,
-        default: "pending",
+        default: "finance pending",
       },
     },
     { timestamps: true }

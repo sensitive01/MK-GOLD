@@ -207,15 +207,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
           variant="contained"
           sx={{ ml: 2 }}
           onClick={() => {
-            if (proofDocument?.length === 0) {
-              setNotify({
-                open: true,
-                message: 'Please upload proof document',
-                severity: 'info',
-              });
-            } else {
-              setStep(step + 1);
-            }
+            setStep(step + 1);
           }}
         >
           Next

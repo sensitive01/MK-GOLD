@@ -23,6 +23,7 @@ import { loginApi, getUserTypeApi, verifyLoginOtp } from '../../../apis/auth';
 export default function LoginForm() {
   const [username, setUsername] = useState('');
   const [userType, setUserType] = useState('');
+  const [loginMethod, setLoginMethod] = useState('password');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [token, setToken] = useState('');
@@ -56,10 +57,18 @@ export default function LoginForm() {
     if (
       userType === 'branch' ||
       userType === 'assistant_branch_manager' ||
-      userType === 'branch_executive' ||
-      userType === 'telecalling'
+      userType === 'branch_executive'
     ) {
       return <Navigate to="/branch/dashboard" />;
+    }
+    if (userType === 'telecalling') {
+      return <Navigate to="/telecalling/dashboard" />;
+    }
+    if (userType === 'transaction_executive') {
+      return <Navigate to="/transaction-executive/dashboard" />;
+    }
+    if (userType === 'operations') {
+      return <Navigate to="/operations/dashboard" />;
     }
     return <Navigate to="/404" />;
   }
@@ -126,7 +135,7 @@ export default function LoginForm() {
             },
           }}
         />
-        {step === 2 && !['branch', 'assistant_branch_manager', 'branch_executive', 'telecalling'].includes(userType) && (
+        {step === 2 && loginMethod === 'password' && (
           <TextField
             name="password"
             label={'Password'}
@@ -155,7 +164,7 @@ export default function LoginForm() {
             }}
           />
         )}
-        {step === 2 && ['branch', 'assistant_branch_manager', 'branch_executive', 'telecalling'].includes(userType) && (
+        {step === 2 && loginMethod === 'otp' && (
           <TextField
             name="otp"
             label={'OTP'}
@@ -212,8 +221,9 @@ export default function LoginForm() {
               getUserTypeApi({ username })
                 .then((data) => {
                   if (data.status === true) {
-                    setUserType(data.data.userType);
-                    if (['branch', 'assistant_branch_manager', 'branch_executive'].includes(data.data.userType)) {
+                    const method = data.data.loginMethod || 'password';
+                    setLoginMethod(method);
+                    if (method === 'otp') {
                       loginApi({ username, password: 'no-password' })
                         .then((data) => {
                           if (data.status === true) {
@@ -247,7 +257,7 @@ export default function LoginForm() {
           } else {
             setIsDisable(true);
             setError(null);
-            if (['branch', 'assistant_branch_manager', 'branch_executive'].includes(userType)) {
+            if (loginMethod === 'otp') {
               verifyLoginOtp({ token, otp })
                 .then((data) => {
                   if (data.status === true) {

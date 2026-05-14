@@ -60,8 +60,62 @@ const Release = mongoose.model(
       status: {
         type: String,
         required: true,
-        default: "pending",
+        default: "finance pending",
       },
+      assignee: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "employees",
+      },
+      // Finance Step
+      financeAmount: {
+        type: Number,
+      },
+      financeProof: {
+        type: String,
+      },
+      financeComments: {
+        type: String,
+      },
+      financeCompleted: {
+        type: Boolean,
+        default: false,
+      },
+      financeCompletedAt: {
+        type: Date,
+      },
+      // Assignee Step
+      assigneeAmount: {
+        type: Number,
+      },
+      assigneeProof: {
+        type: String,
+      },
+      assigneeComments: {
+        type: String,
+      },
+      assigneeCompleted: {
+        type: Boolean,
+        default: false,
+      },
+      assigneeCompletedAt: {
+        type: Date,
+      },
+      ornaments: [
+        {
+          ornamentType: { type: String },
+          quantity: { type: Number },
+          grossWeight: { type: Number },
+          netWeight: { type: Number },
+          purity: { type: Number },
+        },
+      ],
+      proofDocuments: [
+        {
+          documentType: { type: String },
+          documentNo: { type: String },
+          documentFile: { type: String },
+        },
+      ],
       actionBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "employees",

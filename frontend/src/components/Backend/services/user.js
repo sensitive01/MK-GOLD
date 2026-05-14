@@ -42,9 +42,16 @@ async function create(payload) {
 
 async function update(id, payload) {
   try {
-    return await User.findByIdAndUpdate(id, payload, {
-      returnDocument: "after",
-    }).exec();
+    const user = await User.findById(id);
+    if (!user) throw new Error("User not found");
+    
+    // Handle both camelCase and lowercase casing from different clients
+    if (payload.loginmethod && !payload.loginMethod) {
+      payload.loginMethod = payload.loginmethod;
+    }
+    
+    Object.assign(user, payload);
+    return await user.save();
   } catch (err) {
     throw err;
   }

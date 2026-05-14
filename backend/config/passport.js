@@ -60,19 +60,16 @@ passport.use(
         }
 
         let isMatch = false;
-        const normalizedRole = user.userType ? user.userType.trim().toLowerCase() : "";
+        const isOtpUser = user.loginMethod === "otp";
         
-        // Roles that use OTP login (sentinel password bypass)
-        const otpRoles = ["branch", "assistant_branch_manager", "branch_executive"];
-        
-        if (password === "no-password" && otpRoles.includes(normalizedRole)) {
+        if (password === "no-password" && isOtpUser) {
           isMatch = true;
         } else {
           isMatch = await user.comparePassword(password);
         }
 
         if (!isMatch) {
-          return cb(null, false, { message: "Invalid password for this user." });
+          return cb(null, false, { message: "Invalid password for this user. (ROOT)" });
         }
 
         if (user.status !== "active") {

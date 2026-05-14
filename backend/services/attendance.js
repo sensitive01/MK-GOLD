@@ -433,14 +433,28 @@ async function branchStats(branchId, employeeId = null) {
     const endOfDay = new Date(today.setHours(23, 59, 59, 999));
 
     let totalEmployees = 0;
+    let presentCount = 0;
+    let absentCount = 0;
     
     if (employeeId) {
       // For single employee: return cumulative month stats
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-      totalEmployees = await Attendance.countDocuments({
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const todayEnd = new Date(now.setHours(23, 59, 59, 999));
+      
+      // Total days in month so far
+      const daysSoFar = now.getDate();
+      
+      const presentDays = await Attendance.countDocuments({
         employee: employeeId,
-        attendanceDate: { $gte: monthStart, $lte: endOfDay }
+        attendanceDate: { $gte: monthStart, $lte: todayEnd }
       });
+
+      return {
+        total: daysSoFar,
+        present: presentDays,
+        absent: Math.max(0, daysSoFar - presentDays)
+      };
     } else {
       // Try to count directly
       totalEmployees = await Employee.countDocuments({ 
@@ -467,25 +481,23 @@ async function branchStats(branchId, employeeId = null) {
               );
           }
       }
-    }
 
-    const presentQuery = {
-      attendanceDate: { $gte: startOfDay, $lte: endOfDay }
-    };
-    if (branchId) {
-        presentQuery.branch = branchId;
-    }
-    if (employeeId) {
-      presentQuery.employee = employeeId;
-    }
+      const presentQuery = {
+        attendanceDate: { $gte: startOfDay, $lte: endOfDay }
+      };
+      if (branchId) {
+          presentQuery.branch = branchId;
+      }
 
-    const presentCount = await Attendance.countDocuments(presentQuery);
+      presentCount = await Attendance.countDocuments(presentQuery);
+      absentCount = Math.max(0, totalEmployees - presentCount);
 
-    return {
-      total: totalEmployees,
-      present: presentCount,
-      absent: Math.max(0, totalEmployees - presentCount)
-    };
+      return {
+        total: totalEmployees,
+        present: presentCount,
+        absent: absentCount
+      };
+    }
   } catch (err) {
     throw err;
   }

@@ -14,6 +14,7 @@ const MENU_OPTIONS = [
   {
     label: 'Profile',
     icon: 'eva:person-fill',
+    linkTo: '/telecalling/profile',
   },
   {
     label: 'Settings',
@@ -91,7 +92,10 @@ export default function AccountPopover() {
 
         <Stack sx={{ p: 1 }}>
           {MENU_OPTIONS?.map((option) => (
-            <MenuItem key={option.label} onClick={handleClose}>
+            <MenuItem key={option.label} onClick={() => {
+              handleClose();
+              if (option.linkTo) navigate(option.linkTo);
+            }}>
               {option.label}
             </MenuItem>
           ))}

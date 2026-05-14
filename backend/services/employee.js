@@ -8,14 +8,14 @@ async function find(query = {}, user = null) {
       userType === "branch" ||
       userType === "assistant_branch_manager" ||
       userType === "branch_executive" ||
+      userType === "transaction_executive" ||
       userType === "telecalling"
     ) {
       query.branch = user.branch?._id || user.branch;
       
-      // If it's a sub-role, restrict access to only their own record
-      if (userType !== "branch") {
-        query._id = user.employee?._id || user.employee;
-      }
+      // Only restrict to self for non-management/non-sales roles if needed, 
+      // but for now, allow branch roles to see branch employees.
+      // (Removed the restrict-to-self logic for these branch roles)
     }
 
     if (query.createdAt && "$gte" in query.createdAt) {
@@ -28,7 +28,50 @@ async function find(query = {}, user = null) {
         new Date(query.createdAt["$lte"]).toISOString().replace(/T.*Z/, "T23:59:59Z")
       );
     }
-    return await Employee.find(query).sort({ createdAt: -1 }).exec();
+    const mongoose = require("mongoose");
+    if (query.branch && typeof query.branch === "string") {
+      query.branch = mongoose.Types.ObjectId(query.branch);
+    }
+    return await Employee.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "employee",
+          as: "user",
+        },
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+      {
+        $match: {
+          $or: [
+            { branch: query.branch },
+            { "user.branch": query.branch },
+            { branch: query.branch?.toString() },
+            { "user.branch": query.branch?.toString() }
+          ]
+        }
+      },
+      {
+        $lookup: {
+          from: "branches",
+          localField: "branch",
+          foreignField: "_id",
+          as: "branchDetails",
+        },
+      },
+      { $unwind: { path: "$branchDetails", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          designation: 1,
+          userType: "$user.userType",
+          branchName: "$branchDetails.name",
+        },
+      },
+      { $sort: { createdAt: -1 } },
+    ]).exec();
   } catch (err) {
     throw err;
   }
@@ -99,12 +142,15 @@ async function findAllWithBranch() {
           employeeId: 1,
           name: 1,
           branch: "$user.branch",
+          email: 1,
+          phoneNumber: 1,
           gender: 1,
           designation: 1,
           doj: 1,
           employmentType: 1,
           languages: 1,
           status: 1,
+          createdAt: 1,
         },
       },
       { $sort: { createdAt: -1 } },

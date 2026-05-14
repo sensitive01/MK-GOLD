@@ -270,7 +270,7 @@ function renderContent(notification) {
     };
   }
   return {
-    avatar: notification.avatar ? <img alt={notification.title} src={notification.avatar} /> : null,
+    avatar: notification.avatar && notification.avatar !== 'undefined' ? <img alt={notification.title} src={notification.avatar} /> : null,
     title,
   };
 }

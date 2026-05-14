@@ -110,6 +110,7 @@ export default {
     { label: 'Assistant Branch Manager', value: 'assistant_branch_manager' }, // Added for 7.2
     { label: 'Branch Executive', value: 'branch_executive' }, // Added for 7.3
     { label: 'Tele-Calling', value: 'telecalling' },
+    { label: 'Transaction Executive', value: 'transaction_executive' },
   ],
   employmentTypes: [
     { label: 'Full Time', value: 'full-time' },
@@ -127,7 +128,8 @@ export default {
     'Gujarati',
   ],
   canDelete: (userType) => {
-    return userType?.toLowerCase() !== 'subadmin';
+    const role = userType?.toLowerCase();
+    return role !== 'subadmin' && role !== 'transaction_executive';
   },
   maskPhoneNumber: (phone) => {
     if (!phone || phone.length < 4) return phone;

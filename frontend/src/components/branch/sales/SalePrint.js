@@ -14,6 +14,10 @@ export default function SalePrint({ id }) {
     });
   }, [id]);
 
+  if (!data || Object.keys(data).length === 0) {
+    return null;
+  }
+
   return (
     <>
       <iframe id="iframe" style={{ display: 'none', height: '0px', width: '0px', position: 'absolute' }} title="pdf" />
@@ -39,12 +43,12 @@ export default function SalePrint({ id }) {
                   <td style={{ width: '50%' }}>
                     <b>Bill ID:</b> {data?.billId}
                   </td>
-                  <td style={{ width: '50%', textAlign: 'right' }}>{new Date(data?.createdAt).toDateString()}</td>
+                  <td style={{ width: '50%', textAlign: 'right' }}>{data?.createdAt ? new Date(data?.createdAt).toDateString() : ''}</td>
                 </tr>
                 <tr>
                   <td style={{ width: '50%' }}>
                     <b>{data?.purchaseType?.toLowerCase() === 'gold' ? 'Gold' : 'Silver'} Rate:</b> &#8377;{' '}
-                    {data?.purchaseType?.toLowerCase() === 'gold' ? data.goldRate : data.silverRate}
+                    {data?.purchaseType?.toLowerCase() === 'gold' ? data?.goldRate : data?.silverRate}
                   </td>
                   <td style={{ width: '50%', textAlign: 'right' }} />
                 </tr>
@@ -67,7 +71,9 @@ export default function SalePrint({ id }) {
               <tr>
                 <th>Address :</th>
                 <td>
-                  {`${data?.customer?.address[0]?.address}, ${data?.customer?.address[0]?.city}, ${data?.customer?.address[0]?.state}, ${data?.customer?.address[0]?.pincode}`}
+                  {data?.customer?.address?.length > 0 
+                    ? `${data?.customer?.address[0]?.address}, ${data?.customer?.address[0]?.city}, ${data?.customer?.address[0]?.state}, ${data?.customer?.address[0]?.pincode}`
+                    : ''}
                 </td>
               </tr>
             </tbody>
@@ -79,28 +85,28 @@ export default function SalePrint({ id }) {
             <tbody>
               <tr>
                 <td style={{ width: '50%' }}>Total ornaments:</td>
-                <td style={{ width: '50%', textAlign: 'right' }}>{data?.ornaments?.length}</td>
+                <td style={{ width: '50%', textAlign: 'right' }}>{data?.ornaments?.length || 0}</td>
               </tr>
               <tr>
                 <td style={{ width: '50%' }}>Gross weight:</td>
                 <td style={{ width: '50%', textAlign: 'right' }}>
-                  {Math.round(data?.ornaments?.reduce((prev, cur) => cur.grossWeight + prev, 0))}
+                  {Math.round(data?.ornaments?.reduce((prev, cur) => (cur?.grossWeight || 0) + prev, 0) || 0)}
                 </td>
               </tr>
               <tr>
                 <td style={{ width: '50%' }}>Net weight:</td>
                 <td style={{ width: '50%', textAlign: 'right' }}>
-                  {Math.round(data?.ornaments?.reduce((prev, cur) => cur.netWeight + prev, 0))}
+                  {Math.round(data?.ornaments?.reduce((prev, cur) => (cur?.netWeight || 0) + prev, 0) || 0)}
                 </td>
               </tr>
               <tr>
                 <td style={{ width: '50%' }}>Net Amount</td>
-                <td style={{ width: '50%', textAlign: 'right' }}>&#8377; {Math.round(data?.netAmount)}</td>
+                <td style={{ width: '50%', textAlign: 'right' }}>&#8377; {Math.round(data?.netAmount || 0)}</td>
               </tr>
               <tr>
                 <td style={{ width: '50%' }}>Release</td>
                 <td style={{ width: '50%', textAlign: 'right' }}>
-                  &#8377; {Math.round(data?.release?.reduce((prev, cur) => prev + cur.payableAmount, 0))}
+                  &#8377; {Math.round(data?.release?.reduce((prev, cur) => prev + (cur?.payableAmount || 0), 0) || 0)}
                 </td>
               </tr>
               <tr>
@@ -108,28 +114,28 @@ export default function SalePrint({ id }) {
                 <td style={{ width: '50%', textAlign: 'right' }}>
                   &#8377;{' '}
                   {Math.round(
-                    data?.netAmount -
-                      data?.payableAmount -
-                      data?.release?.reduce((prev, cur) => prev + cur.payableAmount, 0)
+                    (data?.netAmount || 0) -
+                      (data?.payableAmount || 0) -
+                      (data?.release?.reduce((prev, cur) => prev + (cur?.payableAmount || 0), 0) || 0)
                   )}
                 </td>
               </tr>
               <tr>
                 <th style={{ width: '50%' }}>Payable</th>
-                <td style={{ width: '50%', textAlign: 'right' }}>&#8377; {Math.round(data?.payableAmount)}</td>
+                <td style={{ width: '50%', textAlign: 'right' }}>&#8377; {Math.round(data?.payableAmount || 0)}</td>
               </tr>
             </tbody>
           </table>
         </div>
         <div style={{ display: 'block', margin: '20px 0' }}>
-          {data.actionBy && (
+          {data?.actionBy && (
             <div style={{ marginTop: '10px', fontSize: '12px' }}>
-              <b>Approved By:</b> {data.actionBy.name} ({data.actionBy.employeeId})
+              <b>Approved By:</b> {data?.actionBy?.name} ({data?.actionBy?.employeeId})
             </div>
           )}
-          {data.actionAt && (
+          {data?.actionAt && (
             <div style={{ marginTop: '5px', fontSize: '12px' }}>
-              <b>Approved At:</b> {new Date(data.actionAt).toLocaleString()}
+              <b>Approved At:</b> {new Date(data?.actionAt).toLocaleString()}
             </div>
           )}
         </div>
@@ -139,7 +145,7 @@ export default function SalePrint({ id }) {
           <br /> www.mk-gold.com
         </div>
       </div>
-      {data?.status?.toLowerCase() === 'approved' && (
+      {(data?.status?.toLowerCase() === 'approved' || data?.status?.toLowerCase() === 'completed') && (
         <Button
           variant="contained"
           sx={{

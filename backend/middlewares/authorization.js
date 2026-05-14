@@ -42,6 +42,7 @@ function isBranch(req, res, next) {
     userType === "branch" ||
     userType === "assistant_branch_manager" ||
     userType === "branch_executive" ||
+    userType === "transaction_executive" ||
     userType === "telecalling" ||
     userType === "admin" ||
     userType === "finance" ||

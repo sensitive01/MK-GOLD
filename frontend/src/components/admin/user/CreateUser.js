@@ -26,23 +26,28 @@ function CreateUser(props) {
 
   // Form validation
   const schema = Yup.object({
-    username: Yup.string().when('userType', {
-      is: (v) => !['branch', 'assistant_branch_manager', 'branch_executive'].includes(v),
+    username: Yup.string().when(['userType', 'loginMethod'], {
+      is: (userType, loginMethod) => 
+        !['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(userType) && 
+        loginMethod === 'password',
       then: Yup.string().required('Username is required'),
     }),
     branch: Yup.string().when('userType', {
-      is: (v) => ['branch', 'assistant_branch_manager', 'branch_executive'].includes(v),
+      is: (v) => ['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(v),
       then: Yup.string().required('Branch is required'),
     }),
-    password: Yup.string().when('userType', {
-      is: (v) => !['branch', 'assistant_branch_manager', 'branch_executive'].includes(v),
+    password: Yup.string().when(['userType', 'loginMethod'], {
+      is: (userType, loginMethod) => 
+        !['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(userType) && 
+        loginMethod === 'password',
       then: Yup.string().required('Password is required'),
     }),
     userType: Yup.string().required('User type is required'),
     employee: Yup.string().required('Employee Id is required'),
+    loginMethod: Yup.string().required('Login method is required'),
   });
 
-  const { handleSubmit, handleChange, handleBlur, values, touched, errors, resetForm } = useFormik({
+  const { handleSubmit, handleChange, handleBlur, values, touched, errors, resetForm, setFieldValue } = useFormik({
     initialValues: {
       username: '',
       password: '',
@@ -50,15 +55,21 @@ function CreateUser(props) {
       employee: '',
       branch: '',
       status: 'active',
+      loginMethod: 'password',
     },
     validationSchema: schema,
     onSubmit: (values) => {
       const payload = { ...values };
-      if (['branch', 'assistant_branch_manager', 'branch_executive'].includes(payload.userType)) {
+      if (['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(payload.userType)) {
         payload.username = employees?.find((e) => e._id === payload.employee)?.phoneNumber ?? null;
-        payload.password = 'no-password';
+        if (payload.loginMethod === 'otp') {
+          payload.password = 'no-password';
+        }
       } else {
         delete payload.branch;
+        if (payload.loginMethod === 'otp') {
+          payload.password = 'no-password';
+        }
       }
 
       createUser(payload).then((data) => {
@@ -69,14 +80,14 @@ function CreateUser(props) {
             severity: 'error',
           });
         } else {
-          props.setToggleContainer(false);
-          if (form.current) form.current.reset();
-          resetForm();
           props.setNotify({
             open: true,
             message: 'User Created Successfully!',
             severity: 'success',
           });
+          props.setToggleContainer(false);
+          if (form.current) form.current.reset();
+          resetForm();
         }
       });
     },
@@ -103,7 +114,14 @@ function CreateUser(props) {
                 name="userType"
                 value={values.userType}
                 onBlur={handleBlur}
-                onChange={handleChange}
+                onChange={(e) => {
+                  handleChange(e);
+                  if (['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(e.target.value)) {
+                    setFieldValue('loginMethod', 'otp');
+                  } else {
+                    setFieldValue('loginMethod', 'password');
+                  }
+                }}
               >
                 {global.userTypes?.map((type) => (
                   <MenuItem key={type.value} value={type.value}>
@@ -113,7 +131,7 @@ function CreateUser(props) {
               </Select>
             </FormControl>
           </Grid>
-          {['branch', 'assistant_branch_manager', 'branch_executive'].includes(values.userType) ? (
+          {['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(values.userType) ? (
             <Grid item xs={12} sm={4}>
               <FormControl fullWidth error={touched.branch && errors.branch && true}>
                 <InputLabel id="select-label">Select branch</InputLabel>
@@ -146,16 +164,18 @@ function CreateUser(props) {
                   onChange={handleChange}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  name="password"
-                  error={touched.password && errors.password && true}
-                  label={touched.password && errors.password ? errors.password : 'Password'}
-                  fullWidth
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                />
-              </Grid>
+              {values.loginMethod === 'password' && (
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    name="password"
+                    error={touched.password && errors.password && true}
+                    label={touched.password && errors.password ? errors.password : 'Password'}
+                    fullWidth
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                  />
+                </Grid>
+              )}
             </>
           )}
           <Grid item xs={12} sm={4}>
@@ -175,6 +195,23 @@ function CreateUser(props) {
                     {e.employeeId} {e.name}
                   </MenuItem>
                 ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth error={touched.loginMethod && errors.loginMethod && true}>
+              <InputLabel id="login-method-label">Login Method</InputLabel>
+              <Select
+                labelId="login-method-label"
+                id="loginMethod"
+                label={touched.loginMethod && errors.loginMethod ? errors.loginMethod : 'Login Method'}
+                name="loginMethod"
+                value={values.loginMethod}
+                onBlur={handleBlur}
+                onChange={handleChange}
+              >
+                <MenuItem value="password">Password</MenuItem>
+                <MenuItem value="otp">OTP</MenuItem>
               </Select>
             </FormControl>
           </Grid>

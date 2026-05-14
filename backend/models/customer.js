@@ -48,15 +48,12 @@ const Customer = mongoose.model(
       employment: mongoose.Schema({
         employmentType: {
           type: String,
-          required: true,
         },
         organisation: {
           type: String,
-          required: true,
         },
         annualIncome: {
           type: String,
-          required: true,
         },
       }),
       otp: {
@@ -126,6 +123,15 @@ const Customer = mongoose.model(
         }),
       ],
       source: {
+        type: String,
+      },
+      chooseId: {
+        type: String,
+      },
+      idNo: {
+        type: String,
+      },
+      mkgCustomerId: {
         type: String,
       },
       label: {

@@ -39,15 +39,17 @@ async function create(req, res) {
 
 async function update(req, res) {
   try {
-    if (req.body.status) {
+    const { status, ...rest } = req.body;
+    if (status) {
       const performerId = req.user.employee || req.user._id;
       const logEntry = {
-        action: req.body.status,
+        action: status,
         performedBy: performerId,
         performedAt: new Date(),
       };
       const result = await release.updateWithLog(req.params.id, {
-        status: req.body.status,
+        ...rest,
+        status: status,
         actionBy: performerId,
         actionAt: new Date(),
       }, logEntry);

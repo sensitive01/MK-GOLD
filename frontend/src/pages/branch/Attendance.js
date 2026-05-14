@@ -90,11 +90,11 @@ export default function Attendance() {
   const [openLogoutModal, setOpenLogoutModal] = useState(false);
   const [logoutId, setLogoutId] = useState(null);
   const [deleteType, setDeleteType] = useState('single');
-  const [currentTab, setCurrentTab] = useState('all_attendance');
-  
   const userType = auth.user.userType?.toLowerCase();
   const isManager = ['branch', 'assistant_branch_manager'].includes(userType);
   const isHRAdmin = ['hr', 'admin'].includes(userType);
+  
+  const [currentTab, setCurrentTab] = useState((isManager || isHRAdmin) ? 'all_attendance' : 'my_attendance');
 
   const handleLogout = (id) => {
     setLogoutId(id);
@@ -126,6 +126,10 @@ export default function Attendance() {
     (query = {}) => {
       if (currentTab === 'my_attendance') {
         query.employee = auth.user.employee?._id || auth.user.employee;
+        query.createdAt = {
+          $gte: moment().startOf('month').format("YYYY-MM-DD"),
+          $lte: moment().endOf('month').format("YYYY-MM-DD"),
+        };
       } else {
         query.createdAt = {
           $gte: moment()?.format("YYYY-MM-DD"),
@@ -322,20 +326,24 @@ export default function Attendance() {
           <Grid item xs={12} sm={4}>
             <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
               <Typography variant="h6">
-                {currentTab === 'my_attendance' ? 'Current Month Attendance' : 'Total Employees'}
+                {!(isManager || isHRAdmin) || currentTab === 'my_attendance' ? 'Total Days (Month)' : 'Total Employees'}
               </Typography>
               <Typography variant="h4">{stats?.total || 0}</Typography>
             </Card>
           </Grid>
           <Grid item xs={12} sm={4}>
             <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
-              <Typography variant="h6">Present Today</Typography>
+              <Typography variant="h6">
+                {!(isManager || isHRAdmin) || currentTab === 'my_attendance' ? 'Present' : 'Present Today'}
+              </Typography>
               <Typography variant="h4">{stats?.present || 0}</Typography>
             </Card>
           </Grid>
           <Grid item xs={12} sm={4}>
             <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'error.main', color: 'white' }}>
-              <Typography variant="h6">Absent Today</Typography>
+              <Typography variant="h6">
+                {!(isManager || isHRAdmin) || currentTab === 'my_attendance' ? 'Absent' : 'Absent Today'}
+              </Typography>
               <Typography variant="h4">{stats?.absent || 0}</Typography>
             </Card>
           </Grid>
@@ -509,17 +517,19 @@ export default function Attendance() {
           },
         }}
       >
-        <MenuItem
-          sx={{ color: 'error.main' }}
-          onClick={() => {
-            setOpen(null);
-            setDeleteType('single');
-            handleOpenDeleteModal();
-          }}
-        >
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-          Delete
-        </MenuItem>
+        {global.canDelete(userType) && (
+          <MenuItem
+            sx={{ color: 'error.main' }}
+            onClick={() => {
+              setOpen(null);
+              setDeleteType('single');
+              handleOpenDeleteModal();
+            }}
+          >
+            <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
+            Delete
+          </MenuItem>
+        )}
       </Popover>
 
       <Modal open={openDeleteModal} onClose={handleCloseDeleteModal}>

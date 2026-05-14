@@ -27,8 +27,30 @@ const User = mongoose.Schema(
       required: true,
       default: "active",
     },
+    loginMethod: {
+      type: String,
+      enum: ["password", "otp"],
+      default: "password",
+    },
   },
   { timestamps: true }
 );
+
+const bcrypt = require('bcryptjs');
+
+User.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+User.methods.comparePassword = function(password) {
+  return bcrypt.compare(password, this.password);
+};
 
 module.exports = mongoose.model("users", User);

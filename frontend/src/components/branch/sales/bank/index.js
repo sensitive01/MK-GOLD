@@ -92,6 +92,9 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
     if (selectedUser) {
       getBankById(selectedUser._id).then((data) => {
         setData(data.data);
+        if (data.data && data.data.length === 1 && !selectedBank) {
+          setSelectedBank(data.data[0]);
+        }
       });
     }
   }, [selectedUser]);
@@ -343,16 +346,18 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
                     <TableCell align="left">{sentenceCase(e.branch)}</TableCell>
                     <TableCell align="left">{e.ifscCode}</TableCell>
                     <TableCell align="left">
-                      <Button
-                        variant="contained"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => {
-                          setOpenId(e._id);
-                          handleOpenDeleteModal();
-                        }}
-                      >
-                        Delete
-                      </Button>
+                      {!(selectedUser?.sales?.some(sale => sale.bank === e._id)) && (
+                        <Button
+                          variant="contained"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => {
+                            setOpenId(e._id);
+                            handleOpenDeleteModal();
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

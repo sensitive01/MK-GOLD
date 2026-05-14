@@ -17,6 +17,10 @@ import {
   TablePagination,
   TableHead,
   Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -32,6 +36,7 @@ import moment from 'moment';
 // import { getBranchByBranchId } from '../../../apis/branch/branch';
 import { getGoldRateByState } from '../../../apis/branch/gold-rate';
 import { createSales, getSalesById, updateSales } from '../../../apis/branch/sales';
+import { findCustomer } from '../../../apis/branch/customer';
 import Customer from './customer';
 import Address from './address';
 import Bank from './bank';
@@ -40,6 +45,7 @@ import Ornament from './ornament';
 import ProofDocument from './proof';
 import Scrollbar from '../../scrollbar';
 import { createFile } from '../../../apis/branch/fileupload';
+import { getEmployee } from '../../../apis/branch/employee';
 import global from '../../../utils/global';
 
 
@@ -56,6 +62,8 @@ function CreateSale(props) {
   const [selectedBank, setSelectedBank] = useState(null);
   const [selectedRelease, setSelectedRelease] = useState([]);
   const [statusLog, setStatusLog] = useState(null);
+  const [assignees, setAssignees] = useState([]);
+
   const payload = {
     employee: auth.user._id,
     customer: selectedUser?._id,
@@ -67,7 +75,8 @@ function CreateSale(props) {
     netAmount: Math.round(ornaments?.reduce((prev, cur) => prev + +cur.netAmount, 0) ?? 0),
     payableAmount: 0,
     bank: selectedBank?._id,
-    status: 'pending',
+    status: 'finance pending',
+    assignee: selectedRelease?.[0]?.assignee || '', // Automatically take from the first selected release
   };
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -83,6 +92,7 @@ function CreateSale(props) {
   };
 
   const [autoOpenEdit, setAutoOpenEdit] = useState(false);
+
 
   useEffect(() => {
     if (props.id) {
@@ -101,6 +111,13 @@ function CreateSale(props) {
           });
           setBranch(sale.branch);
           setSelectedUser(sale.customer);
+          if (sale.customer?.phoneNumber) {
+            findCustomer({ phoneNumber: sale.customer.phoneNumber, all: true }).then((res) => {
+              if (res.data && res.data.length > 0) {
+                setSelectedUser(res.data[0]);
+              }
+            });
+          }
           setSelectedAddress(sale.customer?.address?.[0]);
           setOrnaments(sale.ornaments);
           setSelectedBank(sale.bank);
@@ -142,6 +159,12 @@ function CreateSale(props) {
         }).then((data) => {
           setSilverRate(data.data);
         });
+
+        getEmployee().then((res) => {
+          if (res?.data) {
+            setAssignees(res.data);
+          }
+        });
       }
   }, [auth.user.branch, auth.user.branch?.address?.state]);
 
@@ -167,37 +190,48 @@ function CreateSale(props) {
     },
     validationSchema: schema,
     onSubmit: (values) => {
-      const apiCall = props.id ? updateSales(props.id, payload) : createSales(payload);
-      apiCall.then((data) => {
-        if (data.status === false) {
-          props.setNotify({
-            open: true,
-            message: props.id ? 'Sale not updated' : 'Sale not created',
-            severity: 'error',
-          });
-        } else {
-          proofDocument?.forEach((e) => {
-            const formData = new FormData();
-            formData.append('uploadId', data.data.fileUpload?.uploadId || data.data._id);
-            formData.append('uploadName', data.data.fileUpload?.uploadName || data.data.billId);
-            formData.append('uploadType', 'proof');
-            formData.append('uploadedFile', e.documentFile);
-            formData.append('documentType', e.documentType);
-            formData.append('documentNo', e.documentNo);
-            createFile(formData);
-          });
-          resetForm();
-          setStep(1);
-          props.setToggleContainer(false);
-          props.setNotify({
-            open: true,
-            message: props.id ? 'Sale updated' : 'Sale created',
-            severity: 'success',
-          });
-        }
-      });
+      if (values.saleType === 'pledged') {
+        setOpenConfirmModal(true);
+      } else {
+        submitSale();
+      }
     },
   });
+
+  const [openConfirmModal, setOpenConfirmModal] = useState(false);
+
+  const submitSale = () => {
+    const apiCall = props.id ? updateSales(props.id, payload) : createSales(payload);
+    apiCall.then((data) => {
+      if (data.status === false) {
+        props.setNotify({
+          open: true,
+          message: props.id ? 'Sale not updated' : 'Sale not created',
+          severity: 'error',
+        });
+      } else {
+        proofDocument?.forEach((e) => {
+          const formData = new FormData();
+          formData.append('uploadId', data.data.fileUpload?.uploadId || data.data._id);
+          formData.append('uploadName', data.data.fileUpload?.uploadName || data.data.billId);
+          formData.append('uploadType', 'proof');
+          formData.append('uploadedFile', e.documentFile);
+          formData.append('documentType', e.documentType);
+          formData.append('documentNo', e.documentNo);
+          createFile(formData);
+        });
+        resetForm();
+        setStep(1);
+        props.setToggleContainer(false);
+        props.setNotify({
+          open: true,
+          message: props.id ? 'Sale updated' : 'Sale created and sent for approval',
+          severity: 'success',
+        });
+      }
+    });
+  };
+
 
   payload.saleType = values.saleType;
   payload.purchaseType = values.purchaseType;
@@ -449,7 +483,7 @@ function CreateSale(props) {
                       message: 'Please select release',
                       severity: 'info',
                     });
-                  } else if (ornaments?.length === 0) {
+                  } else if (values.saleType !== 'pledged' && ornaments?.length === 0) {
                     props.setNotify({
                       open: true,
                       message: 'Please add ornaments',
@@ -781,7 +815,30 @@ function CreateSale(props) {
           </Grid>
         </Card>
       </form>
+      <ConfirmModal 
+        open={openConfirmModal} 
+        handleClose={() => setOpenConfirmModal(false)} 
+        handleConfirm={() => {
+          setOpenConfirmModal(false);
+          submitSale();
+        }} 
+      />
     </>
+  );
+}
+
+function ConfirmModal({ open, handleClose, handleConfirm }) {
+  return (
+    <Dialog open={open} onClose={handleClose}>
+      <DialogTitle>Confirmation</DialogTitle>
+      <DialogContent>
+        <Typography>Do you want to send the details for finance approval?</Typography>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose}>No</Button>
+        <Button onClick={handleConfirm} variant="contained" autoFocus>Yes</Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 

@@ -33,6 +33,7 @@ import { CreateEmployee, UpdateEmployee } from '../../components/branch/employee
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
+import global from '../../utils/global';
 // sections
 import { EmployeeListHead, EmployeeListToolbar } from '../../sections/@dashboard/employee';
 // mock
@@ -46,6 +47,7 @@ const TABLE_HEAD = [
   { id: 'email', label: 'Email', alignRight: false },
   { id: 'gender', label: 'Gender', alignRight: false },
   { id: 'designation', label: 'Designation', alignRight: false },
+  { id: 'phoneNumber', label: 'Phone Number', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
@@ -282,7 +284,7 @@ export default function BranchEmployee() {
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, employeeId, name, email, gender, designation, status, createdAt } = row;
+                    const { _id, employeeId, name, email, gender, designation, phoneNumber, status, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -295,6 +297,7 @@ export default function BranchEmployee() {
                         <TableCell align="left">{email}</TableCell>
                         <TableCell align="left">{gender}</TableCell>
                         <TableCell align="left">{sentenceCase(designation)}</TableCell>
+                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
                         <TableCell align="left">
                           <Label color={(status !== 'active' && 'error') || 'success'}>{sentenceCase(status)}</Label>
                         </TableCell>

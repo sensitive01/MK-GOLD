@@ -62,6 +62,7 @@ const TABLE_HEAD = [
   { id: 'userType', label: 'User Type', alignRight: false },
   { id: 'employee', label: 'Employee', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
+  { id: 'loginMethod', label: 'Login Method', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
 ];
@@ -436,7 +437,13 @@ export default function User() {
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, username, userType, employee, status, createdAt } = row;
+                    const _id = row._id;
+                    const username = row.username || row.usernames;
+                    const userType = row.userType || row.usertype;
+                    const employee = row.employee;
+                    const status = row.status;
+                    const createdAt = row.createdAt || row.createdat;
+                    const loginMethod = row.loginMethod || row.loginmethod || 'password';
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -450,6 +457,7 @@ export default function User() {
                         <TableCell align="left">
                           <Status status={status} _id={_id} />
                         </TableCell>
+                        <TableCell align="left">{sentenceCase(row.loginMethod || row.loginmethod || 'password')}</TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">
                           <IconButton

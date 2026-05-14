@@ -46,6 +46,7 @@ import Scrollbar from '../../components/scrollbar';
 import { LeaveListHead, LeaveListToolbar } from '../../sections/@dashboard/leave';
 // mock
 import { deleteLeaveById, getLeave, updateLeave } from '../../apis/branch/leave';
+import global from '../../utils/global';
 
 // ----------------------------------------------------------------------
 
@@ -106,9 +107,9 @@ export default function Leave() {
   const [currentTab, setCurrentTab] = useState(isManager ? 'requests' : 'my_leaves');
 
   const TABLE_HEAD = [
-    { id: 'branchId', label: 'Branch Id', alignRight: false },
-    { id: 'branchName', label: 'Branch Name', alignRight: false },
     ...(currentTab === 'requests' ? [
+      { id: 'branchId', label: 'Branch Id', alignRight: false },
+      { id: 'branchName', label: 'Branch Name', alignRight: false },
       { id: 'employeeId', label: 'Employee Id', alignRight: false },
       { id: 'employeeName', label: 'Employee Name', alignRight: false },
     ] : []),
@@ -356,8 +357,8 @@ export default function Leave() {
                         <TableCell padding="checkbox">
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
-                        <TableCell align="left">{branch?.branchId}</TableCell>
-                        <TableCell align="left">{branch?.branchName}</TableCell>
+                        {currentTab === 'requests' && <TableCell align="left">{branch?.branchId}</TableCell>}
+                        {currentTab === 'requests' && <TableCell align="left">{branch?.branchName}</TableCell>}
                         {currentTab === 'requests' && <TableCell align="left">{employee?.employeeId}</TableCell>}
                         {currentTab === 'requests' && <TableCell align="left">{employee?.name}</TableCell>}
                         <TableCell align="left">{leaveType}</TableCell>
@@ -512,15 +513,19 @@ export default function Leave() {
           },
         }}
       >
-        <MenuItem onClick={handleApprove} sx={{ color: 'success.main' }}>
-          <Iconify icon={'eva:checkmark-circle-2-fill'} sx={{ mr: 2 }} />
-          Approve (BM)
-        </MenuItem>
+        {isManager && (
+          <>
+            <MenuItem onClick={handleApprove} sx={{ color: 'success.main' }}>
+              <Iconify icon={'eva:checkmark-circle-2-fill'} sx={{ mr: 2 }} />
+              Approve (BM)
+            </MenuItem>
 
-        <MenuItem onClick={handleReject} sx={{ color: 'error.main' }}>
-          <Iconify icon={'eva:close-circle-fill'} sx={{ mr: 2 }} />
-          Reject (BM)
-        </MenuItem>
+            <MenuItem onClick={handleReject} sx={{ color: 'error.main' }}>
+              <Iconify icon={'eva:close-circle-fill'} sx={{ mr: 2 }} />
+              Reject (BM)
+            </MenuItem>
+          </>
+        )}
 
         <MenuItem
           onClick={() => {
@@ -544,17 +549,19 @@ export default function Leave() {
           Edit
         </MenuItem>
 
-        <MenuItem
-          sx={{ color: 'error.main' }}
-          onClick={() => {
-            setOpen(null);
-            setDeleteType('single');
-            handleOpenDeleteModal();
-          }}
-        >
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-          Delete
-        </MenuItem>
+        {global.canDelete(userType) && (
+          <MenuItem
+            sx={{ color: 'error.main' }}
+            onClick={() => {
+              setOpen(null);
+              setDeleteType('single');
+              handleOpenDeleteModal();
+            }}
+          >
+            <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
+            Delete
+          </MenuItem>
+        )}
       </Popover>
 
       <Modal

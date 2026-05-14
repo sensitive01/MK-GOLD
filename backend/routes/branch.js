@@ -98,6 +98,7 @@ branchRouter.post("/customer-bank/delete/:id", customerBank.remove);
 
 branchRouter.get("/lead/get", lead.find);
 branchRouter.post("/lead/get", lead.find);
+branchRouter.get("/lead/get-stats", lead.getStats);
 branchRouter.get("/lead/get/:id", lead.findById);
 branchRouter.post("/lead/create", lead.create);
 branchRouter.post("/lead/update/:id", lead.update);
@@ -115,11 +116,11 @@ branchRouter.post("/employee/delete/:id", employee.remove);
 
 branchRouter.get("/attendance/get", attendance.find);
 branchRouter.post("/attendance/get", attendance.find);
+branchRouter.get("/attendance/get-stats", attendance.getStats);
 branchRouter.get("/attendance/get/:id", attendance.findById);
 branchRouter.post("/attendance/create", attendance.create);
 branchRouter.post("/attendance/update/:id", attendance.update);
 branchRouter.post("/attendance/delete/:id", attendance.remove);
-branchRouter.get("/attendance/get-stats", attendance.getStats);
 
 branchRouter.get("/leave/get", leave.find);
 branchRouter.post("/leave/get", leave.find);

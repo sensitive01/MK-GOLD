@@ -27,6 +27,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
+import global from '../../../../utils/global';
 import SaveIcon from '@mui/icons-material/Save';
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
@@ -34,7 +35,6 @@ import Iconify from '../../../iconify';
 import Scrollbar from '../../../scrollbar';
 import { getAddressById, createAddress, deleteAddressById } from '../../../../apis/branch/customer-address';
 import { createFile } from '../../../../apis/branch/fileupload';
-import global from '../../../../utils/global';
 
 const style = {
   position: 'absolute',
@@ -55,6 +55,7 @@ function Address(props) {
   const [data, setData] = useState([]);
   const [openId, setOpenId] = useState(null);
   const [addressModal, setAddressModal] = useState(false);
+  const [addressProofPreview, setAddressProofPreview] = useState(null);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
@@ -93,6 +94,9 @@ function Address(props) {
     if (selectedUser) {
       getAddressById(selectedUser._id).then((data) => {
         setData(data.data);
+        if (data.data && data.data.length === 1 && !props.selectedAddress) {
+          props.setSelectedAddress(data.data[0]);
+        }
       });
     }
   }, [selectedUser]);
@@ -152,6 +156,7 @@ function Address(props) {
           formData.append('documentNo', values.documentNo);
           createFile(formData);
           resetForm();
+          setAddressProofPreview(null);
           setNotify({
             open: true,
             message: 'Address created',
@@ -219,16 +224,18 @@ function Address(props) {
                     <TableCell align="left">{e.pincode}</TableCell>
                     <TableCell align="left">{sentenceCase(e.label)}</TableCell>
                     <TableCell align="left">
-                      <Button
-                        variant="contained"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => {
-                          setOpenId(e._id);
-                          handleOpenDeleteModal();
-                        }}
-                      >
-                        Delete
-                      </Button>
+                      {!(selectedUser?.sales?.length > 0) && (
+                        <Button
+                          variant="contained"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => {
+                            setOpenId(e._id);
+                            handleOpenDeleteModal();
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -472,10 +479,23 @@ function Address(props) {
                   error={touched.documentFile && errors.documentFile && true}
                   onBlur={handleBlur}
                   onChange={(e) => {
-                    setValues({ ...values, documentFile: e.target.files[0] });
+                    const file = e.target.files[0];
+                    setValues({ ...values, documentFile: file });
+                    if (file) {
+                      setAddressProofPreview(URL.createObjectURL(file));
+                    }
                   }}
                   required
                 />
+                {addressProofPreview && (
+                  <Box sx={{ mt: 1 }}>
+                    <img
+                      src={addressProofPreview}
+                      alt="Address Proof Preview"
+                      style={{ width: '100px', height: 'auto', borderRadius: '4px', border: '1px solid #ddd' }}
+                    />
+                  </Box>
+                )}
               </Grid>
               <Grid item xs={12}>
                 <LoadingButton size="large" type="submit" variant="contained" startIcon={<SaveIcon />}>

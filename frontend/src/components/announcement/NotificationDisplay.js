@@ -108,7 +108,7 @@ function NotificationDisplay() {
           >
             {scrolls?.map((s, index) => (
               <span key={s._id} style={{ marginRight: '100px' }}>
-                {s.image && (
+                {s.image && s.image !== 'undefined' && (
                    <img 
                     src={s.image.startsWith('http') ? s.image : `${global.baseURL}/${s.image}`} 
                     alt="icon" 
@@ -157,7 +157,7 @@ function NotificationDisplay() {
               </IconButton>
             </DialogTitle>
             <DialogContent dividers sx={{ p: 3 }}>
-              {currentPop.file?.uploadedFile && (
+              {currentPop.file?.uploadedFile && currentPop.file.uploadedFile !== 'undefined' && (
                 <Box sx={{ mb: 2, textAlign: 'center' }}>
                   <img
                     src={currentPop.file.uploadedFile.startsWith('http') ? currentPop.file.uploadedFile : `${global.baseURL}/${currentPop.file.uploadedFile}`}

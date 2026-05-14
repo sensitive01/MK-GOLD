@@ -44,7 +44,7 @@ export default function QREnquiry() {
   const fetchData = () => {
     getQrEnquiries({}).then((res) => {
       if (res.status) {
-        setData(res.data);
+        setData(res.data ?? []);
       }
     });
   };
@@ -77,7 +77,7 @@ export default function QREnquiry() {
               <Table>
                 <BranchListHead
                   headLabel={TABLE_HEAD}
-                  rowCount={data.length}
+                  rowCount={data?.length ?? 0}
                   onRequestSort={() => {}}
                   onSelectAllClick={() => {}}
                 />
@@ -103,7 +103,7 @@ export default function QREnquiry() {
                       </TableRow>
                     );
                   })}
-                  {data.length === 0 && (
+                  {(data?.length ?? 0) === 0 && (
                     <TableRow>
                       <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
                         <Paper sx={{ textAlign: 'center' }}>
@@ -120,7 +120,7 @@ export default function QREnquiry() {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data.length}
+            count={data?.length ?? 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}

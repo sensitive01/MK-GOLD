@@ -21,7 +21,7 @@ function login(req, res, next) {
         return res.send(err);
       }
 
-      if (user.userType?.toLowerCase() === "branch") {
+      if (user.loginMethod === "otp") {
         const otp = String(
           Math.floor(100000 + Math.random() * 900000)
         ).substring(0, 6);
@@ -208,15 +208,17 @@ function getUserType(req, res, next) {
           message: "",
           data: {
             userType: employeeUser.userType,
+            loginMethod: employeeUser.loginMethod || "password",
           },
         });
       }
       return res.json({
         status: true,
         message: "",
-        data: {
-          userType: user.userType,
-        },
+          data: {
+            userType: user.userType,
+            loginMethod: user.loginMethod || "password",
+          },
       });
     })
     .catch(function (err) {

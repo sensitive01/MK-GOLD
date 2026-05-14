@@ -28,14 +28,69 @@ async function find(query = {}) {
     if (!query.phoneNumber) {
       delete query.phoneNumber;
     }
-    return await Customer.aggregate([
+    const isAll = query.all === true;
+    delete query.all;
+
+    const pipeline = [
       { $match: query },
       {
         $lookup: {
           from: "fileuploads",
-          localField: "_id",
-          foreignField: "uploadId",
+          let: { customerId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$uploadId", "$$customerId"] },
+                    { $eq: ["$uploadType", "profile_image"] }
+                  ]
+                }
+              }
+            },
+            { $sort: { createdAt: -1 } }
+          ],
           as: "profileImage",
+        },
+      },
+      {
+        $lookup: {
+          from: "fileuploads",
+          let: { customerId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$uploadId", "$$customerId"] },
+                    { $eq: ["$uploadType", "upload_id"] }
+                  ]
+                }
+              }
+            },
+            { $sort: { createdAt: -1 } }
+          ],
+          as: "idProof",
+        },
+      },
+      {
+        $lookup: {
+          from: "fileuploads",
+          let: { customerId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$uploadId", "$$customerId"] },
+                    { $eq: ["$uploadType", "signature"] }
+                  ]
+                }
+              }
+            },
+            { $sort: { createdAt: -1 } }
+          ],
+          as: "signatureImage",
         },
       },
       {
@@ -57,16 +112,24 @@ async function find(query = {}) {
       {
         $addFields: {
           profileImage: { $first: "$profileImage" },
+          idProof: { $first: "$idProof" },
+          signatureImage: { $first: "$signatureImage" },
           branch: { $first: "$branch" },
         },
-      },
-      {
+      }
+    ];
+
+    if (!isAll) {
+      pipeline.push({
         $match: {
           sales: { $eq: [] },
         },
-      },
-      { $sort: { createdAt: -1 } },
-    ]).exec();
+      });
+    }
+
+    pipeline.push({ $sort: { createdAt: -1 } });
+
+    return await Customer.aggregate(pipeline).exec();
   } catch (err) {
     throw err;
   }
@@ -79,9 +142,61 @@ async function findById(id) {
       {
         $lookup: {
           from: "fileuploads",
-          localField: "_id",
-          foreignField: "uploadId",
+          let: { customerId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$uploadId", "$$customerId"] },
+                    { $eq: ["$uploadType", "profile_image"] }
+                  ]
+                }
+              }
+            },
+            { $sort: { createdAt: -1 } }
+          ],
           as: "profileImage",
+        },
+      },
+      {
+        $lookup: {
+          from: "fileuploads",
+          let: { customerId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$uploadId", "$$customerId"] },
+                    { $eq: ["$uploadType", "upload_id"] }
+                  ]
+                }
+              }
+            },
+            { $sort: { createdAt: -1 } }
+          ],
+          as: "idProof",
+        },
+      },
+      {
+        $lookup: {
+          from: "fileuploads",
+          let: { customerId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$uploadId", "$$customerId"] },
+                    { $eq: ["$uploadType", "signature"] }
+                  ]
+                }
+              }
+            },
+            { $sort: { createdAt: -1 } }
+          ],
+          as: "signatureImage",
         },
       },
       {
@@ -95,6 +210,8 @@ async function findById(id) {
       {
         $addFields: {
           profileImage: { $first: "$profileImage" },
+          idProof: { $first: "$idProof" },
+          signatureImage: { $first: "$signatureImage" },
           branch: { $first: "$branch" },
         },
       },

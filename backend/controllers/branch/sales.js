@@ -47,30 +47,30 @@ async function create(req, res) {
 
 async function update(req, res) {
   try {
+    const performerId = req.user.employee || req.user._id;
+    let result;
+    
     if (req.body.status) {
-      const performerId = req.user.employee || req.user._id;
       const logEntry = {
         action: req.body.status,
         performedBy: performerId,
         performedAt: new Date(),
       };
-      const result = await salesService.updateWithLog(req.params.id, {
-        status: req.body.status,
-        actionBy: performerId,
-        actionAt: new Date(),
-      }, logEntry);
-      res.json({
-        status: true,
-        message: "",
-        data: result,
-      });
+      
+      const updateData = { ...req.body };
+      updateData.actionBy = performerId;
+      updateData.actionAt = new Date();
+      
+      result = await salesService.updateWithLog(req.params.id, updateData, logEntry);
     } else {
-      res.json({
-        status: true,
-        message: "",
-        data: await salesService.update(req.params.id, req.body),
-      });
+      result = await salesService.update(req.params.id, req.body);
     }
+
+    res.json({
+      status: true,
+      message: "",
+      data: result,
+    });
   } catch (err) {
     res.json({
       status: false,

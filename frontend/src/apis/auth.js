@@ -36,4 +36,22 @@ async function getBranchUserApi(payload) {
   }
 }
 
-export { loginApi, getUserTypeApi, getBranchUserApi, verifyLoginOtp };
+async function getProfileApi() {
+  try {
+    const response = await apiClient().get('/api/v1.0/auth/profile');
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+async function updateProfileApi(payload) {
+  try {
+    const response = await apiClient().post('/api/v1.0/auth/profile', payload);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+export { loginApi, getUserTypeApi, getBranchUserApi, verifyLoginOtp, getProfileApi, updateProfileApi };

@@ -1,6 +1,6 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
-import { forwardRef, useEffect, useState, useCallback } from 'react';
+import { forwardRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
@@ -29,8 +29,11 @@ import {
   TableContainer,
   TablePagination,
   TableRow,
+  TextField,
   Typography,
+  Divider,
 } from '@mui/material';
+import { LoadingButton } from '@mui/lab';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
 import { useSelector } from 'react-redux';
@@ -43,11 +46,18 @@ import Scrollbar from '../../components/scrollbar';
 import { SaleListHead, SaleListToolbar } from '../../sections/@dashboard/sales';
 // mock
 import { deleteSalesById, findSales, updateSales } from '../../apis/branch/sales';
+import { createFile } from '../../apis/branch/fileupload';
+import global from '../../utils/global';
+import PropTypes from 'prop-types';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import Grid from '@mui/material/Grid';
 
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
   { id: 'billId', label: 'Bill Id', alignRight: false },
+  { id: 'customer', label: 'Customer', alignRight: false },
   { id: 'saleType', label: 'Sale Type', alignRight: false },
   { id: 'netAmount', label: 'Net Amount', alignRight: false },
   { id: 'branchId', label: 'Branch Id', alignRight: false },
@@ -119,15 +129,8 @@ export default function Sale() {
   });
 
   const fetchData = useCallback(
-    (
-      query = {
-        createdAt: {
-          $gte: moment()?.format("YYYY-MM-DD"),
-          $lte: moment()?.format("YYYY-MM-DD"),
-        },
-      }
-    ) => {
-      if (!query.branch) query.branch = branch._id;
+    (query = {}) => {
+      if (!query.branch) query.branch = branch?._id;
       findSales(query).then((data) => {
         setData(data.data);
         setOpenBackdrop(false);
@@ -139,11 +142,7 @@ export default function Sale() {
   useEffect(() => {
     setBranch(auth.user.branch);
     fetchData({
-      createdAt: {
-        $gte: moment()?.format("YYYY-MM-DD"),
-        $lte: moment()?.format("YYYY-MM-DD"),
-      },
-      branch: auth.user.branch._id,
+      branch: auth.user.branch?._id,
     });
   }, [toggleContainer, auth.user.branch, fetchData]);
 
@@ -243,72 +242,10 @@ export default function Sale() {
 
   const Alert = forwardRef(AlertComponent);
 
-  function Status(props) {
-    const userType = useSelector((state) => state.auth.user?.userType?.toLowerCase());
-    const isPrivileged = userType === 'admin' || userType === 'subadmin';
 
-    if (props.status !== 'pending') {
-      return (
-        <Stack direction="column" spacing={0.5}>
-          <Label
-            color={(props.status === 'approved' && 'success') || (props.status === 'rejected' && 'error') || 'warning'}
-          >
-            {sentenceCase(props.status)}
-          </Label>
+    const [openVerifyModal, setOpenVerifyModal] = useState(false);
+    const [verifyType, setVerifyType] = useState('');
 
-          {isPrivileged && (
-            <Button
-              size="small"
-              color="inherit"
-              variant="outlined"
-              sx={{ fontSize: '0.65rem', py: 0 }}
-              onClick={() => {
-                updateSales(props._id, { status: 'pending' }).then(() => fetchData());
-              }}
-            >
-              Revoke
-            </Button>
-          )}
-        </Stack>
-      );
-    }
-
-    return (
-      <Stack direction="row" spacing={1}>
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={<Iconify icon="eva:checkmark-circle-2-fill" />}
-          sx={{
-            bgcolor: 'success.main',
-            '&:hover': {
-              bgcolor: 'success.dark',
-            },
-          }}
-          onClick={() => {
-            updateSales(props._id, { status: 'approved' }).then(() => {
-              fetchData();
-            });
-          }}
-        >
-          Approve
-        </Button>
-        <Button
-          variant="contained"
-          size="small"
-          color="error"
-          startIcon={<Iconify icon="eva:close-circle-fill" />}
-          onClick={() => {
-            updateSales(props._id, { status: 'rejected' }).then(() => {
-              fetchData();
-            });
-          }}
-        >
-          Reject
-        </Button>
-      </Stack>
-    );
-  }
 
   return (
     <>
@@ -343,17 +280,19 @@ export default function Sale() {
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Sale
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setSaleIdToEdit(null);
-              setToggleContainer(!toggleContainer);
-              setToggleContainerType('create');
-            }}
-          >
-            New Sale
-          </Button>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setSaleIdToEdit(null);
+                setToggleContainer(true);
+                setToggleContainerType('create');
+              }}
+            >
+              New Sale
+            </Button>
+          </Stack>
         </Stack>
 
         <Card>
@@ -389,13 +328,31 @@ export default function Sale() {
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
                         <TableCell align="left">{billId}</TableCell>
+                        <TableCell align="left">
+                          {row.customer ? (
+                            <Typography variant="subtitle2">
+                              {row.customer.name}
+                              <br />
+                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                {row.customer.phoneNumber}
+                              </Typography>
+                            </Typography>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
                         <TableCell align="left">{sentenceCase(saleType)}</TableCell>
                         <TableCell align="left">&#8377; {netAmount}</TableCell>
                         <TableCell align="left">{rowBranch?.branchId}</TableCell>
                         <TableCell align="left">{rowBranch?.branchName}</TableCell>
                         <TableCell align="left">{sentenceCase(purchaseType)}</TableCell>
                         <TableCell align="left">
-                          <Status status={status} _id={_id} actionBy={row.actionBy} actionAt={row.actionAt} />
+                          <Status 
+                            status={status} 
+                            _id={_id} 
+                            assignee={row.assignee?._id || row.assignee}
+                            fetchData={fetchData}
+                          />
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">
@@ -472,27 +429,26 @@ export default function Sale() {
         </Card>
       </Container>
 
-      <Container
-        maxWidth="xl"
-        sx={{ display: toggleContainer === true && toggleContainerType === 'create' ? 'block' : 'none' }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            {saleIdToEdit ? 'Edit Sale' : 'Create Sale'}
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="mdi:arrow-left" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-            }}
-          >
-            Back
-          </Button>
-        </Stack>
+      {toggleContainer === true && toggleContainerType === 'create' && (
+        <Container maxWidth="xl">
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+              {saleIdToEdit ? 'Edit Sale' : 'Create Sale'}
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="mdi:arrow-left" />}
+              onClick={() => {
+                setToggleContainer(false);
+              }}
+            >
+              Back
+            </Button>
+          </Stack>
 
-        <CreateSale setToggleContainer={setToggleContainer} id={saleIdToEdit} setNotify={setNotify} />
-      </Container>
+          <CreateSale setToggleContainer={setToggleContainer} id={saleIdToEdit} setNotify={setNotify} />
+        </Container>
+      )}
 
       <Container
         maxWidth="xl"
@@ -704,7 +660,377 @@ export default function Sale() {
   );
 }
 
+function Status(props) {
+  const { _id, status, assignee, fetchData } = props;
+  const auth = useSelector((state) => state.auth);
+  const userType = auth.user?.userType?.toLowerCase();
+  const employeeId = auth.user?.employee?._id || auth.user?.employee;
+
+  const [openVerifyModal, setOpenVerifyModal] = useState(false);
+  const [verifyType, setVerifyType] = useState('');
+
+  const handleVerify = (type) => {
+    setVerifyType(type);
+    setOpenVerifyModal(true);
+  };
+
+  let content = <Label color={status === 'completed' ? 'success' : 'error'}>{sentenceCase(status)}</Label>;
+
+  // Finance Step
+  if (status === 'finance pending') {
+    if (userType === 'finance' || userType === 'accounts' || userType === 'admin') {
+      content = (
+        <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
+          Update Finance
+        </Button>
+      );
+    } else {
+      content = <Label color="warning">Finance Pending</Label>;
+    }
+  }
+
+  // Assignee Step (Release Stage)
+  else if (status === 'release pending') {
+    if (employeeId === assignee || userType === 'admin') {
+      content = (
+        <Button variant="contained" size="small" onClick={() => handleVerify('assignee')}>
+          Update Verification
+        </Button>
+      );
+    } else {
+      content = <Label color="warning">Release Pending</Label>;
+    }
+  }
+
+  // Admin Approval Step
+  else if (status === 'admin approve pending') {
+    if (userType === 'admin') {
+      content = (
+        <Stack direction="row" spacing={1}>
+          <Button
+            variant="contained"
+            size="small"
+            color="success"
+            onClick={() => {
+              updateSales(_id, { status: 'completed' }).then(() => fetchData());
+            }}
+          >
+            Approve
+          </Button>
+          <Button
+            variant="contained"
+            size="small"
+            color="error"
+            onClick={() => {
+              updateSales(_id, { status: 'finance pending' }).then(() => fetchData());
+            }}
+          >
+            Reject
+          </Button>
+        </Stack>
+      );
+    } else {
+      content = <Label color="info">Admin Approval Pending</Label>;
+    }
+  }
+
+  return (
+    <>
+      {content}
+
+      <VerificationModal 
+        open={openVerifyModal}
+        id={_id}
+        type={verifyType}
+        handleClose={() => setOpenVerifyModal(false)}
+        fetchData={fetchData}
+      />
+    </>
+  );
+}
 
 
 
 
+
+
+function VerificationModal({ open, id, type, handleClose, fetchData }) {
+  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [ornaments, setOrnaments] = useState([]);
+  const [showOrnamentForm, setShowOrnamentForm] = useState(false);
+
+  const [ornamentValues, setOrnamentValues] = useState({
+    ornamentType: '',
+    quantity: '',
+    grossWeight: '',
+    stoneWeight: '',
+    netWeight: '',
+    purity: '',
+    netAmount: '',
+  });
+
+  const schema = Yup.object({
+    amount: Yup.number().required('Amount is required'),
+    comments: Yup.string().required('Comments are required'),
+    isCompleted: Yup.boolean(),
+  });
+
+  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue } = useFormik({
+    initialValues: {
+      amount: '',
+      comments: '',
+      proof: '',
+      isCompleted: false,
+    },
+    validationSchema: schema,
+    onSubmit: async (values) => {
+      setLoading(true);
+      
+      const payload = {};
+      if (type === 'finance') {
+        payload.financeAmount = values.amount;
+        payload.financeComments = values.comments;
+        payload.financeProof = values.proof;
+        if (values.isCompleted) {
+          payload.financeCompleted = true;
+          payload.financeCompletedAt = new Date();
+          payload.status = 'release pending';
+        }
+      } else {
+        payload.assigneeAmount = values.amount;
+        payload.assigneeComments = values.comments;
+        payload.assigneeProof = values.proof;
+        payload.ornaments = ornaments; // Add ornaments at this step
+        if (values.isCompleted) {
+          payload.assigneeCompleted = true;
+          payload.assigneeCompletedAt = new Date();
+          payload.status = 'admin approve pending';
+        }
+      }
+
+      updateSales(id, payload).then((data) => {
+        setLoading(false);
+        if (data.status) {
+          handleClose();
+          fetchData();
+        }
+      });
+    },
+  });
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPreview(URL.createObjectURL(file));
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('uploadId', id);
+      const res = await createFile(formData);
+      if (res.status) {
+        setFieldValue('proof', res.data.fileUrl || res.data.path);
+      }
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <form onSubmit={handleSubmit}>
+        <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <TextField
+                name="amount"
+                label="Payment Amount"
+                type="number"
+                value={values.amount}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.amount && !!errors.amount}
+                helperText={touched.amount && errors.amount}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Stack spacing={2}>
+                <Typography variant="subtitle2">Upload Proof</Typography>
+                <input type="file" accept="image/*" onChange={handleFileChange} />
+                {preview && (
+                  <Box sx={{ mt: 2, position: 'relative', width: '100%', height: 200, borderRadius: 1, overflow: 'hidden', border: '1px solid #eee' }}>
+                    <img src={preview} alt="Proof Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  </Box>
+                )}
+              </Stack>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                name="comments"
+                label="Comments"
+                value={values.comments}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.comments && !!errors.comments}
+                helperText={touched.comments && errors.comments}
+                fullWidth
+                multiline
+                rows={3}
+              />
+            </Grid>
+
+            {type === 'assignee' && (
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
+                  <Typography variant="h6">Add Ornaments</Typography>
+                  <Button 
+                    variant="outlined" 
+                    size="small" 
+                    onClick={() => setShowOrnamentForm(!showOrnamentForm)}
+                  >
+                    {showOrnamentForm ? 'Hide Form' : 'Add New'}
+                  </Button>
+                </Stack>
+
+                {showOrnamentForm && (
+                  <Box sx={{ p: 2, border: '1px dashed #ccc', borderRadius: 1, mb: 2 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Type</InputLabel>
+                          <Select
+                            value={ornamentValues.ornamentType}
+                            onChange={(e) => setOrnamentValues({ ...ornamentValues, ornamentType: e.target.value })}
+                            label="Type"
+                          >
+                             <MenuItem value="Bangles">Bangles</MenuItem>
+                             <MenuItem value="Chain">Chain</MenuItem>
+                             <MenuItem value="Ring">Ring</MenuItem>
+                             <MenuItem value="Necklace">Necklace</MenuItem>
+                             {/* Simplified for now, can add more */}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <TextField
+                          label="Qty"
+                          size="small"
+                          type="number"
+                          value={ornamentValues.quantity}
+                          onChange={(e) => setOrnamentValues({ ...ornamentValues, quantity: e.target.value })}
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <TextField
+                          label="Gross Wt"
+                          size="small"
+                          type="number"
+                          value={ornamentValues.grossWeight}
+                          onChange={(e) => setOrnamentValues({ ...ornamentValues, grossWeight: e.target.value })}
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={6} sm={4}>
+                        <TextField
+                          label="Net Wt"
+                          size="small"
+                          type="number"
+                          value={ornamentValues.netWeight}
+                          onChange={(e) => setOrnamentValues({ ...ornamentValues, netWeight: e.target.value })}
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={6} sm={4}>
+                        <TextField
+                          label="Purity"
+                          size="small"
+                          type="number"
+                          value={ornamentValues.purity}
+                          onChange={(e) => setOrnamentValues({ ...ornamentValues, purity: e.target.value })}
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Button 
+                          variant="contained" 
+                          fullWidth 
+                          onClick={() => {
+                            if (ornamentValues.ornamentType && ornamentValues.netWeight) {
+                              setOrnaments([...ornaments, ornamentValues]);
+                              setOrnamentValues({ ornamentType: '', quantity: '', grossWeight: '', stoneWeight: '', netWeight: '', purity: '', netAmount: '' });
+                              setShowOrnamentForm(false);
+                            }
+                          }}
+                        >
+                          Add
+                        </Button>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                )}
+
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Type</TableCell>
+                        <TableCell>Qty</TableCell>
+                        <TableCell>Net Wt</TableCell>
+                        <TableCell>Action</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {ornaments.map((orn, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell>{orn.ornamentType}</TableCell>
+                          <TableCell>{orn.quantity}</TableCell>
+                          <TableCell>{orn.netWeight}</TableCell>
+                          <TableCell>
+                            <IconButton color="error" size="small" onClick={() => setOrnaments(ornaments.filter((_, i) => i !== idx))}>
+                              <Iconify icon="eva:trash-2-outline" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {ornaments.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center">No ornaments added yet</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+            )}
+
+            <Grid item xs={12}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Checkbox
+                  name="isCompleted"
+                  checked={values.isCompleted}
+                  onChange={handleChange}
+                />
+                <Typography variant="body2">Mark as completed (Moves to next stage)</Typography>
+              </Stack>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancel</Button>
+          <LoadingButton type="submit" variant="contained" loading={loading} sx={{ color: '#fff' }}>
+            Save & Update Status
+          </LoadingButton>
+        </DialogActions>
+      </form>
+    </Dialog>
+  );
+}
+
+VerificationModal.propTypes = {
+  open: PropTypes.bool,
+  id: PropTypes.string,
+  type: PropTypes.string,
+  handleClose: PropTypes.func,
+  fetchData: PropTypes.func,
+};

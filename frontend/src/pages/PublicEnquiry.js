@@ -399,8 +399,14 @@ export default function PublicEnquiry() {
                         label={t.phone}
                         value={formData.phoneNumber}
                         onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                          setFormData({ ...formData, phoneNumber: val });
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val.startsWith('0')) {
+                            val = val.substring(1);
+                          }
+                          if (val.length > 0 && !/^[6-9]/.test(val)) {
+                            val = '';
+                          }
+                          setFormData({ ...formData, phoneNumber: val.slice(0, 10) });
                         }}
                         type="tel"
                         disabled={otpSent}

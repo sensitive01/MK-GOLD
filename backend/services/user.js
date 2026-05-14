@@ -46,6 +46,11 @@ async function update(id, payload) {
     const user = await User.findById(id);
     if (!user) throw new Error("User not found");
     
+    // Handle both camelCase and lowercase casing from different clients
+    if (payload.loginmethod && !payload.loginMethod) {
+      payload.loginMethod = payload.loginmethod;
+    }
+    
     // Explicitly update fields from payload
     Object.assign(user, payload);
     

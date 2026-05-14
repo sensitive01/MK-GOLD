@@ -1,4 +1,4 @@
-const createError = require("http-errors");
+const createError = require("http-errors"); // root restart trigger // triggered restart
 const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
@@ -7,6 +7,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 require("./config/db");
+const passport = require("passport");
 require("./config/passport");
 
 const authRouter = require("./routes/auth");
@@ -27,7 +28,9 @@ app.set("trust proxy", 1);
 const allowedOrigins = [
   "https://mkgold.tech",
   "https://www.mkgold.tech",
-  "http://localhost:3000"
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173"
 ];
 
 app.use(cors({
@@ -53,6 +56,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
+app.use(passport.initialize());
 
 // routes
 app.use("/api/v1.0/auth", authRouter);

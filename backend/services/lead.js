@@ -108,4 +108,35 @@ async function addDisposition(id, payload) {
   }
 }
 
-module.exports = { find, findById, create, update, remove, addDisposition };
+async function getLeadStats(user = null) {
+  try {
+    const query = {};
+    const userType = user?.userType?.toLowerCase();
+    if (
+      userType === "branch" ||
+      userType === "assistant_branch_manager" ||
+      userType === "branch_executive" ||
+      userType === "telecalling"
+    ) {
+      const branchId = user.branch?._id || user.branch;
+      if (branchId) {
+        query.branch = branchId;
+      } else {
+        // If user has no branch, look for leads with no branch
+        query.branch = { $in: [null, undefined] };
+      }
+    }
+
+    const totalLeads = await Lead.countDocuments(query);
+    const pendingLeads = await Lead.countDocuments({ ...query, status: "pending" });
+
+    console.log('Lead Stats Query:', query);
+    console.log('Stats Result:', { totalLeads, pendingLeads });
+
+    return { totalLeads, pendingLeads };
+  } catch (err) {
+    throw err;
+  }
+}
+
+module.exports = { find, findById, create, update, remove, addDisposition, getLeadStats };

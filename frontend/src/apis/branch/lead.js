@@ -54,4 +54,13 @@ async function addDisposition(id, data) {
   }
 }
 
-export { getLeads, getLeadById, createLead, updateLead, deleteLeadById, addDisposition };
+async function getLeadStats() {
+  try {
+    const response = await apiClient().get('/api/v1.0/branch/lead/get-stats');
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+export { getLeads, getLeadById, createLead, updateLead, deleteLeadById, addDisposition, getLeadStats };

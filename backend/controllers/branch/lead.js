@@ -73,4 +73,13 @@ async function addDisposition(req, res) {
   }
 }
 
-module.exports = { find, findById, create, update, remove, addDisposition };
+async function getStats(req, res) {
+  try {
+    const data = await leadService.getLeadStats(req.user);
+    res.json({ status: true, message: "", data });
+  } catch (err) {
+    res.json({ status: false, message: err.message, data: {} });
+  }
+}
+
+module.exports = { find, findById, create, update, remove, addDisposition, getStats };

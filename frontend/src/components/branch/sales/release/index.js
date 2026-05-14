@@ -35,10 +35,11 @@ import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import Iconify from '../../../iconify';
-import { getReleaseByCustomerId, createRelease, deleteReleaseById } from '../../../../apis/branch/release';
+import { getReleaseByCustomerId, createRelease, deleteReleaseById, updateRelease } from '../../../../apis/branch/release';
 import Scrollbar from '../../../scrollbar';
 import Bank from '../bank';
 import { createFile } from '../../../../apis/branch/fileupload';
+import { getEmployee } from '../../../../apis/branch/employee';
 // import { getBranchByBranchId } from '../../../../apis/branch/branch';
 
 const style = {
@@ -62,8 +63,12 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
   const [data, setData] = useState([]);
   const [openId, setOpenId] = useState(null);
   const [releaseModal, setReleaseModal] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+  const [editId, setEditId] = useState(null);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [selectedBank, setSelectedBank] = useState(null);
+  const [assignees, setAssignees] = useState([]);
+  const [releaseDocPreview, setReleaseDocPreview] = useState(null);
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
   const [page, setPage] = useState(0);
@@ -82,6 +87,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
     pledgedBranch: Yup.string().required('Pledged branch is required'),
     releaseDate: Yup.string().required('Release date is required'),
     comments: Yup.string().required('comments is required'),
+    assignee: Yup.string().required('Assignee is required'),
   });
 
   const { handleSubmit, handleChange, handleBlur, values, setValues, touched, errors } = useFormik({
@@ -98,8 +104,9 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
       pledgedBranch: '',
       releaseDate: moment()?.format("YYYY-MM-DD"),
       comments: '',
+      assignee: '',
       releaseDocument: {},
-      status: 'active',
+      status: 'finance pending',
     },
     validationSchema: schema,
     onSubmit: (values) => {
@@ -126,38 +133,82 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
         pledgedBranch: values.pledgedBranch,
         releaseDate: values.releaseDate,
         comments: values.comments,
+        assignee: values.assignee,
         status: values.status,
       };
-      createRelease(payload).then((data) => {
-        if (data.status === false) {
-          setNotify({
-            open: true,
-            message: 'Release not created',
-            severity: 'error',
-          });
-        } else {
-          getReleaseByCustomerId(selectedUser._id).then((data) => {
-            setData(data.data);
-          });
-          const formData = new FormData();
-          formData.append('uploadId', data.data.fileUpload.uploadId);
-          formData.append('uploadName', data.data.fileUpload.uploadName);
-          formData.append('uploadType', 'proof');
-          formData.append('uploadedFile', values.releaseDocument);
-          createFile(formData);
-          setReleaseModal(false);
-          setNotify({
-            open: true,
-            message: 'Release created',
-            severity: 'success',
-          });
-        }
-      });
+
+      if (isEdit) {
+        updateRelease(editId, payload).then((data) => {
+          if (data.status === false) {
+            setNotify({
+              open: true,
+              message: 'Release not updated',
+              severity: 'error',
+            });
+          } else {
+            getReleaseByCustomerId(selectedUser._id).then((data) => {
+              setData(data.data);
+            });
+            if (values.releaseDocument && values.releaseDocument.name) {
+              const formData = new FormData();
+              // In update, we just append to release object, but here we can just create it
+              // Assuming backend links it if upload type is proof, but we don't have the new uploadId here easily unless returned
+              // Wait, createRelease returns data.data.fileUpload, does updateRelease?
+              if (data.data && data.data.fileUpload) {
+                formData.append('uploadId', data.data.fileUpload.uploadId);
+                formData.append('uploadName', data.data.fileUpload.uploadName);
+                formData.append('uploadType', 'proof');
+                formData.append('uploadedFile', values.releaseDocument);
+                createFile(formData);
+              }
+            }
+            setReleaseModal(false);
+            setNotify({
+              open: true,
+              message: 'Release updated',
+              severity: 'success',
+            });
+          }
+        });
+      } else {
+        createRelease(payload).then((data) => {
+          if (data.status === false) {
+            setNotify({
+              open: true,
+              message: 'Release not created',
+              severity: 'error',
+            });
+          } else {
+            getReleaseByCustomerId(selectedUser._id).then((data) => {
+              setData(data.data);
+            });
+            if (values.releaseDocument && values.releaseDocument.name) {
+              const formData = new FormData();
+              formData.append('uploadId', data.data.fileUpload.uploadId);
+              formData.append('uploadName', data.data.fileUpload.uploadName);
+              formData.append('uploadType', 'proof');
+              formData.append('uploadedFile', values.releaseDocument);
+              createFile(formData);
+            }
+            setReleaseModal(false);
+            setNotify({
+              open: true,
+              message: 'Release created',
+              severity: 'success',
+            });
+          }
+        });
+      }
     },
   });
 
   useEffect(() => {
     setBranch(auth.user.branch);
+    getEmployee().then((res) => {
+      if (res?.data) {
+        setAssignees(res.data);
+      }
+    });
   }, [auth]);
 
   const updateDimensions = () => {
@@ -219,13 +270,36 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
           <Typography variant="h4" gutterBottom>
             Customer Release
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => setReleaseModal(true)}
-          >
-            New Release
-          </Button>
+          {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && (
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setIsEdit(false);
+                setEditId(null);
+                setValues({
+                  customer: selectedUser?._id,
+                  weight: '',
+                  pledgeAmount: '',
+                  payableAmount: '',
+                  paymentType: '',
+                  bank: selectedBank?._id,
+                  pledgedDate: moment()?.format("YYYY-MM-DD"),
+                  pledgeId: '',
+                  pledgedIn: '',
+                  pledgedBranch: '',
+                  releaseDate: moment()?.format("YYYY-MM-DD"),
+                  comments: '',
+                  assignee: '',
+                  releaseDocument: {},
+                  status: 'finance pending',
+                });
+                setReleaseModal(true);
+              }}
+            >
+              New Release
+            </Button>
+          )}
         </Stack>
         <Scrollbar>
           <TableContainer sx={{ minWidth: 800 }}>
@@ -260,16 +334,50 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                     <TableCell align="left">{e.payableAmount}</TableCell>
                     <TableCell align="left">{sentenceCase(e.paymentType)}</TableCell>
                     <TableCell align="left">
-                      <Button
-                        variant="contained"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => {
-                          setOpenId(e._id);
-                          handleOpenDeleteModal();
-                        }}
-                      >
-                        Delete
-                      </Button>
+                      {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && !(selectedUser?.sales?.some(sale => sale.release?.includes(e._id))) && (
+                        <Stack direction="row" spacing={1}>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            onClick={() => {
+                              setIsEdit(true);
+                              setEditId(e._id);
+                              setValues({
+                                customer: e.customer || selectedUser?._id,
+                                weight: e.weight || '',
+                                pledgeAmount: e.pledgeAmount || '',
+                                payableAmount: e.payableAmount || '',
+                                paymentType: e.paymentType || '',
+                                bank: e.bank || selectedBank?._id,
+                                pledgedDate: e.pledgedDate ? moment(e.pledgedDate) : moment(),
+                                pledgeId: e.pledgeId || '',
+                                pledgedIn: e.pledgedIn || '',
+                                pledgedBranch: e.pledgedBranch || '',
+                                releaseDate: e.releaseDate ? moment(e.releaseDate) : moment(),
+                                comments: e.comments || '',
+                                assignee: e.assignee || '',
+                                releaseDocument: {},
+                                status: e.status || 'finance pending',
+                              });
+                              setReleaseModal(true);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="contained"
+                            color="error"
+                            size="small"
+                            startIcon={<DeleteIcon />}
+                            onClick={() => {
+                              setOpenId(e._id);
+                              handleOpenDeleteModal();
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </Stack>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -315,7 +423,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
       >
         <Box sx={style}>
           <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 3 }}>
-            Add Release
+            {isEdit ? 'Edit Release' : 'Add Release'}
             <Button
               sx={{ color: '#222', float: 'right' }}
               startIcon={<CloseIcon />}
@@ -434,10 +542,23 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                   fullWidth
                   onBlur={handleBlur}
                   onChange={(e) => {
-                    setValues({ ...values, releaseDocument: e.target.files[0] });
+                    const file = e.target.files[0];
+                    setValues({ ...values, releaseDocument: file });
+                    if (file) {
+                      setReleaseDocPreview(URL.createObjectURL(file));
+                    }
                   }}
-                  required
+                  required={!isEdit}
                 />
+                {releaseDocPreview && (
+                  <Box sx={{ mt: 1 }}>
+                    <img
+                      src={releaseDocPreview}
+                      alt="Release Document Preview"
+                      style={{ width: '100px', height: 'auto', borderRadius: '4px', border: '1px solid #ddd' }}
+                    />
+                  </Box>
+                )}
               </Grid>
               <Grid item xs={12} md={4}>
                 <LocalizationProvider dateAdapter={AdapterMoment}>
@@ -464,6 +585,26 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                   onBlur={handleBlur}
                   onChange={handleChange}
                 />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth error={touched.assignee && errors.assignee && true}>
+                  <InputLabel id="select-assignee">Select assignee</InputLabel>
+                  <Select
+                    labelId="select-assignee"
+                    id="select"
+                    label={touched.assignee && errors.assignee ? errors.assignee : 'Select assignee'}
+                    name="assignee"
+                    value={values.assignee}
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                  >
+                    {assignees?.map((emp) => (
+                      <MenuItem key={emp._id} value={emp._id}>
+                        {emp.name} - {sentenceCase(emp.userType || '')}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               {values.paymentType === 'bank' && (
                 <Bank

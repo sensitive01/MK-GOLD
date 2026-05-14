@@ -19,88 +19,23 @@ const icon = (name) => <SvgColor src={`/assets/icons/navbar/${name}.svg`} sx={{ 
 const navConfig = [
   {
     title: 'dashboard',
-    path: '/admin/dashboard',
+    path: '/telecalling/dashboard',
     icon: icon('ic_analytics'),
   },
   {
-    title: 'gold-rate',
-    path: '/admin/gold-rate',
-    icon: <MonetizationOnIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'branch',
-    path: '/admin/branch',
-    icon: <HomeWorkIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'user',
-    path: '/admin/user',
+    title: 'leads',
+    path: '/telecalling/leads',
     icon: icon('ic_user'),
-  },
-  {
-    title: 'funds',
-    path: '/admin/fund',
-    icon: <AttachMoneyIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'expenses',
-    path: '/admin/expense',
-    icon: <RequestQuoteIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Leave',
-    path: '/admin/leave',
-    icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Attendance',
-    path: '/admin/attendance',
+    path: '/telecalling/attendance',
     icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
   },
   {
-    title: 'Customer',
-    path: '/admin/customer',
-    icon: icon('ic_user'),
-  },
-  {
-    title: 'Release',
-    path: '/admin/release',
-    icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Sale',
-    path: '/admin/sale',
-    icon: <SellIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Employee',
-    path: '/admin/employee',
-    icon: icon('ic_user'),
-  },
-  {
-    title: 'Report',
-    path: '/admin/report',
-    icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Support',
-    path: '/admin/support',
-    icon: <SupportAgentIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'OTP',
-    path: '/admin/otp',
-    icon: <SafetyCheckIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Move Gold',
-    path: '/admin/ornament',
-    icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Balancesheet',
-    path: '/admin/balancesheet',
-    icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
+    title: 'Leaves',
+    path: '/telecalling/leaves',
+    icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
   },
 ];
 

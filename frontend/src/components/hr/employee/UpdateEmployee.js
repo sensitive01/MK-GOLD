@@ -22,11 +22,12 @@ function UpdateEmployee(props) {
     employeeId: Yup.string().required('Employee Id is required'),
     phoneNumber: Yup.string()
       .required('Phone is required')
-      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
-      ?.length(10),
+      .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
     alternatePhoneNumber: Yup.string()
-      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
-      ?.length(10),
+      .matches(/^[0-9]{10}$/, {
+        message: 'Alternate phone number must be exactly 10 digits',
+        excludeEmptyString: true,
+      }),
     dob: Yup.string().required('DOB is required'),
     shiftStartTime: Yup.string().required('Login Time is required'),
     shiftEndTime: Yup.string().required('Logout Time is required'),
@@ -179,6 +180,7 @@ function UpdateEmployee(props) {
                 setFocusedField(null);
               }}
               onChange={handleChange}
+              inputProps={{ maxLength: 10 }}
             />
           </Grid>
           <Grid item xs={12} sm={4}>
@@ -198,6 +200,7 @@ function UpdateEmployee(props) {
                 setFocusedField(null);
               }}
               onChange={handleChange}
+              inputProps={{ maxLength: 10 }}
             />
           </Grid>
           <Grid item xs={12} sm={4}>

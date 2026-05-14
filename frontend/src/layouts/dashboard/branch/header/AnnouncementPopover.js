@@ -118,7 +118,7 @@ export default function AnnouncementPopover() {
               >
                 <ListItemAvatar>
                   <Avatar sx={{ bgcolor: 'background.neutral' }}>
-                    {notification.file?.uploadedFile ? (
+                    {notification.file?.uploadedFile && notification.file.uploadedFile !== 'undefined' && notification.file.uploadedFile !== null && notification.file.uploadedFile !== '' ? (
                        <img 
                         src={notification.file.uploadedFile.startsWith('http') ? notification.file.uploadedFile : `${global.baseURL}/${notification.file.uploadedFile}`} 
                         alt="icon" 

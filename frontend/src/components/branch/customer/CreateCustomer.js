@@ -9,7 +9,6 @@ import * as Yup from 'yup';
 import Webcam from 'react-webcam';
 import { useSelector } from 'react-redux';
 import { createCustomer } from '../../../apis/branch/customer';
-import { getBranchByBranchId } from '../../../apis/branch/branch';
 import { createFile } from '../../../apis/branch/fileupload';
 import { getEnquiryByMkgId } from '../../../apis/branch/qrEnquiry';
 import Stack from '@mui/material/Stack';
@@ -18,8 +17,6 @@ import global from '../../../utils/global';
 function CreateCustomer({ setToggleContainer, setNotify }) {
   const auth = useSelector((state) => state.auth);
   const [branch, setBranch] = useState({});
-  const [token, setToken] = useState(null);
-  const [altToken, setAltToken] = useState(null);
   const [enquiryId, setEnquiryId] = useState('');
   const [fetchingEnquiry, setFetchingEnquiry] = useState(false);
   const [img, setImg] = useState(null);
@@ -47,19 +44,15 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
     name: Yup.string().required('Name is required'),
     phoneNumber: Yup.string()
       .required('Phone is required')
-      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
-      ?.length(10),
+      .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
     alternatePhoneNumber: Yup.string()
-      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
-      ?.length(10),
+      .matches(/^[0-9]{10}$/, {
+        message: 'Alternate phone number must be exactly 10 digits',
+        excludeEmptyString: true,
+      }),
     email: Yup.string().required('Email id is required'),
     dob: Yup.string().required('DOB is required'),
     gender: Yup.string().required('Gender is required'),
-    otp: Yup.string()?.length(6),
-    altOtp: Yup.string()?.length(6),
-    employmentType: Yup.string().required('Employment type is required'),
-    organisation: Yup.string().required('Organisation is required'),
-    annualIncome: Yup.string().required('Annual income is required'),
     maritalStatus: Yup.string().required('Marital is required'),
   });
 
@@ -71,8 +64,6 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
     setValues,
     touched,
     errors,
-    setFieldError,
-    setFieldTouched,
     resetForm,
   } = useFormik({
     initialValues: {
@@ -82,11 +73,6 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
       email: '',
       dob: null,
       gender: '',
-      otp: '',
-      altOtp: '',
-      employmentType: '',
-      organisation: '',
-      annualIncome: '',
       maritalStatus: '',
       source: '',
       signature: {},
@@ -97,13 +83,6 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
     },
     validationSchema: schema,
     onSubmit: async (values) => {
-      /*
-      setFieldTouched('otp', false);
-      const res = await verifyOtp({ otp: values.otp, token });
-      if (res.status === true || res.status === false) { // Simple bypass for now as per "hide functionality"
-        // ... handled below
-      }
-      */
       if (!img) {
         setNotify({
           open: true,
@@ -120,11 +99,6 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         email: values.email,
         dob: values.dob,
         gender: values.gender,
-        otp: values.otp,
-        altOtp: values.altOtp,
-        employmentType: values.employmentType,
-        organisation: values.organisation,
-        annualIncome: values.annualIncome,
         maritalStatus: values.maritalStatus,
         source: values.source,
         status: values.status,
@@ -140,7 +114,6 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
           const uploadId = data.data.fileUpload.uploadId;
           const uploadName = data.data.fileUpload.uploadName;
 
-          // 1. Upload Profile Photo (Captured from Webcam)
           if (img) {
             fetch(img)
               .then((res) => res.blob())
@@ -157,7 +130,6 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
               });
           }
 
-          // 2. Upload ID Document
           if (values.uploadId && values.uploadId instanceof File) {
             const formData = new FormData();
             formData.append('uploadId', uploadId);
@@ -171,7 +143,6 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
             });
           }
 
-          // 3. Upload Signature
           if (values.signature && values.signature instanceof File) {
             const formData1 = new FormData();
             formData1.append('uploadId', uploadId);
@@ -272,6 +243,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
               label={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber : 'Phone'}
               fullWidth
               onChange={handleChange}
+              inputProps={{ maxLength: 10 }}
             />
           </Grid>
           <Grid item xs={12} sm={4}>
@@ -289,35 +261,9 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
               }
               fullWidth
               onChange={handleChange}
+              inputProps={{ maxLength: 10 }}
             />
           </Grid>
-            {/* 
-            <Button
-              size="small"
-              variant="outlined"
-              sx={{
-                color: '#8A1B9F',
-                borderColor: '#8A1B9F',
-                '&:hover': {
-                  borderColor: '#FFD700',
-                  backgroundColor: 'rgba(255, 215, 0, 0.1)',
-                },
-              }}
-              onClick={() => {
-                sendOtp({ phoneNumber: values.alternatePhoneNumber }).then((data) => {
-                  if (data.status === true) {
-                    setAltToken(data.data.token);
-                    setNotify({ open: true, message: 'OTP Sent', severity: 'success' });
-                  } else {
-                    setNotify({ open: true, message: data.message, severity: 'error' });
-                  }
-                });
-              }}
-              disabled={values.alternatePhoneNumber?.length !== 10}
-            >
-              Send OTP
-            </Button>
-            */}
           <Grid item xs={12} sm={4}>
             <TextField
               name="email"
@@ -361,77 +307,6 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                 <MenuItem value="other">Other</MenuItem>
               </Select>
             </FormControl>
-          </Grid>
-          {/* 
-          <Grid item xs={12} sm={4}>
-            <TextField
-              name="otp"
-              value={values.otp}
-              error={touched.otp && errors.otp && true}
-              label={touched.otp && errors.otp ? errors.otp : 'Phone Number OTP'}
-              fullWidth
-              onBlur={handleBlur}
-              onChange={handleChange}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              name="altOtp"
-              value={values.altOtp}
-              error={touched.altOtp && errors.altOtp && true}
-              label={touched.altOtp && errors.altOtp ? errors.altOtp : 'Alt Phone Number OTP'}
-              fullWidth
-              onBlur={handleBlur}
-              onChange={handleChange}
-            />
-          </Grid>
-          */}
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth error={touched.employmentType && errors.employmentType && true}>
-              <InputLabel id="select-label">Select Employment Type</InputLabel>
-              <Select
-                labelId="select-label"
-                id="select"
-                label={
-                  touched.employmentType && errors.employmentType ? errors.employmentType : 'Select Employment Type'
-                }
-                name="employmentType"
-                value={values.employmentType}
-                onBlur={handleBlur}
-                onChange={handleChange}
-              >
-                <MenuItem value="Business Owner">Business Owner</MenuItem>
-                <MenuItem value="Central Govt Employee">Central Govt Employee</MenuItem>
-                <MenuItem value="Contract Employee">Contract Employee</MenuItem>
-                <MenuItem value="Military">Military</MenuItem>
-                <MenuItem value="Police">Police</MenuItem>
-                <MenuItem value="Self Employed">Self Employed</MenuItem>
-                <MenuItem value="State Govt Employee">State Govt Employee</MenuItem>
-                <MenuItem value="Working Professional">Working Professional</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              name="organisation"
-              value={values.organisation}
-              error={touched.organisation && errors.organisation && true}
-              label={touched.organisation && errors.organisation ? errors.organisation : 'Organisation'}
-              fullWidth
-              onBlur={handleBlur}
-              onChange={handleChange}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              name="annualIncome"
-              value={values.annualIncome}
-              error={touched.annualIncome && errors.annualIncome && true}
-              label={touched.annualIncome && errors.annualIncome ? errors.annualIncome : 'Annualincome'}
-              fullWidth
-              onBlur={handleBlur}
-              onChange={handleChange}
-            />
           </Grid>
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth error={touched.maritalStatus && errors.maritalStatus && true}>
@@ -566,4 +441,3 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
 }
 
 export default CreateCustomer;
-

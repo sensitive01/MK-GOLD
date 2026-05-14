@@ -20,6 +20,7 @@ import {
   Modal,
   Checkbox,
   Paper,
+  InputAdornment,
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -38,7 +39,7 @@ import Webcam from 'react-webcam';
 import PropTypes from 'prop-types';
 import Iconify from '../../../iconify';
 import Label from '../../../label';
-import { findCustomer, createCustomer, deleteCustomerById, updateCustomer } from '../../../../apis/branch/customer';
+import { findCustomer, createCustomer, deleteCustomerById, updateCustomer, sendOtp, verifyOtp } from '../../../../apis/branch/customer';
 import { createFile } from '../../../../apis/branch/fileupload';
 import global from '../../../../utils/global';
 // import { getBranchByBranchId } from '../../../../apis/branch/branch';
@@ -65,6 +66,8 @@ function Customer(props) {
   const [branch, setBranch] = useState({});
   const [token, setToken] = useState(null);
   const [altToken, setAltToken] = useState(null);
+  const [otpStatus, setOtpStatus] = useState(null);
+  const [altOtpStatus, setAltOtpStatus] = useState(null);
   const [data, setData] = useState([]);
   const [openId, setOpenId] = useState(null);
   const [customerModal, setCustomerModal] = useState(false);
@@ -78,6 +81,8 @@ function Customer(props) {
   const [enquiryId, setEnquiryId] = useState('');
   const [fetchingEnquiry, setFetchingEnquiry] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
+  const [uploadIdPreview, setUploadIdPreview] = useState(null);
+  const [signaturePreview, setSignaturePreview] = useState(null);
   const webcamRef = useRef(null);
 
   useEffect(() => {
@@ -87,14 +92,16 @@ function Customer(props) {
   }, [auth.user?.branch]);
 
   const videoConstraints = {
-    width: 420,
-    height: 420,
     facingMode: 'user',
   };
 
   const capture = useCallback(() => {
     const imageSrc = webcamRef.current.getScreenshot();
-    setImg(imageSrc);
+    if (imageSrc) {
+      setImg(imageSrc);
+    } else {
+      alert('Failed to capture photo. Please check your camera connection.');
+    }
   }, [webcamRef]);
 
   const updateDimensions = () => {
@@ -114,7 +121,17 @@ function Customer(props) {
     style.width = 800;
   }
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
+  const displayData = (() => {
+    const list = data || [];
+    if (!selectedUser) return list;
+    const isSelectedInData = list.some((e) => e._id === selectedUser._id);
+    if (!isSelectedInData) {
+      return [selectedUser, ...list];
+    }
+    return list;
+  })();
+
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (displayData?.length || 0)) : 0;
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -127,10 +144,7 @@ function Customer(props) {
   const fetchCustomer = useCallback(
     (
       query = {
-        createdAt: {
-          $gte: moment()?.format('YYYY-MM-DD'),
-          $lte: moment()?.format('YYYY-MM-DD'),
-        },
+        all: true,
       }
     ) => {
       findCustomer(query).then((data) => {
@@ -172,19 +186,14 @@ function Customer(props) {
     name: Yup.string().required('Name is required'),
     phoneNumber: Yup.string()
       .required('Phone is required')
-      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
-      ?.length(10),
+      .test('is-phone', 'Phone number must be exactly 10 digits', (val) => /^[0-9]{10}$/.test(val) || (val && val.includes('*'))),
     alternatePhoneNumber: Yup.string()
-      .matches(/^[6-9][0-9]{9}$/, 'Invalid Indian phone number')
-      ?.length(10),
+      .test('is-alt-phone', 'Alternate phone number must be exactly 10 digits', (val) => !val || /^[0-9]{10}$/.test(val) || val.includes('*')),
     email: Yup.string().required('Email id is required').email(),
     dob: Yup.string().required('DOB is required'),
     gender: Yup.string().required('Gender is required'),
     otp: Yup.string()?.length(6),
     altOtp: Yup.string()?.length(6),
-    employmentType: Yup.string().required('Employment type is required'),
-    organisation: Yup.string().required('Organisation is required'),
-    annualIncome: Yup.string().required('Annual income is required'),
     maritalStatus: Yup.string().required('Marital is required'),
   });
 
@@ -209,9 +218,6 @@ function Customer(props) {
       gender: '',
       otp: '',
       altOtp: '',
-      employmentType: '',
-      organisation: '',
-      annualIncome: '',
       maritalStatus: '',
       source: '',
       signature: {},
@@ -248,12 +254,13 @@ function Customer(props) {
         gender: values.gender,
         otp: values.otp,
         altOtp: values.altOtp,
-        employmentType: values.employmentType,
-        organisation: values.organisation,
-        annualIncome: values.annualIncome,
         maritalStatus: values.maritalStatus,
         source: values.source,
         status: values.status,
+        chooseId: values.chooseId,
+        idNo: values.idNo,
+        customerId: enquiryId,
+        mkgCustomerId: enquiryId,
       };
 
       if (openId) {
@@ -265,18 +272,91 @@ function Customer(props) {
               severity: 'error',
             });
           } else {
+            // Upload images if they were changed
+            if (img && img.startsWith('data:')) {
+                fetch(img).then(res => res.blob()).then(blob => {
+                    const file = new File([blob], `profile-${openId}.png`, { type: 'image/png' });
+                    const formData = new FormData();
+                    formData.append('uploadId', openId);
+                    formData.append('uploadName', 'customer');
+                    formData.append('uploadType', 'profile_image');
+                    formData.append('uploadedFile', file);
+                    createFile(formData);
+                });
+            }
+            if (values.uploadId instanceof File) {
+                const formData = new FormData();
+                formData.append('uploadId', openId);
+                formData.append('uploadName', 'customer');
+                formData.append('uploadType', 'upload_id');
+                formData.append('uploadedFile', values.uploadId);
+                formData.append('documentType', values.chooseId);
+                formData.append('documentNo', values.idNo);
+                createFile(formData);
+            }
+            if (values.signature instanceof File) {
+                const formData = new FormData();
+                formData.append('uploadId', openId);
+                formData.append('uploadName', 'customer');
+                formData.append('uploadType', 'signature');
+                formData.append('uploadedFile', values.signature);
+                createFile(formData);
+            }
+
             fetchCustomer();
             setCustomerModal(false);
             setOpenId(null);
             resetForm();
+            findCustomer({ phoneNumber: data.data.phoneNumber, all: true }).then((res) => {
+              if (res.data && res.data.length > 0) {
+                props.setSelectedUser(res.data[0]);
+              } else {
+                props.setSelectedUser(data.data);
+              }
+            });
             setNotify({
               open: true,
-              message: 'Customer updated',
+              message: 'Customer updated & selected',
               severity: 'success',
             });
+            props.setStep(2);
           }
         });
         return;
+      }
+
+      if (!openId) {
+        const existingRes = await findCustomer({ phoneNumber: values.phoneNumber, all: true });
+        if (existingRes?.data && existingRes.data.length > 0) {
+          const existingUser = existingRes.data[0];
+          setOpenId(existingUser._id);
+          setValues({
+            ...values,
+            name: existingUser.name || '',
+            alternatePhoneNumber: existingUser.alternatePhoneNumber || '',
+            email: existingUser.email || '',
+            dob: existingUser.dob || null,
+            gender: existingUser.gender || '',
+            maritalStatus: existingUser.maritalStatus || '',
+            source: existingUser.source || '',
+            status: existingUser.status || 'active',
+            chooseId: existingUser.chooseId || '',
+            idNo: existingUser.idNo || '',
+          });
+          const profileImg = existingUser.profileImage?.file;
+          if (profileImg) {
+            setImg(`${global.baseURL}/${profileImg}`);
+          }
+          setEnquiryId(existingUser.customerId || '');
+          setOtpStatus('success');
+          setAltOtpStatus('success');
+          setNotify({
+            open: true,
+            message: 'Customer already exists! Details fetched. Click Save again to update.',
+            severity: 'info',
+          });
+          return;
+        }
       }
 
       createCustomer(payload).then((data) => {
@@ -316,11 +396,20 @@ function Customer(props) {
           setCustomerModal(false);
           setImg(null);
           resetForm();
+          const userObj = data.data.data || data.data;
+          findCustomer({ phoneNumber: userObj.phoneNumber, all: true }).then((res) => {
+            if (res.data && res.data.length > 0) {
+              props.setSelectedUser(res.data[0]);
+            } else {
+              props.setSelectedUser(userObj);
+            }
+          });
           setNotify({
             open: true,
-            message: 'Customer created',
+            message: 'Customer created & selected',
             severity: 'success',
           });
+          props.setStep(2);
         }
       });
     },
@@ -337,26 +426,44 @@ function Customer(props) {
         email: e.email || '',
         dob: e.dob || null,
         gender: e.gender || '',
-        employmentType: e.employmentType || '',
-        organisation: e.organisation || '',
-        annualIncome: e.annualIncome || '',
         maritalStatus: e.maritalStatus || '',
         source: e.source || '',
         status: e.status || 'active',
         chooseId: e.chooseId || '',
         idNo: e.idNo || '',
+        mkgCustomerId: e.mkgCustomerId || '',
       });
+      setEnquiryId(e.mkgCustomerId || e.customerId || '');
       // Fetch profile image if exists
-      const profileImg = e.profileImage?.file;
+      const profileImg = e.profileImage?.uploadedFile;
       if (profileImg) {
-        setImg(`${global.baseURL}/${profileImg}`);
+        setImg(profileImg.startsWith('http') ? profileImg : `${global.baseURL}/${profileImg}`);
       } else {
         setImg(null);
       }
+
+      // Fetch ID Proof and Signature
+      if (e.idProof?.uploadedFile) {
+        const idImg = e.idProof.uploadedFile;
+        setUploadIdPreview(idImg.startsWith('http') ? idImg : `${global.baseURL}/${idImg}`);
+      } else {
+        setUploadIdPreview(null);
+      }
+
+      if (e.signatureImage?.uploadedFile) {
+        const sigImg = e.signatureImage.uploadedFile;
+        setSignaturePreview(sigImg.startsWith('http') ? sigImg : `${global.baseURL}/${sigImg}`);
+      } else {
+        setSignaturePreview(null);
+      }
+
+      setOtpStatus('success');
+      setAltOtpStatus('success');
+      setEnquiryId(e.customerId || '');
       setCustomerModal(true);
       props.setAutoOpenEdit(false);
     }
-  }, [props.autoOpenEdit, props.selectedUser, props.setAutoOpenEdit, setValues, setImg]);
+  }, [props.autoOpenEdit, props.selectedUser, props.setAutoOpenEdit, setValues, setImg, setUploadIdPreview, setSignaturePreview]);
 
   const handleSelect = (user) => {
     if (selectedUser && selectedUser._id === user._id) {
@@ -380,18 +487,41 @@ function Customer(props) {
           <Typography variant="h4" gutterBottom>
             Customers
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setOpenId(null);
+          <Stack direction="row" spacing={2}>
+            <TextField
+              size="small"
+              placeholder="Search by Phone..."
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val.length >= 3) {
+                  fetchCustomer({ phoneNumber: val, all: true });
+                } else if (val.length === 0) {
+                  fetchCustomer({ all: true });
+                }
+              }}
+              InputProps={{
+                startAdornment: (
+                  <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled', width: 20, height: 20, mr: 1 }} />
+                ),
+              }}
+            />
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setOpenId(null);
               resetForm();
               setImg(null);
+              setUploadIdPreview(null);
+              setSignaturePreview(null);
+              setOtpStatus(null);
+              setAltOtpStatus(null);
               setCustomerModal(true);
-            }}
-          >
-            New Customer
-          </Button>
+              }}
+            >
+              New Customer
+            </Button>
+          </Stack>
         </Stack>
         <Scrollbar>
           <TableContainer sx={{ minWidth: 800 }}>
@@ -408,7 +538,7 @@ function Customer(props) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e) => (
+                {displayData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e) => (
                   <TableRow hover key={e._id} tabIndex={-1}>
                     <TableCell padding="checkbox">
                       <Checkbox checked={selectedUser?._id === e._id} onChange={() => handleSelect(e)} />
@@ -441,39 +571,59 @@ function Customer(props) {
                             email: e.email || '',
                             dob: e.dob || null,
                             gender: e.gender || '',
-                            employmentType: e.employmentType || '',
-                            organisation: e.organisation || '',
-                            annualIncome: e.annualIncome || '',
                             maritalStatus: e.maritalStatus || '',
                             source: e.source || '',
                             status: e.status || 'active',
                             chooseId: e.chooseId || '',
                             idNo: e.idNo || '',
+                            mkgCustomerId: e.mkgCustomerId || '',
                           });
+                          setEnquiryId(e.mkgCustomerId || e.customerId || '');
                           // Fetch profile image if exists
-                          const profileImg = e.profileImage?.file;
+                          const profileImg = e.profileImage?.uploadedFile;
                           if (profileImg) {
-                            setImg(`${global.baseURL}/${profileImg}`);
+                            setImg(profileImg.startsWith('http') ? profileImg : `${global.baseURL}/${profileImg}`);
                           } else {
                             setImg(null);
                           }
+
+                          // Fetch ID Proof and Signature
+                          if (e.idProof?.uploadedFile) {
+                            const idImg = e.idProof.uploadedFile;
+                            setUploadIdPreview(idImg.startsWith('http') ? idImg : `${global.baseURL}/${idImg}`);
+                          } else {
+                            setUploadIdPreview(null);
+                          }
+
+                          if (e.signatureImage?.uploadedFile) {
+                            const sigImg = e.signatureImage.uploadedFile;
+                            setSignaturePreview(sigImg.startsWith('http') ? sigImg : `${global.baseURL}/${sigImg}`);
+                          } else {
+                            setSignaturePreview(null);
+                          }
+
+                          setOtpStatus('success');
+                          setAltOtpStatus('success');
+                          setEnquiryId(e.customerId || '');
                           setCustomerModal(true);
                         }}
                       >
                         Edit
                       </Button>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        color="error"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => {
-                          setOpenId(e._id);
-                          handleOpenDeleteModal();
-                        }}
-                      >
-                        Delete
-                      </Button>
+                      {!(e.sales?.length > 0) && (
+                        <Button
+                          variant="contained"
+                          size="small"
+                          color="error"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => {
+                            setOpenId(e._id);
+                            handleOpenDeleteModal();
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -482,7 +632,7 @@ function Customer(props) {
                     <TableCell colSpan={7} />
                   </TableRow>
                 )}
-                {data?.length === 0 && (
+                {displayData?.length === 0 && (
                   <TableRow>
                     <TableCell align="center" colSpan={7} sx={{ py: 3 }}>
                       <Paper
@@ -502,7 +652,7 @@ function Customer(props) {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data?.length || 0}
+            count={displayData?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -591,13 +741,56 @@ function Customer(props) {
                   onBlur={(e) => {
                     handleBlur(e);
                     setFocusedField(null);
+                    if (values.phoneNumber && values.phoneNumber.length === 10) {
+                      findCustomer({ phoneNumber: values.phoneNumber, all: true }).then((res) => {
+                        if (res?.data && res.data.length > 0) {
+                          const existingUser = res.data[0];
+                          if (existingUser._id !== openId) {
+                            setOpenId(existingUser._id);
+                            setValues({
+                              ...values,
+                              name: existingUser.name || '',
+                              alternatePhoneNumber: existingUser.alternatePhoneNumber || '',
+                              email: existingUser.email || '',
+                              dob: existingUser.dob || null,
+                              gender: existingUser.gender || '',
+                              maritalStatus: existingUser.maritalStatus || '',
+                              source: existingUser.source || '',
+                              status: existingUser.status || 'active',
+                              chooseId: existingUser.chooseId || '',
+                              idNo: existingUser.idNo || '',
+                            });
+                            const profileImg = existingUser.profileImage?.uploadedFile;
+                            if (profileImg) {
+                              setImg(profileImg.startsWith('http') ? profileImg : `${global.baseURL}/${profileImg}`);
+                            }
+                            setEnquiryId(existingUser.customerId || '');
+                            setOtpStatus('success');
+                            setAltOtpStatus('success');
+                            setNotify({
+                              open: true,
+                              message: 'Existing customer found. Details loaded.',
+                              severity: 'info',
+                            });
+                          }
+                        }
+                      });
+                    }
                   }}
                   error={touched.phoneNumber && errors.phoneNumber && true}
                   label={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber : 'Phone'}
                   fullWidth
                   onChange={(e) => {
-                    handleChange(e);
+                    let val = e.target.value.replace(/\D/g, '');
+                    if (val.startsWith('0')) {
+                      val = val.substring(1);
+                    }
+                    if (val.length > 0 && !/^[6-9]/.test(val)) {
+                      val = '';
+                    }
+                    setValues({ ...values, phoneNumber: val.slice(0, 10) });
                   }}
+                  inputProps={{ maxLength: 10 }}
                 />
               </Grid>
               <Grid item xs={12} md={4}>
@@ -608,6 +801,14 @@ function Customer(props) {
                   onBlur={(e) => {
                     handleBlur(e);
                     setFocusedField(null);
+                    if (values.alternatePhoneNumber && values.alternatePhoneNumber.length === 10 && altOtpStatus !== 'success') {
+                      sendOtp({ phoneNumber: values.alternatePhoneNumber }).then((res) => {
+                        if (res.status) {
+                          setAltToken(res.data.token);
+                          setNotify({ open: true, message: 'OTP sent to Alt Phone', severity: 'success' });
+                        }
+                      });
+                    }
                   }}
                   error={touched.alternatePhoneNumber && errors.alternatePhoneNumber && true}
                   label={
@@ -617,10 +818,58 @@ function Customer(props) {
                   }
                   fullWidth
                   onChange={(e) => {
-                    handleChange(e);
+                    let val = e.target.value.replace(/\D/g, '');
+                    if (val.startsWith('0')) {
+                      val = val.substring(1);
+                    }
+                    if (val.length > 0 && !/^[6-9]/.test(val)) {
+                      val = '';
+                    }
+                    setValues({ ...values, alternatePhoneNumber: val.slice(0, 10) });
                   }}
+                  inputProps={{ maxLength: 10 }}
+                  InputProps={altOtpStatus === 'success' ? {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main' }}>
+                          <Iconify icon="mdi:check-circle" sx={{ mr: 0.5 }} />
+                          <Typography variant="caption" fontWeight="bold">Verified</Typography>
+                        </Box>
+                      </InputAdornment>
+                    )
+                  } : null}
                 />
               </Grid>
+              {values.alternatePhoneNumber?.length === 10 && altOtpStatus !== 'success' && (
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    name="altOtp"
+                    value={values.altOtp}
+                    error={touched.altOtp && errors.altOtp && true}
+                    label={touched.altOtp && errors.altOtp ? errors.altOtp : 'Alt Phone Number OTP'}
+                    fullWidth
+                    onBlur={handleBlur}
+                    onChange={(e) => {
+                      handleChange(e);
+                      const val = e.target.value;
+                      if (val.length === 6) {
+                        verifyOtp({ otp: val, token: altToken }).then((res) => {
+                          if (res.status) {
+                            setAltOtpStatus('success');
+                          } else {
+                            setAltOtpStatus('error');
+                          }
+                        });
+                      } else {
+                        setAltOtpStatus(null);
+                      }
+                    }}
+                    inputProps={{ maxLength: 6 }}
+                  />
+                  {altOtpStatus === 'success' && <Typography variant="caption" color="success.main">OTP verified successfully</Typography>}
+                  {altOtpStatus === 'error' && <Typography variant="caption" color="error.main">Invalid OTP</Typography>}
+                </Grid>
+              )}
               <Grid item xs={12} md={4}>
                 <TextField
                   name="email"
@@ -665,77 +914,8 @@ function Customer(props) {
                   </Select>
                 </FormControl>
               </Grid>
-              {/* 
-              <Grid item xs={12} md={4}>
-                <TextField
-                  name="otp"
-                  value={values.otp}
-                  // error={touched.otp && errors.otp && true}
-                  label={touched.otp && errors.otp ? errors.otp : 'Phone Number OTP'}
-                  fullWidth
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  name="altOtp"
-                  value={values.altOtp}
-                  // error={touched.altOtp && errors.altOtp && true}
-                  label={touched.altOtp && errors.altOtp ? errors.altOtp : 'Alt Phone Number OTP'}
-                  fullWidth
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                />
-              </Grid>
-              */}
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth error={touched.employmentType && errors.employmentType && true}>
-                  <InputLabel id="select-label">Select employment type</InputLabel>
-                  <Select
-                    labelId="select-label"
-                    id="select"
-                    label={
-                      touched.employmentType && errors.employmentType ? errors.employmentType : 'Select employment type'
-                    }
-                    name="employmentType"
-                    value={values.employmentType}
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                  >
-                    <MenuItem value="Business Owner">Business Owner</MenuItem>
-                    <MenuItem value="Central Govt Employee">Central Govt Employee</MenuItem>
-                    <MenuItem value="Contract Employee">Contract Employee</MenuItem>
-                    <MenuItem value="Military">Military</MenuItem>
-                    <MenuItem value="Police">Police</MenuItem>
-                    <MenuItem value="Self Employed">Self Employed</MenuItem>
-                    <MenuItem value="State Govt Employee">State Govt Employee</MenuItem>
-                    <MenuItem value="Working Professional">Working Professional</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  name="organisation"
-                  value={values.organisation}
-                  error={touched.organisation && errors.organisation && true}
-                  label={touched.organisation && errors.organisation ? errors.organisation : 'Organisation'}
-                  fullWidth
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  name="annualIncome"
-                  value={values.annualIncome}
-                  error={touched.annualIncome && errors.annualIncome && true}
-                  label={touched.annualIncome && errors.annualIncome ? errors.annualIncome : 'Annual income'}
-                  fullWidth
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                />
-              </Grid>
+
+
               <Grid item xs={12} md={4}>
                 <FormControl fullWidth error={touched.maritalStatus && errors.maritalStatus && true}>
                   <InputLabel id="select-label">Select marital status</InputLabel>
@@ -812,25 +992,43 @@ function Customer(props) {
               </Grid>
               <Grid item xs={12} md={4}>
                 <span>UploadId: </span>
-                <TextField
+                 <TextField
                   name="uploadId"
                   type={'file'}
                   onBlur={handleBlur}
                   onChange={(e) => {
-                    setValues({ ...values, uploadId: e.target.files[0] });
+                    const file = e.target.files[0];
+                    setValues({ ...values, uploadId: file });
+                    if (file) {
+                      setUploadIdPreview(URL.createObjectURL(file));
+                    }
                   }}
                 />
+                {uploadIdPreview && (
+                  <Box sx={{ mt: 1 }}>
+                    <img src={uploadIdPreview} alt="ID Preview" style={{ width: '100px', height: 'auto', borderRadius: '4px', border: '1px solid #ddd' }} />
+                  </Box>
+                )}
               </Grid>
               <Grid item xs={12} md={4}>
                 <span>Signature: </span>
-                <TextField
+                 <TextField
                   name="signature"
                   type={'file'}
                   onBlur={handleBlur}
                   onChange={(e) => {
-                    setValues({ ...values, signature: e.target.files[0] });
+                    const file = e.target.files[0];
+                    setValues({ ...values, signature: file });
+                    if (file) {
+                      setSignaturePreview(URL.createObjectURL(file));
+                    }
                   }}
                 />
+                {signaturePreview && (
+                  <Box sx={{ mt: 1 }}>
+                    <img src={signaturePreview} alt="Signature Preview" style={{ width: '100px', height: 'auto', borderRadius: '4px', border: '1px solid #ddd' }} />
+                  </Box>
+                )}
               </Grid>
               {customerModal && (
                 <Grid item xs={12}>
@@ -842,22 +1040,33 @@ function Customer(props) {
                         height={400}
                         width={400}
                         ref={webcamRef}
-                        screenshotFormat="image/png"
+                        screenshotFormat="image/jpeg"
                         videoConstraints={videoConstraints}
                       />
                       <br />
-                      <LoadingButton size="small" type="button" variant="contained" onClick={capture}>
+                      <Button size="small" variant="contained" onClick={capture} sx={{ mt: 1 }}>
                         Capture photo
-                      </LoadingButton>
+                      </Button>
                     </>
                   ) : (
-                    <>
-                      <img src={img} alt="screenshot" />
-                      <br />
-                      <LoadingButton size="small" type="button" variant="contained" onClick={() => setImg(null)}>
+                    <div style={{ textAlign: 'center' }}>
+                      <img 
+                        src={img} 
+                        alt="Captured" 
+                        style={{ 
+                          width: '100%', 
+                          maxWidth: '400px', 
+                          height: 'auto', 
+                          display: 'block', 
+                          margin: '0 auto', 
+                          borderRadius: '8px', 
+                          border: '1px solid #ccc' 
+                        }} 
+                      />
+                      <Button size="small" variant="contained" color="warning" onClick={() => setImg(null)} sx={{ mt: 1 }}>
                         Retake
-                      </LoadingButton>
-                    </>
+                      </Button>
+                    </div>
                   )}
                 </Grid>
               )}

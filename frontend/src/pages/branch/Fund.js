@@ -38,6 +38,7 @@ import Scrollbar from '../../components/scrollbar';
 import { FundListHead, FundListToolbar } from '../../sections/@dashboard/fund';
 // mock
 import { deleteFundById, findFund } from '../../apis/branch/fund';
+import global from '../../utils/global';
 
 // ----------------------------------------------------------------------
 
@@ -266,16 +267,18 @@ export default function Fund() {
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Fund
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-              setToggleContainerType('create');
-            }}
-          >
-            New Fund
-          </Button>
+          {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && (
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setToggleContainer(!toggleContainer);
+                setToggleContainerType('create');
+              }}
+            >
+              New Fund
+            </Button>
+          )}
         </Stack>
 
         <Card>
@@ -462,28 +465,32 @@ export default function Fund() {
           },
         }}
       >
-        <MenuItem
-          onClick={() => {
-            setOpen(null);
-            setToggleContainerType('update');
-            setToggleContainer(!toggleContainer);
-          }}
-        >
-          <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
-          Edit
-        </MenuItem>
+        {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && (
+          <MenuItem
+            onClick={() => {
+              setOpen(null);
+              setToggleContainerType('update');
+              setToggleContainer(!toggleContainer);
+            }}
+          >
+            <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
+            Edit
+          </MenuItem>
+        )}
 
-        <MenuItem
-          sx={{ color: 'error.main' }}
-          onClick={() => {
-            setOpen(null);
-            setDeleteType('single');
-            handleOpenDeleteModal();
-          }}
-        >
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-          Delete
-        </MenuItem>
+        {global.canDelete(auth.user?.userType) && (
+          <MenuItem
+            sx={{ color: 'error.main' }}
+            onClick={() => {
+              setOpen(null);
+              setDeleteType('single');
+              handleOpenDeleteModal();
+            }}
+          >
+            <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
+            Delete
+          </MenuItem>
+        )}
       </Popover>
 
       <Modal

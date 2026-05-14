@@ -36,6 +36,10 @@ import FinanceDashboardLayout from './layouts/dashboard/finance';
 import FinanceDashboard from './pages/finance/Dashboard';
 import TelecallingDashboardLayout from './layouts/dashboard/telecalling';
 import TelecallingDashboard from './pages/telecalling/Dashboard';
+import TelecallingProfile from './pages/telecalling/Profile';
+
+import TransactionExecutiveDashboardLayout from './layouts/dashboard/transaction_executive';
+import TransactionExecutiveDashboard from './pages/transaction_executive/Dashboard';
 
 import HrDashboardLayout from './layouts/dashboard/hr';
 import HrDashboard from './pages/hr/Dashboard';
@@ -236,6 +240,27 @@ export default function Router() {
       children: [
         { element: <Navigate to="/telecalling/dashboard" />, index: true },
         { path: 'dashboard', element: <TelecallingDashboard /> },
+        { path: 'leads', element: <BranchLeads /> },
+        { path: 'attendance', element: <BranchAttendance /> },
+        { path: 'leaves', element: <BranchLeave /> },
+        { path: 'profile', element: <TelecallingProfile /> },
+      ],
+    },
+    {
+      path: '/transaction-executive',
+      element: (
+        <Protected>
+          <TransactionExecutiveDashboardLayout />
+        </Protected>
+      ),
+      children: [
+        { element: <Navigate to="/transaction-executive/dashboard" />, index: true },
+        { path: 'dashboard', element: <TransactionExecutiveDashboard /> },
+        { path: 'fund', element: <BranchFund /> },
+        { path: 'leave', element: <BranchLeave /> },
+        { path: 'attendance', element: <BranchAttendance /> },
+        { path: 'release', element: <BranchRelease /> },
+        { path: 'sale', element: <BranchSale /> },
       ],
     },
     {
