@@ -146,6 +146,23 @@ const Sales = mongoose.model(
       financeCompletedAt: {
         type: Date,
       },
+      // Fund Transfer Step (After Admin Approval)
+      fundTransferAmount: {
+        type: Number,
+      },
+      fundTransferProof: {
+        type: String,
+      },
+      fundTransferComments: {
+        type: String,
+      },
+      fundTransferCompleted: {
+        type: Boolean,
+        default: false,
+      },
+      fundTransferCompletedAt: {
+        type: Date,
+      },
       // Assignee Step
       assigneeAmount: {
         type: Number,
@@ -175,6 +192,7 @@ const Sales = mongoose.model(
           action: { type: String },
           performedBy: { type: mongoose.Schema.Types.ObjectId },
           performedAt: { type: Date, default: Date.now },
+          comments: { type: String },
         },
       ],
     },

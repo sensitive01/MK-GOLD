@@ -1,22 +1,31 @@
 const Sales = require("../models/sales");
+const Release = require("../models/release");
 const mongoose = require("mongoose");
 
 async function find(query = {}) {
   try {
     let filter = {};
-    if (query.createdAt && "$gte" in query.createdAt) {
-      query.createdAt["$gte"] = new Date(
-        new Date(query.createdAt["$gte"])
-          .toISOString()
-          .replace(/T.*Z/, "T00:00:00Z")
-      );
-    }
-    if (query.createdAt && "$lte" in query.createdAt) {
-      query.createdAt["$lte"] = new Date(
-        new Date(query.createdAt["$lte"])
-          .toISOString()
-          .replace(/T.*Z/, "T23:59:59Z")
-      );
+    if (query.createdAt) {
+      const dateFilter = { ...query.createdAt };
+      if (dateFilter["$gte"]) {
+        dateFilter["$gte"] = new Date(
+          new Date(dateFilter["$gte"])
+            .toISOString()
+            .replace(/T.*Z/, "T00:00:00Z")
+        );
+      }
+      if (dateFilter["$lte"]) {
+        dateFilter["$lte"] = new Date(
+          new Date(dateFilter["$lte"])
+            .toISOString()
+            .replace(/T.*Z/, "T23:59:59Z")
+        );
+      }
+      delete query.createdAt;
+      query.$or = [
+        { createdAt: dateFilter },
+        { status: { $ne: "completed" } },
+      ];
     }
     if (query.branch) {
       query.branch = new mongoose.Types.ObjectId(query.branch);
@@ -175,6 +184,7 @@ async function find(query = {}) {
                 action: "$$log.action",
                 performedBy: "$$log.performedBy",
                 performedAt: "$$log.performedAt",
+                comments: "$$log.comments",
                 performerName: {
                   $let: {
                     vars: {
@@ -367,6 +377,13 @@ async function aggregate(query = {}) {
 async function create(payload) {
   try {
     payload.billId = Math.floor(100000 + Math.random() * 900000);
+    payload.actionLog = [
+      {
+        action: payload.status || "finance pending",
+        performedBy: payload.employee,
+        performedAt: new Date(),
+      },
+    ];
     let sale = new Sales(payload);
     return await sale.save();
   } catch (err) {
@@ -386,7 +403,7 @@ async function update(id, payload) {
 
 async function updateWithLog(id, setData, logEntry) {
   try {
-    return await Sales.findByIdAndUpdate(
+    const updatedSale = await Sales.findByIdAndUpdate(
       id,
       {
         $set: setData,
@@ -394,6 +411,19 @@ async function updateWithLog(id, setData, logEntry) {
       },
       { returnDocument: "after" }
     ).exec();
+
+    // Synchronize linked releases if status is updated
+    if (setData.status && updatedSale.release && updatedSale.release.length > 0) {
+      await Release.updateMany(
+        { _id: { $in: updatedSale.release } },
+        {
+          $set: { status: setData.status },
+          $push: { actionLog: { action: setData.status, performedBy: logEntry.performedBy, performedAt: logEntry.performedAt } }
+        }
+      ).exec();
+    }
+
+    return updatedSale;
   } catch (err) {
     throw err;
   }
@@ -401,9 +431,19 @@ async function updateWithLog(id, setData, logEntry) {
 
 async function remove(id) {
   try {
+    const ids = id.split(",");
+    const salesToDelete = await Sales.find({ _id: { $in: ids } }).exec();
+    
+    // Cascading delete: Remove all linked releases first
+    for (const sale of salesToDelete) {
+      if (sale.release && sale.release.length > 0) {
+        await Release.deleteMany({ _id: { $in: sale.release } }).exec();
+      }
+    }
+
     return await Sales.deleteMany({
       _id: {
-        $in: id.split(","),
+        $in: ids,
       },
     }).exec();
   } catch (err) {

@@ -611,7 +611,7 @@ export default function Sale() {
               return (
                 <Box sx={{ minWidth: 400, py: 1 }}>
                   <Typography variant="subtitle2" gutterBottom>
-                    Current Status: <span style={{ color: sale.status === 'approved' ? 'green' : sale.status === 'rejected' ? 'red' : 'orange' }}>
+                    Current Sale Status: <span style={{ color: sale.status === 'approved' ? 'green' : sale.status === 'rejected' ? 'red' : 'orange' }}>
                       {sentenceCase(sale.status || 'pending')}
                     </span>
                   </Typography>

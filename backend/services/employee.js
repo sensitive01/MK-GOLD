@@ -64,8 +64,14 @@ async function find(query = {}, user = null) {
       {
         $project: {
           _id: 1,
+          employeeId: 1,
           name: 1,
+          email: 1,
+          gender: 1,
           designation: 1,
+          phoneNumber: 1,
+          status: 1,
+          createdAt: 1,
           userType: "$user.userType",
           branchName: "$branchDetails.name",
         },

@@ -1,4 +1,5 @@
 const Release = require("../models/release");
+const Sales = require("../models/sales");
 const mongoose = require("mongoose");
 
 async function find(query = {}) {
@@ -229,9 +230,17 @@ async function updateWithLog(id, setData, logEntry) {
 
 async function remove(id) {
   try {
+    const ids = id.split(",");
+    
+    // Remove references from Sales model
+    await Sales.updateMany(
+      { release: { $in: ids } },
+      { $pull: { release: { $in: ids } } }
+    ).exec();
+
     return await Release.deleteMany({
       _id: {
-        $in: id.split(","),
+        $in: ids,
       },
     }).exec();
   } catch (err) {

@@ -32,12 +32,13 @@ async function update(req, res) {
         action: req.body.status,
         performedBy: performerId,
         performedAt: new Date(),
+        comments: req.body.financeComments || req.body.assigneeComments || req.body.fundTransferComments || req.body.comments,
       };
-      const result = await salesService.updateWithLog(req.params.id, {
-        status: req.body.status,
-        actionBy: performerId,
-        actionAt: new Date(),
-      }, logEntry);
+      const updateData = { ...req.body };
+      updateData.actionBy = performerId;
+      updateData.actionAt = new Date();
+      
+      const result = await salesService.updateWithLog(req.params.id, updateData, logEntry);
       res.json({
         status: true,
         message: "",

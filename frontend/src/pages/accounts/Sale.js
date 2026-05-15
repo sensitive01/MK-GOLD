@@ -772,6 +772,7 @@ export default function Sale() {
                             <TableCell><strong>Employee ID</strong></TableCell>
                             <TableCell><strong>Name</strong></TableCell>
                             <TableCell><strong>Action</strong></TableCell>
+                            <TableCell><strong>Comments</strong></TableCell>
                             <TableCell><strong>Timestamp</strong></TableCell>
                           </TableRow>
                         </TableHead>
@@ -783,6 +784,7 @@ export default function Sale() {
                               <TableCell sx={{ color: log.action === 'approved' ? 'green' : log.action === 'rejected' ? 'red' : 'orange', fontWeight: 'bold', textTransform: 'capitalize' }}>
                                 {log.action}
                               </TableCell>
+                              <TableCell>{log.comments || 'N/A'}</TableCell>
                               <TableCell>{moment(log.performedAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                             </TableRow>
                           ))}
@@ -823,7 +825,20 @@ function Status(props) {
     setOpenVerifyModal(true);
   };
 
-  let content = <Label color={status === 'completed' ? 'success' : 'error'}>{sentenceCase(status)}</Label>;
+  let content = (
+    <Label
+      color={
+        (status === 'completed' && 'success') ||
+        (status === 'finance pending' && 'warning') ||
+        (status === 'release pending' && 'warning') ||
+        (status === 'admin approve pending' && 'info') ||
+        (status === 'fund transfer pending' && 'warning') ||
+        'error'
+      }
+    >
+      {sentenceCase(status || '')}
+    </Label>
+  );
 
   // Finance Step
   if (status === 'finance pending') {
@@ -861,7 +876,7 @@ function Status(props) {
             size="small"
             color="success"
             onClick={() => {
-              updateSales(_id, { status: 'completed' }).then(() => fetchData());
+              updateSales(_id, { status: 'fund transfer pending' }).then(() => fetchData());
             }}
           >
             Approve
@@ -880,6 +895,19 @@ function Status(props) {
       );
     } else {
       content = <Label color="info">Admin Approval Pending</Label>;
+    }
+  }
+
+  // Fund Transfer Step
+  else if (status === 'fund transfer pending') {
+    if (userType === 'finance' || userType === 'accounts' || userType === 'admin') {
+      content = (
+        <Button variant="contained" size="small" onClick={() => handleVerify('fund transfer')}>
+          Fund Transfer
+        </Button>
+      );
+    } else {
+      content = <Label color="warning">Fund Transfer Pending</Label>;
     }
   }
 
@@ -940,6 +968,15 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
           payload.financeCompleted = true;
           payload.financeCompletedAt = new Date();
           payload.status = 'release pending';
+        }
+      } else if (type === 'fund transfer') {
+        payload.fundTransferAmount = values.amount;
+        payload.fundTransferComments = values.comments;
+        payload.fundTransferProof = values.proof;
+        if (values.isCompleted) {
+          payload.fundTransferCompleted = true;
+          payload.fundTransferCompletedAt = new Date();
+          payload.status = 'completed';
         }
       } else {
         payload.assigneeAmount = values.amount;

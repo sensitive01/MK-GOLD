@@ -55,6 +55,7 @@ async function update(req, res) {
         action: req.body.status,
         performedBy: performerId,
         performedAt: new Date(),
+        comments: req.body.financeComments || req.body.assigneeComments || req.body.fundTransferComments || req.body.comments,
       };
       
       const updateData = { ...req.body };

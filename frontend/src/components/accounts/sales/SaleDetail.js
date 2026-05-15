@@ -437,6 +437,45 @@ export default function SaleDetail({ id }) {
             </Grid>
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
+                Verification Details:
+              </Typography>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableBody>
+                    <TableRow>
+                      <TableCell><strong>Finance Amount</strong></TableCell>
+                      <TableCell>{data.financeAmount ? `₹${data.financeAmount}` : 'N/A'}</TableCell>
+                      <TableCell><strong>Finance Comments</strong></TableCell>
+                      <TableCell>{data.financeComments || 'N/A'}</TableCell>
+                      <TableCell><strong>Finance Proof</strong></TableCell>
+                      <TableCell>
+                        {data.financeProof ? (
+                          <Link href={data.financeProof.startsWith('http') ? data.financeProof : `${global.baseURL}/${data.financeProof}`} target="_blank" rel="noopener">
+                            View Proof
+                          </Link>
+                        ) : 'N/A'}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell><strong>Fund Transfer Amount</strong></TableCell>
+                      <TableCell>{data.fundTransferAmount ? `₹${data.fundTransferAmount}` : 'N/A'}</TableCell>
+                      <TableCell><strong>Fund Transfer Comments</strong></TableCell>
+                      <TableCell>{data.fundTransferComments || 'N/A'}</TableCell>
+                      <TableCell><strong>Fund Transfer Proof</strong></TableCell>
+                      <TableCell>
+                        {data.fundTransferProof ? (
+                          <Link href={data.fundTransferProof.startsWith('http') ? data.fundTransferProof : `${global.baseURL}/${data.fundTransferProof}`} target="_blank" rel="noopener">
+                            View Proof
+                          </Link>
+                        ) : 'N/A'}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
                 Bill Detail:
               </Typography>
               <TableContainer>

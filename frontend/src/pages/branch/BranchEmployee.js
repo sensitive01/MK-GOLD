@@ -296,10 +296,10 @@ export default function BranchEmployee() {
                         <TableCell align="left">{name}</TableCell>
                         <TableCell align="left">{email}</TableCell>
                         <TableCell align="left">{gender}</TableCell>
-                        <TableCell align="left">{sentenceCase(designation)}</TableCell>
+                        <TableCell align="left">{sentenceCase(designation || '')}</TableCell>
                         <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
                         <TableCell align="left">
-                          <Label color={(status !== 'active' && 'error') || 'success'}>{sentenceCase(status)}</Label>
+                          <Label color={(status !== 'active' && 'error') || 'success'}>{sentenceCase(status || '')}</Label>
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">

@@ -224,12 +224,15 @@ export default function Release() {
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openViewModal, setOpenViewModal] = useState(false);
+  const [openLogModal, setOpenLogModal] = useState(false);
   const handleOpenEditModal = () => setOpenEditModal(true);
   const handleCloseEditModal = () => setOpenEditModal(false);
   const [deleteType, setDeleteType] = useState('single');
   const userType = auth.user?.userType;
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
+  const handleOpenLogModal = () => setOpenLogModal(true);
+  const handleCloseLogModal = () => setOpenLogModal(false);
 
   const [notify, setNotify] = useState({
     open: false,
@@ -563,6 +566,16 @@ export default function Release() {
           View Details
         </MenuItem>
 
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
+            handleOpenLogModal();
+          }}
+        >
+          <Iconify icon={'material-symbols:history'} sx={{ mr: 2 }} />
+          Approval Log
+        </MenuItem>
+
         {userType?.toLowerCase() !== 'transaction_executive' && (
           <MenuItem
             onClick={() => {
@@ -622,6 +635,61 @@ export default function Release() {
           </Stack>
         </Box>
       </Modal>
+
+      <Dialog open={openLogModal} onClose={handleCloseLogModal}>
+        <DialogTitle>Approval Log</DialogTitle>
+        <DialogContent dividers>
+          {data?.find((s) => s._id === openId) ? (
+            (() => {
+              const release = data.find((s) => s._id === openId);
+              return (
+                <Box sx={{ minWidth: 400, py: 1 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Current Release Status: <span style={{ color: release.status === 'completed' ? 'green' : 'orange' }}>
+                      {sentenceCase(release.status || 'pending')}
+                    </span>
+                  </Typography>
+                  {release.actionLog && release.actionLog.length > 0 ? (
+                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee', mt: 2 }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                            <TableCell><strong>Employee ID</strong></TableCell>
+                            <TableCell><strong>Name</strong></TableCell>
+                            <TableCell><strong>Action</strong></TableCell>
+                            <TableCell><strong>Timestamp</strong></TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {release.actionLog.map((log, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell>{log.performerName?.employeeId || 'N/A'}</TableCell>
+                              <TableCell>{log.performerName?.name || 'System'}</TableCell>
+                              <TableCell sx={{ color: log.action === 'completed' ? 'green' : 'orange', fontWeight: 'bold', textTransform: 'capitalize' }}>
+                                {log.action}
+                              </TableCell>
+                              <TableCell>{moment(log.performedAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  ) : (
+                    <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic', color: 'text.secondary' }}>
+                      No action history available for this record.
+                    </Typography>
+                  )}
+                </Box>
+              );
+            })()
+          ) : (
+            <Typography>Loading...</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseLogModal}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       <EditReleaseModal open={openEditModal} id={openId} handleClose={handleCloseEditModal} fetchData={fetchData} />
       <ViewReleaseModal open={openViewModal} id={openId} handleClose={() => setOpenViewModal(false)} />
