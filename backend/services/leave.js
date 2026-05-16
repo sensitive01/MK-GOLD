@@ -5,17 +5,19 @@ const { sendEmail } = require("./mailer");
 
 async function find(query = {}, user = null) {
   try {
-    const type = user?.userType?.toLowerCase();
-    if (["branch", "assistant_branch_manager", "branch_executive", "telecalling", "finance", "accounts", "operations"].includes(type)) {
+    const type = user?.userType?.toLowerCase() || '';
+    const isBranchUser = ["branch", "assistant_branch_manager", "branch_executive", "telecalling", "finance", "accounts", "operations"].some(role => type.includes(role));
+    
+    if (isBranchUser) {
       const bId = user.branch?._id || user.branch;
       if (bId) {
         query.branch = bId;
       }
       // If it's a sub-role (employee), only show their own leaves
-      if (type !== "branch") {
+      if (!type.includes("branch")) {
         query.employee = user.employee?._id || user.employee;
       }
-    } else if (type === "hr") {
+    } else if (type.includes("hr")) {
       // HR can see all leaves.
     }
 

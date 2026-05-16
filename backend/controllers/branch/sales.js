@@ -47,12 +47,19 @@ async function create(req, res) {
 
 async function update(req, res) {
   try {
-    const performerId = req.user.employee || req.user._id;
+    const performerId = req.user.employee?._id || req.user.employee || req.user._id;
     let result;
     
     if (req.body.status) {
+      const actionMap = {
+        'release pending': 'Finance Approved',
+        'admin approval pending': 'Verification Approved',
+        'completed': 'Admin Approved',
+        'rejected': 'Rejected'
+      };
+
       const logEntry = {
-        action: req.body.status,
+        action: actionMap[req.body.status] || req.body.status,
         performedBy: performerId,
         performedAt: new Date(),
         comments: req.body.financeComments || req.body.assigneeComments || req.body.fundTransferComments || req.body.comments,

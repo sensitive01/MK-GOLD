@@ -42,7 +42,7 @@ async function find(query = {}) {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ["$uploadId", "$$customerId"] },
+                    { $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }] },
                     { $eq: ["$uploadType", "profile_image"] }
                   ]
                 }
@@ -62,7 +62,7 @@ async function find(query = {}) {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ["$uploadId", "$$customerId"] },
+                    { $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }] },
                     { $eq: ["$uploadType", "upload_id"] }
                   ]
                 }
@@ -82,7 +82,7 @@ async function find(query = {}) {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ["$uploadId", "$$customerId"] },
+                    { $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }] },
                     { $eq: ["$uploadType", "signature"] }
                   ]
                 }
@@ -148,7 +148,7 @@ async function findById(id) {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ["$uploadId", "$$customerId"] },
+                    { $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }] },
                     { $eq: ["$uploadType", "profile_image"] }
                   ]
                 }
@@ -168,7 +168,7 @@ async function findById(id) {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ["$uploadId", "$$customerId"] },
+                    { $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }] },
                     { $eq: ["$uploadType", "upload_id"] }
                   ]
                 }
@@ -188,7 +188,7 @@ async function findById(id) {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ["$uploadId", "$$customerId"] },
+                    { $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }] },
                     { $eq: ["$uploadType", "signature"] }
                   ]
                 }
@@ -239,12 +239,32 @@ async function count(query = {}) {
 
 async function create(payload) {
   try {
+    const QREnquiry = require("../models/qrEnquiry");
     const latestSeq = await Customer.findOne({})
       .sort({ customerIdSeq: -1 })
       .exec();
     payload.customerIdSeq = (latestSeq?.customerIdSeq ?? 0) + 1;
     let customer = new Customer(payload);
-    return await customer.save();
+    const createdCustomer = await customer.save();
+
+    // Log to enquiry if ID is provided
+    if (payload.enqID) {
+      await QREnquiry.findOneAndUpdate(
+        { enqID: payload.enqID },
+        {
+          $push: {
+            actionLog: {
+              action: "Customer Registered",
+              performedBy: payload.createdBy,
+              performedAt: new Date(),
+              comments: `Customer ID generated: ${createdCustomer.customerId}`
+            }
+          }
+        }
+      );
+    }
+
+    return createdCustomer;
   } catch (err) {
     throw err;
   }
@@ -252,9 +272,29 @@ async function create(payload) {
 
 async function update(id, payload) {
   try {
-    return await Customer.findByIdAndUpdate(id, payload, {
+    const QREnquiry = require("../models/qrEnquiry");
+    const updatedCustomer = await Customer.findByIdAndUpdate(id, payload, {
       returnDocument: "after",
     }).exec();
+
+    // Log to enquiry if ID is provided
+    if (payload.enqID) {
+      await QREnquiry.findOneAndUpdate(
+        { enqID: payload.enqID },
+        {
+          $push: {
+            actionLog: {
+              action: "Customer Details Updated",
+              performedBy: payload.updatedBy || payload.createdBy,
+              performedAt: new Date(),
+              comments: "Customer information modified in portal"
+            }
+          }
+        }
+      );
+    }
+
+    return updatedCustomer;
   } catch (err) {
     throw err;
   }

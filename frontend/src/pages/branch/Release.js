@@ -46,6 +46,7 @@ import global from '../../utils/global';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { LoadingButton } from '@mui/lab';
+import TimelineView from '../../components/TimelineView';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -108,6 +109,9 @@ function applySortFilter(array, comparator, query) {
 
 function Status(props) {
   const { _id, status, assignee, financeCompleted, assigneeCompleted, userType, employeeId, fetchData } = props;
+  const userTypeLower = userType?.toLowerCase() || '';
+  const isAdmin = userTypeLower.includes('admin');
+  const isTransactionExecutive = userTypeLower.includes('transaction_executive');
 
   const [openVerifyModal, setOpenVerifyModal] = useState(false);
   const [verifyType, setVerifyType] = useState(''); // 'finance' or 'assignee'
@@ -119,7 +123,8 @@ function Status(props) {
 
   // Finance Step
   if (status === 'finance pending') {
-    if (userType === 'finance' || userType === 'accounts' || userType === 'admin') {
+    const isFinance = userTypeLower.includes('finance') || userTypeLower.includes('accounts');
+    if (isFinance || isAdmin) {
       return (
         <>
           <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
@@ -141,7 +146,7 @@ function Status(props) {
   // Assignee Step
   if (status === 'release pending') {
     const isAssignee = assignee === employeeId;
-    if (isAssignee || userType === 'admin' || userType === 'transaction_executive') {
+    if (isAssignee || isAdmin || isTransactionExecutive) {
       return (
         <>
           <Button variant="contained" size="small" color="info" onClick={() => handleVerify('assignee')}>
@@ -161,8 +166,8 @@ function Status(props) {
   }
 
   // Admin Approval Step
-  if (status === 'admin approve pending') {
-    if (userType === 'admin') {
+  if (status === 'admin approval pending') {
+    if (isAdmin) {
       return (
         <Stack direction="row" spacing={1}>
           <Button
@@ -644,40 +649,46 @@ export default function Release() {
               const release = data.find((s) => s._id === openId);
               return (
                 <Box sx={{ minWidth: 400, py: 1 }}>
-                  <Typography variant="subtitle2" gutterBottom>
+                   <Typography variant="subtitle2" gutterBottom>
                     Current Release Status: <span style={{ color: release.status === 'completed' ? 'green' : 'orange' }}>
                       {sentenceCase(release.status || 'pending')}
                     </span>
                   </Typography>
-                  {release.actionLog && release.actionLog.length > 0 ? (
-                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee', mt: 2 }}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                            <TableCell><strong>Employee ID</strong></TableCell>
-                            <TableCell><strong>Name</strong></TableCell>
-                            <TableCell><strong>Action</strong></TableCell>
-                            <TableCell><strong>Timestamp</strong></TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {release.actionLog.map((log, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell>{log.performerName?.employeeId || 'N/A'}</TableCell>
-                              <TableCell>{log.performerName?.name || 'System'}</TableCell>
-                              <TableCell sx={{ color: log.action === 'completed' ? 'green' : 'orange', fontWeight: 'bold', textTransform: 'capitalize' }}>
-                                {log.action}
-                              </TableCell>
-                              <TableCell>{moment(log.performedAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+
+                  <TimelineView timeline={release.timeline} />
+                  
+                  {release.actionLog && release.actionLog.length > 0 && (
+                    <Box sx={{ mt: 4 }}>
+                      <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.secondary' }}>
+                        Raw Status Logs
+                      </Typography>
+                      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee' }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow sx={{ bgcolor: '#610C9F' }}>
+                              <TableCell sx={{ color: '#fff' }}><strong>No.</strong></TableCell>
+                              <TableCell sx={{ color: '#fff' }}><strong>Employee ID</strong></TableCell>
+                              <TableCell sx={{ color: '#fff' }}><strong>Name</strong></TableCell>
+                              <TableCell sx={{ color: '#fff' }}><strong>Action</strong></TableCell>
+                              <TableCell sx={{ color: '#fff' }}><strong>Timestamp</strong></TableCell>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  ) : (
-                    <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic', color: 'text.secondary' }}>
-                      No action history available for this record.
-                    </Typography>
+                          </TableHead>
+                          <TableBody>
+                            {release.actionLog.map((log, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell>{idx + 1}</TableCell>
+                                <TableCell>{log.performerName?.employeeId || 'N/A'}</TableCell>
+                                <TableCell>{log.performerName?.name || 'System'}</TableCell>
+                                <TableCell sx={{ color: log.action === 'completed' ? 'green' : 'orange', fontWeight: 'bold', textTransform: 'capitalize' }}>
+                                  {log.action}
+                                </TableCell>
+                                <TableCell>{moment(log.performedAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
                   )}
                 </Box>
               );
@@ -964,7 +975,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         if (values.isCompleted) {
           payload.assigneeCompleted = true;
           payload.assigneeCompletedAt = new Date();
-          payload.status = 'admin approve pending';
+          payload.status = 'admin approval pending';
         }
       }
 

@@ -9,13 +9,13 @@ async function getQrEnquiries(query) {
   }
 }
 
-async function getEnquiryByMkgId(mkgId) {
+async function getEnquiryByEnqId(enqId) {
   try {
-    const response = await apiClient().get(`/api/v1.0/branch/qr-enquiry/get-by-mkgid/${mkgId}`);
+    const response = await apiClient().get(`/api/v1.0/branch/qr-enquiry/get-by-enqid/${enqId}`);
     return response.data;
   } catch (err) {
     return err;
   }
 }
 
-export { getQrEnquiries, getEnquiryByMkgId };
+export { getQrEnquiries, getEnquiryByEnqId };

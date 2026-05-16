@@ -195,6 +195,15 @@ const Sales = mongoose.model(
           comments: { type: String },
         },
       ],
+      timeline: [
+        {
+          event: { type: String },
+          performedBy: { type: mongoose.Schema.Types.ObjectId, ref: "employees" },
+          performedAt: { type: Date, default: Date.now },
+          details: { type: String },
+          timeTaken: { type: Number }, // in seconds
+        },
+      ],
     },
     { timestamps: true }
   )

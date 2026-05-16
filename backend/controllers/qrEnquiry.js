@@ -1,6 +1,7 @@
 const qrService = require("../services/qrEnquiry");
 const otpService = require("../services/otp");
 const smsService = require("../services/sms");
+const Customer = require("../models/customer");
 
 async function sendOtp(req, res) {
   try {
@@ -77,10 +78,42 @@ async function getEnquiries(req, res) {
     }
 }
 
-async function findByMkgId(req, res) {
+async function findByEnqId(req, res) {
   try {
-    const { mkgId } = req.params;
-    const result = await qrService.findOne({ mkgCustomerId: mkgId });
+    const { enqId } = req.params;
+    if (!enqId) {
+        return res.json({ status: false, message: "Enquiry ID is required" });
+    }
+    
+    // Try case-insensitive and trimmed search
+    const trimmedId = enqId.trim();
+    let result = await qrService.findOne({ 
+        enqID: { $regex: new RegExp("^" + trimmedId + "$", "i") } 
+    });
+    
+    if (!result) {
+        // Fallback 1: Check if it's a customerId (e.g., BGC001)
+        const customerByCode = await Customer.findOne({ 
+            customerId: { $regex: new RegExp("^" + trimmedId + "$", "i") } 
+        }).select("enqID phoneNumber").lean().exec();
+        
+        if (customerByCode && customerByCode.enqID) {
+            result = await qrService.findOne({ enqID: customerByCode.enqID });
+        } else {
+            // Fallback 2: Check if it's a phoneNumber
+            const customerByPhone = await Customer.findOne({ 
+                phoneNumber: trimmedId 
+            }).select("enqID").lean().exec();
+            
+            if (customerByPhone && customerByPhone.enqID) {
+                result = await qrService.findOne({ enqID: customerByPhone.enqID });
+            } else {
+                // Fallback 3: Search enquiry directly by phone
+                result = await qrService.findOne({ phoneNumber: trimmedId });
+            }
+        }
+    }
+    
     if (!result) {
         return res.json({ status: false, message: "Enquiry not found" });
     }
@@ -90,4 +123,4 @@ async function findByMkgId(req, res) {
   }
 }
 
-module.exports = { sendOtp, verifyOtp, verifyAndSubmit, getEnquiries, findByMkgId };
+module.exports = { sendOtp, verifyOtp, verifyAndSubmit, getEnquiries, findByEnqId };

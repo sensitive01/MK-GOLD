@@ -84,7 +84,7 @@ const translations = {
     success: 'Thank you! Submission successful.',
     alreadyExists: 'You are already registered!',
     contactBranch: 'Please contact the branch for further processing.',
-    customerId: 'Your Customer ID',
+    enquiryId: 'Your Enquiry ID',
     autoClose: 'Redirecting in {sec} seconds...',
     branchNotFound: 'Branch Information Not Found',
     sendOtp: 'Send OTP',
@@ -115,7 +115,7 @@ const translations = {
     success: 'ಧನ್ಯವಾದಗಳು! ಸಲ್ಲಿಕೆ ಯಶಸ್ವಿಯಾಗಿದೆ.',
     alreadyExists: 'ನೀವು ಈಗಾಗಲೇ ನೋಂದಾಯಿಸಿಕೊಂಡಿದ್ದೀರಿ!',
     contactBranch: 'ಹೆಚ್ಚಿನ ಪ್ರಕ್ರಿಯೆಗಾಗಿ ದಯವಿಟ್ಟು ಶಾಖೆಯನ್ನು ಸಂಪರ್ಕಿಸಿ.',
-    customerId: 'ನಿಮ್ಮ ಗ್ರಾಹಕರ ಐಡಿ',
+    enquiryId: 'ನಿಮ್ಮ ವಿಚಾರಣೆ ಐಡಿ',
     autoClose: '{sec} ಸೆಕೆಂಡುಗಳಲ್ಲಿ ಮರುನಿರ್ದೇಶಿಸಲಾಗುತ್ತಿದೆ...',
     branchNotFound: 'ಶಾಖೆಯ ಮಾಹಿತಿ ಕಂಡುಬಂದಿಲ್ಲ',
     sendOtp: 'OTP ಕಳುಹಿಸಿ',
@@ -253,7 +253,7 @@ export default function PublicEnquiry() {
         skipOtp: false, 
       });
       if (res.data.status) {
-        setGeneratedId(res.data.data.mkgCustomerId);
+        setGeneratedId(res.data.data.enqID);
         if (res.data.alreadyExists) {
             setAlreadyRegistered(true);
         }
@@ -346,7 +346,7 @@ export default function PublicEnquiry() {
 
                     <Box sx={{ bgcolor: 'primary.lighter', p: 3, borderRadius: 2, mb: 4, border: '1px dashed #8A1B9F' }}>
                         <Typography variant="subtitle2" color="primary.darker" sx={{ mb: 1 }}>
-                            {t.customerId}
+                            {t.enquiryId}
                         </Typography>
                         <Typography variant="h2" color="primary.darker" sx={{ letterSpacing: 3, fontWeight: 'bold' }}>
                             {generatedId}

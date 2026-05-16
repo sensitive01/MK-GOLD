@@ -14,7 +14,15 @@ import {
   Typography,
   TableContainer,
   TablePagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Box,
+  Divider,
 } from '@mui/material';
+import Iconify from '../../components/iconify';
 import moment from 'moment';
 import Scrollbar from '../../components/scrollbar';
 import global from '../../utils/global';
@@ -22,7 +30,7 @@ import { getQrEnquiries } from '../../apis/branch/qrEnquiry';
 import { BranchListHead } from '../../sections/@dashboard/branch';
 
 const TABLE_HEAD = [
-  { id: 'mkgCustomerId', label: 'Customer ID', alignRight: false },
+  { id: 'enqID', label: 'Enquiry ID', alignRight: false },
   { id: 'name', label: 'Name', alignRight: false },
   { id: 'phoneNumber', label: 'Phone', alignRight: false },
   { id: 'email', label: 'Email', alignRight: false },
@@ -30,6 +38,7 @@ const TABLE_HEAD = [
   { id: 'grossWeight', label: 'Weight', alignRight: false },
   { id: 'pincode', label: 'Pincode', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
+  { id: 'action', label: 'Action', alignRight: true },
 ];
 
 export default function QREnquiry() {
@@ -38,6 +47,18 @@ export default function QREnquiry() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selected, setSelected] = useState([]);
+  const [openLogModal, setOpenLogModal] = useState(false);
+  const [selectedEnquiry, setSelectedEnquiry] = useState(null);
+
+  const handleOpenLogModal = (enquiry) => {
+    setSelectedEnquiry(enquiry);
+    setOpenLogModal(true);
+  };
+
+  const handleCloseLogModal = () => {
+    setOpenLogModal(false);
+    setSelectedEnquiry(null);
+  };
 
   useEffect(() => {
     fetchData();
@@ -118,7 +139,7 @@ export default function QREnquiry() {
                   />
                 <TableBody>
                     {data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
-                      const { _id, mkgCustomerId, name, phoneNumber, email, type, grossWeight, pincode, createdAt } = row;
+                      const { _id, enqID, name, phoneNumber, email, type, grossWeight, pincode, createdAt } = row;
                       const isItemSelected = selected.indexOf(_id) !== -1;
 
                       return (
@@ -127,7 +148,7 @@ export default function QREnquiry() {
                             <Checkbox checked={isItemSelected} onChange={(event) => handleClick(event, _id)} />
                           </TableCell>
                           <TableCell align="left" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                            {mkgCustomerId}
+                            {enqID}
                           </TableCell>
                           <TableCell align="left">{name}</TableCell>
                           <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
@@ -138,6 +159,16 @@ export default function QREnquiry() {
                           <TableCell align="left">{grossWeight}g</TableCell>
                           <TableCell align="left">{pincode}</TableCell>
                           <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm')}</TableCell>
+                          <TableCell align="right">
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => handleOpenLogModal(row)}
+                              startIcon={<Iconify icon="material-symbols:history" />}
+                            >
+                              Logs
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -166,6 +197,48 @@ export default function QREnquiry() {
           />
         </Card>
       </Container>
+
+      <Dialog open={openLogModal} onClose={handleCloseLogModal} maxWidth="lg" fullWidth>
+        <DialogTitle>Enquiry Process Log</DialogTitle>
+        <DialogContent dividers>
+          {selectedEnquiry && (
+            <Box sx={{ py: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Enquiry ID: <span style={{ color: '#2065D1' }}>{selectedEnquiry.enqID}</span>
+              </Typography>
+              <Divider sx={{ my: 2 }} />
+              {selectedEnquiry.actionLog && selectedEnquiry.actionLog.length > 0 ? (
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableBody>
+                      {selectedEnquiry.actionLog.map((log, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{log.action}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {moment(log.performedAt).format('YYYY-MM-DD HH:mm:ss')}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            {log.comments || '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary', p: 2 }}>
+                  No logs available for this enquiry.
+                </Typography>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseLogModal}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

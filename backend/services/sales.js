@@ -157,20 +157,61 @@ async function find(query = {}) {
           },
         },
       },
-      // Resolve actionLog performers
+      // Resolve all performers from both actionLog and timeline
       {
         $lookup: {
           from: "employees",
-          localField: "actionLog.performedBy",
-          foreignField: "_id",
+          let: { 
+            logIds: { $ifNull: ["$actionLog.performedBy", []] },
+            tlIds: { $ifNull: ["$timeline.performedBy", []] }
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $in: ["$_id", "$$logIds"] },
+                    { $in: ["$_id", "$$tlIds"] }
+                  ]
+                }
+              }
+            }
+          ],
           as: "_logEmployees",
         },
       },
       {
         $lookup: {
           from: "users",
-          localField: "actionLog.performedBy",
-          foreignField: "_id",
+          let: { 
+            logIds: { $ifNull: ["$actionLog.performedBy", []] },
+            tlIds: { $ifNull: ["$timeline.performedBy", []] }
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $in: ["$_id", "$$logIds"] },
+                    { $in: ["$_id", "$$tlIds"] }
+                  ]
+                }
+              }
+            },
+            {
+              $lookup: {
+                from: "employees",
+                localField: "employee",
+                foreignField: "_id",
+                as: "employeeData"
+              }
+            },
+            {
+              $addFields: {
+                employeeData: { $first: "$employeeData" }
+              }
+            }
+          ],
           as: "_logUsers",
         },
       },
@@ -205,7 +246,69 @@ async function find(query = {}) {
                       $cond: {
                         if: "$$emp",
                         then: { name: "$$emp.name", employeeId: "$$emp.employeeId" },
-                        else: { name: { $ifNull: ["$$usr.username", "System"] }, employeeId: "ADMIN-USER" },
+                        else: { 
+                          $cond: {
+                            if: "$$usr",
+                            then: { 
+                              name: { $ifNull: ["$$usr.employeeData.name", { $ifNull: ["$$usr.username", "Staff"] }] }, 
+                              employeeId: { $ifNull: ["$$usr.employeeData.employeeId", "ADMIN-USER"] } 
+                            },
+                            else: { 
+                                name: { $ifNull: ["$$emp.name", "System"] }, 
+                                employeeId: { $ifNull: ["$$emp.employeeId", "N/A"] } 
+                            }
+                          }
+                        }
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          timeline: {
+            $map: {
+              input: { $ifNull: ["$timeline", []] },
+              as: "tl",
+              in: {
+                event: "$$tl.event",
+                performedBy: "$$tl.performedBy",
+                performedAt: "$$tl.performedAt",
+                details: "$$tl.details",
+                timeTaken: "$$tl.timeTaken",
+                performerName: {
+                  $let: {
+                    vars: {
+                      emp: {
+                        $arrayElemAt: [
+                          { $filter: { input: "$_logEmployees", as: "e", cond: { $eq: ["$$e._id", "$$tl.performedBy"] } } },
+                          0,
+                        ],
+                      },
+                      usr: {
+                        $arrayElemAt: [
+                          { $filter: { input: "$_logUsers", as: "u", cond: { $eq: ["$$u._id", "$$tl.performedBy"] } } },
+                          0,
+                        ],
+                      },
+                    },
+                    in: {
+                      $cond: {
+                        if: "$$emp",
+                        then: { name: "$$emp.name", employeeId: "$$emp.employeeId" },
+                        else: { 
+                          $cond: {
+                            if: "$$usr",
+                            then: { 
+                              name: { $ifNull: ["$$usr.employeeData.name", { $ifNull: ["$$usr.username", "Staff"] }] }, 
+                              employeeId: { $ifNull: ["$$usr.employeeData.employeeId", "ADMIN-USER"] } 
+                            },
+                            else: { 
+                                name: { $ifNull: ["$$emp.name", "System"] }, 
+                                employeeId: { $ifNull: ["$$emp.employeeId", "N/A"] } 
+                            }
+                          }
+                        }
                       },
                     },
                   },
@@ -343,6 +446,175 @@ async function findById(id) {
           },
         },
       },
+      // Resolve all performers from both actionLog and timeline
+      {
+        $lookup: {
+          from: "employees",
+          let: { 
+            logIds: { $ifNull: ["$actionLog.performedBy", []] },
+            tlIds: { $ifNull: ["$timeline.performedBy", []] }
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $in: ["$_id", "$$logIds"] },
+                    { $in: ["$_id", "$$tlIds"] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: "_logEmployees",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: { 
+            logIds: { $ifNull: ["$actionLog.performedBy", []] },
+            tlIds: { $ifNull: ["$timeline.performedBy", []] }
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $in: ["$_id", "$$logIds"] },
+                    { $in: ["$_id", "$$tlIds"] }
+                  ]
+                }
+              }
+            },
+            {
+              $lookup: {
+                from: "employees",
+                localField: "employee",
+                foreignField: "_id",
+                as: "employeeData"
+              }
+            },
+            {
+              $addFields: {
+                employeeData: { $first: "$employeeData" }
+              }
+            }
+          ],
+          as: "_logUsers",
+        },
+      },
+      {
+        $addFields: {
+          actionLog: {
+            $map: {
+              input: { $ifNull: ["$actionLog", []] },
+              as: "log",
+              in: {
+                action: "$$log.action",
+                performedBy: "$$log.performedBy",
+                performedAt: "$$log.performedAt",
+                comments: "$$log.comments",
+                performerName: {
+                  $let: {
+                    vars: {
+                      emp: {
+                        $arrayElemAt: [
+                          { $filter: { input: "$_logEmployees", as: "e", cond: { $eq: ["$$e._id", "$$log.performedBy"] } } },
+                          0,
+                        ],
+                      },
+                      usr: {
+                        $arrayElemAt: [
+                          { $filter: { input: "$_logUsers", as: "u", cond: { $eq: ["$$u._id", "$$log.performedBy"] } } },
+                          0,
+                        ],
+                      },
+                    },
+                    in: {
+                      $cond: {
+                        if: "$$emp",
+                        then: { name: "$$emp.name", employeeId: "$$emp.employeeId" },
+                        else: { 
+                          $cond: {
+                            if: "$$usr",
+                            then: { 
+                              name: { $ifNull: ["$$usr.employeeData.name", { $ifNull: ["$$usr.username", "Staff"] }] }, 
+                              employeeId: { $ifNull: ["$$usr.employeeData.employeeId", "ADMIN-USER"] } 
+                            },
+                            else: { 
+                                name: { $ifNull: ["$$emp.name", "System"] }, 
+                                employeeId: { $ifNull: ["$$emp.employeeId", "N/A"] } 
+                            }
+                          }
+                        }
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          timeline: {
+            $map: {
+              input: { $ifNull: ["$timeline", []] },
+              as: "tl",
+              in: {
+                event: "$$tl.event",
+                performedBy: "$$tl.performedBy",
+                performedAt: "$$tl.performedAt",
+                details: "$$tl.details",
+                timeTaken: "$$tl.timeTaken",
+                performerName: {
+                  $let: {
+                    vars: {
+                      emp: {
+                        $arrayElemAt: [
+                          { $filter: { input: "$_logEmployees", as: "e", cond: { $eq: ["$$e._id", "$$tl.performedBy"] } } },
+                          0,
+                        ],
+                      },
+                      usr: {
+                        $arrayElemAt: [
+                          { $filter: { input: "$_logUsers", as: "u", cond: { $eq: ["$$u._id", "$$tl.performedBy"] } } },
+                          0,
+                        ],
+                      },
+                    },
+                    in: {
+                      $cond: {
+                        if: "$$emp",
+                        then: { name: "$$emp.name", employeeId: "$$emp.employeeId" },
+                        else: { 
+                          $cond: {
+                            if: "$$usr",
+                            then: { 
+                              name: { $ifNull: ["$$usr.employeeData.name", { $ifNull: ["$$usr.username", "Staff"] }] }, 
+                              employeeId: { $ifNull: ["$$usr.employeeData.employeeId", "ADMIN-USER"] } 
+                            },
+                            else: { 
+                                name: { $ifNull: ["$$emp.name", "System"] }, 
+                                employeeId: { $ifNull: ["$$emp.employeeId", "N/A"] } 
+                            }
+                          }
+                        }
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _logEmployees: 0,
+          _logUsers: 0,
+          actionByEmp: 0,
+          actionByUser: 0,
+        },
+      },
       { $limit: 1 },
     ]).exec();
     return sales[0];
@@ -376,7 +648,88 @@ async function aggregate(query = {}) {
 
 async function create(payload) {
   try {
+    const Customer = require("../models/customer");
+    const QREnquiry = require("../models/qrEnquiry");
+    const Release = require("../models/release");
+
     payload.billId = Math.floor(100000 + Math.random() * 900000);
+    
+    // Build Initial Timeline
+    const timeline = [];
+    const customer = await Customer.findById(payload.customer).exec();
+    
+    if (customer) {
+      // 1. Enquiry Stage
+      if (customer.enqID) {
+        const enquiry = await QREnquiry.findOne({ enqID: customer.enqID }).exec();
+        if (enquiry) {
+          timeline.push({
+            event: "Enquiry Raised",
+            performedAt: enquiry.createdAt,
+            details: `Enquiry ID: ${enquiry.enqID}`,
+          });
+        }
+      }
+
+    // 2. Registration Stage
+      timeline.push({
+        event: "Customer registered",
+        performedBy: customer.createdBy || payload.employee,
+        performedAt: customer.createdAt,
+        details: `Customer ID generated: ${customer.customerId}`,
+      });
+
+      // 3. Address Added
+      if (customer.address && customer.address.length > 0) {
+        const latestAddress = customer.address[customer.address.length - 1];
+        timeline.push({
+          event: "Address added",
+          performedBy: latestAddress.createdBy || customer.createdBy || payload.employee,
+          performedAt: latestAddress.createdAt || customer.createdAt,
+          details: `New address added: ${latestAddress.area || latestAddress.address}`,
+        });
+      }
+
+      // 4. Bank Added
+      if (customer.bank && customer.bank.length > 0) {
+        const latestBank = customer.bank[customer.bank.length - 1];
+        timeline.push({
+          event: "Bank added",
+          performedBy: latestBank.createdBy || customer.createdBy || payload.employee,
+          performedAt: latestBank.createdAt || customer.createdAt,
+          details: `New bank added: ${latestBank.bankName} (${latestBank.accountNumber})`,
+        });
+      }
+    }
+
+    // 5. Release Added (if any)
+    if (payload.release && payload.release.length > 0) {
+      const releases = await Release.find({ _id: { $in: payload.release } }).exec();
+      for (const rel of releases) {
+        timeline.push({
+          event: "Release Added",
+          performedBy: rel.actionBy || payload.employee,
+          performedAt: rel.createdAt,
+          details: `Release Amount: ${rel.payableAmount}`,
+        });
+      }
+    }
+
+    // 6. Billing Initiated (Current Action)
+    timeline.push({
+      event: "Billing Initiated",
+      performedBy: payload.employee,
+      performedAt: new Date(),
+    });
+
+    // Calculate timeTaken (TTL) for each stage
+    for (let i = 1; i < timeline.length; i++) {
+      const prev = timeline[i - 1];
+      const curr = timeline[i];
+      curr.timeTaken = Math.floor((new Date(curr.performedAt) - new Date(prev.performedAt)) / 1000);
+    }
+
+    payload.timeline = timeline;
     payload.actionLog = [
       {
         action: payload.status || "finance pending",
@@ -384,6 +737,7 @@ async function create(payload) {
         performedAt: new Date(),
       },
     ];
+    
     let sale = new Sales(payload);
     return await sale.save();
   } catch (err) {
@@ -403,19 +757,38 @@ async function update(id, payload) {
 
 async function updateWithLog(id, setData, logEntry) {
   try {
+    const sale = await Sales.findById(id).exec();
+    if (!sale) throw new Error("Sale not found");
+
+    const timelineEntry = {
+      event: logEntry.action,
+      performedBy: logEntry.performedBy,
+      performedAt: logEntry.performedAt,
+      details: logEntry.comments,
+    };
+
+    // Calculate TTL for this stage
+    const lastTimeline = sale.timeline[sale.timeline.length - 1];
+    if (lastTimeline) {
+      timelineEntry.timeTaken = Math.floor((new Date(logEntry.performedAt) - new Date(lastTimeline.performedAt)) / 1000);
+    }
+
     const updatedSale = await Sales.findByIdAndUpdate(
       id,
       {
         $set: setData,
-        $push: { actionLog: logEntry },
+        $push: { 
+          actionLog: logEntry,
+          timeline: timelineEntry
+        },
       },
       { returnDocument: "after" }
     ).exec();
 
-    // Synchronize linked releases if status is updated
-    if (setData.status && updatedSale.release && updatedSale.release.length > 0) {
+    // Synchronize linked releases if status is updated and different
+    if (setData.status && sale.status !== setData.status && updatedSale.release && updatedSale.release.length > 0) {
       await Release.updateMany(
-        { _id: { $in: updatedSale.release } },
+        { _id: { $in: updatedSale.release }, status: { $ne: setData.status } },
         {
           $set: { status: setData.status },
           $push: { actionLog: { action: setData.status, performedBy: logEntry.performedBy, performedAt: logEntry.performedAt } }

@@ -11,7 +11,9 @@ async function findById(req, res) {
 
 async function create(req, res) {
   try {
-    let createdData = await customerAddressService.create(req.body);
+    const payload = { ...req.body };
+    payload.createdBy = req.user.employee || req.user._id;
+    let createdData = await customerAddressService.create(payload);
     res.json({
       status: true,
       message: "",

@@ -21,6 +21,11 @@ import {
   Checkbox,
   Paper,
   InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Divider,
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -44,7 +49,7 @@ import { createFile } from '../../../../apis/branch/fileupload';
 import global from '../../../../utils/global';
 // import { getBranchByBranchId } from '../../../../apis/branch/branch';
 import Scrollbar from '../../../scrollbar';
-import { getEnquiryByMkgId } from '../../../../apis/branch/qrEnquiry';
+import { getEnquiryByEnqId } from '../../../../apis/branch/qrEnquiry';
 
 const style = {
   position: 'absolute',
@@ -76,6 +81,35 @@ function Customer(props) {
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [openLogModal, setOpenLogModal] = useState(false);
+  const [selectedEnquiryForLog, setSelectedEnquiryForLog] = useState(null);
+  const [fetchingLog, setFetchingLog] = useState(false);
+
+  const handleOpenLogModal = async (customer) => {
+    const enqId = customer.enqID || customer.customerId;
+    if (!enqId) {
+      setNotify({ open: true, message: 'No Enquiry ID linked to this customer', severity: 'warning' });
+      return;
+    }
+    setFetchingLog(true);
+    try {
+      const res = await getEnquiryByEnqId(enqId);
+      if (res.status) {
+        setSelectedEnquiryForLog(res.data);
+        setOpenLogModal(true);
+      } else {
+        setNotify({ open: true, message: 'Could not fetch enquiry logs', severity: 'error' });
+      }
+    } catch (e) {
+      setNotify({ open: true, message: 'Error fetching logs', severity: 'error' });
+    }
+    setFetchingLog(false);
+  };
+
+  const handleCloseLogModal = () => {
+    setOpenLogModal(false);
+    setSelectedEnquiryForLog(null);
+  };
   const [width, setWindowWidth] = useState(0);
   const [img, setImg] = useState(null);
   const [enquiryId, setEnquiryId] = useState('');
@@ -162,7 +196,7 @@ function Customer(props) {
     if (!enquiryId) return;
     setFetchingEnquiry(true);
     try {
-      const res = await getEnquiryByMkgId(enquiryId);
+      const res = await getEnquiryByEnqId(enquiryId);
       if (res.status) {
         setValues({
           ...values,
@@ -259,8 +293,7 @@ function Customer(props) {
         status: values.status,
         chooseId: values.chooseId,
         idNo: values.idNo,
-        customerId: enquiryId,
-        mkgCustomerId: enquiryId,
+        enqID: enquiryId,
       };
 
       if (openId) {
@@ -347,7 +380,7 @@ function Customer(props) {
           if (profileImg) {
             setImg(`${global.baseURL}/${profileImg}`);
           }
-          setEnquiryId(existingUser.customerId || '');
+          setEnquiryId(existingUser.enqID || '');
           setOtpStatus('success');
           setAltOtpStatus('success');
           setNotify({
@@ -431,9 +464,9 @@ function Customer(props) {
         status: e.status || 'active',
         chooseId: e.chooseId || '',
         idNo: e.idNo || '',
-        mkgCustomerId: e.mkgCustomerId || '',
+        enqID: e.enqID || '',
       });
-      setEnquiryId(e.mkgCustomerId || e.customerId || '');
+      setEnquiryId(e.enqID || '');
       // Fetch profile image if exists
       const profileImg = e.profileImage?.uploadedFile;
       if (profileImg) {
@@ -459,7 +492,7 @@ function Customer(props) {
 
       setOtpStatus('success');
       setAltOtpStatus('success');
-      setEnquiryId(e.customerId || '');
+      setEnquiryId(e.enqID || '');
       setCustomerModal(true);
       props.setAutoOpenEdit(false);
     }
@@ -576,9 +609,9 @@ function Customer(props) {
                             status: e.status || 'active',
                             chooseId: e.chooseId || '',
                             idNo: e.idNo || '',
-                            mkgCustomerId: e.mkgCustomerId || '',
+                            enqID: e.enqID || '',
                           });
-                          setEnquiryId(e.mkgCustomerId || e.customerId || '');
+                          setEnquiryId(e.enqID || '');
                           // Fetch profile image if exists
                           const profileImg = e.profileImage?.uploadedFile;
                           if (profileImg) {
@@ -604,7 +637,7 @@ function Customer(props) {
 
                           setOtpStatus('success');
                           setAltOtpStatus('success');
-                          setEnquiryId(e.customerId || '');
+                          setEnquiryId(e.enqID || '');
                           setCustomerModal(true);
                         }}
                       >
@@ -616,6 +649,7 @@ function Customer(props) {
                           size="small"
                           color="error"
                           startIcon={<DeleteIcon />}
+                          sx={{ mr: 1 }}
                           onClick={() => {
                             setOpenId(e._id);
                             handleOpenDeleteModal();
@@ -624,6 +658,16 @@ function Customer(props) {
                           Delete
                         </Button>
                       )}
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        color="secondary"
+                        startIcon={<Iconify icon="material-symbols:history" />}
+                        onClick={() => handleOpenLogModal(e)}
+                        disabled={fetchingLog}
+                      >
+                        Logs
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -708,7 +752,7 @@ function Customer(props) {
                 <Stack direction="row" spacing={2} alignItems="center">
                     <TextField
                         size="small"
-                        label="Customer ID (e.g. MK123A)"
+                        label="Enquiry ID (e.g. ENQ123A)"
                         value={enquiryId}
                         onChange={(e) => setEnquiryId(e.target.value)}
                         sx={{ maxWidth: 300 }}
@@ -764,7 +808,7 @@ function Customer(props) {
                             if (profileImg) {
                               setImg(profileImg.startsWith('http') ? profileImg : `${global.baseURL}/${profileImg}`);
                             }
-                            setEnquiryId(existingUser.customerId || '');
+                            setEnquiryId(existingUser.enqID || '');
                             setOtpStatus('success');
                             setAltOtpStatus('success');
                             setNotify({
@@ -1113,6 +1157,83 @@ function Customer(props) {
           </Stack>
         </Box>
       </Modal>
+
+      <Dialog open={openLogModal} onClose={handleCloseLogModal} maxWidth="lg" fullWidth>
+        <DialogTitle>Customer Enquiry History</DialogTitle>
+        <DialogContent dividers>
+          {selectedEnquiryForLog && (
+            <Box sx={{ py: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Enquiry ID: <span style={{ color: '#2065D1' }}>{selectedEnquiryForLog.enqID}</span>
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                Customer: <strong>{selectedEnquiryForLog.name}</strong>
+              </Typography>
+              <Divider sx={{ my: 2 }} />
+              {(() => {
+                // Ensure there's always at least the 'Enquiry Raised' entry using the createdAt timestamp
+                const logs = [...(selectedEnquiryForLog.actionLog || [])];
+                if (logs.length === 0 || !logs.some(l => l.action.toLowerCase().includes('enquiry raised'))) {
+                  logs.unshift({
+                    action: 'Enquiry Raised',
+                    performedAt: selectedEnquiryForLog.createdAt,
+                    performerName: null, // Indicates Customer (Online)
+                    comments: 'Initial enquiry registered via QR code'
+                  });
+                }
+                
+                return (
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableHead sx={{ bgcolor: 'background.neutral' }}>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 'bold' }}>No.</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold' }}>Action</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold' }}>Performed By</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold' }}>Date & Time</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold' }}>Comments</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {logs.map((log, idx) => (
+                          <TableRow key={idx} hover>
+                            <TableCell>{idx + 1}</TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                                {log.action}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              {log.performerName?.name || 'Customer (Online)'}
+                              {log.performerName?.employeeId && (
+                                <Typography variant="caption" display="block" color="text.secondary">
+                                  ID: {log.performerName.employeeId}
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {moment(log.performedAt).format('YYYY-MM-DD')}
+                              <Typography variant="caption" display="block" color="text.secondary">
+                                {moment(log.performedAt).format('HH:mm:ss')}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              {log.comments || '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                );
+              })()}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseLogModal}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

@@ -831,7 +831,7 @@ function Status(props) {
         (status === 'completed' && 'success') ||
         (status === 'finance pending' && 'warning') ||
         (status === 'release pending' && 'warning') ||
-        (status === 'admin approve pending' && 'info') ||
+        (status === 'admin approval pending' && 'info') ||
         (status === 'fund transfer pending' && 'warning') ||
         'error'
       }
@@ -867,7 +867,7 @@ function Status(props) {
   }
 
   // Admin Approval Step
-  else if (status === 'admin approve pending') {
+  else if (status === 'admin approval pending') {
     if (userType === 'admin') {
       content = (
         <Stack direction="row" spacing={1}>
@@ -986,7 +986,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         if (values.isCompleted) {
           payload.assigneeCompleted = true;
           payload.assigneeCompletedAt = new Date();
-          payload.status = 'admin approve pending';
+          payload.status = 'admin approval pending';
         }
       }
 

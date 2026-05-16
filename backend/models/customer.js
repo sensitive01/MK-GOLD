@@ -94,6 +94,10 @@ const Customer = mongoose.model(
               type: String,
               required: true,
             },
+            createdBy: {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: "employees",
+            },
           },
           { timestamps: true }
         ),
@@ -120,7 +124,11 @@ const Customer = mongoose.model(
             type: String,
             required: true,
           },
-        }),
+          createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "employees",
+          },
+        }, { timestamps: true }),
       ],
       source: {
         type: String,
@@ -131,8 +139,12 @@ const Customer = mongoose.model(
       idNo: {
         type: String,
       },
-      mkgCustomerId: {
+      enqID: {
         type: String,
+      },
+      createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "employees",
       },
       label: {
         type: String,

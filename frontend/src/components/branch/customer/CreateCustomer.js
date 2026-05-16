@@ -10,7 +10,7 @@ import Webcam from 'react-webcam';
 import { useSelector } from 'react-redux';
 import { createCustomer } from '../../../apis/branch/customer';
 import { createFile } from '../../../apis/branch/fileupload';
-import { getEnquiryByMkgId } from '../../../apis/branch/qrEnquiry';
+import { getEnquiryByEnqId } from '../../../apis/branch/qrEnquiry';
 import Stack from '@mui/material/Stack';
 import global from '../../../utils/global';
 
@@ -102,6 +102,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         maritalStatus: values.maritalStatus,
         source: values.source,
         status: values.status,
+        enqID: enquiryId,
       };
       createCustomer(payload).then((data) => {
         if (data.status === false) {
@@ -172,7 +173,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
     if (!enquiryId) return;
     setFetchingEnquiry(true);
     try {
-      const res = await getEnquiryByMkgId(enquiryId);
+      const res = await getEnquiryByEnqId(enquiryId);
       if (res.status) {
         setValues({
           ...values,
@@ -205,7 +206,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
             <Stack direction="row" spacing={2} alignItems="center">
                 <TextField
                     size="small"
-                    label="Customer ID (e.g. MK123A)"
+                    label="Enquiry ID (e.g. ENQ123A)"
                     value={enquiryId}
                     onChange={(e) => setEnquiryId(e.target.value)}
                     sx={{ maxWidth: 300 }}

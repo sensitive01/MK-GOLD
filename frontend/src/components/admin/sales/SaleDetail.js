@@ -11,6 +11,7 @@ import {
   TablePagination,
   TableHead,
   Paper,
+  Divider,
 } from '@mui/material';
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -23,6 +24,7 @@ import moment from 'moment';
 import Scrollbar from '../../scrollbar';
 import { getSalesById, updateSales } from '../../../apis/admin/sales';
 import global from '../../../utils/global';
+import TimelineView from '../../TimelineView';
 
 export default function SaleDetail({ id, setNotify }) {
   const [data, setData] = useState({});
@@ -59,8 +61,10 @@ export default function SaleDetail({ id, setNotify }) {
 
   useEffect(() => {
     getSalesById(id).then((data) => {
-      setData(data.data);
-      setFieldValue('payableAmount', Math.round(data.data.payableAmount ?? 0));
+      if (data.status && data.data) {
+        setData(data.data);
+        setFieldValue('payableAmount', Math.round(data.data.payableAmount ?? 0));
+      }
       setOpenBackdrop(false);
     });
   }, [id]);
@@ -543,6 +547,12 @@ export default function SaleDetail({ id, setNotify }) {
                   </Table>
                 </TableContainer>
               </Grid>
+              
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                <TimelineView timeline={data.timeline} />
+              </Grid>
+
               {data.status === 'pending' && (
                 <Grid item xs={12}>
                   <LoadingButton size="large" type="submit" variant="contained">

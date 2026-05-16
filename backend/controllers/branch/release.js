@@ -19,7 +19,10 @@ async function findById(req, res) {
 
 async function create(req, res) {
   try {
-    let createdData = await release.create(req.body);
+    const payload = { ...req.body };
+    payload.actionBy = req.user.employee || req.user._id;
+    payload.actionAt = new Date();
+    let createdData = await release.create(payload);
     res.json({
       status: true,
       message: "",
@@ -41,9 +44,16 @@ async function update(req, res) {
   try {
     const { status, ...rest } = req.body;
     if (status) {
-      const performerId = req.user.employee || req.user._id;
+      const performerId = req.user.employee?._id || req.user.employee || req.user._id;
+      const actionMap = {
+        'release pending': 'Finance Approved',
+        'admin approval pending': 'Verification Approved',
+        'completed': 'Admin Approved',
+        'rejected': 'Rejected'
+      };
+
       const logEntry = {
-        action: status,
+        action: actionMap[status] || status,
         performedBy: performerId,
         performedAt: new Date(),
       };

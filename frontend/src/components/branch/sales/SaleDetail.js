@@ -11,6 +11,7 @@ import {
   TablePagination,
   TableHead,
   Paper,
+  Divider,
 } from '@mui/material';
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -21,6 +22,7 @@ import moment from 'moment';
 import Scrollbar from '../../scrollbar';
 import { getSalesById } from '../../../apis/branch/sales';
 import global from '../../../utils/global';
+import TimelineView from '../../TimelineView';
 
 export default function SaleDetail({ id }) {
   const [data, setData] = useState({});
@@ -30,7 +32,9 @@ export default function SaleDetail({ id }) {
     if (id) {
       setOpenBackdrop(true);
       getSalesById(id).then((data) => {
-        setData(data.data);
+        if (data.status && data.data) {
+          setData(data.data);
+        }
         setOpenBackdrop(false);
       });
     }
@@ -495,6 +499,11 @@ export default function SaleDetail({ id }) {
                   </TableBody>
                 </Table>
               </TableContainer>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <TimelineView timeline={data.timeline} />
             </Grid>
           </Grid>
         </Card>

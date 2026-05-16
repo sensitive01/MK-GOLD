@@ -83,8 +83,10 @@ async function markAsSeen(id, userId) {
 async function findForUser(user) {
   try {
     const now = new Date();
-    let userRole = user.userType.toLowerCase().replace("-", "").replace(" ", "_");
-    if (userRole === "branch_manager") userRole = "branch";
+    const originalRole = Array.isArray(user.userType) ? user.userType.join(",") : (user.userType || "");
+    let userRole = originalRole.toLowerCase().replace(/-/g, "").replace(/\s+/g, "_");
+    if (userRole.includes("branch_manager")) userRole = "branch";
+    if (userRole.includes("admin")) userRole = "admin"; // Standardize admin roles
     
     console.log(`DEBUG: Fetching announcements for user ${user._id}, role: ${userRole}`);
 

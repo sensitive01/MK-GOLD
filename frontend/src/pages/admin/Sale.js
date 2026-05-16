@@ -56,6 +56,7 @@ import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 import global from '../../utils/global';
+import TimelineView from '../../components/TimelineView';
 // sections
 import { SaleListHead, SaleListToolbar } from '../../sections/@dashboard/sales';
 // mock
@@ -626,7 +627,7 @@ export default function Sale() {
           }}
         >
           <Iconify icon={'material-symbols:history'} sx={{ mr: 2 }} />
-          Approval Log
+          Process Log & Timeline
         </MenuItem>
         {global.canDelete(userType) && (
           <MenuItem
@@ -786,8 +787,8 @@ export default function Sale() {
         <CircularProgress color="inherit" />
       </Backdrop>
 
-      <Dialog open={openLogModal} onClose={handleCloseLogModal}>
-        <DialogTitle>Approval Log</DialogTitle>
+      <Dialog open={openLogModal} onClose={handleCloseLogModal} maxWidth="lg" fullWidth>
+        <DialogTitle>Process Log & Timeline</DialogTitle>
         <DialogContent dividers>
           {data?.find((s) => s._id === saleIdToEdit) ? (
             (() => {
@@ -799,35 +800,38 @@ export default function Sale() {
                       {sentenceCase(sale.status || 'pending')}
                     </span>
                   </Typography>
-                  {sale.actionLog && sale.actionLog.length > 0 ? (
-                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee', mt: 2 }}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                            <TableCell><strong>Employee ID</strong></TableCell>
-                            <TableCell><strong>Name</strong></TableCell>
-                            <TableCell><strong>Action</strong></TableCell>
-                            <TableCell><strong>Timestamp</strong></TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {sale.actionLog.map((log, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell>{log.performerName?.employeeId || 'N/A'}</TableCell>
-                              <TableCell>{log.performerName?.name || 'System'}</TableCell>
-                              <TableCell sx={{ color: log.action === 'approved' ? 'green' : log.action === 'rejected' ? 'red' : 'orange', fontWeight: 'bold', textTransform: 'capitalize' }}>
-                                {log.action}
-                              </TableCell>
-                              <TableCell>{moment(log.performedAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                  <TimelineView timeline={sale.timeline} />
+                  
+                  {sale.actionLog && sale.actionLog.length > 0 && (
+                    <Box sx={{ mt: 4 }}>
+                      <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.secondary' }}>
+                        Raw Status Logs
+                      </Typography>
+                      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee' }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                              <TableCell><strong>Employee ID</strong></TableCell>
+                              <TableCell><strong>Name</strong></TableCell>
+                              <TableCell><strong>Action</strong></TableCell>
+                              <TableCell><strong>Timestamp</strong></TableCell>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  ) : (
-                    <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic', color: 'text.secondary' }}>
-                      No action history available for this record.
-                    </Typography>
+                          </TableHead>
+                          <TableBody>
+                            {sale.actionLog.map((log, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell>{log.performerName?.employeeId || 'N/A'}</TableCell>
+                                <TableCell>{log.performerName?.name || 'System'}</TableCell>
+                                <TableCell sx={{ color: log.action === 'approved' ? 'green' : log.action === 'rejected' ? 'red' : 'orange', fontWeight: 'bold', textTransform: 'capitalize' }}>
+                                  {log.action}
+                                </TableCell>
+                                <TableCell>{moment(log.performedAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
                   )}
                 </Box>
               );
@@ -883,7 +887,7 @@ function Status(props) {
   }
 
   // Admin Approval Step
-  if (status === 'admin approve pending') {
+  if (status === 'admin approval pending') {
     if (userType === 'admin') {
       return (
         <Stack direction="row" spacing={1}>
@@ -981,7 +985,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         if (values.isCompleted) {
           payload.assigneeCompleted = true;
           payload.assigneeCompletedAt = new Date();
-          payload.status = 'admin approve pending';
+          payload.status = 'admin approval pending';
         }
       }
 
@@ -1010,7 +1014,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
         <DialogContent sx={{ mt: 2 }}>

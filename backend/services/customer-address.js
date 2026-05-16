@@ -10,6 +10,9 @@ async function findById(id) {
 
 async function create(payload) {
   try {
+    const QREnquiry = require("../models/qrEnquiry");
+    const customer = await Customer.findById(payload.customerId).exec();
+    
     const data = {
       address: payload.address,
       area: payload.area,
@@ -19,14 +22,34 @@ async function create(payload) {
       landmark: payload.landmark,
       residential: payload.residential,
       label: payload.label,
+      createdBy: payload.createdBy,
     };
-    return await Customer.findByIdAndUpdate(
+    const updatedCustomer = await Customer.findByIdAndUpdate(
       payload.customerId,
       { $push: { address: data } },
       {
         returnDocument: "after",
       }
     ).exec();
+
+    // Log to enquiry if ID is provided
+    if (customer && customer.enqID) {
+      await QREnquiry.findOneAndUpdate(
+        { enqID: customer.enqID },
+        {
+          $push: {
+            actionLog: {
+              action: "Address Added",
+              performedBy: payload.createdBy,
+              performedAt: new Date(),
+              comments: `New address added: ${payload.label}`
+            }
+          }
+        }
+      );
+    }
+
+    return updatedCustomer;
   } catch (err) {
     throw err;
   }

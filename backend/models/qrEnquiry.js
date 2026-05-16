@@ -34,7 +34,7 @@ const QREnquiry = mongoose.model(
         type: Number,
         required: true,
       },
-      mkgCustomerId: {
+      enqID: {
         type: String,
         unique: true,
       },
@@ -42,6 +42,14 @@ const QREnquiry = mongoose.model(
         type: String,
         default: "pending",
       },
+      actionLog: [
+        {
+          action: { type: String },
+          performedBy: { type: mongoose.Schema.Types.ObjectId },
+          performedAt: { type: Date, default: Date.now },
+          comments: { type: String },
+        },
+      ],
     },
     { timestamps: true }
   )

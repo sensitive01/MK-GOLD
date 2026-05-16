@@ -48,6 +48,7 @@ import { SaleListHead, SaleListToolbar } from '../../sections/@dashboard/sales';
 import { deleteSalesById, findSales, updateSales } from '../../apis/branch/sales';
 import { createFile } from '../../apis/branch/fileupload';
 import global from '../../utils/global';
+import TimelineView from '../../components/TimelineView';
 import PropTypes from 'prop-types';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -136,7 +137,7 @@ export default function Sale() {
         setOpenBackdrop(false);
       });
     },
-    [branch._id]
+    [branch?._id]
   );
 
   useEffect(() => {
@@ -275,7 +276,8 @@ export default function Sale() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth={false} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
+      {toggleContainer === false && (
+        <Container maxWidth="xl">
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Sale
@@ -417,17 +419,9 @@ export default function Sale() {
               </Table>
             </TableContainer>
 
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={data?.length || 0}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-          />
-        </Card>
-      </Container>
+          </Card>
+        </Container>
+      )}
 
       {toggleContainer === true && toggleContainerType === 'create' && (
         <Container maxWidth="xl">
@@ -450,49 +444,47 @@ export default function Sale() {
         </Container>
       )}
 
-      <Container
-        maxWidth="xl"
-        sx={{ display: toggleContainer === true && toggleContainerType === 'print' ? 'block' : 'none' }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Invoice
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="mdi:arrow-left" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-            }}
-          >
-            Back
-          </Button>
-        </Stack>
+      {toggleContainer === true && toggleContainerType === 'print' && (
+        <Container maxWidth="xl">
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+              Invoice
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="mdi:arrow-left" />}
+              onClick={() => {
+                setToggleContainer(false);
+              }}
+            >
+              Back
+            </Button>
+          </Stack>
 
-        <SalePrint id={saleIdToEdit} />
-      </Container>
+          <SalePrint id={saleIdToEdit} />
+        </Container>
+      )}
 
-      <Container
-        maxWidth="xl"
-        sx={{ display: toggleContainer === true && toggleContainerType === 'detail' ? 'block' : 'none' }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Sale Details
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="mdi:arrow-left" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-            }}
-          >
-            Back
-          </Button>
-        </Stack>
+      {toggleContainer === true && toggleContainerType === 'detail' && (
+        <Container maxWidth="xl">
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+              Sale Details
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="mdi:arrow-left" />}
+              onClick={() => {
+                setToggleContainer(false);
+              }}
+            >
+              Back
+            </Button>
+          </Stack>
 
-        <SaleDetail id={saleIdToEdit} setNotify={setNotify} />
-      </Container>
+          <SaleDetail id={saleIdToEdit} setNotify={setNotify} />
+        </Container>
+      )}
 
       <Popover
         open={Boolean(open)}
@@ -549,7 +541,7 @@ export default function Sale() {
           }}
         >
           <Iconify icon={'material-symbols:history'} sx={{ mr: 2 }} />
-          Approval Log
+          Process Log & Timeline
         </MenuItem>
         <MenuItem
           sx={{ color: 'error.main' }}
@@ -602,8 +594,8 @@ export default function Sale() {
         <CircularProgress color="inherit" />
       </Backdrop>
 
-      <Dialog open={openLogModal} onClose={handleCloseLogModal}>
-        <DialogTitle>Approval Log</DialogTitle>
+      <Dialog open={openLogModal} onClose={handleCloseLogModal} maxWidth="lg" fullWidth>
+        <DialogTitle>Process Log & Timeline</DialogTitle>
         <DialogContent dividers>
           {data?.find((s) => s._id === saleIdToEdit) ? (
             (() => {
@@ -615,35 +607,38 @@ export default function Sale() {
                       {sentenceCase(sale.status || 'pending')}
                     </span>
                   </Typography>
-                  {sale.actionLog && sale.actionLog.length > 0 ? (
-                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee', mt: 2 }}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                            <TableCell><strong>Employee ID</strong></TableCell>
-                            <TableCell><strong>Name</strong></TableCell>
-                            <TableCell><strong>Action</strong></TableCell>
-                            <TableCell><strong>Timestamp</strong></TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {sale.actionLog.map((log, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell>{log.performerName?.employeeId || 'N/A'}</TableCell>
-                              <TableCell>{log.performerName?.name || 'System'}</TableCell>
-                              <TableCell sx={{ color: log.action === 'approved' ? 'green' : log.action === 'rejected' ? 'red' : 'orange', fontWeight: 'bold', textTransform: 'capitalize' }}>
-                                {log.action}
-                              </TableCell>
-                              <TableCell>{moment(log.performedAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                  <TimelineView timeline={sale.timeline} />
+                  
+                  {sale.actionLog && sale.actionLog.length > 0 && (
+                    <Box sx={{ mt: 4 }}>
+                      <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.secondary' }}>
+                        Raw Status Logs
+                      </Typography>
+                      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #eee' }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                              <TableCell><strong>Employee ID</strong></TableCell>
+                              <TableCell><strong>Name</strong></TableCell>
+                              <TableCell><strong>Action</strong></TableCell>
+                              <TableCell><strong>Timestamp</strong></TableCell>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  ) : (
-                    <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic', color: 'text.secondary' }}>
-                      No action history available for this record.
-                    </Typography>
+                          </TableHead>
+                          <TableBody>
+                            {sale.actionLog.map((log, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell>{log.performerName?.employeeId || 'N/A'}</TableCell>
+                                <TableCell>{log.performerName?.name || 'System'}</TableCell>
+                                <TableCell sx={{ color: log.action === 'approved' ? 'green' : log.action === 'rejected' ? 'red' : 'orange', fontWeight: 'bold', textTransform: 'capitalize' }}>
+                                  {log.action}
+                                </TableCell>
+                                <TableCell>{moment(log.performedAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
                   )}
                 </Box>
               );
@@ -663,7 +658,9 @@ export default function Sale() {
 function Status(props) {
   const { _id, status, assignee, fetchData } = props;
   const auth = useSelector((state) => state.auth);
-  const userType = auth.user?.userType?.toLowerCase();
+  const userType = auth.user?.userType?.toLowerCase() || '';
+  const isAdmin = userType.includes('admin');
+  const isFinance = userType.includes('finance') || userType.includes('accounts');
   const employeeId = auth.user?.employee?._id || auth.user?.employee;
 
   const [openVerifyModal, setOpenVerifyModal] = useState(false);
@@ -676,9 +673,8 @@ function Status(props) {
 
   let content = <Label color={status === 'completed' ? 'success' : 'error'}>{sentenceCase(status)}</Label>;
 
-  // Finance Step
   if (status === 'finance pending') {
-    if (userType === 'finance' || userType === 'accounts' || userType === 'admin') {
+    if (isFinance || isAdmin) {
       content = (
         <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
           Update Finance
@@ -691,7 +687,7 @@ function Status(props) {
 
   // Assignee Step (Release Stage)
   else if (status === 'release pending') {
-    if (employeeId === assignee || userType === 'admin') {
+    if (employeeId === assignee || isAdmin) {
       content = (
         <Button variant="contained" size="small" onClick={() => handleVerify('assignee')}>
           Update Verification
@@ -703,8 +699,8 @@ function Status(props) {
   }
 
   // Admin Approval Step
-  else if (status === 'admin approve pending') {
-    if (userType === 'admin') {
+  else if (status === 'admin approval pending') {
+    if (isAdmin) {
       content = (
         <Stack direction="row" spacing={1}>
           <Button
@@ -731,6 +727,19 @@ function Status(props) {
       );
     } else {
       content = <Label color="info">Admin Approval Pending</Label>;
+    }
+  }
+
+  // Fund Transfer Step
+  else if (status === 'fund transfer pending') {
+    if (isFinance || isAdmin) {
+      content = (
+        <Button variant="contained" size="small" onClick={() => handleVerify('fund transfer')}>
+          Fund Transfer
+        </Button>
+      );
+    } else {
+      content = <Label color="warning">Fund Transfer Pending</Label>;
     }
   }
 
@@ -805,7 +814,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         if (values.isCompleted) {
           payload.assigneeCompleted = true;
           payload.assigneeCompletedAt = new Date();
-          payload.status = 'admin approve pending';
+          payload.status = 'admin approval pending';
         }
       }
 
@@ -834,7 +843,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
         <DialogContent sx={{ mt: 2 }}>

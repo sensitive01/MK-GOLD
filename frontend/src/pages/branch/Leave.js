@@ -602,7 +602,7 @@ export default function Leave() {
       <Dialog
         open={logModal.open}
         onClose={() => setLogModal({ open: false, logs: [] })}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
       >
         <DialogTitle sx={{ fontWeight: 'bold' }}>Leave Action Log</DialogTitle>

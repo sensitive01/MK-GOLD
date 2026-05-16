@@ -78,41 +78,118 @@ async function find(query = {}) {
         $addFields: {
           branch: { $first: "$branch" },
           customer: { $first: "$customer" },
+          // Convert actionLog performer IDs to ObjectIds for lookup
+          actionLog: {
+            $map: {
+              input: { $ifNull: ["$actionLog", []] },
+              as: "log",
+              in: {
+                action: "$$log.action",
+                performedAt: "$$log.performedAt",
+                performedBy: { $toObjectId: "$$log.performedBy" }
+              }
+            }
+          }
         },
       },
+      // Resolve all performers from actionLog
       {
         $lookup: {
           from: "employees",
-          localField: "actionBy",
-          foreignField: "_id",
-          as: "actionByEmp",
+          let: { logIds: "$actionLog.performedBy" },
+          pipeline: [
+            { $match: { $expr: { $in: ["$_id", "$$logIds"] } } }
+          ],
+          as: "_logEmployees",
         },
       },
       {
         $lookup: {
           from: "users",
-          localField: "actionBy",
-          foreignField: "_id",
-          as: "actionByUser",
+          let: { logIds: "$actionLog.performedBy" },
+          pipeline: [
+            { $match: { $expr: { $in: ["$_id", "$$logIds"] } } },
+            {
+              $lookup: {
+                from: "employees",
+                localField: "employee",
+                foreignField: "_id",
+                as: "employeeData"
+              }
+            },
+            { $addFields: { employeeData: { $first: "$employeeData" } } }
+          ],
+          as: "_logUsers",
         },
       },
       {
         $addFields: {
-          actionBy: { $ifNull: [{ $first: "$actionByEmp" }, { $first: "$actionByUser" }] },
-        },
-      },
-      {
-        $addFields: {
-          actionBy: {
-            $cond: {
-              if: { $eq: [{ $type: "$actionBy.username" }, "string"] },
-              then: {
-                name: "$actionBy.username",
-                employeeId: "ADMIN-USER",
+          actionLog: {
+            $map: {
+              input: "$actionLog",
+              as: "log",
+              in: {
+                action: "$$log.action",
+                performedBy: "$$log.performedBy",
+                performedAt: "$$log.performedAt",
+                performerName: {
+                  $let: {
+                    vars: {
+                      emp: {
+                        $arrayElemAt: [
+                          { $filter: { input: "$_logEmployees", as: "e", cond: { $eq: ["$$e._id", "$$log.performedBy"] } } },
+                          0,
+                        ],
+                      },
+                      usr: {
+                        $arrayElemAt: [
+                          { $filter: { input: "$_logUsers", as: "u", cond: { $eq: ["$$u._id", "$$log.performedBy"] } } },
+                          0,
+                        ],
+                      },
+                    },
+                    in: {
+                      $cond: {
+                        if: "$$emp",
+                        then: { name: "$$emp.name", employeeId: "$$emp.employeeId" },
+                        else: { 
+                          $cond: {
+                            if: "$$usr",
+                            then: { 
+                              name: { $ifNull: ["$$usr.employeeData.name", { $ifNull: ["$$usr.username", "Staff"] }] }, 
+                              employeeId: { $ifNull: ["$$usr.employeeData.employeeId", "ADMIN-USER"] } 
+                            },
+                            else: { name: "System", employeeId: "N/A" }
+                          }
+                        }
+                      },
+                    },
+                  },
+                },
               },
-              else: "$actionBy",
             },
           },
+        },
+      },
+      {
+        $addFields: {
+          timeline: {
+            $map: {
+              input: "$actionLog",
+              as: "log",
+              in: {
+                event: "$$log.action",
+                performedBy: "$$log.performerName",
+                performedAt: "$$log.performedAt",
+              }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _logEmployees: 0,
+          _logUsers: 0,
         },
       },
       {
@@ -149,41 +226,118 @@ async function findById(id) {
         $addFields: {
           branch: { $first: "$branch" },
           customer: { $first: "$customer" },
+          // Convert actionLog performer IDs to ObjectIds for lookup
+          actionLog: {
+            $map: {
+              input: { $ifNull: ["$actionLog", []] },
+              as: "log",
+              in: {
+                action: "$$log.action",
+                performedAt: "$$log.performedAt",
+                performedBy: { $toObjectId: "$$log.performedBy" }
+              }
+            }
+          }
         },
       },
+      // Resolve all performers from actionLog
       {
         $lookup: {
           from: "employees",
-          localField: "actionBy",
-          foreignField: "_id",
-          as: "actionByEmp",
+          let: { logIds: "$actionLog.performedBy" },
+          pipeline: [
+            { $match: { $expr: { $in: ["$_id", "$$logIds"] } } }
+          ],
+          as: "_logEmployees",
         },
       },
       {
         $lookup: {
           from: "users",
-          localField: "actionBy",
-          foreignField: "_id",
-          as: "actionByUser",
+          let: { logIds: "$actionLog.performedBy" },
+          pipeline: [
+            { $match: { $expr: { $in: ["$_id", "$$logIds"] } } },
+            {
+              $lookup: {
+                from: "employees",
+                localField: "employee",
+                foreignField: "_id",
+                as: "employeeData"
+              }
+            },
+            { $addFields: { employeeData: { $first: "$employeeData" } } }
+          ],
+          as: "_logUsers",
         },
       },
       {
         $addFields: {
-          actionBy: { $ifNull: [{ $first: "$actionByEmp" }, { $first: "$actionByUser" }] },
-        },
-      },
-      {
-        $addFields: {
-          actionBy: {
-            $cond: {
-              if: { $eq: [{ $type: "$actionBy.username" }, "string"] },
-              then: {
-                name: "$actionBy.username",
-                employeeId: "ADMIN-USER",
+          actionLog: {
+            $map: {
+              input: "$actionLog",
+              as: "log",
+              in: {
+                action: "$$log.action",
+                performedBy: "$$log.performedBy",
+                performedAt: "$$log.performedAt",
+                performerName: {
+                  $let: {
+                    vars: {
+                      emp: {
+                        $arrayElemAt: [
+                          { $filter: { input: "$_logEmployees", as: "e", cond: { $eq: ["$$e._id", "$$log.performedBy"] } } },
+                          0,
+                        ],
+                      },
+                      usr: {
+                        $arrayElemAt: [
+                          { $filter: { input: "$_logUsers", as: "u", cond: { $eq: ["$$u._id", "$$log.performedBy"] } } },
+                          0,
+                        ],
+                      },
+                    },
+                    in: {
+                      $cond: {
+                        if: "$$emp",
+                        then: { name: "$$emp.name", employeeId: "$$emp.employeeId" },
+                        else: { 
+                          $cond: {
+                            if: "$$usr",
+                            then: { 
+                              name: { $ifNull: ["$$usr.employeeData.name", { $ifNull: ["$$usr.username", "Staff"] }] }, 
+                              employeeId: { $ifNull: ["$$usr.employeeData.employeeId", "ADMIN-USER"] } 
+                            },
+                            else: { name: "System", employeeId: "N/A" }
+                          }
+                        }
+                      },
+                    },
+                  },
+                },
               },
-              else: "$actionBy",
             },
           },
+        },
+      },
+      {
+        $addFields: {
+          timeline: {
+            $map: {
+              input: "$actionLog",
+              as: "log",
+              in: {
+                event: "$$log.action",
+                performedBy: "$$log.performerName",
+                performedAt: "$$log.performedAt",
+              }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _logEmployees: 0,
+          _logUsers: 0,
         },
       },
       { $limit: 1 },
@@ -205,9 +359,19 @@ async function create(payload) {
 
 async function update(id, payload) {
   try {
-    return await Release.findByIdAndUpdate(id, payload, {
+    const updatedRelease = await Release.findByIdAndUpdate(id, payload, {
       returnDocument: "after",
     }).exec();
+
+    // Synchronize to Sales if status is updated
+    if (payload.status) {
+      await Sales.updateMany(
+        { release: id },
+        { $set: { status: payload.status } }
+      ).exec();
+    }
+
+    return updatedRelease;
   } catch (err) {
     throw err;
   }
@@ -215,7 +379,7 @@ async function update(id, payload) {
 
 async function updateWithLog(id, setData, logEntry) {
   try {
-    return await Release.findByIdAndUpdate(
+    const updatedRelease = await Release.findByIdAndUpdate(
       id,
       {
         $set: setData,
@@ -223,6 +387,18 @@ async function updateWithLog(id, setData, logEntry) {
       },
       { returnDocument: "after" }
     ).exec();
+
+    // Synchronize to Sales if status is updated and different
+    if (setData.status && release.status !== setData.status) {
+      // We need to update the Sale with log too to capture the timeline
+      const linkedSales = await Sales.find({ release: id, status: { $ne: setData.status } }).exec();
+      const salesService = require("./sales");
+      for (const sale of linkedSales) {
+        await salesService.updateWithLog(sale._id, { status: setData.status }, logEntry);
+      }
+    }
+
+    return updatedRelease;
   } catch (err) {
     throw err;
   }

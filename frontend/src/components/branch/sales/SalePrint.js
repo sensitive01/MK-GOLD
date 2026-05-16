@@ -9,9 +9,11 @@ export default function SalePrint({ id }) {
   const [data, setData] = useState({});
 
   useEffect(() => {
-    getSalesById(id).then((data) => {
-      setData(data.data);
-    });
+    if (id) {
+      getSalesById(id).then((data) => {
+        setData(data.data);
+      });
+    }
   }, [id]);
 
   if (!data || Object.keys(data).length === 0) {

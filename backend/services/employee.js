@@ -3,14 +3,16 @@ const User = require("../models/user");
 
 async function find(query = {}, user = null) {
   try {
-    const userType = user?.userType?.toLowerCase();
-    if (
-      userType === "branch" ||
-      userType === "assistant_branch_manager" ||
-      userType === "branch_executive" ||
-      userType === "transaction_executive" ||
-      userType === "telecalling"
-    ) {
+    const type = user?.userType?.toLowerCase() || '';
+    const isBranchRole = [
+      "branch", 
+      "assistant_branch_manager", 
+      "branch_executive", 
+      "transaction_executive", 
+      "telecalling"
+    ].some(role => type.includes(role));
+
+    if (isBranchRole) {
       query.branch = user.branch?._id || user.branch;
       
       // Only restrict to self for non-management/non-sales roles if needed, 
