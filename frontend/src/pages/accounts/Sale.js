@@ -842,7 +842,7 @@ function Status(props) {
 
   // Finance Step
   if (status === 'finance pending') {
-    if (userType === 'finance' || userType === 'accounts' || userType === 'admin') {
+    if (userType === 'finance' || userType === 'accounts') {
       content = (
         <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
           Update Finance
@@ -855,7 +855,7 @@ function Status(props) {
 
   // Assignee Step (Release Stage)
   else if (status === 'release pending') {
-    if (employeeId === assignee || userType === 'admin') {
+    if (employeeId === assignee) {
       content = (
         <Button variant="contained" size="small" onClick={() => handleVerify('assignee')}>
           Update Verification
@@ -995,6 +995,8 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         if (data.status) {
           handleClose();
           fetchData();
+        } else {
+          alert(data.message || 'Verification failed. Please ensure prior stages are approved.');
         }
       });
     },

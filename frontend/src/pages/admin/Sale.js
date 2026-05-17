@@ -61,7 +61,7 @@ import TimelineView from '../../components/TimelineView';
 import { SaleListHead, SaleListToolbar } from '../../sections/@dashboard/sales';
 // mock
 import { getBranch } from '../../apis/admin/branch';
-import { deleteSalesById, findSales, updateSales } from '../../apis/admin/sales';
+import { deleteSalesById, findSales, updateSales, getSalesById } from '../../apis/admin/sales';
 import { createFile } from '../../apis/branch/fileupload';
 
 // ----------------------------------------------------------------------
@@ -857,71 +857,147 @@ function Status(props) {
   const [openVerifyModal, setOpenVerifyModal] = useState(false);
   const [verifyType, setVerifyType] = useState('');
 
+  // Confirmation dialog state for Admin approval/rejection
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(''); // 'approve' or 'reject'
+
   const handleVerify = (type) => {
     setVerifyType(type);
     setOpenVerifyModal(true);
   };
 
+  const handleOpenConfirm = (action) => {
+    setConfirmAction(action);
+    setOpenConfirmDialog(true);
+  };
+
+  const handleCloseConfirm = () => {
+    setOpenConfirmDialog(false);
+  };
+
+  const handleExecuteConfirm = () => {
+    const nextStatus = confirmAction === 'approve' ? 'fund transfer pending' : 'finance pending';
+    updateSales(_id, { status: nextStatus }).then((res) => {
+      if (res.status === false) {
+        alert(res.message || 'Cannot update. Please ensure assignee has completed their verification step.');
+      } else {
+        fetchData();
+        handleCloseConfirm();
+      }
+    });
+  };
+
+  let content = (
+    <Label
+      color={
+        (status === 'completed' && 'success') ||
+        (status === 'finance pending' && 'warning') ||
+        (status === 'release pending' && 'warning') ||
+        (status === 'admin approval pending' && 'info') ||
+        (status === 'fund transfer pending' && 'warning') ||
+        'error'
+      }
+    >
+      {sentenceCase(status || '')}
+    </Label>
+  );
+
   // Finance Step
   if (status === 'finance pending') {
-    if (userType === 'finance' || userType === 'accounts' || userType === 'admin') {
-      return (
+    if (userType === 'finance' || userType === 'accounts') {
+      content = (
         <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
           Update Finance
         </Button>
       );
+    } else {
+      content = <Label color="warning">Finance Pending</Label>;
     }
-    return <Label color="warning">Finance Pending</Label>;
   }
 
   // Assignee Step (Release Stage)
-  if (status === 'release pending') {
-    if (employeeId === assignee || userType === 'admin') {
-      return (
+  else if (status === 'release pending') {
+    if (employeeId === assignee) {
+      content = (
         <Button variant="contained" size="small" onClick={() => handleVerify('assignee')}>
           Update Verification
         </Button>
       );
+    } else {
+      content = <Label color="warning">Release Pending</Label>;
     }
-    return <Label color="warning">Release Pending</Label>;
   }
 
   // Admin Approval Step
-  if (status === 'admin approval pending') {
+  else if (status === 'admin approval pending') {
     if (userType === 'admin') {
-      return (
-        <Stack direction="row" spacing={1}>
-          <Button
-            variant="contained"
-            size="small"
-            color="success"
-            onClick={() => {
-              updateSales(_id, { status: 'completed' }).then(() => fetchData());
-            }}
-          >
-            Approve
-          </Button>
-          <Button
-            variant="contained"
-            size="small"
-            color="error"
-            onClick={() => {
-              updateSales(_id, { status: 'finance pending' }).then(() => fetchData());
-            }}
-          >
-            Reject
-          </Button>
-        </Stack>
+      content = (
+        <>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              size="small"
+              color="success"
+              onClick={() => handleOpenConfirm('approve')}
+            >
+              Approve
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              color="error"
+              onClick={() => handleOpenConfirm('reject')}
+            >
+              Reject
+            </Button>
+          </Stack>
+
+          <Dialog open={openConfirmDialog} onClose={handleCloseConfirm}>
+            <DialogTitle sx={{ textTransform: 'capitalize' }}>
+              Confirm {confirmAction}
+            </DialogTitle>
+            <DialogContent>
+              <Typography sx={{ mt: 1 }}>
+                Are you sure you want to {confirmAction} this sale transaction?
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseConfirm} color="inherit">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleExecuteConfirm} 
+                color={confirmAction === 'approve' ? 'success' : 'error'} 
+                variant="contained"
+                sx={{ color: '#fff' }}
+              >
+                {confirmAction === 'approve' ? 'Yes, Approve' : 'Yes, Reject'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </>
       );
+    } else {
+      content = <Label color="info">Admin Approval Pending</Label>;
     }
-    return <Label color="info">Admin Approval Pending</Label>;
+  }
+
+  // Fund Transfer Step
+  else if (status === 'fund transfer pending') {
+    if (userType === 'finance' || userType === 'accounts') {
+      content = (
+        <Button variant="contained" size="small" onClick={() => handleVerify('fund transfer')}>
+          Fund Transfer
+        </Button>
+      );
+    } else {
+      content = <Label color="warning">Fund Transfer Pending</Label>;
+    }
   }
 
   return (
     <>
-      <Label color={status === 'completed' ? 'success' : 'error'}>
-        {sentenceCase(status)}
-      </Label>
+      {content}
 
       <VerificationModal 
         open={openVerifyModal}
@@ -935,10 +1011,18 @@ function Status(props) {
 }
 
 function VerificationModal({ open, id, type, handleClose, fetchData }) {
+  const auth = useSelector((state) => state.auth);
+  const userType = auth.user?.userType?.toLowerCase();
+  const isAdmin = userType === 'admin';
+
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [ornaments, setOrnaments] = useState([]);
   const [showOrnamentForm, setShowOrnamentForm] = useState(false);
+
+  // Admin read-only review states
+  const [saleDetails, setSaleDetails] = useState(null);
+  const [adminComments, setAdminComments] = useState('');
 
   const [ornamentValues, setOrnamentValues] = useState({
     ornamentType: '',
@@ -949,6 +1033,27 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
     purity: '',
     netAmount: '',
   });
+
+  // Fetch sale details for admin read-only display
+  useEffect(() => {
+    if (id && open) {
+      setLoading(true);
+      getSalesById(id).then((res) => {
+        setLoading(false);
+        if (res.status) {
+          setSaleDetails(res.data);
+          if (res.data.ornaments) {
+            setOrnaments(res.data.ornaments);
+          }
+        }
+      });
+    } else {
+      setSaleDetails(null);
+      setOrnaments([]);
+      setAdminComments('');
+      setPreview(null);
+    }
+  }, [id, open]);
 
   const schema = Yup.object({
     amount: Yup.number().required('Amount is required'),
@@ -965,6 +1070,12 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
     },
     validationSchema: schema,
     onSubmit: async (values) => {
+      // Strict sequence guard:
+      if (type === 'assignee' && values.isCompleted && saleDetails && !saleDetails.financeCompleted) {
+        alert('Cannot verify Assignee stage: Finance verification must be completed first!');
+        return;
+      }
+
       setLoading(true);
       
       const payload = {};
@@ -976,6 +1087,15 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
           payload.financeCompleted = true;
           payload.financeCompletedAt = new Date();
           payload.status = 'release pending';
+        }
+      } else if (type === 'fund transfer') {
+        payload.fundTransferAmount = values.amount;
+        payload.fundTransferComments = values.comments;
+        payload.fundTransferProof = values.proof;
+        if (values.isCompleted) {
+          payload.fundTransferCompleted = true;
+          payload.fundTransferCompletedAt = new Date();
+          payload.status = 'completed';
         }
       } else {
         payload.assigneeAmount = values.amount;
@@ -994,6 +1114,8 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         if (data.status) {
           handleClose();
           fetchData();
+        } else {
+          alert(data.message || 'Verification failed. Please ensure prior stages are approved.');
         }
       });
     },
@@ -1013,6 +1135,121 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
     }
   };
 
+  const handleAdminAction = async (action) => {
+    if (!saleDetails) return;
+
+    // Strict sequence guard:
+    if (type === 'assignee' && action === 'approve' && !saleDetails.financeCompleted) {
+      alert('Cannot verify Assignee stage: Finance verification must be completed first!');
+      return;
+    }
+
+    setLoading(true);
+    const payload = {};
+
+    if (type === 'finance') {
+      if (action === 'approve') {
+        payload.financeAmount = saleDetails.netAmount;
+        payload.financeComments = adminComments || 'Approved by Admin';
+        payload.financeCompleted = true;
+        payload.financeCompletedAt = new Date();
+        payload.status = 'release pending';
+      } else {
+        payload.status = 'rejected';
+      }
+    } else if (type === 'fund transfer') {
+      if (action === 'approve') {
+        payload.fundTransferAmount = saleDetails.payableAmount;
+        payload.fundTransferComments = adminComments || 'Approved by Admin';
+        payload.fundTransferCompleted = true;
+        payload.fundTransferCompletedAt = new Date();
+        payload.status = 'completed';
+      } else {
+        payload.status = 'admin approval pending';
+      }
+    } else {
+      if (action === 'approve') {
+        payload.assigneeAmount = saleDetails.payableAmount;
+        payload.assigneeComments = adminComments || 'Approved by Admin';
+        payload.assigneeCompleted = true;
+        payload.assigneeCompletedAt = new Date();
+        payload.status = 'admin approval pending';
+      } else {
+        payload.status = 'finance pending';
+      }
+    }
+
+    updateSales(id, payload).then((res) => {
+      setLoading(false);
+      if (res.status) {
+        handleClose();
+        fetchData();
+      }
+    });
+  };
+
+  // ---------------- ADMIN VIEW ----------------
+  if (isAdmin) {
+    return (
+      <Dialog open={open} onClose={handleClose} maxWidth="xl" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#f8f9fa', borderBottom: '1px solid #e9ecef', py: 2 }}>
+          <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+            {sentenceCase(type || '')} Verification — Admin Review
+          </Typography>
+          <IconButton onClick={handleClose} size="small">
+            <Iconify icon="eva:close-fill" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2, p: 3 }}>
+          {/* Render the full comprehensive SaleDetail component showing all customer, address, ornaments, release, and bank details! */}
+          <SaleDetail id={id} setNotify={() => {}} />
+
+          {/* Admin Review Action Notes */}
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+              Admin Review Action Notes
+            </Typography>
+            <TextField
+              name="adminComments"
+              label="Add approval or rejection remarks here..."
+              multiline
+              rows={3}
+              fullWidth
+              value={adminComments}
+              onChange={(e) => setAdminComments(e.target.value)}
+              placeholder="e.g., Audited and verified all details successfully."
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, borderTop: '1px solid #e9ecef', bgcolor: '#f8f9fa' }}>
+          <Button onClick={handleClose} color="inherit" variant="outlined" size="large">
+            Cancel
+          </Button>
+          <LoadingButton 
+            variant="contained" 
+            color="error" 
+            loading={loading}
+            onClick={() => handleAdminAction('reject')}
+            size="large"
+          >
+            Reject Stage
+          </LoadingButton>
+          <LoadingButton 
+            variant="contained" 
+            color="success" 
+            loading={loading}
+            onClick={() => handleAdminAction('approve')}
+            sx={{ color: '#fff' }}
+            size="large"
+          >
+            Verify & Approve
+          </LoadingButton>
+        </DialogActions>
+      </Dialog>
+    );
+  }
+
+  // ---------------- OTHER USERS VIEW (Form Entry) ----------------
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
       <form onSubmit={handleSubmit}>

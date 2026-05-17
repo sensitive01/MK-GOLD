@@ -52,9 +52,11 @@ async function update(req, res) {
     
     if (req.body.status) {
       const actionMap = {
-        'release pending': 'Finance Approved',
-        'admin approval pending': 'Verification Approved',
-        'completed': 'Admin Approved',
+        'finance pending': 'Finance Pending',
+        'release pending': 'Release Pending',
+        'admin approval pending': 'Admin Approval Pending',
+        'fund transfer pending': 'Fund Transfer Pending (Finance)',
+        'completed': 'Completed',
         'rejected': 'Rejected'
       };
 

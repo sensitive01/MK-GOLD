@@ -38,6 +38,10 @@ const QREnquiry = mongoose.model(
         type: String,
         unique: true,
       },
+      mkgCustomerId: {
+        type: String,
+        default: null,
+      },
       status: {
         type: String,
         default: "pending",

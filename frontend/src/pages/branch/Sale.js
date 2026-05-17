@@ -674,7 +674,7 @@ function Status(props) {
   let content = <Label color={status === 'completed' ? 'success' : 'error'}>{sentenceCase(status)}</Label>;
 
   if (status === 'finance pending') {
-    if (isFinance || isAdmin) {
+    if (isFinance) {
       content = (
         <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
           Update Finance
@@ -687,7 +687,7 @@ function Status(props) {
 
   // Assignee Step (Release Stage)
   else if (status === 'release pending') {
-    if (employeeId === assignee || isAdmin) {
+    if (employeeId === assignee) {
       content = (
         <Button variant="contained" size="small" onClick={() => handleVerify('assignee')}>
           Update Verification
@@ -823,6 +823,8 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         if (data.status) {
           handleClose();
           fetchData();
+        } else {
+          alert(data.message || 'Verification failed. Please ensure prior stages are approved.');
         }
       });
     },

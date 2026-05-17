@@ -28,8 +28,18 @@ async function update(req, res) {
   try {
     if (req.body.status) {
       const performerId = req.user.employee || req.user._id;
+      
+      const actionMap = {
+        'finance pending': 'Finance Pending',
+        'release pending': 'Release Pending',
+        'admin approval pending': 'Admin Approval Pending',
+        'fund transfer pending': 'Fund Transfer Pending (Finance)',
+        'completed': 'Completed',
+        'rejected': 'Rejected'
+      };
+
       const logEntry = {
-        action: req.body.status,
+        action: actionMap[req.body.status] || req.body.status,
         performedBy: performerId,
         performedAt: new Date(),
         comments: req.body.financeComments || req.body.assigneeComments || req.body.fundTransferComments || req.body.comments,

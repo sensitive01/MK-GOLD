@@ -363,11 +363,16 @@ async function update(id, payload) {
       returnDocument: "after",
     }).exec();
 
-    // Synchronize to Sales if status is updated
-    if (payload.status) {
+    // Synchronize to Sales if status or completion flags are updated
+    const syncData = {};
+    if (payload.status !== undefined) syncData.status = payload.status;
+    if (payload.financeCompleted !== undefined) syncData.financeCompleted = payload.financeCompleted;
+    if (payload.assigneeCompleted !== undefined) syncData.assigneeCompleted = payload.assigneeCompleted;
+
+    if (Object.keys(syncData).length > 0) {
       await Sales.updateMany(
         { release: id },
-        { $set: { status: payload.status } }
+        { $set: syncData }
       ).exec();
     }
 
@@ -388,13 +393,17 @@ async function updateWithLog(id, setData, logEntry) {
       { returnDocument: "after" }
     ).exec();
 
-    // Synchronize to Sales if status is updated and different
-    if (setData.status && release.status !== setData.status) {
-      // We need to update the Sale with log too to capture the timeline
-      const linkedSales = await Sales.find({ release: id, status: { $ne: setData.status } }).exec();
+    // Synchronize to Sales if status or completion flags are updated
+    if (updatedRelease && (setData.status !== undefined || setData.financeCompleted !== undefined || setData.assigneeCompleted !== undefined)) {
+      const linkedSales = await Sales.find({ release: id }).exec();
       const salesService = require("./sales");
       for (const sale of linkedSales) {
-        await salesService.updateWithLog(sale._id, { status: setData.status }, logEntry);
+        const syncData = {};
+        if (setData.status !== undefined) syncData.status = setData.status;
+        if (setData.financeCompleted !== undefined) syncData.financeCompleted = setData.financeCompleted;
+        if (setData.assigneeCompleted !== undefined) syncData.assigneeCompleted = setData.assigneeCompleted;
+        
+        await salesService.updateWithLog(sale._id, syncData, logEntry);
       }
     }
 

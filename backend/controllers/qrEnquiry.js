@@ -39,17 +39,6 @@ async function verifyOtp(req, res) {
 async function verifyAndSubmit(req, res) {
   try {
     const { phoneNumber, otp, skipOtp, ...formData } = req.body;
-    
-    // Check if an enquiry already exists for this phone number
-    const existing = await qrService.findOne({ phoneNumber });
-    if (existing) {
-        return res.json({ 
-            status: true, 
-            alreadyExists: true,
-            message: "You are already registered.",
-            data: existing 
-        });
-    }
 
     if (!skipOtp) {
       if (!otp) {
@@ -61,6 +50,14 @@ async function verifyAndSubmit(req, res) {
       }
       // Remove used OTP
       await otpService.remove(otpRecord._id.toString());
+    }
+
+    // Check if customer already exists in our database
+    const customer = await Customer.findOne({ phoneNumber }).lean().exec();
+    if (customer) {
+      formData.mkgCustomerId = customer.customerId;
+    } else {
+      formData.mkgCustomerId = null;
     }
 
     const result = await qrService.create({ ...formData, phoneNumber });
