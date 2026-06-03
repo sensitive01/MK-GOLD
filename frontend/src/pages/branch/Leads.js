@@ -22,12 +22,18 @@ import {
     TableBody,
     TableCell,
     TableContainer,
+    TableHead,
     TablePagination,
     TableRow,
     Typography,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
+import * as XLSX from 'xlsx';
 // components
 import { CreateLead, UpdateLead, PreviewLead } from '../../components/branch/lead';
 import Iconify from '../../components/iconify';
@@ -36,6 +42,7 @@ import Scrollbar from '../../components/scrollbar';
 import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashboard/attendance';
 // apis
 import { deleteLeadById, getLeads } from '../../apis/branch/lead';
+import { getImportedLeads, importLeads, deleteImportedLead } from '../../apis/branch/importedLead';
 import global from '../../utils/global';
 
 // ----------------------------------------------------------------------
@@ -101,6 +108,11 @@ export default function Leads() {
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
 
+  const [openImportModal, setOpenImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importPreview, setImportPreview] = useState([]);
+  const [isImportedLead, setIsImportedLead] = useState(false);
+
   const [notify, setNotify] = useState({
     open: false,
     message: '',
@@ -109,10 +121,24 @@ export default function Leads() {
 
   const fetchData = useCallback(
     () => {
-      getLeads({}).then((data) => {
-        setData(data.data);
-        setOpenBackdrop(false);
-      });
+      setOpenBackdrop(true);
+      Promise.all([getLeads({}), getImportedLeads()])
+        .then(([leadsRes, importedRes]) => {
+          const normalLeads = leadsRes.data || [];
+          const importedLeads = (importedRes.status && importedRes.data) ? importedRes.data.map(item => ({
+            ...item,
+            mobile: item.phone, // map phone to mobile for table display
+            category: 'Imported',
+            status: 'pending',
+            type: 'CSV',
+            isImported: true,
+          })) : [];
+          setData([...normalLeads, ...importedLeads]);
+          setOpenBackdrop(false);
+        })
+        .catch(() => {
+          setOpenBackdrop(false);
+        });
     },
     []
   );
@@ -120,6 +146,129 @@ export default function Leads() {
   useEffect(() => {
     fetchData();
   }, [fetchData, toggleContainer]);
+
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files[0];
+    if (selectedFile) {
+      const nameLower = selectedFile.name.toLowerCase();
+      const isCSV = selectedFile.type === 'text/csv' || nameLower.endsWith('.csv');
+      const isExcel = nameLower.endsWith('.xlsx') || nameLower.endsWith('.xls');
+      if (!isCSV && !isExcel) {
+        setNotify({
+          open: true,
+          message: 'Please upload a valid CSV or Excel file.',
+          severity: 'error',
+        });
+        return;
+      }
+      setImportFile(selectedFile);
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const arrayBuffer = e.target.result;
+          const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet);
+          
+          if (json.length === 0) {
+            setNotify({
+              open: true,
+              message: 'The uploaded file is empty.',
+              severity: 'warning',
+            });
+            return;
+          }
+          
+          const mapped = json.map((row) => {
+            const keys = Object.keys(row);
+            const getVal = (possibleKeys) => {
+              const matchedKey = keys.find(k => possibleKeys.includes(k.toLowerCase().trim()));
+              return matchedKey ? String(row[matchedKey]).trim() : '';
+            };
+            
+            return {
+              name: getVal(['name', 'full name', 'lead name']),
+              phone: getVal(['phone', 'phone number', 'mobile', 'mobile number']),
+              email: getVal(['email', 'email address']),
+              weight: parseFloat(getVal(['weight', 'qty', 'quantity'])) || 0,
+              pincode: getVal(['pincode', 'pin', 'postal code']),
+              comments: getVal(['comments', 'comment', 'remarks', 'remark', 'desc']),
+            };
+          });
+
+          setImportPreview(mapped);
+          setNotify({
+            open: true,
+            message: `Successfully parsed ${mapped.length} rows.`,
+            severity: 'success',
+          });
+        } catch (error) {
+          setNotify({
+            open: true,
+            message: 'Error parsing CSV file.',
+            severity: 'error',
+          });
+        }
+      };
+      reader.readAsArrayBuffer(selectedFile);
+    }
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = ['Name', 'Phone', 'Email', 'Weight', 'Comments', 'Pincode'];
+    const csvContent = 'data:text/csv;charset=utf-8,' + headers.join(',');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'leads_import_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleSubmitImport = () => {
+    if (importPreview.length === 0) {
+      setNotify({
+        open: true,
+        message: 'No data to import.',
+        severity: 'warning',
+      });
+      return;
+    }
+
+    setOpenBackdrop(true);
+    importLeads({ leads: importPreview })
+      .then((res) => {
+        if (res.status) {
+          setNotify({
+            open: true,
+            message: res.message || 'Leads imported successfully',
+            severity: 'success',
+          });
+          setImportPreview([]);
+          setImportFile(null);
+          setOpenImportModal(false);
+          fetchData();
+        } else {
+          setNotify({
+            open: true,
+            message: res.message || 'Failed to import leads',
+            severity: 'error',
+          });
+          setOpenBackdrop(false);
+        }
+      })
+      .catch((err) => {
+        setNotify({
+          open: true,
+          message: err.message || 'An error occurred',
+          severity: 'error',
+        });
+        setOpenBackdrop(false);
+      });
+  };
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -178,15 +327,35 @@ export default function Leads() {
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
-    deleteLeadById(openId).then(() => {
-      fetchData();
-      handleCloseDeleteModal();
-      setSelected(selected?.filter((e) => e !== openId));
-    });
+    if (isImportedLead) {
+      deleteImportedLead(openId).then(() => {
+        fetchData();
+        handleCloseDeleteModal();
+        setSelected(selected?.filter((e) => e !== openId));
+      });
+    } else {
+      deleteLeadById(openId).then(() => {
+        fetchData();
+        handleCloseDeleteModal();
+        setSelected(selected?.filter((e) => e !== openId));
+      });
+    }
   };
 
   const handleDeleteSelected = () => {
-    deleteLeadById(selected).then(() => {
+    const selectedRows = data.filter(item => selected.includes(item._id));
+    const normalIds = selectedRows.filter(item => !item.isImported).map(item => item._id);
+    const importedIds = selectedRows.filter(item => item.isImported).map(item => item._id);
+
+    const promises = [];
+    if (normalIds.length > 0) {
+      promises.push(deleteLeadById(normalIds));
+    }
+    if (importedIds.length > 0) {
+      promises.push(deleteImportedLead(importedIds.join(',')));
+    }
+
+    Promise.all(promises).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected([]);
@@ -238,16 +407,33 @@ export default function Leads() {
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Leads Management
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setToggleContainer(true);
-              setToggleContainerType('create');
-            }}
-          >
-            New Lead
-          </Button>
+          <Stack direction="row" spacing={2}>
+            {auth.user?.userType?.toLowerCase() === 'telecalling' && (
+              <Button
+                variant="outlined"
+                color="inherit"
+                startIcon={<Iconify icon="eva:cloud-upload-fill" />}
+                onClick={() => {
+                  setImportFile(null);
+                  setImportPreview([]);
+                  setOpenImportModal(true);
+                }}
+                sx={{ color: '#fff', borderColor: '#fff', '&:hover': { borderColor: '#e1bee7', bgcolor: 'rgba(255,255,255,0.08)' } }}
+              >
+                Import Leads
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setToggleContainer(true);
+                setToggleContainerType('create');
+              }}
+            >
+              New Lead
+            </Button>
+          </Stack>
         </Stack>
 
         <Card>
@@ -310,6 +496,7 @@ export default function Leads() {
                             color="inherit"
                             onClick={(e) => {
                               setOpenId(_id);
+                              setIsImportedLead(!!row.isImported);
                               handleOpenMenu(e);
                             }}
                           >
@@ -364,7 +551,11 @@ export default function Leads() {
               Back
             </Button>
           </Stack>
-          <PreviewLead setToggleContainer={setToggleContainer} id={openId} />
+          {isImportedLead ? (
+            <PreviewImportedLead data={data.find(item => item._id === openId)} />
+          ) : (
+            <PreviewLead setToggleContainer={setToggleContainer} id={openId} />
+          )}
         </Container>
       )}
 
@@ -422,16 +613,18 @@ export default function Leads() {
           <Iconify icon={'eva:eye-outline'} sx={{ mr: 2 }} />
           Preview
         </MenuItem>
-        <MenuItem
-           onClick={() => {
-             setOpen(null);
-             setToggleContainer(true);
-             setToggleContainerType('update');
-           }}
-        >
-          <Iconify icon={'eva:edit-outline'} sx={{ mr: 2 }} />
-          Edit
-        </MenuItem>
+        {!isImportedLead && (
+          <MenuItem
+             onClick={() => {
+               setOpen(null);
+               setToggleContainer(true);
+               setToggleContainerType('update');
+             }}
+          >
+            <Iconify icon={'eva:edit-outline'} sx={{ mr: 2 }} />
+            Edit
+          </MenuItem>
+        )}
         <MenuItem
           sx={{ color: 'error.main' }}
           onClick={() => {
@@ -459,7 +652,175 @@ export default function Leads() {
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
       </Backdrop>
+
+      <Dialog open={openImportModal} onClose={() => setOpenImportModal(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 2 }}>
+          <Typography variant="h6" sx={{ color: '#8A1B9F', fontWeight: 'bold' }}>
+            Import Leads via CSV
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<Iconify icon="eva:download-outline" />}
+            onClick={handleDownloadTemplate}
+            size="small"
+            sx={{
+              color: '#8A1B9F',
+              borderColor: '#8A1B9F',
+              fontWeight: 'bold',
+              '&:hover': {
+                borderColor: '#7B1FA2',
+                bgcolor: 'rgba(138, 27, 159, 0.04)',
+              }
+            }}
+          >
+            Download Template
+          </Button>
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            p: 3,
+            overflowY: 'auto',
+            '&::-webkit-scrollbar': { display: 'none' },
+            msOverflowStyle: 'none',
+            scrollbarWidth: 'none',
+          }}
+        >
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" color="textSecondary" gutterBottom>
+              Select a CSV or Excel file containing columns for <strong>Name, Phone, Email, Weight, Comments, Pincode</strong>.
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              All fields are optional.
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '2px dashed #8A1B9F',
+              borderRadius: 2,
+              p: 4,
+              textAlign: 'center',
+              cursor: 'pointer',
+              bgcolor: 'rgba(138, 27, 159, 0.04)',
+              transition: 'all 0.3s',
+              width: '100%',
+              boxSizing: 'border-box',
+              '&:hover': {
+                bgcolor: 'rgba(138, 27, 159, 0.08)',
+                borderColor: '#b39ddb',
+              },
+            }}
+            component="label"
+          >
+            <input type="file" accept=".csv, .xlsx, .xls" hidden onChange={handleFileChange} />
+            <Iconify icon="eva:cloud-upload-fill" sx={{ fontSize: 48, color: '#8A1B9F', mb: 1 }} />
+            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+              {importFile ? importFile.name : 'Click to select CSV or Excel File'}
+            </Typography>
+            <Typography variant="caption" color="textSecondary">
+              Accepts CSV or Excel files up to 5MB
+            </Typography>
+          </Box>
+
+          {importPreview.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', color: '#8A1B9F', fontWeight: 'bold' }}>
+                <Iconify icon="eva:list-fill" sx={{ mr: 1 }} /> Preview (First 5 Rows)
+              </Typography>
+              <TableContainer component={Paper} sx={{ maxHeight: 180, border: '1px solid #f0f0f0', borderRadius: 1 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ bgcolor: '#f5f5f5' }}>Name</TableCell>
+                      <TableCell sx={{ bgcolor: '#f5f5f5' }}>Phone</TableCell>
+                      <TableCell sx={{ bgcolor: '#f5f5f5' }}>Email</TableCell>
+                      <TableCell sx={{ bgcolor: '#f5f5f5' }}>Weight (gm)</TableCell>
+                      <TableCell sx={{ bgcolor: '#f5f5f5' }}>Pincode</TableCell>
+                      <TableCell sx={{ bgcolor: '#f5f5f5' }}>Comments</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {importPreview.slice(0, 5).map((row, index) => (
+                      <TableRow key={index} hover>
+                        <TableCell>{row.name || '-'}</TableCell>
+                        <TableCell>{row.phone || '-'}</TableCell>
+                        <TableCell>{row.email || '-'}</TableCell>
+                        <TableCell>{row.weight}</TableCell>
+                        <TableCell>{row.pincode || '-'}</TableCell>
+                        <TableCell>{row.comments || '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid #f0f0f0' }}>
+          <Button variant="outlined" onClick={() => setOpenImportModal(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleSubmitImport}
+            disabled={importPreview.length === 0}
+            sx={{
+              color: '#fff',
+              bgcolor: '#8A1B9F',
+              '&:hover': { bgcolor: '#7B1FA2' },
+              '&.Mui-disabled': { bgcolor: 'rgba(0, 0, 0, 0.12)', color: 'rgba(0, 0, 0, 0.26)' }
+            }}
+          >
+            Import {importPreview.length} Leads
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
+  );
+}
+
+function PreviewImportedLead({ data }) {
+  if (!data) return <div>No data found</div>;
+
+  return (
+    <Card sx={{ p: 4, my: 4 }}>
+      <Typography variant="h5" sx={{ color: '#000', mb: 3 }}>
+        Imported Lead Details
+      </Typography>
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} sm={6}>
+          <Typography variant="subtitle2" color="textSecondary">Name</Typography>
+          <Typography variant="body1">{data.name}</Typography>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Typography variant="subtitle2" color="textSecondary">Phone / Mobile</Typography>
+          <Typography variant="body1">{data.phone}</Typography>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Typography variant="subtitle2" color="textSecondary">Email</Typography>
+          <Typography variant="body1">{data.email || 'N/A'}</Typography>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Typography variant="subtitle2" color="textSecondary">Weight</Typography>
+          <Typography variant="body1">{data.weight} gm</Typography>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Typography variant="subtitle2" color="textSecondary">Pincode</Typography>
+          <Typography variant="body1">{data.pincode || 'N/A'}</Typography>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Typography variant="subtitle2" color="textSecondary">Import Date</Typography>
+          <Typography variant="body1">{moment(data.createdAt).format('LLLL')}</Typography>
+        </Grid>
+        <Grid item xs={12}>
+          <Typography variant="subtitle2" color="textSecondary">Comments</Typography>
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{data.comments || 'N/A'}</Typography>
+        </Grid>
+      </Grid>
+    </Card>
   );
 }
 

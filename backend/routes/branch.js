@@ -19,6 +19,7 @@ const leave = require("../controllers/branch/leave");
 const report = require("../controllers/branch/report");
 const balancesheet = require("../controllers/branch/balancesheet");
 const lead = require("../controllers/branch/lead");
+const importedLead = require("../controllers/branch/importedLead");
 const qrEnquiry = require("../controllers/qrEnquiry");
 const fileUpload = require("../controllers/branch/fileupload");
 const { isBranch } = require("../middlewares/authorization");
@@ -104,6 +105,10 @@ branchRouter.post("/lead/create", lead.create);
 branchRouter.post("/lead/update/:id", lead.update);
 branchRouter.post("/lead/delete/:id", lead.remove);
 branchRouter.post("/lead/disposition/:id", lead.addDisposition);
+
+branchRouter.post("/imported-lead/import", importedLead.importLeads);
+branchRouter.get("/imported-lead/get", importedLead.find);
+branchRouter.post("/imported-lead/delete/:id", importedLead.remove);
 
 branchRouter.get("/employee/get", employee.find);
 branchRouter.post("/employee/get", employee.find);
