@@ -179,6 +179,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
           ...values,
           name: res.data.name || values.name,
           phoneNumber: res.data.phoneNumber || values.phoneNumber,
+          email: res.data.email || values.email,
           pincode: res.data.pincode || values.pincode,
         });
         setNotify({ open: true, message: 'Enquiry details fetched', severity: 'success' });

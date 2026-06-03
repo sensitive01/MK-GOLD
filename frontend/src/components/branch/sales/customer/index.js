@@ -202,6 +202,7 @@ function Customer(props) {
           ...values,
           name: res.data.name || values.name,
           phoneNumber: res.data.phoneNumber || values.phoneNumber,
+          email: res.data.email || values.email,
         });
         setNotify({ open: true, message: 'Enquiry details fetched', severity: 'success' });
       } else {
