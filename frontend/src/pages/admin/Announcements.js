@@ -187,8 +187,8 @@ function Announcements() {
             />
 
             <Scrollbar>
-              <TableContainer sx={{ minWidth: 800 }}>
-                <Table>
+              <TableContainer>
+                <Table sx={{ minWidth: 800 }}>
                   <UserListHead
                     order={order}
                     orderBy={orderBy}

@@ -704,7 +704,7 @@ async function create(payload) {
 
     // 5. Release Added (if any)
     if (payload.release && payload.release.length > 0) {
-      const releases = await Release.find({ _id: { $in: payload.release } }).exec();
+      const releases = await Release.find({ _id: { $in: payload.release } }).lean().exec();
       for (const rel of releases) {
         timeline.push({
           event: "Release Added",
@@ -713,6 +713,7 @@ async function create(payload) {
           details: `Release Amount: ${rel.payableAmount}`,
         });
       }
+      payload.release = releases;
     }
 
     // 6. Billing Initiated (Current Action)
@@ -750,32 +751,19 @@ async function update(id, payload) {
     const sale = await Sales.findById(id).exec();
     if (!sale) throw new Error("Sale not found");
 
-    // Strict sequence validation:
-    if (payload.status === "fund transfer pending" || payload.status === "completed") {
-      let isFinanceApproved = sale.financeCompleted;
-      let isAssigneeApproved = sale.assigneeCompleted;
-
-      if (sale.release && sale.release.length > 0) {
-        const Release = require("../models/release");
-        const linkedReleases = await Release.find({ _id: { $in: sale.release } }).exec();
-        if (linkedReleases.length > 0) {
-          isFinanceApproved = isFinanceApproved || linkedReleases.every(r => r.financeCompleted);
-          isAssigneeApproved = isAssigneeApproved || linkedReleases.every(r => r.assigneeCompleted);
-        }
-      }
-
-      if (!isFinanceApproved) {
-        throw new Error("Cannot update sale status: Finance must be approved first");
-      }
-      if (!isAssigneeApproved) {
-        throw new Error("Cannot update sale status: Assignee must be approved first");
-      }
+    // Sequence validation:
+    if (payload.status === "finance pending" && !sale.bullionCompleted && !payload.bullionCompleted) {
+      throw new Error("Cannot update sale status: Bullion Desk must approve first");
+    }
+    if (payload.status === "completed" && !sale.financeCompleted && !payload.financeCompleted) {
+      throw new Error("Cannot update sale status: Finance must approve first");
     }
 
-    if (payload.status === "completed") {
-      if (!sale.fundTransferCompleted && !payload.fundTransferCompleted) {
-        throw new Error("Cannot complete sale: Fund transfer must be approved first");
-      }
+    if (payload.release && payload.release.length > 0) {
+      const releaseIds = payload.release.map(r => r._id || r);
+      const ReleaseModel = require("../models/release");
+      const releases = await ReleaseModel.find({ _id: { $in: releaseIds } }).lean().exec();
+      payload.release = releases;
     }
 
     const updatedSale = await Sales.findByIdAndUpdate(id, payload, {
@@ -790,8 +778,9 @@ async function update(id, payload) {
       if (payload.assigneeCompleted !== undefined) releaseSync.assigneeCompleted = payload.assigneeCompleted;
       
       if (Object.keys(releaseSync).length > 0) {
+        const releaseIds = updatedSale.release.map(r => r._id || r);
         await Release.updateMany(
-          { _id: { $in: updatedSale.release } },
+          { _id: { $in: releaseIds } },
           { $set: releaseSync }
         ).exec();
       }
@@ -808,39 +797,12 @@ async function updateWithLog(id, setData, logEntry) {
     const sale = await Sales.findById(id).exec();
     if (!sale) throw new Error("Sale not found");
 
-    // Strict sequence validation:
-    let isFinanceApproved = sale.financeCompleted;
-    let isAssigneeApproved = sale.assigneeCompleted;
-
-    if (sale.release && sale.release.length > 0) {
-      const Release = require("../models/release");
-      const linkedReleases = await Release.find({ _id: { $in: sale.release } }).exec();
-      if (linkedReleases.length > 0) {
-        isFinanceApproved = isFinanceApproved || linkedReleases.every(r => r.financeCompleted);
-        isAssigneeApproved = isAssigneeApproved || linkedReleases.every(r => r.assigneeCompleted);
-      }
+    // Sequence validation:
+    if (setData.status === "finance pending" && !sale.bullionCompleted && !setData.bullionCompleted) {
+      throw new Error("Cannot update sale status: Bullion Desk must approve first");
     }
-
-    // 1. Assignee cannot approve if Finance is not completed
-    if (setData.assigneeCompleted && !isFinanceApproved) {
-      throw new Error("Cannot approve Assignee: Finance must be approved first");
-    }
-
-    // 2. Transition to fund transfer pending or completed requires prior stages completed
-    if (setData.status === "fund transfer pending" || setData.status === "completed") {
-      if (!isFinanceApproved) {
-        throw new Error("Cannot update sale status: Finance must be approved first");
-      }
-      if (!isAssigneeApproved && !setData.assigneeCompleted) {
-        throw new Error("Cannot update sale status: Assignee must be approved first");
-      }
-    }
-
-    // 3. To set status to completed, fund transfer must be completed
-    if (setData.status === "completed") {
-      if (!sale.fundTransferCompleted && !setData.fundTransferCompleted) {
-        throw new Error("Cannot complete sale: Fund transfer must be approved first");
-      }
+    if (setData.status === "completed" && !sale.financeCompleted && !setData.financeCompleted) {
+      throw new Error("Cannot update sale status: Finance must approve first");
     }
 
     const timelineEntry = {
@@ -872,7 +834,7 @@ async function updateWithLog(id, setData, logEntry) {
     if (updatedSale.release && updatedSale.release.length > 0) {
       const Release = require("../models/release");
       const releaseSync = {};
-      if (setData.status && sale.status !== setData.status) {
+      if (setData.status && sale.status !== setData.status && setData.status === 'release pending') {
         releaseSync.status = setData.status;
       }
       if (setData.financeCompleted !== undefined) {
@@ -884,7 +846,7 @@ async function updateWithLog(id, setData, logEntry) {
 
       if (Object.keys(releaseSync).length > 0) {
         const updatePayload = { $set: releaseSync };
-        if (setData.status && sale.status !== setData.status) {
+        if (setData.status && sale.status !== setData.status && setData.status === 'release pending') {
           updatePayload.$push = {
             actionLog: {
               action: setData.status,
@@ -893,8 +855,9 @@ async function updateWithLog(id, setData, logEntry) {
             }
           };
         }
+        const releaseIds = updatedSale.release.map(r => r._id || r);
         await Release.updateMany(
-          { _id: { $in: updatedSale.release } },
+          { _id: { $in: releaseIds } },
           updatePayload
         ).exec();
       }

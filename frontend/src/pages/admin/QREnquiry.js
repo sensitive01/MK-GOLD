@@ -93,8 +93,8 @@ export default function QREnquiry() {
 
         <Card>
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <BranchListHead
                   headLabel={TABLE_HEAD}
                   rowCount={data?.length ?? 0}

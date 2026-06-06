@@ -12,6 +12,13 @@ import {
   TableHead,
   Paper,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Box,
+  Stack,
 } from '@mui/material';
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -19,14 +26,118 @@ import Link from '@mui/material/Link';
 import { useEffect, useState } from 'react';
 import { sentenceCase } from 'change-case';
 import moment from 'moment';
+import { useSelector } from 'react-redux';
+import { LoadingButton } from '@mui/lab';
 import Scrollbar from '../../scrollbar';
-import { getSalesById } from '../../../apis/branch/sales';
+import { getSalesById, updateSales } from '../../../apis/branch/sales';
 import global from '../../../utils/global';
 import TimelineView from '../../TimelineView';
 
-export default function SaleDetail({ id }) {
+export default function SaleDetail({ id, setNotify, onActionComplete }) {
+  const auth = useSelector((state) => state.auth);
   const [data, setData] = useState({});
   const [openBackdrop, setOpenBackdrop] = useState(true);
+  const [openRejectDialog, setOpenRejectDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const userType = auth.user?.userType?.toLowerCase();
+  const isAuthorized = ['bullion_desk', 'admin'].includes(userType);
+
+  const handleApprove = async () => {
+    setActionLoading(true);
+    try {
+      const payload = {
+        status: 'finance pending',
+        bullionCompleted: true,
+        bullionCompletedAt: new Date(),
+        bullionComments: 'Approved by Bullion Desk',
+        comments: 'Approved by Bullion Desk',
+      };
+      const response = await updateSales(id, payload);
+      if (response.status) {
+        if (setNotify) {
+          setNotify({
+            open: true,
+            message: 'Sale approved successfully',
+            severity: 'success',
+          });
+        }
+        if (onActionComplete) {
+          onActionComplete();
+        }
+      } else {
+        if (setNotify) {
+          setNotify({
+            open: true,
+            message: response.message || 'Failed to approve sale',
+            severity: 'error',
+          });
+        }
+      }
+    } catch (err) {
+      if (setNotify) {
+        setNotify({
+          open: true,
+          message: err.message || 'Error approving sale',
+          severity: 'error',
+        });
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectReason.trim()) {
+      setRejectError('Rejection reason is required');
+      return;
+    }
+    setRejectError('');
+    setActionLoading(true);
+    try {
+      const payload = {
+        status: 'rejected',
+        bullionCompleted: false,
+        bullionComments: rejectReason.trim(),
+        comments: rejectReason.trim(),
+      };
+      const response = await updateSales(id, payload);
+      if (response.status) {
+        setOpenRejectDialog(false);
+        setRejectReason('');
+        if (setNotify) {
+          setNotify({
+            open: true,
+            message: 'Sale rejected successfully',
+            severity: 'success',
+          });
+        }
+        if (onActionComplete) {
+          onActionComplete();
+        }
+      } else {
+        if (setNotify) {
+          setNotify({
+            open: true,
+            message: response.message || 'Failed to reject sale',
+            severity: 'error',
+          });
+        }
+      }
+    } catch (err) {
+      if (setNotify) {
+        setNotify({
+          open: true,
+          message: err.message || 'Error rejecting sale',
+          severity: 'error',
+        });
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -222,14 +333,28 @@ export default function SaleDetail({ id }) {
                   <TableCell align="left">{e.documentNo}</TableCell>
                   <TableCell align="left">
                     {e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
-                      <img
-                        key={index}
-                        src={e?.uploadedFile?.startsWith('http') ? e.uploadedFile : `${global.baseURL}/${e?.uploadedFile}`}
-                        alt="document"
-                        style={{ width: '80px' }}
-                      />
+                      <a
+                        href={e?.uploadedFile?.startsWith('http') ? e.uploadedFile : `${global.baseURL}/${e?.uploadedFile}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <img
+                          key={index}
+                          src={e?.uploadedFile?.startsWith('http') ? e.uploadedFile : `${global.baseURL}/${e?.uploadedFile}`}
+                          alt="document"
+                          style={{ width: '80px' }}
+                        />
+                      </a>
                     ) : (
-                      <img key={index} src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />
+                      <a
+                        href={e?.uploadedFile?.startsWith('http') ? e.uploadedFile : `${global.baseURL}/${e?.uploadedFile}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <img key={index} src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />
+                      </a>
                     )}
                   </TableCell>
                 </TableRow>
@@ -366,15 +491,26 @@ export default function SaleDetail({ id }) {
                       <TableCell align="left">
                         Photo:
                         {data?.customer?.profileImage?.uploadedFile ? (
-                          <img
-                            src={
+                          <a
+                            href={
                               data.customer.profileImage.uploadedFile.startsWith('http')
                                 ? data.customer.profileImage.uploadedFile
                                 : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`
                             }
-                            alt="document"
-                            style={{ width: '80px' }}
-                          />
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <img
+                              src={
+                                data.customer.profileImage.uploadedFile.startsWith('http')
+                                  ? data.customer.profileImage.uploadedFile
+                                  : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`
+                              }
+                              alt="document"
+                              style={{ width: '80px' }}
+                            />
+                          </a>
                         ) : (
                           <img src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />
                         )}
@@ -505,9 +641,65 @@ export default function SaleDetail({ id }) {
               <Divider sx={{ my: 2 }} />
               <TimelineView timeline={data.timeline} />
             </Grid>
+
+            {isAuthorized && data.status === 'bullion pending' && (
+              <Grid item xs={12}>
+                <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    disabled={actionLoading}
+                    onClick={() => setOpenRejectDialog(true)}
+                  >
+                    Reject Sale
+                  </Button>
+                  <LoadingButton
+                    variant="contained"
+                    color="success"
+                    loading={actionLoading}
+                    onClick={handleApprove}
+                  >
+                    Approve Sale
+                  </LoadingButton>
+                </Stack>
+              </Grid>
+            )}
           </Grid>
         </Card>
       )}
+
+      <Dialog open={openRejectDialog} onClose={() => setOpenRejectDialog(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Reject Sale</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+            Please provide a reason for rejecting this sale. This reason will be saved to the database.
+          </Typography>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Rejection Reason"
+            fullWidth
+            multiline
+            rows={4}
+            value={rejectReason}
+            onChange={(e) => {
+              setRejectReason(e.target.value);
+              if (e.target.value.trim()) setRejectError('');
+            }}
+            error={Boolean(rejectError)}
+            helperText={rejectError}
+            variant="outlined"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenRejectDialog(false)} color="inherit" disabled={actionLoading}>
+            Cancel
+          </Button>
+          <LoadingButton onClick={handleReject} loading={actionLoading} variant="contained" color="error">
+            Reject Sale
+          </LoadingButton>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

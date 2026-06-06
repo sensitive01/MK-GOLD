@@ -108,49 +108,27 @@ function applySortFilter(array, comparator, query) {
 }
 
 function Status(props) {
-  const { _id, status, assignee, financeCompleted, assigneeCompleted, userType, employeeId, fetchData } = props;
+  const { _id, status, assignee, userType, employeeId, fetchData } = props;
   const userTypeLower = userType?.toLowerCase() || '';
   const isAdmin = userTypeLower.includes('admin');
   const isTransactionExecutive = userTypeLower.includes('transaction_executive');
 
   const [openVerifyModal, setOpenVerifyModal] = useState(false);
-  const [verifyType, setVerifyType] = useState(''); // 'finance' or 'assignee'
+  const [verifyType, setVerifyType] = useState('');
 
   const handleVerify = (type) => {
     setVerifyType(type);
     setOpenVerifyModal(true);
   };
 
-  // Finance Step
-  if (status === 'finance pending') {
-    const isFinance = userTypeLower.includes('finance') || userTypeLower.includes('accounts');
-    if (isFinance || isAdmin) {
-      return (
-        <>
-          <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
-            Update Finance
-          </Button>
-          <VerificationModal
-            open={openVerifyModal}
-            id={_id}
-            type={verifyType}
-            handleClose={() => setOpenVerifyModal(false)}
-            fetchData={fetchData}
-          />
-        </>
-      );
-    }
-    return <Label color="warning">Finance Pending</Label>;
-  }
-
-  // Assignee Step
+  // Release Pending — only assignee (or admin/TE) can mark it complete
   if (status === 'release pending') {
     const isAssignee = assignee === employeeId;
     if (isAssignee || isAdmin || isTransactionExecutive) {
       return (
         <>
-          <Button variant="contained" size="small" color="info" onClick={() => handleVerify('assignee')}>
-            Update Verification
+          <Button variant="contained" size="small" color="warning" onClick={() => handleVerify('release_complete')}>
+            Mark Complete
           </Button>
           <VerificationModal
             open={openVerifyModal}
@@ -165,52 +143,13 @@ function Status(props) {
     return <Label color="warning">Release Pending</Label>;
   }
 
-  // Admin Approval Step
-  if (status === 'admin approval pending') {
-    if (isAdmin) {
-      return (
-        <Stack direction="row" spacing={1}>
-          <Button
-            variant="contained"
-            size="small"
-            color="success"
-            onClick={() => {
-              updateRelease(_id, { status: 'completed' }).then(() => fetchData());
-            }}
-          >
-            Approve
-          </Button>
-          <Button
-            variant="contained"
-            size="small"
-            color="error"
-            onClick={() => {
-              updateRelease(_id, { status: 'finance pending' }).then(() => fetchData());
-            }}
-          >
-            Reject
-          </Button>
-        </Stack>
-      );
-    }
-    return <Label color="info">Admin Approval Pending</Label>;
+  // Completed
+  if (status === 'completed') {
+    return <Label color="success">Completed</Label>;
   }
 
-  return (
-    <>
-      <Label color={status === 'completed' ? 'success' : 'error'}>
-        {sentenceCase(status)}
-      </Label>
-
-      <VerificationModal
-        open={openVerifyModal}
-        id={_id}
-        type={verifyType}
-        handleClose={() => setOpenVerifyModal(false)}
-        fetchData={fetchData}
-      />
-    </>
-  );
+  // Fallback
+  return <Label color="error">Unknown Status</Label>;
 }
 
 export default function Release() {
@@ -219,13 +158,14 @@ export default function Release() {
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
+  const [data, setData] = useState([]);
+  const selectedReleaseObj = data?.find((s) => s._id === openId);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
   const [selected, setSelected] = useState([]);
   const [orderBy, setOrderBy] = useState(null);
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [data, setData] = useState([]);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openViewModal, setOpenViewModal] = useState(false);
@@ -417,8 +357,8 @@ export default function Release() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <ReleaseListHead
                   order={order}
                   orderBy={orderBy}
@@ -445,9 +385,24 @@ export default function Release() {
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
-                      <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                      <TableRow
+                        hover
+                        key={_id}
+                        tabIndex={-1}
+                        role="checkbox"
+                        selected={selectedData}
+                        onClick={() => {
+                          setOpenId(_id);
+                          setOpenViewModal(true);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedData}
+                            onChange={(event) => handleClick(event, _id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         </TableCell>
                         <TableCell align="left">{pledgeId}</TableCell>
                         <TableCell align="left">{sentenceCase(pledgedIn)}</TableCell>
@@ -456,7 +411,7 @@ export default function Release() {
                         <TableCell align="left">{moment(pledgedDate).format('YYYY-MM-DD')}</TableCell>
                         <TableCell align="left">{payableAmount}</TableCell>
                         <TableCell align="left">{sentenceCase(paymentType)}</TableCell>
-                        <TableCell align="left">
+                        <TableCell align="left" onClick={(e) => e.stopPropagation()}>
                           <Status 
                             status={status} 
                             _id={_id} 
@@ -469,11 +424,13 @@ export default function Release() {
                           />
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                        <TableCell align="right">
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton
                             size="large"
                             color="inherit"
                             onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
                               setOpenId(_id);
                               handleOpenMenu(e);
                             }}
@@ -583,6 +540,7 @@ export default function Release() {
 
         {userType?.toLowerCase() !== 'transaction_executive' && (
           <MenuItem
+            disabled={selectedReleaseObj?.status === 'completed'}
             onClick={() => {
               setOpen(null);
               handleOpenEditModal();
@@ -594,7 +552,8 @@ export default function Release() {
         )}
         {global.canDelete(userType) && (
           <MenuItem
-            sx={{ color: 'error.main' }}
+            disabled={selectedReleaseObj?.status === 'completed'}
+            sx={{ color: selectedReleaseObj?.status === 'completed' ? 'text.disabled' : 'error.main' }}
             onClick={() => {
               setOpen(null);
               setDeleteType('single');
@@ -956,27 +915,13 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
       setLoading(true);
       
       const payload = {};
-      if (type === 'finance') {
-        payload.financeAmount = values.amount;
-        payload.financeComments = values.comments;
-        payload.financeProof = proofDocuments[0]?.documentFile || ''; // Fallback to first proof
-        payload.proofDocuments = proofDocuments;
-        if (values.isCompleted) {
-          payload.financeCompleted = true;
-          payload.financeCompletedAt = new Date();
-          payload.status = 'release pending';
-        }
-      } else {
+      // Assignee marks the release as complete
+      if (type === 'release_complete') {
         payload.assigneeAmount = values.amount;
         payload.assigneeComments = values.comments;
-        payload.assigneeProof = proofDocuments[0]?.documentFile || '';
         payload.proofDocuments = proofDocuments;
         payload.ornaments = ornaments;
-        if (values.isCompleted) {
-          payload.assigneeCompleted = true;
-          payload.assigneeCompletedAt = new Date();
-          payload.status = 'admin approval pending';
-        }
+        payload.status = 'completed';
       }
 
       updateRelease(id, payload).then((data) => {

@@ -20,6 +20,7 @@ import {
   Modal,
   Checkbox,
   Paper,
+  IconButton,
 } from '@mui/material';
 import { sentenceCase } from 'change-case';
 import { LoadingButton } from '@mui/lab';
@@ -192,8 +193,8 @@ function Address(props) {
           </Button>
         </Stack>
         <Scrollbar>
-          <TableContainer sx={{ minWidth: 800 }}>
-            <Table>
+          <TableContainer>
+            <Table sx={{ minWidth: 800 }}>
               <TableHead>
                 <TableRow>
                   <TableCell align="left" />
@@ -472,30 +473,42 @@ function Address(props) {
                 />
               </Grid>
               <Grid item xs={12} md={4}>
-                <span>Attach address proof: </span>
-                <TextField
-                  name="documentFile"
-                  type={'file'}
-                  error={touched.documentFile && errors.documentFile && true}
-                  onBlur={handleBlur}
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    setValues({ ...values, documentFile: file });
-                    if (file) {
-                      setAddressProofPreview(URL.createObjectURL(file));
-                    }
-                  }}
-                  required
-                />
-                {addressProofPreview && (
-                  <Box sx={{ mt: 1 }}>
-                    <img
-                      src={addressProofPreview}
-                      alt="Address Proof Preview"
-                      style={{ width: '100px', height: 'auto', borderRadius: '4px', border: '1px solid #ddd' }}
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      Attach address proof:
+                    </Typography>
+                    <TextField
+                      name="documentFile"
+                      type="file"
+                      error={touched.documentFile && errors.documentFile && true}
+                      onBlur={handleBlur}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setValues({ ...values, documentFile: file });
+                        if (file) {
+                          setAddressProofPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      required
+                      fullWidth
+                      size="small"
                     />
                   </Box>
-                )}
+                  {addressProofPreview && (
+                    <IconButton
+                      component="a"
+                      href={addressProofPreview}
+                      target="_blank"
+                      rel="noreferrer"
+                      color="secondary"
+                      title="View Address Document"
+                      sx={{ mt: 3 }}
+                    >
+                      <Iconify icon="mdi:eye" />
+                    </IconButton>
+                  )}
+                </Stack>
               </Grid>
               <Grid item xs={12}>
                 <LoadingButton size="large" type="submit" variant="contained" startIcon={<SaveIcon />}>

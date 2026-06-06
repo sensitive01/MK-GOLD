@@ -293,8 +293,8 @@ export default function Fund() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <FundListHead
                   order={order}
                   orderBy={orderBy}

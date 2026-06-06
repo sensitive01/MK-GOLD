@@ -156,8 +156,8 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
           </Typography>
         </Stack>
         <Scrollbar>
-          <TableContainer sx={{ minWidth: 800 }}>
-            <Table>
+          <TableContainer>
+            <Table sx={{ minWidth: 800 }}>
               <TableHead>
                 <TableRow>
                   <TableCell align="left">Ornament Type</TableCell>

@@ -5,7 +5,7 @@ async function getAttendance(query = {}) {
     const response = await apiClient().post('/api/v1.0/branch/attendance/get', query);
     return response.data;
   } catch (err) {
-    return err;
+    return { status: false, message: err?.response?.data?.message || err.message };
   }
 }
 
@@ -14,7 +14,7 @@ async function getAttendanceById(id) {
     const response = await apiClient().get(`/api/v1.0/branch/attendance/get/${id}`);
     return response.data;
   } catch (err) {
-    return err;
+    return { status: false, message: err?.response?.data?.message || err.message };
   }
 }
 
@@ -23,7 +23,7 @@ async function createAttendance(payload) {
     const response = await apiClient().post('/api/v1.0/branch/attendance/create', payload);
     return response.data;
   } catch (err) {
-    return err;
+    return { status: false, message: err?.response?.data?.message || err.message };
   }
 }
 
@@ -32,7 +32,7 @@ async function updateAttendance(id, payload) {
     const response = await apiClient().post(`/api/v1.0/branch/attendance/update/${id}`, payload);
     return response.data;
   } catch (err) {
-    return err;
+    return { status: false, message: err?.response?.data?.message || err.message };
   }
 }
 
@@ -41,16 +41,17 @@ async function deleteAttendanceById(id) {
     const response = await apiClient().post(`/api/v1.0/branch/attendance/delete/${id}`);
     return response.data;
   } catch (err) {
-    return err;
+    return { status: false, message: err?.response?.data?.message || err.message };
   }
 }
 
-async function getBranchAttendanceStats() {
+async function getBranchAttendanceStats(employeeId = null) {
   try {
-    const response = await apiClient().get('/api/v1.0/branch/attendance/get-stats');
+    const url = employeeId ? `/api/v1.0/branch/attendance/get-stats?employeeId=${employeeId}` : '/api/v1.0/branch/attendance/get-stats';
+    const response = await apiClient().get(url);
     return response.data;
   } catch (err) {
-    return err;
+    return { status: false, message: err?.response?.data?.message || err.message };
   }
 }
 

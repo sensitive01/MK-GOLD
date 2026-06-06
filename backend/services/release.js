@@ -363,17 +363,36 @@ async function update(id, payload) {
       returnDocument: "after",
     }).exec();
 
-    // Synchronize to Sales if status or completion flags are updated
-    const syncData = {};
-    if (payload.status !== undefined) syncData.status = payload.status;
-    if (payload.financeCompleted !== undefined) syncData.financeCompleted = payload.financeCompleted;
-    if (payload.assigneeCompleted !== undefined) syncData.assigneeCompleted = payload.assigneeCompleted;
+    if (updatedRelease) {
+      const linkedSales = await Sales.find({ "release._id": id }).exec();
+      for (const sale of linkedSales) {
+        const updatedReleaseArray = sale.release.map(rel => {
+          if (rel._id && rel._id.toString() === id.toString()) {
+            return updatedRelease.toObject();
+          }
+          return rel;
+        });
 
-    if (Object.keys(syncData).length > 0) {
-      await Sales.updateMany(
-        { release: id },
-        { $set: syncData }
-      ).exec();
+        const setDataSales = {
+          release: updatedReleaseArray
+        };
+
+        if (payload.status === "completed") {
+          setDataSales.status = "bullion pending";
+          setDataSales.assigneeCompleted = true;
+          setDataSales.bullionCompleted = false;
+          setDataSales.financeCompleted = false;
+        }
+
+        if (payload.financeCompleted !== undefined) {
+          setDataSales.financeCompleted = payload.financeCompleted;
+        }
+        if (payload.assigneeCompleted !== undefined) {
+          setDataSales.assigneeCompleted = payload.assigneeCompleted;
+        }
+
+        await Sales.findByIdAndUpdate(sale._id, setDataSales).exec();
+      }
     }
 
     return updatedRelease;
@@ -393,17 +412,36 @@ async function updateWithLog(id, setData, logEntry) {
       { returnDocument: "after" }
     ).exec();
 
-    // Synchronize to Sales if status or completion flags are updated
-    if (updatedRelease && (setData.status !== undefined || setData.financeCompleted !== undefined || setData.assigneeCompleted !== undefined)) {
-      const linkedSales = await Sales.find({ release: id }).exec();
+    if (updatedRelease) {
+      const linkedSales = await Sales.find({ "release._id": id }).exec();
       const salesService = require("./sales");
       for (const sale of linkedSales) {
-        const syncData = {};
-        if (setData.status !== undefined) syncData.status = setData.status;
-        if (setData.financeCompleted !== undefined) syncData.financeCompleted = setData.financeCompleted;
-        if (setData.assigneeCompleted !== undefined) syncData.assigneeCompleted = setData.assigneeCompleted;
-        
-        await salesService.updateWithLog(sale._id, syncData, logEntry);
+        const updatedReleaseArray = sale.release.map(rel => {
+          if (rel._id && rel._id.toString() === id.toString()) {
+            return updatedRelease.toObject();
+          }
+          return rel;
+        });
+
+        const setDataSales = {
+          release: updatedReleaseArray
+        };
+
+        if (setData.status === "completed") {
+          setDataSales.status = "bullion pending";
+          setDataSales.assigneeCompleted = true;
+          setDataSales.bullionCompleted = false;
+          setDataSales.financeCompleted = false;
+        }
+
+        if (setData.financeCompleted !== undefined) {
+          setDataSales.financeCompleted = setData.financeCompleted;
+        }
+        if (setData.assigneeCompleted !== undefined) {
+          setDataSales.assigneeCompleted = setData.assigneeCompleted;
+        }
+
+        await salesService.updateWithLog(sale._id, setDataSales, logEntry);
       }
     }
 
@@ -416,11 +454,12 @@ async function updateWithLog(id, setData, logEntry) {
 async function remove(id) {
   try {
     const ids = id.split(",");
+    const objectIds = ids.map(idStr => new mongoose.Types.ObjectId(idStr));
     
-    // Remove references from Sales model
+    // Remove references/embedded documents from Sales model
     await Sales.updateMany(
-      { release: { $in: ids } },
-      { $pull: { release: { $in: ids } } }
+      { "release._id": { $in: objectIds } },
+      { $pull: { release: { _id: { $in: objectIds } } } }
     ).exec();
 
     return await Release.deleteMany({

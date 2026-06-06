@@ -51,6 +51,8 @@ import Scrollbar from '../../components/scrollbar';
 import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashboard/attendance';
 // mock
 import { deleteAttendanceById, getAttendance } from '../../apis/admin/attendance';
+import { getBranchAttendanceStats } from '../../apis/branch/attendance';
+import CreateAttendance from '../../components/branch/attendance/CreateAttendance';
 import global from '../../utils/global';
 
 // ----------------------------------------------------------------------
@@ -96,9 +98,12 @@ export default function Attendance() {
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [data, setData] = useState([]);
+  const [stats, setStats] = useState({ total: 0, present: 0, absent: 0 });
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
   const [currentTab, setCurrentTab] = useState('all_attendance');
+  const [toggleContainer, setToggleContainer] = useState(false);
+  const [toggleContainerType, setToggleContainerType] = useState('');
   
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
@@ -125,13 +130,24 @@ export default function Attendance() {
     validationSchema: schema,
     onSubmit: (values) => {
       setOpenBackdrop(true);
-      getAttendance({
+      const query = {
         createdAt: {
           $gte: values.fromDate?.format("YYYY-MM-DD"),
           $lte: values.toDate?.format("YYYY-MM-DD"),
         },
-      }).then((data) => {
-        setData(data.data);
+      };
+      if (currentTab === 'my_attendance') {
+        const empId = auth.user.employee?._id || auth.user.employee;
+        if (!empId) {
+          setData([]);
+          setOpenBackdrop(false);
+          setFilterOpen(false);
+          return;
+        }
+        query.employee = empId;
+      }
+      getAttendance(query).then((data) => {
+        setData(data.data || []);
         setOpenBackdrop(false);
       });
       setFilterOpen(false);
@@ -141,7 +157,19 @@ export default function Attendance() {
   const fetchData = useCallback(
     (query = {}) => {
       if (currentTab === 'my_attendance') {
-        query.employee = auth.user.employee?._id || auth.user.employee;
+        const empId = auth.user.employee?._id || auth.user.employee;
+        if (!empId) {
+          setData([]);
+          setStats({ total: 0, present: 0, absent: 0 });
+          setOpenBackdrop(false);
+          return;
+        }
+        query.employee = empId;
+        getBranchAttendanceStats(empId).then((data) => {
+          if (data.status) {
+            setStats(data.data);
+          }
+        });
       } else if (!query.createdAt) {
           query.createdAt = {
             $gte: values.fromDate ?? moment()?.format("YYYY-MM-DD"),
@@ -158,7 +186,7 @@ export default function Attendance() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, toggleContainer]);
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -298,12 +326,47 @@ export default function Attendance() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="xl">
+      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
           <Typography variant="h4" sx={{ color: '#fff' }}>
             Attendance
           </Typography>
+          {currentTab === 'my_attendance' && (
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setToggleContainer(!toggleContainer);
+                setToggleContainerType('create');
+              }}
+            >
+              Mark Attendance
+            </Button>
+          )}
         </Stack>
+
+        {currentTab === 'my_attendance' && (
+          <Grid container spacing={3} mb={5}>
+            <Grid item xs={12} sm={4}>
+              <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
+                <Typography variant="h6">Total Days (Month)</Typography>
+                <Typography variant="h4">{stats?.total || 0}</Typography>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
+                <Typography variant="h6">Present</Typography>
+                <Typography variant="h4">{stats?.present || 0}</Typography>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'error.main', color: 'white' }}>
+                <Typography variant="h6">Absent</Typography>
+                <Typography variant="h4">{stats?.absent || 0}</Typography>
+              </Card>
+            </Grid>
+          </Grid>
+        )}
 
         <Card>
           <Box sx={{ width: '100%' }}>
@@ -315,22 +378,18 @@ export default function Attendance() {
             </Box>
             
             <Box sx={{ p: 3 }}>
-              {currentTab === 'all_attendance' && (
-                <Button variant="contained" startIcon={<Iconify icon="material-symbols:filter-alt-off" />} onClick={() => setFilterOpen(true)} sx={{ float: 'right', mx: '10px' }}>
-                  Filter
-                </Button>
-              )}
+              <Button variant="contained" startIcon={<Iconify icon="material-symbols:filter-alt-off" />} onClick={() => setFilterOpen(true)} sx={{ float: 'right', mx: '10px' }}>
+                Filter
+              </Button>
               <Button variant="contained" startIcon={<Iconify icon="carbon:document-export" />} onClick={() => {
                 handleExport(data?.map(e => ({ EmployeeId: e?.employee?.employeeId, EmployeeName: e?.employee?.name, Date: e.createdAt })), 'Attendance');
               }} sx={{ float: 'right' }}>
                 Export
               </Button>
 
-              {currentTab === 'all_attendance' && (
-                <p style={{ color: '#fff' }}>
-                  From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date: {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
-                </p>
-              )}
+              <p style={{ color: '#fff' }}>
+                From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date: {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
+              </p>
 
               <AttendanceListToolbar
                 numSelected={selected?.length}
@@ -340,8 +399,8 @@ export default function Attendance() {
               />
 
               <Scrollbar>
-                <TableContainer sx={{ minWidth: 800 }}>
-                  <Table>
+                <TableContainer>
+                  <Table sx={{ minWidth: 800 }}>
                     <AttendanceListHead
                       order={order}
                       orderBy={orderBy}
@@ -484,6 +543,25 @@ export default function Attendance() {
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
       </Backdrop>
+
+      {toggleContainer === true && toggleContainerType === 'create' && (
+        <Container maxWidth="xl">
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+              Mark Attendance
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="mdi:arrow-left" />}
+              onClick={() => setToggleContainer(!toggleContainer)}
+            >
+              Back
+            </Button>
+          </Stack>
+
+          <CreateAttendance setToggleContainer={setToggleContainer} setNotify={setNotify} />
+        </Container>
+      )}
     </>
   );
 }

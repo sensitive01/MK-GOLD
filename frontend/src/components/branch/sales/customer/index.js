@@ -26,6 +26,9 @@ import {
   DialogContent,
   DialogActions,
   Divider,
+  Tab,
+  Tabs,
+  IconButton,
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -84,6 +87,7 @@ function Customer(props) {
   const [openLogModal, setOpenLogModal] = useState(false);
   const [selectedEnquiryForLog, setSelectedEnquiryForLog] = useState(null);
   const [fetchingLog, setFetchingLog] = useState(false);
+  const [tabValue, setTabValue] = useState(0);
 
   const handleOpenLogModal = async (customer) => {
     const enqId = customer.enqID || customer.customerId;
@@ -126,6 +130,8 @@ function Customer(props) {
   }, [auth.user?.branch]);
 
   const videoConstraints = {
+    width: 320,
+    height: 240,
     facingMode: 'user',
   };
 
@@ -494,6 +500,7 @@ function Customer(props) {
       setOtpStatus('success');
       setAltOtpStatus('success');
       setEnquiryId(e.enqID || '');
+      setTabValue(0);
       setCustomerModal(true);
       props.setAutoOpenEdit(false);
     }
@@ -550,6 +557,7 @@ function Customer(props) {
               setSignaturePreview(null);
               setOtpStatus(null);
               setAltOtpStatus(null);
+              setTabValue(0);
               setCustomerModal(true);
               }}
             >
@@ -558,8 +566,8 @@ function Customer(props) {
           </Stack>
         </Stack>
         <Scrollbar>
-          <TableContainer sx={{ minWidth: 800 }}>
-            <Table>
+          <TableContainer>
+            <Table sx={{ minWidth: 800 }}>
               <TableHead>
                 <TableRow>
                   <TableCell align="left" />
@@ -639,6 +647,7 @@ function Customer(props) {
                           setOtpStatus('success');
                           setAltOtpStatus('success');
                           setEnquiryId(e.enqID || '');
+                          setTabValue(0);
                           setCustomerModal(true);
                         }}
                       >
@@ -748,389 +757,460 @@ function Customer(props) {
             }}
             autoComplete="off"
           >
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Stack direction="row" spacing={2} alignItems="center">
-                    <TextField
-                        size="small"
-                        label="Enquiry ID (e.g. ENQ123A)"
-                        value={enquiryId}
-                        onChange={(e) => setEnquiryId(e.target.value)}
-                        sx={{ maxWidth: 300 }}
-                    />
-                    <LoadingButton
-                        loading={fetchingEnquiry}
-                        variant="outlined"
-                        onClick={handleFetchEnquiry}
-                    >
-                        Fetch Detail
-                    </LoadingButton>
-                </Stack>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  name="name"
-                  value={values.name}
-                  error={touched.name && errors.name && true}
-                  label={touched.name && errors.name ? errors.name : 'Name'}
-                  fullWidth
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  name="phoneNumber"
-                  value={focusedField === 'phoneNumber' ? values.phoneNumber : global.maskPhoneNumber(values.phoneNumber)}
-                  onFocus={() => setFocusedField('phoneNumber')}
-                  onBlur={(e) => {
-                    handleBlur(e);
-                    setFocusedField(null);
-                    if (values.phoneNumber && values.phoneNumber.length === 10) {
-                      findCustomer({ phoneNumber: values.phoneNumber, all: true }).then((res) => {
-                        if (res?.data && res.data.length > 0) {
-                          const existingUser = res.data[0];
-                          if (existingUser._id !== openId) {
-                            setOpenId(existingUser._id);
-                            setValues({
-                              ...values,
-                              name: existingUser.name || '',
-                              alternatePhoneNumber: existingUser.alternatePhoneNumber || '',
-                              email: existingUser.email || '',
-                              dob: existingUser.dob || null,
-                              gender: existingUser.gender || '',
-                              maritalStatus: existingUser.maritalStatus || '',
-                              source: existingUser.source || '',
-                              status: existingUser.status || 'active',
-                              chooseId: existingUser.chooseId || '',
-                              idNo: existingUser.idNo || '',
-                            });
-                            const profileImg = existingUser.profileImage?.uploadedFile;
-                            if (profileImg) {
-                              setImg(profileImg.startsWith('http') ? profileImg : `${global.baseURL}/${profileImg}`);
-                            }
-                            setEnquiryId(existingUser.enqID || '');
-                            setOtpStatus('success');
-                            setAltOtpStatus('success');
-                            setNotify({
-                              open: true,
-                              message: 'Existing customer found. Details loaded.',
-                              severity: 'info',
-                            });
-                          }
-                        }
-                      });
-                    }
-                  }}
-                  error={touched.phoneNumber && errors.phoneNumber && true}
-                  label={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber : 'Phone'}
-                  fullWidth
-                  onChange={(e) => {
-                    let val = e.target.value.replace(/\D/g, '');
-                    if (val.startsWith('0')) {
-                      val = val.substring(1);
-                    }
-                    if (val.length > 0 && !/^[6-9]/.test(val)) {
-                      val = '';
-                    }
-                    setValues({ ...values, phoneNumber: val.slice(0, 10) });
-                  }}
-                  inputProps={{ maxLength: 10 }}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  name="alternatePhoneNumber"
-                  value={focusedField === 'alternatePhoneNumber' ? values.alternatePhoneNumber : global.maskPhoneNumber(values.alternatePhoneNumber)}
-                  onFocus={() => setFocusedField('alternatePhoneNumber')}
-                  onBlur={(e) => {
-                    handleBlur(e);
-                    setFocusedField(null);
-                    if (values.alternatePhoneNumber && values.alternatePhoneNumber.length === 10 && altOtpStatus !== 'success') {
-                      sendOtp({ phoneNumber: values.alternatePhoneNumber }).then((res) => {
-                        if (res.status) {
-                          setAltToken(res.data.token);
-                          setNotify({ open: true, message: 'OTP sent to Alt Phone', severity: 'success' });
-                        }
-                      });
-                    }
-                  }}
-                  error={touched.alternatePhoneNumber && errors.alternatePhoneNumber && true}
-                  label={
-                    touched.alternatePhoneNumber && errors.alternatePhoneNumber
-                      ? errors.alternatePhoneNumber
-                      : 'Alt phone'
-                  }
-                  fullWidth
-                  onChange={(e) => {
-                    let val = e.target.value.replace(/\D/g, '');
-                    if (val.startsWith('0')) {
-                      val = val.substring(1);
-                    }
-                    if (val.length > 0 && !/^[6-9]/.test(val)) {
-                      val = '';
-                    }
-                    setValues({ ...values, alternatePhoneNumber: val.slice(0, 10) });
-                  }}
-                  inputProps={{ maxLength: 10 }}
-                  InputProps={altOtpStatus === 'success' ? {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main' }}>
-                          <Iconify icon="mdi:check-circle" sx={{ mr: 0.5 }} />
-                          <Typography variant="caption" fontWeight="bold">Verified</Typography>
-                        </Box>
-                      </InputAdornment>
-                    )
-                  } : null}
-                />
-              </Grid>
-              {values.alternatePhoneNumber?.length === 10 && altOtpStatus !== 'success' && (
+            <Tabs
+              value={tabValue}
+              onChange={(e, newValue) => setTabValue(newValue)}
+              sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
+              variant="fullWidth"
+            >
+              <Tab label="1. Details" />
+              <Tab label="2. Documents" />
+              <Tab label="3. Photo Capture" />
+            </Tabs>
+
+            {tabValue === 0 && (
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                      <TextField
+                          size="small"
+                          label="Enquiry ID (e.g. ENQ123A)"
+                          value={enquiryId}
+                          onChange={(e) => setEnquiryId(e.target.value)}
+                          sx={{ maxWidth: 300 }}
+                      />
+                      <LoadingButton
+                          loading={fetchingEnquiry}
+                          variant="outlined"
+                          onClick={handleFetchEnquiry}
+                      >
+                          Fetch Detail
+                      </LoadingButton>
+                  </Stack>
+                </Grid>
                 <Grid item xs={12} md={4}>
                   <TextField
-                    name="altOtp"
-                    value={values.altOtp}
-                    error={touched.altOtp && errors.altOtp && true}
-                    label={touched.altOtp && errors.altOtp ? errors.altOtp : 'Alt Phone Number OTP'}
+                    name="name"
+                    value={values.name}
+                    error={touched.name && errors.name && true}
+                    label={touched.name && errors.name ? errors.name : 'Name'}
                     fullWidth
                     onBlur={handleBlur}
-                    onChange={(e) => {
-                      handleChange(e);
-                      const val = e.target.value;
-                      if (val.length === 6) {
-                        verifyOtp({ otp: val, token: altToken }).then((res) => {
-                          if (res.status) {
-                            setAltOtpStatus('success');
-                          } else {
-                            setAltOtpStatus('error');
+                    onChange={handleChange}
+                  />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    name="phoneNumber"
+                    value={focusedField === 'phoneNumber' ? values.phoneNumber : global.maskPhoneNumber(values.phoneNumber)}
+                    onFocus={() => setFocusedField('phoneNumber')}
+                    onBlur={(e) => {
+                      handleBlur(e);
+                      setFocusedField(null);
+                      if (values.phoneNumber && values.phoneNumber.length === 10) {
+                        findCustomer({ phoneNumber: values.phoneNumber, all: true }).then((res) => {
+                          if (res?.data && res.data.length > 0) {
+                            const existingUser = res.data[0];
+                            if (existingUser._id !== openId) {
+                              setOpenId(existingUser._id);
+                              setValues({
+                                ...values,
+                                name: existingUser.name || '',
+                                alternatePhoneNumber: existingUser.alternatePhoneNumber || '',
+                                email: existingUser.email || '',
+                                dob: existingUser.dob || null,
+                                gender: existingUser.gender || '',
+                                maritalStatus: existingUser.maritalStatus || '',
+                                source: existingUser.source || '',
+                                status: existingUser.status || 'active',
+                                chooseId: existingUser.chooseId || '',
+                                idNo: existingUser.idNo || '',
+                              });
+                              const profileImg = existingUser.profileImage?.uploadedFile;
+                              if (profileImg) {
+                                setImg(profileImg.startsWith('http') ? profileImg : `${global.baseURL}/${profileImg}`);
+                              }
+                              setEnquiryId(existingUser.enqID || '');
+                              setOtpStatus('success');
+                              setAltOtpStatus('success');
+                              setNotify({
+                                open: true,
+                                message: 'Existing customer found. Details loaded.',
+                                severity: 'info',
+                              });
+                            }
                           }
                         });
-                      } else {
-                        setAltOtpStatus(null);
                       }
                     }}
-                    inputProps={{ maxLength: 6 }}
-                  />
-                  {altOtpStatus === 'success' && <Typography variant="caption" color="success.main">OTP verified successfully</Typography>}
-                  {altOtpStatus === 'error' && <Typography variant="caption" color="error.main">Invalid OTP</Typography>}
-                </Grid>
-              )}
-              <Grid item xs={12} md={4}>
-                <TextField
-                  name="email"
-                  value={values.email}
-                  error={touched.email && errors.email && true}
-                  label={touched.email && errors.email ? errors.email : 'Email id'}
-                  fullWidth
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <LocalizationProvider dateAdapter={AdapterMoment}>
-                  <DesktopDatePicker
-                    name="dob"
-                    value={values.dob}
-                    error={touched.dob && errors.dob && true}
-                    label={touched.dob && errors.dob ? errors.dob : 'DOB'}
-                    inputFormat="MM/DD/YYYY"
+                    error={touched.phoneNumber && errors.phoneNumber && true}
+                    label={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber : 'Phone'}
+                    fullWidth
                     onChange={(e) => {
-                      setValues({ ...values, dob: e });
+                      let val = e.target.value.replace(/\D/g, '');
+                      if (val.startsWith('0')) {
+                        val = val.substring(1);
+                      }
+                      if (val.length > 0 && !/^[6-9]/.test(val)) {
+                        val = '';
+                      }
+                      setValues({ ...values, phoneNumber: val.slice(0, 10) });
                     }}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
+                    inputProps={{ maxLength: 10 }}
                   />
-                </LocalizationProvider>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth error={touched.gender && errors.gender && true}>
-                  <InputLabel id="select-label">Select gender</InputLabel>
-                  <Select
-                    labelId="select-label"
-                    id="select"
-                    label={touched.gender && errors.gender ? errors.gender : 'Select gender'}
-                    name="gender"
-                    value={values.gender}
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                  >
-                    <MenuItem value="male">Male</MenuItem>
-                    <MenuItem value="female">Female</MenuItem>
-                    <MenuItem value="other">Other</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-
-
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth error={touched.maritalStatus && errors.maritalStatus && true}>
-                  <InputLabel id="select-label">Select marital status</InputLabel>
-                  <Select
-                    labelId="select-label"
-                    id="select"
-                    label={
-                      touched.maritalStatus && errors.maritalStatus ? errors.maritalStatus : 'Select marital status'
-                    }
-                    name="maritalStatus"
-                    value={values.maritalStatus}
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                  >
-                    <MenuItem value="married">Married</MenuItem>
-                    <MenuItem value="unmarried">Unmarried</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth error={touched.source && errors.source && true}>
-                  <InputLabel id="select-label">Select source</InputLabel>
-                  <Select
-                    labelId="select-label"
-                    id="select"
-                    label={touched.source && errors.source ? errors.source : 'Select source'}
-                    name="source"
-                    value={values.source}
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                  >
-                    <MenuItem value="TV Ad">TV Ad</MenuItem>
-                    <MenuItem value="Newspaper Ad">Newspaper Ad</MenuItem>
-                    <MenuItem value="Friend Reference">Friend Reference</MenuItem>
-                    <MenuItem value="Hoardings">Hoardings</MenuItem>
-                    <MenuItem value="Pamphlet Ad">Pamphlet Ad</MenuItem>
-                    <MenuItem value="Poster Ad">Poster Ad</MenuItem>
-                    <MenuItem value="Google Ad">Google Ad</MenuItem>
-                    <MenuItem value="Others">Others</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth error={touched.chooseId && errors.chooseId && true}>
-                  <InputLabel id="select-label">Select choose id</InputLabel>
-                  <Select
-                    labelId="select-label"
-                    id="select"
-                    label={touched.chooseId && errors.chooseId ? errors.chooseId : 'Select choose id'}
-                    name="chooseId"
-                    value={values.chooseId}
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                  >
-                    <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
-                    <MenuItem value="Driving License">Driving License</MenuItem>
-                    <MenuItem value="PAN Card">PAN Card</MenuItem>
-                    <MenuItem value="Passport">Passport</MenuItem>
-                    <MenuItem value="Ration Card">Ration Card</MenuItem>
-                    <MenuItem value="Others">Others</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  name="idNo"
-                  value={values.idNo}
-                  error={touched.idNo && errors.idNo && true}
-                  label={touched.idNo && errors.idNo ? errors.idNo : 'Id No'}
-                  fullWidth
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <span>UploadId: </span>
-                 <TextField
-                  name="uploadId"
-                  type={'file'}
-                  onBlur={handleBlur}
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    setValues({ ...values, uploadId: file });
-                    if (file) {
-                      setUploadIdPreview(URL.createObjectURL(file));
-                    }
-                  }}
-                />
-                {uploadIdPreview && (
-                  <Box sx={{ mt: 1 }}>
-                    <img src={uploadIdPreview} alt="ID Preview" style={{ width: '100px', height: 'auto', borderRadius: '4px', border: '1px solid #ddd' }} />
-                  </Box>
-                )}
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <span>Signature: </span>
-                 <TextField
-                  name="signature"
-                  type={'file'}
-                  onBlur={handleBlur}
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    setValues({ ...values, signature: file });
-                    if (file) {
-                      setSignaturePreview(URL.createObjectURL(file));
-                    }
-                  }}
-                />
-                {signaturePreview && (
-                  <Box sx={{ mt: 1 }}>
-                    <img src={signaturePreview} alt="Signature Preview" style={{ width: '100px', height: 'auto', borderRadius: '4px', border: '1px solid #ddd' }} />
-                  </Box>
-                )}
-              </Grid>
-              {customerModal && (
-                <Grid item xs={12}>
-                  {img === null ? (
-                    <>
-                      <Webcam
-                        mirrored
-                        audio={false}
-                        height={400}
-                        width={400}
-                        ref={webcamRef}
-                        screenshotFormat="image/jpeg"
-                        videoConstraints={videoConstraints}
-                      />
-                      <br />
-                      <Button size="small" variant="contained" onClick={capture} sx={{ mt: 1 }}>
-                        Capture photo
-                      </Button>
-                    </>
-                  ) : (
-                    <div style={{ textAlign: 'center' }}>
-                      <img 
-                        src={img} 
-                        alt="Captured" 
-                        style={{ 
-                          width: '100%', 
-                          maxWidth: '400px', 
-                          height: 'auto', 
-                          display: 'block', 
-                          margin: '0 auto', 
-                          borderRadius: '8px', 
-                          border: '1px solid #ccc' 
-                        }} 
-                      />
-                      <Button size="small" variant="contained" color="warning" onClick={() => setImg(null)} sx={{ mt: 1 }}>
-                        Retake
-                      </Button>
-                    </div>
-                  )}
                 </Grid>
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    name="alternatePhoneNumber"
+                    value={focusedField === 'alternatePhoneNumber' ? values.alternatePhoneNumber : global.maskPhoneNumber(values.alternatePhoneNumber)}
+                    onFocus={() => setFocusedField('alternatePhoneNumber')}
+                    onBlur={(e) => {
+                      handleBlur(e);
+                      setFocusedField(null);
+                      if (values.alternatePhoneNumber && values.alternatePhoneNumber.length === 10 && altOtpStatus !== 'success') {
+                        sendOtp({ phoneNumber: values.alternatePhoneNumber }).then((res) => {
+                          if (res.status) {
+                            setAltToken(res.data.token);
+                            setNotify({ open: true, message: 'OTP sent to Alt Phone', severity: 'success' });
+                          }
+                        });
+                      }
+                    }}
+                    error={touched.alternatePhoneNumber && errors.alternatePhoneNumber && true}
+                    label={
+                      touched.alternatePhoneNumber && errors.alternatePhoneNumber
+                        ? errors.alternatePhoneNumber
+                        : 'Alt phone'
+                    }
+                    fullWidth
+                    onChange={(e) => {
+                      let val = e.target.value.replace(/\D/g, '');
+                      if (val.startsWith('0')) {
+                        val = val.substring(1);
+                      }
+                      if (val.length > 0 && !/^[6-9]/.test(val)) {
+                        val = '';
+                      }
+                      setValues({ ...values, alternatePhoneNumber: val.slice(0, 10) });
+                    }}
+                    inputProps={{ maxLength: 10 }}
+                    InputProps={altOtpStatus === 'success' ? {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main' }}>
+                            <Iconify icon="mdi:check-circle" sx={{ mr: 0.5 }} />
+                            <Typography variant="caption" fontWeight="bold">Verified</Typography>
+                          </Box>
+                        </InputAdornment>
+                      )
+                    } : null}
+                  />
+                </Grid>
+                {values.alternatePhoneNumber?.length === 10 && altOtpStatus !== 'success' && (
+                  <Grid item xs={12} md={4}>
+                    <TextField
+                      name="altOtp"
+                      value={values.altOtp}
+                      error={touched.altOtp && errors.altOtp && true}
+                      label={touched.altOtp && errors.altOtp ? errors.altOtp : 'Alt Phone Number OTP'}
+                      fullWidth
+                      onBlur={handleBlur}
+                      onChange={(e) => {
+                        handleChange(e);
+                        const val = e.target.value;
+                        if (val.length === 6) {
+                          verifyOtp({ otp: val, token: altToken }).then((res) => {
+                            if (res.status) {
+                              setAltOtpStatus('success');
+                            } else {
+                              setAltOtpStatus('error');
+                            }
+                          });
+                        } else {
+                          setAltOtpStatus(null);
+                        }
+                      }}
+                      inputProps={{ maxLength: 6 }}
+                    />
+                    {altOtpStatus === 'success' && <Typography variant="caption" color="success.main">OTP verified successfully</Typography>}
+                    {altOtpStatus === 'error' && <Typography variant="caption" color="error.main">Invalid OTP</Typography>}
+                  </Grid>
+                )}
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    name="email"
+                    value={values.email}
+                    error={touched.email && errors.email && true}
+                    label={touched.email && errors.email ? errors.email : 'Email id'}
+                    fullWidth
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                  />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <LocalizationProvider dateAdapter={AdapterMoment}>
+                    <DesktopDatePicker
+                      name="dob"
+                      value={values.dob}
+                      error={touched.dob && errors.dob && true}
+                      label={touched.dob && errors.dob ? errors.dob : 'DOB'}
+                      inputFormat="MM/DD/YYYY"
+                      onChange={(e) => {
+                        setValues({ ...values, dob: e });
+                      }}
+                      renderInput={(params) => <TextField {...params} fullWidth />}
+                    />
+                  </LocalizationProvider>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth error={touched.gender && errors.gender && true}>
+                    <InputLabel id="select-label">Select gender</InputLabel>
+                    <Select
+                      labelId="select-label"
+                      id="select"
+                      label={touched.gender && errors.gender ? errors.gender : 'Select gender'}
+                      name="gender"
+                      value={values.gender}
+                      onBlur={handleBlur}
+                      onChange={handleChange}
+                    >
+                      <MenuItem value="male">Male</MenuItem>
+                      <MenuItem value="female">Female</MenuItem>
+                      <MenuItem value="other">Other</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth error={touched.maritalStatus && errors.maritalStatus && true}>
+                    <InputLabel id="select-label">Select marital status</InputLabel>
+                    <Select
+                      labelId="select-label"
+                      id="select"
+                      label={
+                        touched.maritalStatus && errors.maritalStatus ? errors.maritalStatus : 'Select marital status'
+                      }
+                      name="maritalStatus"
+                      value={values.maritalStatus}
+                      onBlur={handleBlur}
+                      onChange={handleChange}
+                    >
+                      <MenuItem value="married">Married</MenuItem>
+                      <MenuItem value="unmarried">Unmarried</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth error={touched.source && errors.source && true}>
+                    <InputLabel id="select-label">Select source</InputLabel>
+                    <Select
+                      labelId="select-label"
+                      id="select"
+                      label={touched.source && errors.source ? errors.source : 'Select source'}
+                      name="source"
+                      value={values.source}
+                      onBlur={handleBlur}
+                      onChange={handleChange}
+                    >
+                      <MenuItem value="TV Ad">TV Ad</MenuItem>
+                      <MenuItem value="Newspaper Ad">Newspaper Ad</MenuItem>
+                      <MenuItem value="Friend Reference">Friend Reference</MenuItem>
+                      <MenuItem value="Hoardings">Hoardings</MenuItem>
+                      <MenuItem value="Pamphlet Ad">Pamphlet Ad</MenuItem>
+                      <MenuItem value="Poster Ad">Poster Ad</MenuItem>
+                      <MenuItem value="Google Ad">Google Ad</MenuItem>
+                      <MenuItem value="Others">Others</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </Grid>
+            )}
+
+            {tabValue === 1 && (
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth error={touched.chooseId && errors.chooseId && true}>
+                    <InputLabel id="select-label">Select choose id</InputLabel>
+                    <Select
+                      labelId="select-label"
+                      id="select"
+                      label={touched.chooseId && errors.chooseId ? errors.chooseId : 'Select choose id'}
+                      name="chooseId"
+                      value={values.chooseId}
+                      onBlur={handleBlur}
+                      onChange={handleChange}
+                    >
+                      <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
+                      <MenuItem value="Driving License">Driving License</MenuItem>
+                      <MenuItem value="PAN Card">PAN Card</MenuItem>
+                      <MenuItem value="Passport">Passport</MenuItem>
+                      <MenuItem value="Ration Card">Ration Card</MenuItem>
+                      <MenuItem value="Others">Others</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    name="idNo"
+                    value={values.idNo}
+                    error={touched.idNo && errors.idNo && true}
+                    label={touched.idNo && errors.idNo ? errors.idNo : 'Id No'}
+                    fullWidth
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
+                      Upload ID:
+                    </Typography>
+                    <TextField
+                      name="uploadId"
+                      type={'file'}
+                      onBlur={handleBlur}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setValues({ ...values, uploadId: file });
+                        if (file) {
+                          setUploadIdPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      size="small"
+                      fullWidth
+                    />
+                    {uploadIdPreview && (
+                      <IconButton
+                        component="a"
+                        href={uploadIdPreview}
+                        target="_blank"
+                        rel="noreferrer"
+                        color="secondary"
+                        title="View ID Document"
+                      >
+                        <Iconify icon="mdi:eye" />
+                      </IconButton>
+                    )}
+                  </Stack>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
+                      Signature:
+                    </Typography>
+                    <TextField
+                      name="signature"
+                      type={'file'}
+                      onBlur={handleBlur}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setValues({ ...values, signature: file });
+                        if (file) {
+                          setSignaturePreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      size="small"
+                      fullWidth
+                    />
+                    {signaturePreview && (
+                      <IconButton
+                        component="a"
+                        href={signaturePreview}
+                        target="_blank"
+                        rel="noreferrer"
+                        color="secondary"
+                        title="View Signature"
+                      >
+                        <Iconify icon="mdi:eye" />
+                      </IconButton>
+                    )}
+                  </Stack>
+                </Grid>
+              </Grid>
+            )}
+
+            {tabValue === 2 && (
+              <Grid container spacing={3}>
+                {customerModal && (
+                  <Grid item xs={12}>
+                    {img === null ? (
+                      <div style={{ textAlign: 'center' }}>
+                        <Webcam
+                          mirrored
+                          audio={false}
+                          height={240}
+                          width={320}
+                          ref={webcamRef}
+                          screenshotFormat="image/jpeg"
+                          videoConstraints={videoConstraints}
+                        />
+                        <br />
+                        <Button size="small" variant="contained" onClick={capture} sx={{ mt: 1 }}>
+                          Capture photo
+                        </Button>
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'center' }}>
+                        <img 
+                          src={img} 
+                          alt="Captured" 
+                          style={{ 
+                            width: '100%', 
+                            maxWidth: '320px', 
+                            height: 'auto', 
+                            display: 'block', 
+                            margin: '0 auto', 
+                            borderRadius: '8px', 
+                            border: '1px solid #ccc' 
+                          }} 
+                        />
+                        <Button size="small" variant="contained" color="warning" onClick={() => setImg(null)} sx={{ mt: 1 }}>
+                          Retake
+                        </Button>
+                      </div>
+                    )}
+                  </Grid>
+                )}
+              </Grid>
+            )}
+
+            <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3, borderTop: 1, borderColor: 'divider', pt: 2 }}>
+              {tabValue > 0 && (
+                <Button
+                  size="large"
+                  variant="outlined"
+                  onClick={() => setTabValue((prev) => prev - 1)}
+                >
+                  Back
+                </Button>
               )}
-              <Grid item xs={12}>
-                <LoadingButton size="large" type="submit" variant="contained" startIcon={<SaveIcon />}>
-                  Save
-                </LoadingButton>
+              {tabValue < 2 ? (
                 <Button
                   size="large"
                   variant="contained"
-                  color="error"
-                  sx={{ ml: 2 }}
-                  startIcon={<CloseIcon />}
-                  onClick={() => setCustomerModal(false)}
+                  onClick={() => setTabValue((prev) => prev + 1)}
                 >
-                  Close
+                  Next
                 </Button>
-              </Grid>
-            </Grid>
+              ) : (
+                <LoadingButton
+                  size="large"
+                  type="submit"
+                  variant="contained"
+                  startIcon={<SaveIcon />}
+                >
+                  Save
+                </LoadingButton>
+              )}
+              <Button
+                size="large"
+                variant="outlined"
+                color="error"
+                startIcon={<CloseIcon />}
+                onClick={() => setCustomerModal(false)}
+              >
+                Close
+              </Button>
+            </Stack>
           </form>
         </Box>
       </Modal>

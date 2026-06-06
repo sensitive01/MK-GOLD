@@ -44,13 +44,16 @@ function isBranch(req, res, next) {
     userType === "branch_executive" ||
     userType === "transaction_executive" ||
     userType === "telecalling" ||
+    userType === "bullion_desk" ||
     userType === "admin" ||
     userType === "finance" ||
     userType === "operations" ||
-    userType === "subadmin"
+    userType === "subadmin" ||
+    userType === "hr"
   ) {
     return next();
   }
+
 
   return res.status(401).json({
     status: false,

@@ -44,6 +44,21 @@ async function create(req, res) {
 
 async function update(req, res) {
   try {
+    if (req.body.logoutTime) {
+      const records = await attendanceService.findById(req.params.id);
+      const record = records && records[0];
+      if (record) {
+        const recordEmpId = record.employee?._id?.toString() || record.employee?.toString();
+        const userEmpId = req.user.employee?._id?.toString() || req.user.employee?.toString();
+        if (!userEmpId || recordEmpId !== userEmpId) {
+          return res.json({
+            status: false,
+            message: "You cannot mark logout for another employee.",
+            data: {},
+          });
+        }
+      }
+    }
     res.json({
       status: true,
       message: "",
@@ -85,8 +100,8 @@ async function getStats(req, res) {
   try {
     const branchId = req.user.branch?._id || req.user.branch;
     const type = req.user.userType?.toLowerCase();
-    let employeeId = null;
-    if (["assistant_branch_manager", "branch_executive", "telecalling", "finance", "accounts", "operations"].includes(type)) {
+    let employeeId = req.query.employeeId || null;
+    if (!employeeId && ["branch_executive", "telecalling", "finance", "accounts", "operations"].includes(type)) {
       employeeId = req.user.employee?._id || req.user.employee;
     }
 

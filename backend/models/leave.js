@@ -17,6 +17,17 @@ const Leave = mongoose.model(
         type: String,
         required: true,
       },
+      leaveCategory: {
+        type: String,
+        enum: ["Leave", "Permission"],
+        default: "Leave",
+      },
+      startTime: {
+        type: String,
+      },
+      endTime: {
+        type: String,
+      },
       dates: [Date],
       note: {
         type: String,

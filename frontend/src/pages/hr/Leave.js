@@ -389,8 +389,8 @@ export default function Leave() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <LeaveListHead
                   order={order}
                   orderBy={orderBy}
@@ -402,7 +402,7 @@ export default function Leave() {
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, branch, employee, leaveType, dates, note, status, createdAt } = row;
+                    const { _id, branch, employee, leaveType, leaveCategory, startTime, endTime, dates, note, status, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -416,7 +416,11 @@ export default function Leave() {
                         <TableCell align="left">{employee?.name}</TableCell>
                         <TableCell align="left">{leaveType}</TableCell>
                         <TableCell align="left">
-                          {dates?.map((date) => moment(date).format('Y/M/D')).join(', ')}
+                          {leaveCategory === 'Permission' ? (
+                            `${dates?.map((date) => moment(date).format('YYYY-MM-DD')).join(', ')} (${startTime} - ${endTime})`
+                          ) : (
+                            dates?.map((date) => moment(date).format('YYYY-MM-DD')).join(', ')
+                          )}
                         </TableCell>
                         <TableCell align="left">{note}</TableCell>
                         <TableCell align="left" sx={{ minWidth: 180 }}>

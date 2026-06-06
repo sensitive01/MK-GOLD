@@ -39,7 +39,7 @@ function CreateAttendance(props) {
 
   const { handleSubmit, handleChange, handleBlur, values, touched, errors, setValues, resetForm } = useFormik({
     initialValues: {
-      employee: auth.user?.employee?._id || auth.user?.employee || '',
+      employee: auth.user?.employee?._id || auth.user?.employee || localStorage.getItem('empId') || '',
     },
     validationSchema: schema,
     onSubmit: (values) => {
@@ -55,7 +55,7 @@ function CreateAttendance(props) {
         if (data.status === false) {
           props.setNotify({
             open: true,
-            message: 'Attendance not created',
+            message: data.message || 'Attendance not created',
             severity: 'error',
           });
         } else {
@@ -96,13 +96,15 @@ function CreateAttendance(props) {
         }}
         autoComplete="off"
       >
+
+
         <Grid container spacing={3}>
           <Grid
             item
             xs={12}
             sm={12}
             sx={{
-              display: ['assistant_branch_manager', 'branch_executive', 'telecalling', 'finance', 'accounts', 'operations'].includes(auth.user.userType?.toLowerCase()) ? 'none' : 'block',
+              display: (auth.user?.employee || localStorage.getItem('empId')) ? 'none' : 'block',
             }}
           >
             <FormControl fullWidth error={touched.employee && errors.employee && true}>
@@ -117,7 +119,7 @@ function CreateAttendance(props) {
                 onChange={(e) => {
                   setValues({ ...values, employee: e.target.value });
                 }}
-                disabled={['assistant_branch_manager', 'branch_executive', 'telecalling', 'finance', 'accounts', 'operations'].includes(auth.user.userType?.toLowerCase())}
+                disabled={Boolean(auth.user?.employee || localStorage.getItem('empId'))}
               >
                 {employees?.map((e) => (
                   <MenuItem key={e._id} value={e._id}>{e.employeeId} {e.name}</MenuItem>
@@ -125,6 +127,7 @@ function CreateAttendance(props) {
               </Select>
             </FormControl>
           </Grid>
+
           <Grid item xs={12} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {img === null ? (
               <>
@@ -163,3 +166,5 @@ function CreateAttendance(props) {
 }
 
 export default CreateAttendance;
+
+

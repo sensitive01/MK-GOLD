@@ -32,6 +32,9 @@ import {
   TextField,
   Typography,
   Divider,
+  FormControl,
+  InputLabel,
+  Select,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import MuiAlert from '@mui/material/Alert';
@@ -115,6 +118,7 @@ export default function Sale() {
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
+  const selectedSale = useMemo(() => data?.find((s) => s._id === saleIdToEdit), [data, saleIdToEdit]);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
@@ -308,8 +312,8 @@ export default function Sale() {
             }}
           />
 
-          <TableContainer sx={{ minWidth: 800 }}>
-            <Table>
+          <TableContainer>
+            <Table sx={{ minWidth: 800 }}>
               <SaleListHead
                   order={order}
                   orderBy={orderBy}
@@ -325,9 +329,25 @@ export default function Sale() {
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
-                      <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                      <TableRow
+                        hover
+                        key={_id}
+                        tabIndex={-1}
+                        role="checkbox"
+                        selected={selectedData}
+                        onClick={() => {
+                          setSaleIdToEdit(_id);
+                          setToggleContainer(true);
+                          setToggleContainerType('detail');
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedData}
+                            onChange={(event) => handleClick(event, _id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         </TableCell>
                         <TableCell align="left">{billId}</TableCell>
                         <TableCell align="left">
@@ -348,16 +368,18 @@ export default function Sale() {
                         <TableCell align="left">{rowBranch?.branchId}</TableCell>
                         <TableCell align="left">{rowBranch?.branchName}</TableCell>
                         <TableCell align="left">{sentenceCase(purchaseType)}</TableCell>
-                        <TableCell align="left">
+                        <TableCell align="left" onClick={(e) => e.stopPropagation()}>
                           <Status 
                             status={status} 
                             _id={_id} 
                             assignee={row.assignee?._id || row.assignee}
                             fetchData={fetchData}
+                            saleType={saleType}
+                            assigneeCompleted={row.assigneeCompleted}
                           />
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                        <TableCell align="right">
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton
                             size="large"
                             color="inherit"
@@ -482,7 +504,14 @@ export default function Sale() {
             </Button>
           </Stack>
 
-          <SaleDetail id={saleIdToEdit} setNotify={setNotify} />
+          <SaleDetail
+            id={saleIdToEdit}
+            setNotify={setNotify}
+            onActionComplete={() => {
+              setToggleContainer(false);
+              fetchData();
+            }}
+          />
         </Container>
       )}
 
@@ -505,9 +534,10 @@ export default function Sale() {
         }}
       >
         <MenuItem
+          disabled={selectedSale?.status === 'completed'}
           onClick={() => {
             setOpen(null);
-            setToggleContainer(!toggleContainer);
+            setToggleContainer(true);
             setToggleContainerType('create');
           }}
         >
@@ -517,7 +547,7 @@ export default function Sale() {
         <MenuItem
           onClick={() => {
             setOpen(null);
-            setToggleContainer(!toggleContainer);
+            setToggleContainer(true);
             setToggleContainerType('detail');
           }}
         >
@@ -527,7 +557,7 @@ export default function Sale() {
         <MenuItem
           onClick={() => {
             setOpen(null);
-            setToggleContainer(!toggleContainer);
+            setToggleContainer(true);
             setToggleContainerType('print');
           }}
         >
@@ -544,7 +574,8 @@ export default function Sale() {
           Process Log & Timeline
         </MenuItem>
         <MenuItem
-          sx={{ color: 'error.main' }}
+          disabled={selectedSale?.status === 'completed'}
+          sx={{ color: selectedSale?.status === 'completed' ? 'text.disabled' : 'error.main' }}
           onClick={() => {
             setOpen(null);
             setDeleteType('single');
@@ -656,7 +687,7 @@ export default function Sale() {
 }
 
 function Status(props) {
-  const { _id, status, assignee, fetchData } = props;
+  const { _id, status, assignee, fetchData, saleType, assigneeCompleted } = props;
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType?.toLowerCase() || '';
   const isAdmin = userType.includes('admin');
@@ -673,7 +704,13 @@ function Status(props) {
 
   let content = <Label color={status === 'completed' ? 'success' : 'error'}>{sentenceCase(status)}</Label>;
 
-  if (status === 'finance pending') {
+  const isBullionDesk = userType.includes('bullion_desk');
+
+  if (status === 'bullion pending') {
+    content = <Label color="warning">Bullion Pending</Label>;
+  }
+
+  else if (status === 'finance pending') {
     if (isFinance) {
       content = (
         <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
@@ -685,62 +722,19 @@ function Status(props) {
     }
   }
 
-  // Assignee Step (Release Stage)
+  // Release Pending — assignee acts from the Release sidebar, sale advances automatically
   else if (status === 'release pending') {
-    if (employeeId === assignee) {
-      content = (
-        <Button variant="contained" size="small" onClick={() => handleVerify('assignee')}>
-          Update Verification
-        </Button>
-      );
-    } else {
-      content = <Label color="warning">Release Pending</Label>;
-    }
+    content = <Label color="warning">Release Pending</Label>;
   }
 
-  // Admin Approval Step
+  // Admin Approval Step (Legacy support)
   else if (status === 'admin approval pending') {
-    if (isAdmin) {
-      content = (
-        <Stack direction="row" spacing={1}>
-          <Button
-            variant="contained"
-            size="small"
-            color="success"
-            onClick={() => {
-              updateSales(_id, { status: 'completed' }).then(() => fetchData());
-            }}
-          >
-            Approve
-          </Button>
-          <Button
-            variant="contained"
-            size="small"
-            color="error"
-            onClick={() => {
-              updateSales(_id, { status: 'finance pending' }).then(() => fetchData());
-            }}
-          >
-            Reject
-          </Button>
-        </Stack>
-      );
-    } else {
-      content = <Label color="info">Admin Approval Pending</Label>;
-    }
+    content = <Label color="info">Admin Approval Pending</Label>;
   }
 
-  // Fund Transfer Step
+  // Fund Transfer Step (Legacy support)
   else if (status === 'fund transfer pending') {
-    if (isFinance || isAdmin) {
-      content = (
-        <Button variant="contained" size="small" onClick={() => handleVerify('fund transfer')}>
-          Fund Transfer
-        </Button>
-      );
-    } else {
-      content = <Label color="warning">Fund Transfer Pending</Label>;
-    }
+    content = <Label color="warning">Fund Transfer Pending</Label>;
   }
 
   return (
@@ -753,6 +747,8 @@ function Status(props) {
         type={verifyType}
         handleClose={() => setOpenVerifyModal(false)}
         fetchData={fetchData}
+        saleType={saleType}
+        assigneeCompleted={assigneeCompleted}
       />
     </>
   );
@@ -763,7 +759,7 @@ function Status(props) {
 
 
 
-function VerificationModal({ open, id, type, handleClose, fetchData }) {
+function VerificationModal({ open, id, type, handleClose, fetchData, saleType, assigneeCompleted }) {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [ornaments, setOrnaments] = useState([]);
@@ -780,7 +776,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
   });
 
   const schema = Yup.object({
-    amount: Yup.number().required('Amount is required'),
+    amount: type === 'bullion' ? Yup.number().nullable() : Yup.number().required('Amount is required'),
     comments: Yup.string().required('Comments are required'),
     isCompleted: Yup.boolean(),
   });
@@ -797,14 +793,22 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
       setLoading(true);
       
       const payload = {};
-      if (type === 'finance') {
+      if (type === 'bullion') {
+        payload.bullionComments = values.comments;
+        if (values.isCompleted) {
+          payload.bullionCompleted = true;
+          payload.bullionCompletedAt = new Date();
+          payload.status = 'finance pending';
+        }
+      } else if (type === 'finance') {
         payload.financeAmount = values.amount;
         payload.financeComments = values.comments;
         payload.financeProof = values.proof;
         if (values.isCompleted) {
           payload.financeCompleted = true;
           payload.financeCompletedAt = new Date();
-          payload.status = 'release pending';
+          const isPhys = saleType === 'physical';
+          payload.status = (isPhys || assigneeCompleted) ? 'completed' : 'release pending';
         }
       } else {
         payload.assigneeAmount = values.amount;
@@ -814,7 +818,9 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         if (values.isCompleted) {
           payload.assigneeCompleted = true;
           payload.assigneeCompletedAt = new Date();
-          payload.status = 'admin approval pending';
+          payload.status = 'bullion pending';
+          payload.bullionCompleted = false;
+          payload.financeCompleted = false;
         }
       }
 
@@ -850,30 +856,41 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <TextField
-                name="amount"
-                label="Payment Amount"
-                type="number"
-                value={values.amount}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.amount && !!errors.amount}
-                helperText={touched.amount && errors.amount}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Stack spacing={2}>
-                <Typography variant="subtitle2">Upload Proof</Typography>
-                <input type="file" accept="image/*" onChange={handleFileChange} />
-                {preview && (
-                  <Box sx={{ mt: 2, position: 'relative', width: '100%', height: 200, borderRadius: 1, overflow: 'hidden', border: '1px solid #eee' }}>
-                    <img src={preview} alt="Proof Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                  </Box>
-                )}
-              </Stack>
-            </Grid>
+            {type !== 'bullion' && (
+              <>
+                <Grid item xs={12}>
+                  <TextField
+                    name="amount"
+                    label="Payment Amount"
+                    type="number"
+                    value={values.amount}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.amount && !!errors.amount}
+                    helperText={touched.amount && errors.amount}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Stack spacing={2}>
+                    <Typography variant="subtitle2">Upload Proof</Typography>
+                    <input type="file" accept="image/*" onChange={handleFileChange} />
+                    {preview && (
+                      <a
+                        href={values.proof ? (values.proof.startsWith('http') ? values.proof : `${global.baseURL}/${values.proof}`) : preview}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <Box sx={{ mt: 2, position: 'relative', width: '100%', height: 200, borderRadius: 1, overflow: 'hidden', border: '1px solid #eee' }}>
+                          <img src={preview} alt="Proof Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        </Box>
+                      </a>
+                    )}
+                  </Stack>
+                </Grid>
+              </>
+            )}
             <Grid item xs={12}>
               <TextField
                 name="comments"

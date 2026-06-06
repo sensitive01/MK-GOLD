@@ -291,8 +291,8 @@ export default function Ornament() {
 
         <Card>
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <ListHead
                   order={order}
                   orderBy={orderBy}

@@ -70,6 +70,9 @@ export default function LoginForm() {
     if (userType === 'operations') {
       return <Navigate to="/operations/dashboard" />;
     }
+    if (userType === 'bullion_desk') {
+      return <Navigate to="/bullion-desk/dashboard" />;
+    }
     return <Navigate to="/404" />;
   }
 

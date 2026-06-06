@@ -5,7 +5,7 @@ async function getAttendance(query = {}) {
     const response = await apiClient().post('/api/v1.0/hr/attendance/get', query);
     return response.data;
   } catch (err) {
-    return err;
+    return { status: false, message: err?.response?.data?.message || err.message };
   }
 }
 
@@ -14,7 +14,7 @@ async function getAttendanceById(id) {
     const response = await apiClient().get(`/api/v1.0/hr/attendance/get/${id}`);
     return response.data;
   } catch (err) {
-    return err;
+    return { status: false, message: err?.response?.data?.message || err.message };
   }
 }
 
@@ -23,7 +23,7 @@ async function createAttendance(payload) {
     const response = await apiClient().post('/api/v1.0/hr/attendance/create', payload);
     return response.data;
   } catch (err) {
-    return err;
+    return { status: false, message: err?.response?.data?.message || err.message };
   }
 }
 
@@ -32,7 +32,7 @@ async function updateAttendance(id, payload) {
     const response = await apiClient().post(`/api/v1.0/hr/attendance/update/${id}`, payload);
     return response.data;
   } catch (err) {
-    return err;
+    return { status: false, message: err?.response?.data?.message || err.message };
   }
 }
 
@@ -41,7 +41,7 @@ async function deleteAttendanceById(id) {
     const response = await apiClient().post(`/api/v1.0/hr/attendance/delete/${id}`);
     return response.data;
   } catch (err) {
-    return err;
+    return { status: false, message: err?.response?.data?.message || err.message };
   }
 }
 
@@ -50,7 +50,7 @@ async function getConsolidatedAttendance(query = {}) {
     const response = await apiClient().post('/api/v1.0/hr/attendance/consolidated', query);
     return response.data;
   } catch (err) {
-    return err;
+    return { status: false, message: err?.response?.data?.message || err.message };
   }
 }
 

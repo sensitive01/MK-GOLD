@@ -45,6 +45,7 @@ import { deleteUserById, getUser } from '../../apis/hr/user';
 const TABLE_HEAD = [
   { id: 'username', label: 'Username', alignRight: false },
   { id: 'userType', label: 'User Type', alignRight: false },
+  { id: 'branch', label: 'Branch', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
@@ -304,8 +305,8 @@ export default function User() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <UserListHead
                   order={order}
                   orderBy={orderBy}
@@ -327,6 +328,7 @@ export default function User() {
                         </TableCell>
                         <TableCell align="left">{username}</TableCell>
                         <TableCell align="left">{sentenceCase(userType)}</TableCell>
+                        <TableCell align="left">{row.branch?.branchName || 'N/A'}</TableCell>
                         <TableCell align="left">
                           <Label color={(status !== 'active' && 'error') || 'success'}>{sentenceCase(status)}</Label>
                         </TableCell>

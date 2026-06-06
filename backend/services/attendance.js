@@ -25,8 +25,30 @@ async function find(query = {}, user = null) {
       }
       
       // If it's a sub-role, only show their own attendance
-      if (!type.includes("branch")) {
+      if (!["branch", "assistant_branch_manager"].includes(type)) {
         query.employee = user.employee?._id || user.employee;
+      }
+    }
+
+    if (query.branch) {
+      if (typeof query.branch === 'string' && mongoose.Types.ObjectId.isValid(query.branch)) {
+        query.branch = new mongoose.Types.ObjectId(query.branch);
+      } else if (query.branch.$in) {
+        query.branch.$in = query.branch.$in.map(id => typeof id === 'string' && mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id);
+      }
+    }
+    if (query.employee) {
+      if (typeof query.employee === 'string' && mongoose.Types.ObjectId.isValid(query.employee)) {
+        query.employee = new mongoose.Types.ObjectId(query.employee);
+      } else if (query.employee.$in) {
+        query.employee.$in = query.employee.$in.map(id => typeof id === 'string' && mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id);
+      }
+    }
+    if (query._id) {
+      if (typeof query._id === 'string' && mongoose.Types.ObjectId.isValid(query._id)) {
+        query._id = new mongoose.Types.ObjectId(query._id);
+      } else if (query._id.$in) {
+        query._id.$in = query._id.$in.map(id => typeof id === 'string' && mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id);
       }
     }
 

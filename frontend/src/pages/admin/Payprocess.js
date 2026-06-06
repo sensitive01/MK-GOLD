@@ -264,8 +264,8 @@ export default function Payprocess() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <PayprocessListHead
                   order={order}
                   orderBy={orderBy}

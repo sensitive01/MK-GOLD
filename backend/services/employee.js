@@ -9,7 +9,8 @@ async function find(query = {}, user = null) {
       "assistant_branch_manager", 
       "branch_executive", 
       "transaction_executive", 
-      "telecalling"
+      "telecalling",
+      "bullion_desk"
     ].some(role => type.includes(role));
 
     if (isBranchRole) {

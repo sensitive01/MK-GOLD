@@ -417,8 +417,8 @@ export default function Expense() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <ExpenseListHead
                   order={order}
                   orderBy={orderBy}

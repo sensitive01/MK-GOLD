@@ -83,7 +83,8 @@ function applySortFilter(array, comparator, query) {
   return stabilizedThis?.map((el) => el[0]);
 }
 
-export default function Customer() {
+export default function Customer({ isTab = false }) {
+  const Wrapper = isTab ? Box : Container;
   const auth = useSelector((state) => state.auth);
   const [branch, setBranch] = useState({});
   const [open, setOpen] = useState(null);
@@ -261,7 +262,7 @@ export default function Customer() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
+      <Wrapper {...(!isTab ? { maxWidth: 'xl' } : {})} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Customer
@@ -290,8 +291,8 @@ export default function Customer() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <CustomerListHead
                   order={order}
                   orderBy={orderBy}
@@ -307,9 +308,25 @@ export default function Customer() {
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
-                      <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                      <TableRow
+                        hover
+                        key={_id}
+                        tabIndex={-1}
+                        role="checkbox"
+                        selected={selectedData}
+                        onClick={() => {
+                          setOpenId(_id);
+                          setToggleContainer(true);
+                          setToggleContainerType('detail');
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedData}
+                            onChange={(event) => handleClick(event, _id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         </TableCell>
                         <TableCell align="left">{sentenceCase(name ?? '')}</TableCell>
                         <TableCell align="left">{email}</TableCell>
@@ -325,11 +342,13 @@ export default function Customer() {
                           </Label>
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                        <TableCell align="right">
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton
                             size="large"
                             color="inherit"
                             onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
                               setOpenId(_id);
                               handleOpenMenu(e);
                             }}
@@ -397,10 +416,10 @@ export default function Customer() {
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
         </Card>
-      </Container>
+      </Wrapper>
 
       {toggleContainer === true && (toggleContainerType === 'create') === true && (
-        <Container maxWidth="xl">
+        <Wrapper {...(!isTab ? { maxWidth: 'xl' } : {})}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
             <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
               Create Customer
@@ -417,12 +436,12 @@ export default function Customer() {
           </Stack>
 
           <CreateCustomer setToggleContainer={setToggleContainer} setNotify={setNotify} />
-        </Container>
+        </Wrapper>
       )}
 
       {toggleContainer === true && (toggleContainerType === 'detail') === true && (
-        <Container
-          maxWidth="xl"
+        <Wrapper
+          {...(!isTab ? { maxWidth: 'xl' } : {})}
           sx={{ display: toggleContainer === true && toggleContainerType === 'detail' ? 'block' : 'none' }}
         >
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
@@ -441,7 +460,7 @@ export default function Customer() {
           </Stack>
 
           <CustomerDetail id={openId} />
-        </Container>
+        </Wrapper>
       )}
 
       <Popover

@@ -137,8 +137,8 @@ export default function Sale({
           <SaleListToolbar filterName={filterName} onFilterName={handleFilterByName} />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <TableHead>
                   <TableRow>
                     <TableCell align="left">Bill Id</TableCell>

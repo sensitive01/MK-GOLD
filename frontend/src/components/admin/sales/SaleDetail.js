@@ -251,14 +251,28 @@ export default function SaleDetail({ id, setNotify }) {
                   <TableCell align="left">{e.documentNo}</TableCell>
                   <TableCell align="left">
                     {e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
-                      <img
-                        key={index}
-                        src={e?.uploadedFile?.startsWith('http') ? e.uploadedFile : `${global.baseURL}/${e?.uploadedFile}`}
-                        alt="document"
-                        style={{ width: '80px' }}
-                      />
+                      <a
+                        href={e?.uploadedFile?.startsWith('http') ? e.uploadedFile : `${global.baseURL}/${e?.uploadedFile}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <img
+                          key={index}
+                          src={e?.uploadedFile?.startsWith('http') ? e.uploadedFile : `${global.baseURL}/${e?.uploadedFile}`}
+                          alt="document"
+                          style={{ width: '80px' }}
+                        />
+                      </a>
                     ) : (
-                      <img key={index} src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />
+                      <a
+                        href={e?.uploadedFile?.startsWith('http') ? e.uploadedFile : `${global.baseURL}/${e?.uploadedFile}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <img key={index} src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />
+                      </a>
                     )}
                   </TableCell>
                 </TableRow>
@@ -401,6 +415,14 @@ export default function SaleDetail({ id, setNotify }) {
                       <TableRow tabIndex={-1}>
                         <TableCell align="left">
                           Photo:
+                        <a
+                          href={data?.customer?.profileImage?.uploadedFile?.startsWith('http') 
+                            ? data?.customer?.profileImage?.uploadedFile 
+                            : `${global.baseURL}/${data?.customer?.profileImage?.uploadedFile}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ cursor: 'pointer' }}
+                        >
                           <img
                             src={data?.customer?.profileImage?.uploadedFile?.startsWith('http') 
                               ? data?.customer?.profileImage?.uploadedFile 
@@ -408,6 +430,7 @@ export default function SaleDetail({ id, setNotify }) {
                             alt="document"
                             style={{ width: '80px' }}
                           />
+                        </a>
                         </TableCell>
                         <TableCell align="left">Customer Name: {data?.customer?.name}</TableCell>
                         <TableCell align="left">Customer Email: {data?.customer?.email}</TableCell>

@@ -448,8 +448,8 @@ export default function Leads() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <AttendanceListHead
                   order={order}
                   orderBy={orderBy}
@@ -465,9 +465,26 @@ export default function Leads() {
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
-                      <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                      <TableRow
+                        hover
+                        key={_id}
+                        tabIndex={-1}
+                        role="checkbox"
+                        selected={selectedData}
+                        onClick={() => {
+                          setOpenId(_id);
+                          setIsImportedLead(!!row.isImported);
+                          setToggleContainer(true);
+                          setToggleContainerType('preview');
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedData}
+                            onChange={(event) => handleClick(event, _id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         </TableCell>
                         <TableCell align="left">{name}</TableCell>
                         <TableCell align="left">{global.maskPhoneNumber(mobile)}</TableCell>
@@ -489,12 +506,14 @@ export default function Leads() {
                              {status}
                            </Box>
                         </TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD')}</TableCell>
-                        <TableCell align="right">
+                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton
                             size="large"
                             color="inherit"
                             onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
                               setOpenId(_id);
                               setIsImportedLead(!!row.isImported);
                               handleOpenMenu(e);

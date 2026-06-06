@@ -384,8 +384,8 @@ export default function Sale() {
             }}
           />
 
-          <TableContainer sx={{ minWidth: 800 }}>
-            <Table>
+          <TableContainer>
+            <Table sx={{ minWidth: 800 }}>
               <SaleListHead
                   order={order}
                   orderBy={orderBy}
@@ -401,9 +401,25 @@ export default function Sale() {
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
-                      <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                      <TableRow
+                        hover
+                        key={_id}
+                        tabIndex={-1}
+                        role="checkbox"
+                        selected={selectedData}
+                        onClick={() => {
+                          setOpenId(_id);
+                          setToggleContainer(true);
+                          setToggleContainerType('detail');
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedData}
+                            onChange={(event) => handleClick(event, _id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         </TableCell>
                         <TableCell align="left">{billId}</TableCell>
                         <TableCell align="left">{sentenceCase(saleType)}</TableCell>
@@ -411,20 +427,24 @@ export default function Sale() {
                         <TableCell align="left">{branch?.branchId}</TableCell>
                         <TableCell align="left">{branch?.branchName}</TableCell>
                         <TableCell align="left">{sentenceCase(purchaseType)}</TableCell>
-                        <TableCell align="left">
+                        <TableCell align="left" onClick={(e) => e.stopPropagation()}>
                           <Status 
                             status={status} 
                             _id={_id} 
                             assignee={row.assignee?._id || row.assignee}
                             fetchData={fetchData}
+                            saleType={saleType}
+                            assigneeCompleted={row.assigneeCompleted}
                           />
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                        <TableCell align="right">
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton
                             size="large"
                             color="inherit"
                             onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
                               setOpenId(_id);
                               handleOpenMenu(e);
                             }}
@@ -534,7 +554,14 @@ export default function Sale() {
           </Button>
         </Stack>
 
-        <SaleDetail id={openId} setNotify={setNotify} />
+        <SaleDetail
+          id={openId}
+          setNotify={setNotify}
+          onActionComplete={() => {
+            setToggleContainer(false);
+            fetchData();
+          }}
+        />
       </Container>
 
       <Popover
@@ -812,7 +839,7 @@ export default function Sale() {
 }
 
 function Status(props) {
-  const { _id, status, assignee, fetchData } = props;
+  const { _id, status, assignee, fetchData, saleType, assigneeCompleted } = props;
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType?.toLowerCase();
   const employeeId = auth.user?.employee?._id || auth.user?.employee;
@@ -866,49 +893,14 @@ function Status(props) {
     }
   }
 
-  // Admin Approval Step
+  // Admin Approval Step (Legacy support)
   else if (status === 'admin approval pending') {
-    if (userType === 'admin') {
-      content = (
-        <Stack direction="row" spacing={1}>
-          <Button
-            variant="contained"
-            size="small"
-            color="success"
-            onClick={() => {
-              updateSales(_id, { status: 'fund transfer pending' }).then(() => fetchData());
-            }}
-          >
-            Approve
-          </Button>
-          <Button
-            variant="contained"
-            size="small"
-            color="error"
-            onClick={() => {
-              updateSales(_id, { status: 'finance pending' }).then(() => fetchData());
-            }}
-          >
-            Reject
-          </Button>
-        </Stack>
-      );
-    } else {
-      content = <Label color="info">Admin Approval Pending</Label>;
-    }
+    content = <Label color="info">Admin Approval Pending</Label>;
   }
 
-  // Fund Transfer Step
+  // Fund Transfer Step (Legacy support)
   else if (status === 'fund transfer pending') {
-    if (userType === 'finance' || userType === 'accounts' || userType === 'admin') {
-      content = (
-        <Button variant="contained" size="small" onClick={() => handleVerify('fund transfer')}>
-          Fund Transfer
-        </Button>
-      );
-    } else {
-      content = <Label color="warning">Fund Transfer Pending</Label>;
-    }
+    content = <Label color="warning">Fund Transfer Pending</Label>;
   }
 
   return (
@@ -921,12 +913,14 @@ function Status(props) {
         type={verifyType}
         handleClose={() => setOpenVerifyModal(false)}
         fetchData={fetchData}
+        saleType={saleType}
+        assigneeCompleted={assigneeCompleted}
       />
     </>
   );
 }
 
-function VerificationModal({ open, id, type, handleClose, fetchData }) {
+function VerificationModal({ open, id, type, handleClose, fetchData, saleType, assigneeCompleted }) {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [ornaments, setOrnaments] = useState([]);
@@ -942,13 +936,16 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
     netAmount: '',
   });
 
+  const [fileType, setFileType] = useState('');
+  const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
+
   const schema = Yup.object({
     amount: Yup.number().required('Amount is required'),
     comments: Yup.string().required('Comments are required'),
     isCompleted: Yup.boolean(),
   });
 
-  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue } = useFormik({
+  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue, resetForm } = useFormik({
     initialValues: {
       amount: '',
       comments: '',
@@ -967,7 +964,8 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         if (values.isCompleted) {
           payload.financeCompleted = true;
           payload.financeCompletedAt = new Date();
-          payload.status = 'release pending';
+          const isPhys = saleType === 'physical';
+          payload.status = (isPhys || assigneeCompleted) ? 'completed' : 'release pending';
         }
       } else if (type === 'fund transfer') {
         payload.fundTransferAmount = values.amount;
@@ -986,14 +984,16 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         if (values.isCompleted) {
           payload.assigneeCompleted = true;
           payload.assigneeCompletedAt = new Date();
-          payload.status = 'admin approval pending';
+          payload.status = 'bullion pending';
+          payload.bullionCompleted = false;
+          payload.financeCompleted = false;
         }
       }
 
       updateSales(id, payload).then((data) => {
         setLoading(false);
         if (data.status) {
-          handleClose();
+          handleModalClose();
           fetchData();
         } else {
           alert(data.message || 'Verification failed. Please ensure prior stages are approved.');
@@ -1002,10 +1002,26 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
     },
   });
 
+  const handleModalClose = () => {
+    setPreview(null);
+    setFileType('');
+    setPdfBlobUrl(null);
+    resetForm();
+    handleClose();
+  };
+
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setPreview(URL.createObjectURL(file));
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        setFileType('pdf');
+        setPreview(file.name);
+        setPdfBlobUrl(URL.createObjectURL(file));
+      } else {
+        setFileType('image');
+        setPreview(URL.createObjectURL(file));
+        setPdfBlobUrl(null);
+      }
       const formData = new FormData();
       formData.append('file', file);
       formData.append('uploadId', id);
@@ -1017,7 +1033,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleModalClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
@@ -1050,7 +1066,30 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
             <Grid item xs={12}>
               <Typography variant="subtitle2" gutterBottom>Upload Proof/Photo</Typography>
               <input type="file" onChange={handleFileChange} style={{ marginBottom: '10px' }} />
-              {preview && <img src={preview} alt="Preview" style={{ width: '100%', height: 'auto', borderRadius: '8px' }} />}
+              {preview && (
+                fileType === 'pdf' ? (
+                  <a
+                    href={values.proof ? (values.proof.startsWith('http') ? values.proof : `${global.baseURL}/${values.proof}`) : (pdfBlobUrl || '#')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, p: 2, border: '1px dashed #ccc', borderRadius: 1, cursor: 'pointer' }}>
+                      <img src="/assets/doc.svg" alt="pdf document" style={{ width: '24px' }} />
+                      <Typography variant="body2">{preview}</Typography>
+                    </Box>
+                  </a>
+                ) : (
+                  <a
+                    href={values.proof ? (values.proof.startsWith('http') ? values.proof : `${global.baseURL}/${values.proof}`) : preview}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <img src={preview} alt="Preview" style={{ width: '100%', height: 'auto', borderRadius: '8px' }} />
+                  </a>
+                )
+              )}
             </Grid>
 
             {type === 'assignee' && (
@@ -1154,7 +1193,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleModalClose}>Cancel</Button>
           <LoadingButton type="submit" variant="contained" loading={loading} sx={{ color: '#fff' }}>
             Save & Update Status
           </LoadingButton>

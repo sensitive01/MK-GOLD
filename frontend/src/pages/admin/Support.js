@@ -354,8 +354,8 @@ export default function Support() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <SupportListHead
                   order={order}
                   orderBy={orderBy}

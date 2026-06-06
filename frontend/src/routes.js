@@ -59,6 +59,7 @@ import AccountsSale from './pages/accounts/Sale';
 import AccountsBalancesheet from './pages/accounts/Balancesheet';
 import AccountsLeave from './pages/accounts/Leave';
 import BranchDashboardLayout from './layouts/dashboard/branch';
+import BullionDeskDashboardLayout from './layouts/dashboard/bullion_desk';
 import BranchDashboard from './pages/branch/Dashboard';
 import BranchFund from './pages/branch/Fund';
 import BranchExpense from './pages/branch/Expense';
@@ -182,6 +183,21 @@ export default function Router() {
         { path: 'ornament', element: <BranchOrnament /> },
         { path: 'employee', element: <BranchEmployee /> },
         { path: 'qr-enquiry', element: <BranchQREnquiry /> },
+      ],
+    },
+    {
+      path: '/bullion-desk',
+      element: (
+        <Protected>
+          <BullionDeskDashboardLayout />
+        </Protected>
+      ),
+      children: [
+        { element: <Navigate to="/bullion-desk/dashboard" />, index: true },
+        { path: 'dashboard', element: <BranchDashboard /> },
+        { path: 'sale', element: <BranchSale /> },
+        { path: 'leave', element: <BranchLeave /> },
+        { path: 'attendance', element: <BranchAttendance /> },
       ],
     },
     {

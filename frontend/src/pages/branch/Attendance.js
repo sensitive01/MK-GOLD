@@ -1,5 +1,5 @@
 import { filter } from 'lodash';
-import { forwardRef, useEffect, useState, useCallback } from 'react';
+import { forwardRef, useEffect, useRef, useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -10,6 +10,7 @@ import {
     Checkbox,
     CircularProgress,
     Container,
+    FormControl,
     Grid,
     IconButton,
     MenuItem,
@@ -26,10 +27,20 @@ import {
     TableRow,
     Tabs,
     Tab,
+    TextField,
     Typography,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { useFormik } from 'formik';
 import moment from 'moment';
+import * as Yup from 'yup';
 // components
 import { CreateAttendance } from '../../components/branch/attendance';
 import Iconify from '../../components/iconify';
@@ -115,6 +126,8 @@ export default function Attendance() {
 
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
+  const [filterOpen, setFilterOpen] = useState(null);
+  const form = useRef();
 
   const [notify, setNotify] = useState({
     open: false,
@@ -122,32 +135,86 @@ export default function Attendance() {
     severity: 'success',
   });
 
+  const schema = Yup.object({
+    fromDate: Yup.string().required('From date is required'),
+    toDate: Yup.string().required('To date is required'),
+  });
+
+  const { handleSubmit, touched, errors, values, setFieldValue, resetForm } = useFormik({
+    initialValues: {
+      fromDate: null,
+      toDate: null,
+    },
+    validationSchema: schema,
+    onSubmit: (values) => {
+      setOpenBackdrop(true);
+      const query = {
+        createdAt: {
+          $gte: values.fromDate?.format("YYYY-MM-DD"),
+          $lte: values.toDate?.format("YYYY-MM-DD"),
+        },
+      };
+      if (currentTab === 'my_attendance') {
+        const empId = auth.user.employee?._id || auth.user.employee;
+        if (!empId) {
+          setData([]);
+          setOpenBackdrop(false);
+          setFilterOpen(false);
+          return;
+        }
+        query.employee = empId;
+      }
+      getAttendance(query).then((data) => {
+        setData(data.data || []);
+        setOpenBackdrop(false);
+      });
+      setFilterOpen(false);
+    },
+  });
+
   const fetchData = useCallback(
     (query = {}) => {
+      let statsEmpId = null;
       if (currentTab === 'my_attendance') {
-        query.employee = auth.user.employee?._id || auth.user.employee;
-        query.createdAt = {
-          $gte: moment().startOf('month').format("YYYY-MM-DD"),
-          $lte: moment().endOf('month').format("YYYY-MM-DD"),
-        };
+        const empId = auth.user.employee?._id || auth.user.employee;
+        if (!empId) {
+          setData([]);
+          setOpenBackdrop(false);
+          getBranchAttendanceStats().then((data) => {
+            if (data.status) {
+              setStats(data.data);
+            }
+          });
+          return;
+        }
+        query.employee = empId;
+        statsEmpId = empId;
+        if (!query.createdAt) {
+          query.createdAt = {
+            $gte: values.fromDate ? values.fromDate.format("YYYY-MM-DD") : moment().startOf('month').format("YYYY-MM-DD"),
+            $lte: values.toDate ? values.toDate.format("YYYY-MM-DD") : moment().endOf('month').format("YYYY-MM-DD"),
+          };
+        }
       } else {
-        query.createdAt = {
-          $gte: moment()?.format("YYYY-MM-DD"),
-          $lte: moment()?.format("YYYY-MM-DD"),
-        };
+        if (!query.createdAt) {
+          query.createdAt = {
+            $gte: values.fromDate ? values.fromDate.format("YYYY-MM-DD") : moment()?.format("YYYY-MM-DD"),
+            $lte: values.toDate ? values.toDate.format("YYYY-MM-DD") : moment()?.format("YYYY-MM-DD"),
+          };
+        }
       }
       
       getAttendance(query).then((data) => {
         setData(data.data || []);
         setOpenBackdrop(false);
       });
-      getBranchAttendanceStats().then((data) => {
+      getBranchAttendanceStats(statsEmpId).then((data) => {
         if (data.status) {
           setStats(data.data);
         }
       });
     },
-    [currentTab, auth.user.employee]
+    [currentTab, auth.user.employee, values.fromDate, values.toDate]
   );
 
   useEffect(() => {
@@ -350,6 +417,27 @@ export default function Attendance() {
         </Grid>
 
         <Card>
+          <Box sx={{ p: 3, pb: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+            <Box>
+              {(values.fromDate || values.toDate) ? (
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Filter: <strong>{values.fromDate ? values.fromDate.format('DD-MM-YYYY') : ''}</strong> to <strong>{values.toDate ? values.toDate.format('DD-MM-YYYY') : ''}</strong>
+                </Typography>
+              ) : (
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Showing: <strong>{currentTab === 'my_attendance' ? 'Current Month' : 'Today'}</strong>
+                </Typography>
+              )}
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+              onClick={() => setFilterOpen(true)}
+            >
+              Filter
+            </Button>
+          </Box>
+
           <AttendanceListToolbar
             numSelected={selected?.length}
             filterName={filterName}
@@ -361,8 +449,8 @@ export default function Attendance() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <AttendanceListHead
                   order={order}
                   orderBy={orderBy}
@@ -405,21 +493,26 @@ export default function Attendance() {
                           {logoutTime ? (
                             moment(logoutTime).format('DD-MM-YYYY HH:mm:ss')
                           ) : (
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              onClick={() => handleLogout(_id)}
-                              sx={{
-                                color: 'error.main',
-                                borderColor: 'error.main',
-                                '&:hover': {
-                                  bgcolor: 'rgba(255, 0, 0, 0.08)',
-                                  borderColor: 'error.dark',
-                                },
-                              }}
-                            >
-                              Logout
-                            </Button>
+                            employee && auth.user.employee &&
+                            (employee?._id?.toString() || employee?.toString()) === (auth.user.employee?._id?.toString() || auth.user.employee?.toString()) ? (
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => handleLogout(_id)}
+                                sx={{
+                                  color: 'error.main',
+                                  borderColor: 'error.main',
+                                  '&:hover': {
+                                    bgcolor: 'rgba(255, 0, 0, 0.08)',
+                                    borderColor: 'error.dark',
+                                  },
+                                }}
+                              >
+                                Logout
+                              </Button>
+                            ) : (
+                              'Not Logged Out'
+                            )
                           )}
                         </TableCell>
                         <TableCell align="right">
@@ -562,6 +655,69 @@ export default function Attendance() {
           </Stack>
         </Box>
       </Modal>
+
+      <Dialog open={filterOpen} onClose={() => setFilterOpen(false)}>
+        <form ref={form} onSubmit={(e) => { e.preventDefault(); handleSubmit(e); }} autoComplete="off">
+          <DialogTitle>Filter</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={3} sx={{ p: 1, mt: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <FormControl sx={{ minWidth: 120 }} fullWidth>
+                  <LocalizationProvider dateAdapter={AdapterMoment}>
+                    <DesktopDatePicker
+                      label="From Date"
+                      inputFormat="MM/DD/YYYY"
+                      value={values.fromDate}
+                      onChange={(v) => setFieldValue('fromDate', v)}
+                      renderInput={(params) => <TextField {...params} fullWidth />}
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl sx={{ minWidth: 120 }} fullWidth>
+                  <LocalizationProvider dateAdapter={AdapterMoment}>
+                    <DesktopDatePicker
+                      label="To Date"
+                      inputFormat="MM/DD/YYYY"
+                      value={values.toDate}
+                      onChange={(v) => setFieldValue('toDate', v)}
+                      renderInput={(params) => <TextField {...params} fullWidth />}
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => {
+                setFilterOpen(false);
+                resetForm();
+                const defaultQuery = {};
+                if (currentTab === 'my_attendance') {
+                  defaultQuery.createdAt = {
+                    $gte: moment().startOf('month').format("YYYY-MM-DD"),
+                    $lte: moment().endOf('month').format("YYYY-MM-DD"),
+                  };
+                } else {
+                  defaultQuery.createdAt = {
+                    $gte: moment().format("YYYY-MM-DD"),
+                    $lte: moment().format("YYYY-MM-DD"),
+                  };
+                }
+                fetchData(defaultQuery);
+              }}
+            >
+              Clear
+            </Button>
+            <Button variant="contained" onClick={() => setFilterOpen(false)}>Close</Button>
+            <Button variant="contained" type="submit">Filter</Button>
+          </DialogActions>
+        </form>
+      </Dialog>
 
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />

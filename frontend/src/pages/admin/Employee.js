@@ -280,8 +280,8 @@ export default function Employee() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <EmployeeListHead
                   order={order}
                   orderBy={orderBy}

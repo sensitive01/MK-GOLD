@@ -353,8 +353,8 @@ export default function GoldRate() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <GoldRateListHead
                   order={order}
                   orderBy={orderBy}

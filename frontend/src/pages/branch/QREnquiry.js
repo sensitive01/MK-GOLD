@@ -21,7 +21,10 @@ import {
   Button,
   Box,
   Divider,
+  Tabs,
+  Tab,
 } from '@mui/material';
+import Customer from './Customer';
 import Iconify from '../../components/iconify';
 import moment from 'moment';
 import Scrollbar from '../../components/scrollbar';
@@ -49,6 +52,7 @@ export default function QREnquiry() {
   const [selected, setSelected] = useState([]);
   const [openLogModal, setOpenLogModal] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
+  const [tabValue, setTabValue] = useState(0);
 
   const handleOpenLogModal = (enquiry) => {
     setSelectedEnquiry(enquiry);
@@ -114,21 +118,33 @@ export default function QREnquiry() {
   return (
     <>
       <Helmet>
-        <title> QR Enquiries | MK Gold </title>
+        <title> QR Enquiries & Walk-ins | MK Gold </title>
       </Helmet>
 
       <Container maxWidth="xl">
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            QR Enquiries (Branch Leads)
+            QR Enquiries & Walk-ins
           </Typography>
         </Stack>
 
-        <Card>
-          <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
-                <BranchListHead
+        <Tabs
+          value={tabValue}
+          onChange={(e, newValue) => setTabValue(newValue)}
+          sx={{ mb: 3, borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { color: 'rgba(255,255,255,0.7)' }, '& .Mui-selected': { color: '#fff !important' } }}
+          textColor="primary"
+          indicatorColor="primary"
+        >
+          <Tab label="QR Enquiries" />
+          <Tab label="Walk-ins (Registered Customers)" />
+        </Tabs>
+
+        {tabValue === 0 && (
+          <Card>
+            <Scrollbar>
+              <TableContainer>
+                <Table sx={{ minWidth: 800 }}>
+                  <BranchListHead
                     headLabel={TABLE_HEAD}
                     rowCount={data.length}
                     numSelected={selected.length}
@@ -137,14 +153,21 @@ export default function QREnquiry() {
                     onRequestSort={() => {}}
                     onSelectAllClick={handleSelectAllClick}
                   />
-                <TableBody>
+                  <TableBody>
                     {data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
                       const { _id, enqID, name, phoneNumber, email, type, grossWeight, pincode, createdAt } = row;
                       const isItemSelected = selected.indexOf(_id) !== -1;
 
                       return (
-                        <TableRow hover key={_id} tabIndex={-1} selected={isItemSelected}>
-                          <TableCell padding="checkbox">
+                        <TableRow
+                          hover
+                          key={_id}
+                          tabIndex={-1}
+                          selected={isItemSelected}
+                          onClick={() => handleOpenLogModal(row)}
+                          sx={{ cursor: 'pointer' }}
+                        >
+                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                             <Checkbox checked={isItemSelected} onChange={(event) => handleClick(event, _id)} />
                           </TableCell>
                           <TableCell align="left" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
@@ -158,8 +181,8 @@ export default function QREnquiry() {
                           </TableCell>
                           <TableCell align="left">{grossWeight}g</TableCell>
                           <TableCell align="left">{pincode}</TableCell>
-                          <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm')}</TableCell>
-                          <TableCell align="right">
+                          <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                          <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                             <Button
                               variant="outlined"
                               size="small"
@@ -172,30 +195,35 @@ export default function QREnquiry() {
                         </TableRow>
                       );
                     })}
-                  {data.length === 0 && (
-                    <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
-                        <Paper sx={{ textAlign: 'center' }}>
-                          <Typography paragraph>No enquiries found</Typography>
-                        </Paper>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Scrollbar>
+                    {data.length === 0 && (
+                      <TableRow>
+                        <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                          <Paper sx={{ textAlign: 'center' }}>
+                            <Typography paragraph>No enquiries found</Typography>
+                          </Paper>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Scrollbar>
 
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={data.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-          />
-        </Card>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={data.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+          </Card>
+        )}
+
+        {tabValue === 1 && (
+          <Customer isTab />
+        )}
       </Container>
 
       <Dialog open={openLogModal} onClose={handleCloseLogModal} maxWidth="lg" fullWidth>

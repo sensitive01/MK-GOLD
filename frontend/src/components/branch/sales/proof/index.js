@@ -19,6 +19,7 @@ import {
   TableHead,
   Modal,
   Paper,
+  IconButton,
 } from '@mui/material';
 import { sentenceCase } from 'change-case';
 import { LoadingButton } from '@mui/lab';
@@ -31,6 +32,7 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import Iconify from '../../../iconify';
 import Scrollbar from '../../../scrollbar';
+import global from '../../../../utils/global';
 
 const style = {
   position: 'absolute',
@@ -47,10 +49,11 @@ const style = {
   border: 'none',
 };
 
-function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocument }) {
+function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocument, saleType }) {
   const [openId, setOpenId] = useState(null);
   const [ornamentModal, setProofDocumentModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
   const [page, setPage] = useState(0);
@@ -89,7 +92,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
     documentType: Yup.string().required('Document type is required'),
   });
 
-  const { handleSubmit, handleChange, handleBlur, values, setValues, touched, errors, resetForm } = useFormik({
+  const { handleSubmit, handleChange, handleBlur, values, setValues, touched, errors, resetForm, setFieldValue } = useFormik({
     initialValues: {
       documentType: '',
       documentNo: '',
@@ -100,6 +103,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
       setProofDocument([...proofDocument, values]);
       setProofDocumentModal(false);
       resetForm();
+      setPreviewUrl(null);
       setNotify({
         open: true,
         message: 'Proof document uploaded',
@@ -115,7 +119,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
 
   return (
     <>
-      <Card sx={{ display: step === 4 ? 'block' : 'none', p: 4, my: 4 }}>
+      <Card sx={{ display: step === 3 ? 'block' : 'none', p: 4, my: 4 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mt={2} mb={3}>
           <Typography variant="h4" gutterBottom>
             Proof Documents
@@ -129,8 +133,8 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
           </Button>
         </Stack>
         <Scrollbar>
-          <TableContainer sx={{ minWidth: 800 }}>
-            <Table>
+          <TableContainer>
+            <Table sx={{ minWidth: 800 }}>
               <TableHead>
                 <TableRow>
                   <TableCell align="left">Document Type</TableCell>
@@ -145,11 +149,24 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
                     <TableCell align="left">{sentenceCase(e.documentType)}</TableCell>
                     <TableCell align="left">{e.documentNo}</TableCell>
                     <TableCell align="left">
-                      {e?.documentFile?.type.match(/image\/.*/) ? (
-                        <img key={index} src={URL.createObjectURL(e.documentFile)} alt="document" style={{ width: '80px' }} />
-                      ) : (
-                        <img key={index} src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />
-                      )}
+                      {(() => {
+                        const file = e?.documentFile;
+                        if (!file) return 'No File';
+                        if (file instanceof File || file instanceof Blob) {
+                          if (file.type && file.type.match(/image\/.*/)) {
+                            return <img key={index} src={URL.createObjectURL(file)} alt="document" style={{ width: '80px' }} />;
+                          }
+                          return <img key={index} src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />;
+                        }
+                        if (typeof file === 'string') {
+                          const isImage = file.match(/\.(jpeg|jpg|gif|png|webp|svg)/i);
+                          const src = file.startsWith('http') ? file : `${global.baseURL}/${file}`;
+                          if (isImage) {
+                            return <img key={index} src={src} alt="document" style={{ width: '80px' }} />;
+                          }
+                        }
+                        return <img key={index} src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />;
+                      })()}
                     </TableCell>
                     <TableCell align="left">
                       <Button
@@ -198,7 +215,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
           />
         </Scrollbar>
         <LoadingButton size="large" name="submit" type="button" variant="contained" onClick={() => setStep(step - 1)}>
-          Prev
+          Back to billing details
         </LoadingButton>
         <LoadingButton
           size="large"
@@ -207,10 +224,23 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
           variant="contained"
           sx={{ ml: 2 }}
           onClick={() => {
+            if (saleType === 'physical') {
+              const hasOrnamentPhoto = proofDocument.some(
+                (doc) => doc.documentType?.toLowerCase() === 'ornaments photo'
+              );
+              if (!hasOrnamentPhoto) {
+                setNotify({
+                  open: true,
+                  message: 'Ornaments Photo is mandatory for physical sales.',
+                  severity: 'error',
+                });
+                return;
+              }
+            }
             setStep(step + 1);
           }}
         >
-          Next
+          View summary
         </LoadingButton>
       </Card>
 
@@ -226,7 +256,10 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
             <Button
               sx={{ color: '#222', float: 'right' }}
               startIcon={<CloseIcon />}
-              onClick={() => setProofDocumentModal(false)}
+              onClick={() => {
+                setProofDocumentModal(false);
+                setPreviewUrl(null);
+              }}
             />
           </Typography>
           <form
@@ -270,16 +303,38 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
                 />
               </Grid>
               <Grid item xs={12} md={4}>
-                <TextField
-                  name="documentFile"
-                  type={'file'}
-                  fullWidth
-                  onBlur={handleBlur}
-                  onChange={(e) => {
-                    setValues({ ...values, documentFile: e.target.files[0] });
-                  }}
-                  required
-                />
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <TextField
+                      name="documentFile"
+                      type={'file'}
+                      fullWidth
+                      onBlur={handleBlur}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setFieldValue('documentFile', file);
+                        if (file) {
+                          setPreviewUrl(URL.createObjectURL(file));
+                        } else {
+                          setPreviewUrl(null);
+                        }
+                      }}
+                      required
+                    />
+                  </Box>
+                  {previewUrl && (
+                    <IconButton
+                      component="a"
+                      href={previewUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      color="secondary"
+                      title="View Document"
+                    >
+                      <Iconify icon="mdi:eye" />
+                    </IconButton>
+                  )}
+                </Stack>
               </Grid>
               <Grid item xs={12}>
                 <LoadingButton size="large" type="submit" variant="contained" startIcon={<SaveIcon />}>
@@ -291,7 +346,10 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
                   color="error"
                   sx={{ ml: 2 }}
                   startIcon={<CloseIcon />}
-                  onClick={() => setProofDocumentModal(false)}
+                  onClick={() => {
+                    setProofDocumentModal(false);
+                    setPreviewUrl(null);
+                  }}
                 >
                   Close
                 </Button>
@@ -334,6 +392,7 @@ ProofDocument.propTypes = {
   setNotify: PropTypes.func,
   proofDocument: PropTypes.array,
   setProofDocument: PropTypes.func,
+  saleType: PropTypes.string,
 };
 
 export default ProofDocument;

@@ -19,6 +19,7 @@ import {
   Modal,
   Checkbox,
   Paper,
+  IconButton,
 } from '@mui/material';
 import { sentenceCase } from 'change-case';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -106,7 +107,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
       comments: '',
       assignee: '',
       releaseDocument: {},
-      status: 'finance pending',
+      status: 'release pending',
     },
     validationSchema: schema,
     onSubmit: (values) => {
@@ -292,7 +293,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                   comments: '',
                   assignee: '',
                   releaseDocument: {},
-                  status: 'finance pending',
+                  status: 'release pending',
                 });
                 setReleaseModal(true);
               }}
@@ -302,8 +303,8 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
           )}
         </Stack>
         <Scrollbar>
-          <TableContainer sx={{ minWidth: 800 }}>
-            <Table>
+          <TableContainer>
+            <Table sx={{ minWidth: 800 }}>
               <TableHead>
                 <TableRow>
                   <TableCell align="left" />
@@ -314,6 +315,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                   <TableCell align="left">Pledged date</TableCell>
                   <TableCell align="left">Payable amount</TableCell>
                   <TableCell align="left">Payment Type</TableCell>
+                  <TableCell align="left">Status</TableCell>
                   <TableCell align="left">Action</TableCell>
                 </TableRow>
               </TableHead>
@@ -333,6 +335,18 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                     <TableCell align="left">{moment(e.pledgedDate).format('YYYY-MM-DD')}</TableCell>
                     <TableCell align="left">{e.payableAmount}</TableCell>
                     <TableCell align="left">{sentenceCase(e.paymentType)}</TableCell>
+                    <TableCell align="left">
+                      <span style={{
+                        padding: '2px 10px',
+                        borderRadius: 12,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        background: e.status === 'completed' ? '#d4edda' : e.status === 'release pending' ? '#fff3cd' : '#cce5ff',
+                        color: e.status === 'completed' ? '#155724' : e.status === 'release pending' ? '#856404' : '#004085',
+                      }}>
+                        {e.status ? sentenceCase(e.status) : 'Pending'}
+                      </span>
+                    </TableCell>
                     <TableCell align="left">
                       {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && !(selectedUser?.sales?.some(sale => sale.release?.includes(e._id))) && (
                         <Stack direction="row" spacing={1}>
@@ -534,31 +548,42 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                 />
               </Grid>
               <Grid item xs={12} md={4}>
-                <span>Release document: </span>
-                <TextField
-                  name="releaseDocument"
-                  type={'file'}
-                  error={touched.releaseDocument && errors.releaseDocument && true}
-                  fullWidth
-                  onBlur={handleBlur}
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    setValues({ ...values, releaseDocument: file });
-                    if (file) {
-                      setReleaseDocPreview(URL.createObjectURL(file));
-                    }
-                  }}
-                  required={!isEdit}
-                />
-                {releaseDocPreview && (
-                  <Box sx={{ mt: 1 }}>
-                    <img
-                      src={releaseDocPreview}
-                      alt="Release Document Preview"
-                      style={{ width: '100px', height: 'auto', borderRadius: '4px', border: '1px solid #ddd' }}
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      Release document:
+                    </Typography>
+                    <TextField
+                      name="releaseDocument"
+                      type="file"
+                      error={touched.releaseDocument && errors.releaseDocument && true}
+                      onBlur={handleBlur}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setValues({ ...values, releaseDocument: file });
+                        if (file) {
+                          setReleaseDocPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      required={!isEdit}
+                      fullWidth
+                      size="small"
                     />
                   </Box>
-                )}
+                  {releaseDocPreview && (
+                    <IconButton
+                      component="a"
+                      href={releaseDocPreview}
+                      target="_blank"
+                      rel="noreferrer"
+                      color="secondary"
+                      title="View Release Document"
+                      sx={{ mt: 3 }}
+                    >
+                      <Iconify icon="mdi:eye" />
+                    </IconButton>
+                  )}
+                </Stack>
               </Grid>
               <Grid item xs={12} md={4}>
                 <LocalizationProvider dateAdapter={AdapterMoment}>

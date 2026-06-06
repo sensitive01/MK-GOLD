@@ -34,8 +34,7 @@ const Sales = mongoose.model(
       },
       release: [
         {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "releases",
+          type: mongoose.Schema.Types.Mixed,
         },
       ],
       ornaments: [
@@ -123,11 +122,22 @@ const Sales = mongoose.model(
       status: {
         type: String,
         required: true,
-        default: "finance pending",
+        default: "bullion pending",
       },
       assignee: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "employees",
+      },
+      // Bullion Desk Step
+      bullionComments: {
+        type: String,
+      },
+      bullionCompleted: {
+        type: Boolean,
+        default: false,
+      },
+      bullionCompletedAt: {
+        type: Date,
       },
       // Finance Step
       financeAmount: {

@@ -320,8 +320,8 @@ export default function Designation() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <DesignationListHead
                   order={order}
                   orderBy={orderBy}

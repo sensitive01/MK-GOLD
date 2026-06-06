@@ -1,4 +1,4 @@
-import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid } from '@mui/material';
+import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid, Tab, Tabs, Box, Button, Typography, IconButton } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
@@ -13,6 +13,7 @@ import { createFile } from '../../../apis/branch/fileupload';
 import { getEnquiryByEnqId } from '../../../apis/branch/qrEnquiry';
 import Stack from '@mui/material/Stack';
 import global from '../../../utils/global';
+import Iconify from '../../iconify';
 
 function CreateCustomer({ setToggleContainer, setNotify }) {
   const auth = useSelector((state) => state.auth);
@@ -23,14 +24,17 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
   const [focusedField, setFocusedField] = useState(null);
   const webcamRef = useRef(null);
   const form = useRef();
+  const [tabValue, setTabValue] = useState(0);
+  const [uploadIdPreview, setUploadIdPreview] = useState(null);
+  const [signaturePreview, setSignaturePreview] = useState(null);
 
   useEffect(() => {
     setBranch(auth.user.branch);
   }, [auth]);
 
   const videoConstraints = {
-    width: 420,
-    height: 420,
+    width: 320,
+    height: 240,
     facingMode: 'user',
   };
 
@@ -157,6 +161,9 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
 
           setToggleContainer(false);
           setImg(null);
+          setTabValue(0);
+          setUploadIdPreview(null);
+          setSignaturePreview(null);
           form.current.reset();
           resetForm();
           setNotify({
@@ -202,241 +209,340 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         }}
         autoComplete="off"
       >
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Stack direction="row" spacing={2} alignItems="center">
-                <TextField
-                    size="small"
-                    label="Enquiry ID (e.g. ENQ123A)"
-                    value={enquiryId}
-                    onChange={(e) => setEnquiryId(e.target.value)}
-                    sx={{ maxWidth: 300 }}
-                />
-                <LoadingButton
-                    loading={fetchingEnquiry}
-                    variant="outlined"
-                    onClick={handleFetchEnquiry}
-                >
-                    Fetch Detail
-                </LoadingButton>
-            </Stack>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              name="name"
-              value={values.name}
-              error={touched.name && errors.name && true}
-              label={touched.name && errors.name ? errors.name : 'Name'}
-              fullWidth
-              onBlur={handleBlur}
-              onChange={handleChange}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              name="phoneNumber"
-              value={focusedField === 'phoneNumber' ? values.phoneNumber : global.maskPhoneNumber(values.phoneNumber)}
-              onFocus={() => setFocusedField('phoneNumber')}
-              onBlur={(e) => {
-                handleBlur(e);
-                setFocusedField(null);
-              }}
-              error={touched.phoneNumber && errors.phoneNumber && true}
-              label={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber : 'Phone'}
-              fullWidth
-              onChange={handleChange}
-              inputProps={{ maxLength: 10 }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              name="alternatePhoneNumber"
-              value={focusedField === 'alternatePhoneNumber' ? values.alternatePhoneNumber : global.maskPhoneNumber(values.alternatePhoneNumber)}
-              onFocus={() => setFocusedField('alternatePhoneNumber')}
-              onBlur={(e) => {
-                handleBlur(e);
-                setFocusedField(null);
-              }}
-              error={touched.alternatePhoneNumber && errors.alternatePhoneNumber && true}
-              label={
-                touched.alternatePhoneNumber && errors.alternatePhoneNumber ? errors.alternatePhoneNumber : 'Alt Phone'
-              }
-              fullWidth
-              onChange={handleChange}
-              inputProps={{ maxLength: 10 }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              name="email"
-              value={values.email}
-              error={touched.email && errors.email && true}
-              label={touched.email && errors.email ? errors.email : 'Email id'}
-              fullWidth
-              onBlur={handleBlur}
-              onChange={handleChange}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <LocalizationProvider dateAdapter={AdapterMoment}>
-              <DesktopDatePicker
-                name="dob"
-                value={values.dob}
-                error={touched.dob && errors.dob && true}
-                label={touched.dob && errors.dob ? errors.dob : 'DOB'}
-                inputFormat="MM/DD/YYYY"
-                onChange={(e) => {
-                  setValues({ ...values, dob: e });
-                }}
-                renderInput={(params) => <TextField {...params} fullWidth />}
+        <Tabs
+          value={tabValue}
+          onChange={(e, newValue) => setTabValue(newValue)}
+          sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
+          variant="fullWidth"
+        >
+          <Tab label="1. Details" />
+          <Tab label="2. Documents" />
+          <Tab label="3. Photo Capture" />
+        </Tabs>
+
+        {tabValue === 0 && (
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                  <TextField
+                      size="small"
+                      label="Enquiry ID (e.g. ENQ123A)"
+                      value={enquiryId}
+                      onChange={(e) => setEnquiryId(e.target.value)}
+                      sx={{ maxWidth: 300 }}
+                  />
+                  <LoadingButton
+                      loading={fetchingEnquiry}
+                      variant="outlined"
+                      onClick={handleFetchEnquiry}
+                  >
+                      Fetch Detail
+                  </LoadingButton>
+              </Stack>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                name="name"
+                value={values.name}
+                error={touched.name && errors.name && true}
+                label={touched.name && errors.name ? errors.name : 'Name'}
+                fullWidth
+                onBlur={handleBlur}
+                onChange={handleChange}
               />
-            </LocalizationProvider>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth error={touched.gender && errors.gender && true}>
-              <InputLabel id="select-label">Select gender</InputLabel>
-              <Select
-                labelId="select-label"
-                id="select"
-                label={touched.gender && errors.gender ? errors.gender : 'Select gender'}
-                name="gender"
-                value={values.gender}
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                name="phoneNumber"
+                value={focusedField === 'phoneNumber' ? values.phoneNumber : global.maskPhoneNumber(values.phoneNumber)}
+                onFocus={() => setFocusedField('phoneNumber')}
+                onBlur={(e) => {
+                  handleBlur(e);
+                  setFocusedField(null);
+                }}
+                error={touched.phoneNumber && errors.phoneNumber && true}
+                label={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber : 'Phone'}
+                fullWidth
+                onChange={handleChange}
+                inputProps={{ maxLength: 10 }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                name="alternatePhoneNumber"
+                value={focusedField === 'alternatePhoneNumber' ? values.alternatePhoneNumber : global.maskPhoneNumber(values.alternatePhoneNumber)}
+                onFocus={() => setFocusedField('alternatePhoneNumber')}
+                onBlur={(e) => {
+                  handleBlur(e);
+                  setFocusedField(null);
+                }}
+                error={touched.alternatePhoneNumber && errors.alternatePhoneNumber && true}
+                label={
+                  touched.alternatePhoneNumber && errors.alternatePhoneNumber ? errors.alternatePhoneNumber : 'Alt Phone'
+                }
+                fullWidth
+                onChange={handleChange}
+                inputProps={{ maxLength: 10 }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                name="email"
+                value={values.email}
+                error={touched.email && errors.email && true}
+                label={touched.email && errors.email ? errors.email : 'Email id'}
+                fullWidth
                 onBlur={handleBlur}
                 onChange={handleChange}
-              >
-                <MenuItem value="male">Male</MenuItem>
-                <MenuItem value="female">Female</MenuItem>
-                <MenuItem value="other">Other</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth error={touched.maritalStatus && errors.maritalStatus && true}>
-              <InputLabel id="select-label">Select marital status</InputLabel>
-              <Select
-                labelId="select-label"
-                id="select"
-                label={touched.maritalStatus && errors.maritalStatus ? errors.maritalStatus : 'Select maritalStatus'}
-                name="maritalStatus"
-                value={values.maritalStatus}
-                onBlur={handleBlur}
-                onChange={handleChange}
-              >
-                <MenuItem value="married">Married</MenuItem>
-                <MenuItem value="unmarried">Unmarried</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth error={touched.source && errors.source && true}>
-              <InputLabel id="select-label">Select source</InputLabel>
-              <Select
-                labelId="select-label"
-                id="select"
-                label={touched.source && errors.source ? errors.source : 'Select source'}
-                name="source"
-                value={values.source}
-                onBlur={handleBlur}
-                onChange={handleChange}
-              >
-                <MenuItem value="TV Ad">TV Ad</MenuItem>
-                <MenuItem value="Newspaper Ad">Newspaper Ad</MenuItem>
-                <MenuItem value="Friend Reference">Friend Reference</MenuItem>
-                <MenuItem value="Hoardings">Hoardings</MenuItem>
-                <MenuItem value="Pamphlet Ad">Pamphlet Ad</MenuItem>
-                <MenuItem value="Poster Ad">Poster Ad</MenuItem>
-                <MenuItem value="Google Ad">Google Ad</MenuItem>
-                <MenuItem value="Others">Others</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth error={touched.chooseId && errors.chooseId && true}>
-              <InputLabel id="select-label">Select chooseId</InputLabel>
-              <Select
-                labelId="select-label"
-                id="select"
-                label={touched.chooseId && errors.chooseId ? errors.chooseId : 'Select chooseId'}
-                name="chooseId"
-                value={values.chooseId}
-                onBlur={handleBlur}
-                onChange={handleChange}
-              >
-                <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
-                <MenuItem value="Driving License">Driving License</MenuItem>
-                <MenuItem value="PAN Card">PAN Card</MenuItem>
-                <MenuItem value="Passport">Passport</MenuItem>
-                <MenuItem value="Ration Card">Ration Card</MenuItem>
-                <MenuItem value="Others">Others</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <TextField
-              name="idNo"
-              value={values.idNo}
-              error={touched.idNo && errors.idNo && true}
-              label={touched.idNo && errors.idNo ? errors.idNo : 'Id No'}
-              fullWidth
-              onBlur={handleBlur}
-              onChange={handleChange}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <span>UploadId: </span>
-            <TextField
-              name="uploadId"
-              type={'file'}
-              onBlur={handleBlur}
-              onChange={(e) => {
-                setValues({ ...values, uploadId: e.target.files[0] });
-              }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <span>Signature: </span>
-            <TextField
-              name="signature"
-              type={'file'}
-              onBlur={handleBlur}
-              onChange={(e) => {
-                setValues({ ...values, signature: e.target.files[0] });
-              }}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            {img === null ? (
-              <>
-                <Webcam
-                  mirrored
-                  audio={false}
-                  height={400}
-                  width={400}
-                  ref={webcamRef}
-                  screenshotFormat="image/png"
-                  videoConstraints={videoConstraints}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <LocalizationProvider dateAdapter={AdapterMoment}>
+                <DesktopDatePicker
+                  name="dob"
+                  value={values.dob}
+                  error={touched.dob && errors.dob && true}
+                  label={touched.dob && errors.dob ? errors.dob : 'DOB'}
+                  inputFormat="MM/DD/YYYY"
+                  onChange={(e) => {
+                    setValues({ ...values, dob: e });
+                  }}
+                  renderInput={(params) => <TextField {...params} fullWidth />}
                 />
-                <br />
-                <LoadingButton size="small" type="button" variant="contained" onClick={capture}>
-                  Capture photo
-                </LoadingButton>
-              </>
-            ) : (
-              <>
-                <img src={img} alt="screenshot" />
-                <br />
-                <LoadingButton size="small" type="button" variant="contained" onClick={() => setImg(null)}>
-                  Retake
-                </LoadingButton>
-              </>
-            )}
+              </LocalizationProvider>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth error={touched.gender && errors.gender && true}>
+                <InputLabel id="select-label">Select gender</InputLabel>
+                <Select
+                  labelId="select-label"
+                  id="select"
+                  label={touched.gender && errors.gender ? errors.gender : 'Select gender'}
+                  name="gender"
+                  value={values.gender}
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                >
+                  <MenuItem value="male">Male</MenuItem>
+                  <MenuItem value="female">Female</MenuItem>
+                  <MenuItem value="other">Other</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth error={touched.maritalStatus && errors.maritalStatus && true}>
+                <InputLabel id="select-label">Select marital status</InputLabel>
+                <Select
+                  labelId="select-label"
+                  id="select"
+                  label={touched.maritalStatus && errors.maritalStatus ? errors.maritalStatus : 'Select maritalStatus'}
+                  name="maritalStatus"
+                  value={values.maritalStatus}
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                >
+                  <MenuItem value="married">Married</MenuItem>
+                  <MenuItem value="unmarried">Unmarried</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth error={touched.source && errors.source && true}>
+                <InputLabel id="select-label">Select source</InputLabel>
+                <Select
+                  labelId="select-label"
+                  id="select"
+                  label={touched.source && errors.source ? errors.source : 'Select source'}
+                  name="source"
+                  value={values.source}
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                >
+                  <MenuItem value="TV Ad">TV Ad</MenuItem>
+                  <MenuItem value="Newspaper Ad">Newspaper Ad</MenuItem>
+                  <MenuItem value="Friend Reference">Friend Reference</MenuItem>
+                  <MenuItem value="Hoardings">Hoardings</MenuItem>
+                  <MenuItem value="Pamphlet Ad">Pamphlet Ad</MenuItem>
+                  <MenuItem value="Poster Ad">Poster Ad</MenuItem>
+                  <MenuItem value="Google Ad">Google Ad</MenuItem>
+                  <MenuItem value="Others">Others</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
           </Grid>
-          <Grid item xs={12}>
+        )}
+
+        {tabValue === 1 && (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth error={touched.chooseId && errors.chooseId && true}>
+                <InputLabel id="select-label">Select chooseId</InputLabel>
+                <Select
+                  labelId="select-label"
+                  id="select"
+                  label={touched.chooseId && errors.chooseId ? errors.chooseId : 'Select chooseId'}
+                  name="chooseId"
+                  value={values.chooseId}
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                >
+                  <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
+                  <MenuItem value="Driving License">Driving License</MenuItem>
+                  <MenuItem value="PAN Card">PAN Card</MenuItem>
+                  <MenuItem value="Passport">Passport</MenuItem>
+                  <MenuItem value="Ration Card">Ration Card</MenuItem>
+                  <MenuItem value="Others">Others</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                name="idNo"
+                value={values.idNo}
+                error={touched.idNo && errors.idNo && true}
+                label={touched.idNo && errors.idNo ? errors.idNo : 'Id No'}
+                fullWidth
+                onBlur={handleBlur}
+                onChange={handleChange}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
+                  Upload ID:
+                </Typography>
+                <TextField
+                  name="uploadId"
+                  type={'file'}
+                  onBlur={handleBlur}
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    setValues({ ...values, uploadId: file });
+                    if (file) {
+                      setUploadIdPreview(URL.createObjectURL(file));
+                    }
+                  }}
+                  size="small"
+                  fullWidth
+                />
+                {uploadIdPreview && (
+                  <IconButton
+                    component="a"
+                    href={uploadIdPreview}
+                    target="_blank"
+                    rel="noreferrer"
+                    color="secondary"
+                    title="View ID Document"
+                  >
+                    <Iconify icon="mdi:eye" />
+                  </IconButton>
+                )}
+              </Stack>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
+                  Signature:
+                </Typography>
+                <TextField
+                  name="signature"
+                  type={'file'}
+                  onBlur={handleBlur}
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    setValues({ ...values, signature: file });
+                    if (file) {
+                      setSignaturePreview(URL.createObjectURL(file));
+                    }
+                  }}
+                  size="small"
+                  fullWidth
+                />
+                {signaturePreview && (
+                  <IconButton
+                    component="a"
+                    href={signaturePreview}
+                    target="_blank"
+                    rel="noreferrer"
+                    color="secondary"
+                    title="View Signature"
+                  >
+                    <Iconify icon="mdi:eye" />
+                  </IconButton>
+                )}
+              </Stack>
+            </Grid>
+          </Grid>
+        )}
+
+        {tabValue === 2 && (
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              {img === null ? (
+                <div style={{ textAlign: 'center' }}>
+                  <Webcam
+                    mirrored
+                    audio={false}
+                    height={240}
+                    width={320}
+                    ref={webcamRef}
+                    screenshotFormat="image/png"
+                    videoConstraints={videoConstraints}
+                  />
+                  <br />
+                  <LoadingButton size="small" type="button" variant="contained" onClick={capture} sx={{ mt: 1 }}>
+                    Capture photo
+                  </LoadingButton>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center' }}>
+                  <img 
+                    src={img} 
+                    alt="screenshot" 
+                    style={{ 
+                      width: '100%', 
+                      maxWidth: '320px', 
+                      height: 'auto', 
+                      display: 'block', 
+                      margin: '0 auto', 
+                      borderRadius: '8px', 
+                      border: '1px solid #ccc' 
+                    }} 
+                  />
+                  <br />
+                  <LoadingButton size="small" type="button" variant="contained" onClick={() => setImg(null)} sx={{ mt: 1 }}>
+                    Retake
+                  </LoadingButton>
+                </div>
+              )}
+            </Grid>
+          </Grid>
+        )}
+
+        <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3, borderTop: 1, borderColor: 'divider', pt: 2 }}>
+          {tabValue > 0 && (
+            <Button
+              size="large"
+              variant="outlined"
+              onClick={() => setTabValue((prev) => prev - 1)}
+            >
+              Back
+            </Button>
+          )}
+          {tabValue < 2 ? (
+            <Button
+              size="large"
+              variant="contained"
+              onClick={() => setTabValue((prev) => prev + 1)}
+            >
+              Next
+            </Button>
+          ) : (
             <LoadingButton size="large" type="submit" variant="contained">
               Save
             </LoadingButton>
-          </Grid>
-        </Grid>
+          )}
+        </Stack>
       </form>
     </Card>
   );

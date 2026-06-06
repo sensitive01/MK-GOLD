@@ -331,8 +331,8 @@ export default function Branch() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <BranchListHead
                   order={order}
                   orderBy={orderBy}

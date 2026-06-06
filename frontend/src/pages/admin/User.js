@@ -61,6 +61,7 @@ const TABLE_HEAD = [
   { id: 'username', label: 'Username', alignRight: false },
   { id: 'userType', label: 'User Type', alignRight: false },
   { id: 'employee', label: 'Employee', alignRight: false },
+  { id: 'branch', label: 'Branch', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'loginMethod', label: 'Login Method', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
@@ -424,8 +425,8 @@ export default function User() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <UserListHead
                   order={order}
                   orderBy={orderBy}
@@ -454,6 +455,7 @@ export default function User() {
                         <TableCell align="left">{username}</TableCell>
                         <TableCell align="left">{sentenceCase(userType)}</TableCell>
                         <TableCell align="left">{employee?.employeeId}</TableCell>
+                        <TableCell align="left">{row.branch?.branchName || 'N/A'}</TableCell>
                         <TableCell align="left">
                           <Status status={status} _id={_id} />
                         </TableCell>

@@ -20,6 +20,7 @@ import {
   Checkbox,
   Paper,
   CircularProgress,
+  IconButton,
 } from '@mui/material';
 import { sentenceCase } from 'change-case';
 import { LoadingButton } from '@mui/lab';
@@ -51,8 +52,8 @@ const style = {
 };
 
 const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, setData, modalRoot }) => {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [bankProofPreview, setBankProofPreview] = useState(null);
 
   // Form validation
   const schema = Yup.object({
@@ -97,6 +98,7 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
             createFile(formData);
             resetForm();
             setFieldValue('proofFile', {});
+            setBankProofPreview(null);
             setBankModal(false);
             setNotify({
               open: true,
@@ -175,18 +177,7 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
     if (!file) return;
 
     setFieldValue('proofFile', file);
-    setIsAnalyzing(true);
-
-    // Simulate OCR Analysis
-    setTimeout(() => {
-      setIsAnalyzing(false);
-      // Using data from the user's actual passbook for a realistic demo
-      setFieldValue('accountNo', '40128101081190');
-      setFieldValue('ifscCode', 'KLGB0040128');
-      setFieldValue('accountHolderName', 'ASWINRAJ R');
-
-      setNotify({ open: true, message: 'Document analyzed and details auto-filled!', severity: 'success' });
-    }, 2000);
+    setBankProofPreview(URL.createObjectURL(file));
   };
 
   if (!modalRoot) return null;
@@ -204,7 +195,10 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
           <Button
             sx={{ color: '#222', float: 'right' }}
             startIcon={<CloseIcon />}
-            onClick={() => setBankModal(false)}
+            onClick={() => {
+              setBankModal(false);
+              setBankProofPreview(null);
+            }}
           />
         </Typography>
         <form
@@ -224,6 +218,7 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
                 fullWidth
                 onBlur={handleBlur}
                 onChange={handleChange}
+                autoComplete="new-password"
               />
             </Grid>
             <Grid item xs={12} md={5}>
@@ -235,7 +230,7 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
                 fullWidth
                 onBlur={handleBlur}
                 onChange={handleChange}
-                inputProps={{ style: { textTransform: 'uppercase' } }}
+                inputProps={{ style: { textTransform: 'uppercase' }, autoComplete: 'new-password' }}
               />
             </Grid>
             <Grid item xs={12} md={3} sx={{ display: 'flex', alignItems: 'center' }}>
@@ -265,6 +260,7 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
                 fullWidth
                 onBlur={handleBlur}
                 onChange={handleChange}
+                autoComplete="new-password"
               />
             </Grid>
             <Grid item xs={12} md={4}>
@@ -276,6 +272,7 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
                 fullWidth
                 onBlur={handleBlur}
                 onChange={handleChange}
+                autoComplete="new-password"
               />
             </Grid>
             <Grid item xs={12} md={4}>
@@ -287,6 +284,7 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
                 fullWidth
                 onBlur={handleBlur}
                 onChange={handleChange}
+                autoComplete="new-password"
               />
             </Grid>
             <Grid item xs={12} md={4}>
@@ -311,23 +309,31 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
             <Grid item xs={12} md={8}>
               <Box sx={{ border: '1px dashed #ccc', p: 1, borderRadius: 1, position: 'relative' }}>
                 <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                  Attach Bank Proof (OCR Analysis Enabled):
+                  Attach Bank Proof:
                 </Typography>
                 <Stack direction="row" alignItems="center" spacing={2}>
-                  <TextField
-                    name="proofFile"
-                    type={'file'}
-                    error={touched.proofFile && errors.proofFile && true}
-                    onBlur={handleBlur}
-                    onChange={handleFileUpload}
-                    required
-                    sx={{ flexGrow: 1 }}
-                  />
-                  {isAnalyzing && (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <CircularProgress size={20} />
-                      <Typography variant="caption">Scanning...</Typography>
-                    </Stack>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <TextField
+                      name="proofFile"
+                      type={'file'}
+                      error={touched.proofFile && errors.proofFile && true}
+                      onBlur={handleBlur}
+                      onChange={handleFileUpload}
+                      required
+                      fullWidth
+                    />
+                  </Box>
+                  {bankProofPreview && (
+                    <IconButton
+                      component="a"
+                      href={bankProofPreview}
+                      target="_blank"
+                      rel="noreferrer"
+                      color="secondary"
+                      title="View Bank Proof"
+                    >
+                      <Iconify icon="mdi:eye" />
+                    </IconButton>
                   )}
                 </Stack>
               </Box>
@@ -343,7 +349,10 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
                 color="error"
                 sx={{ ml: 2 }}
                 startIcon={<CloseIcon />}
-                onClick={() => setBankModal(false)}
+                onClick={() => {
+                  setBankModal(false);
+                  setBankProofPreview(null);
+                }}
               >
                 Cancel
               </Button>
@@ -429,8 +438,8 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
           </Button>
         </Stack>
         <Scrollbar>
-          <TableContainer sx={{ minWidth: 800 }}>
-            <Table>
+          <TableContainer>
+            <Table sx={{ minWidth: 800 }}>
               <TableHead>
                 <TableRow>
                   <TableCell align="left" />

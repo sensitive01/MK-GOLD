@@ -418,8 +418,8 @@ export default function Release() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <ReleaseListHead
                   order={order}
                   orderBy={orderBy}

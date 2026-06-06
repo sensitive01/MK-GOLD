@@ -264,8 +264,8 @@ export default function OTP() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <OTPListHead
                   order={order}
                   orderBy={orderBy}

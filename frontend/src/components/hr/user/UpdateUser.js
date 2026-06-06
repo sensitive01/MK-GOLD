@@ -42,11 +42,16 @@ function UpdateUser(props) {
     initialValues: { ...initialValues },
     validationSchema: schema,
     onSubmit: (values) => {
-      if (['branch', 'assistant_branch_manager', 'branch_executive'].includes(values.userType)) {
-        values.username = employees?.find((e) => e._id === values.employee)?.phoneNumber ?? null;
-        values.password = 'no-password';
+      const payload = { ...values };
+      if (['branch', 'assistant_branch_manager', 'branch_executive'].includes(payload.userType)) {
+        payload.username = employees?.find((e) => e._id === payload.employee)?.phoneNumber ?? null;
+        payload.password = 'no-password';
+      } else {
+        if (!payload.branch) {
+          payload.branch = null;
+        }
       }
-      updateUser(props.id, values).then((data) => {
+      updateUser(props.id, payload).then((data) => {
         if (data.status === false) {
           props.setNotify({
             open: true,
@@ -124,7 +129,7 @@ function UpdateUser(props) {
                   id="select"
                   label={touched.branch && errors.branch ? errors.branch : 'Select branch'}
                   name="branch"
-                  value={values.branch}
+                  value={values.branch || ''}
                   onBlur={handleBlur}
                   onChange={handleChange}
                 >
@@ -159,6 +164,27 @@ function UpdateUser(props) {
                   onBlur={handleBlur}
                   onChange={handleChange}
                 />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <FormControl fullWidth error={touched.branch && errors.branch && true}>
+                  <InputLabel id="select-branch-optional-label">Select branch (Optional)</InputLabel>
+                  <Select
+                    labelId="select-branch-optional-label"
+                    id="select-branch-optional"
+                    label={touched.branch && errors.branch ? errors.branch : 'Select branch (Optional)'}
+                    name="branch"
+                    value={values.branch || ''}
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value="">None</MenuItem>
+                    {branches?.map((e) => (
+                      <MenuItem value={e._id} key={e._id}>
+                        {e.branchId} {e.branchName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
             </>
           )}

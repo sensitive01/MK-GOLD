@@ -162,6 +162,7 @@ branchRouter.post(
 router.use(
   function (req, res, next) {
     passport.authenticate("jwt", { session: false }, (err, user, info) => {
+      console.log("JWT Auth Attempt:", { err, userId: user?._id, username: user?.username, userType: user?.userType, info });
       if (err) {
         return res.status(400).json({
           status: false,

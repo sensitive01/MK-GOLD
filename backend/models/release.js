@@ -60,11 +60,22 @@ const Release = mongoose.model(
       status: {
         type: String,
         required: true,
-        default: "finance pending",
+        default: "release pending",
       },
       assignee: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "employees",
+      },
+      // Bullion Desk Step
+      bullionComments: {
+        type: String,
+      },
+      bullionCompleted: {
+        type: Boolean,
+        default: false,
+      },
+      bullionCompletedAt: {
+        type: Date,
       },
       // Finance Step
       financeAmount: {

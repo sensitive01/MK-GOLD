@@ -111,6 +111,7 @@ export default {
     { label: 'Branch Executive', value: 'branch_executive' }, // Added for 7.3
     { label: 'Tele-Calling', value: 'telecalling' },
     { label: 'Transaction Executive', value: 'transaction_executive' },
+    { label: 'Bullion Desk', value: 'bullion_desk' },
   ],
   employmentTypes: [
     { label: 'Full Time', value: 'full-time' },

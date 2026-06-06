@@ -396,8 +396,8 @@ export default function Sale() {
             }}
           />
 
-          <TableContainer sx={{ minWidth: 800 }}>
-            <Table>
+          <TableContainer>
+            <Table sx={{ minWidth: 800 }}>
               <SaleListHead
                   order={order}
                   orderBy={orderBy}
@@ -413,9 +413,25 @@ export default function Sale() {
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
-                      <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                      <TableRow
+                        hover
+                        key={_id}
+                        tabIndex={-1}
+                        role="checkbox"
+                        selected={selectedData}
+                        onClick={() => {
+                          setSaleIdToEdit(_id);
+                          setToggleContainer(true);
+                          setToggleContainerType('detail');
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedData}
+                            onChange={(event) => handleClick(event, _id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         </TableCell>
                         <TableCell align="left">{billId}</TableCell>
                         <TableCell align="left">{sentenceCase(saleType)}</TableCell>
@@ -423,16 +439,18 @@ export default function Sale() {
                         <TableCell align="left">{rowBranch?.branchId}</TableCell>
                         <TableCell align="left">{rowBranch?.branchName}</TableCell>
                         <TableCell align="left">{sentenceCase(purchaseType)}</TableCell>
-                        <TableCell align="left">
+                        <TableCell align="left" onClick={(e) => e.stopPropagation()}>
                           <Status 
                             status={status} 
                             _id={_id} 
                             assignee={row.assignee?._id || row.assignee}
                             fetchData={fetchData}
+                            saleType={saleType}
+                            assigneeCompleted={row.assigneeCompleted}
                           />
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                        <TableCell align="right">
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton
                             size="large"
                             color="inherit"
@@ -849,7 +867,7 @@ export default function Sale() {
 }
 
 function Status(props) {
-  const { _id, status, assignee, fetchData } = props;
+  const { _id, status, assignee, fetchData, saleType, assigneeCompleted } = props;
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType?.toLowerCase();
   const employeeId = auth.user?.employee?._id || auth.user?.employee;
@@ -928,71 +946,14 @@ function Status(props) {
     }
   }
 
-  // Admin Approval Step
+  // Admin Approval Step (Legacy support)
   else if (status === 'admin approval pending') {
-    if (userType === 'admin') {
-      content = (
-        <>
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="contained"
-              size="small"
-              color="success"
-              onClick={() => handleOpenConfirm('approve')}
-            >
-              Approve
-            </Button>
-            <Button
-              variant="contained"
-              size="small"
-              color="error"
-              onClick={() => handleOpenConfirm('reject')}
-            >
-              Reject
-            </Button>
-          </Stack>
-
-          <Dialog open={openConfirmDialog} onClose={handleCloseConfirm}>
-            <DialogTitle sx={{ textTransform: 'capitalize' }}>
-              Confirm {confirmAction}
-            </DialogTitle>
-            <DialogContent>
-              <Typography sx={{ mt: 1 }}>
-                Are you sure you want to {confirmAction} this sale transaction?
-              </Typography>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCloseConfirm} color="inherit">
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleExecuteConfirm} 
-                color={confirmAction === 'approve' ? 'success' : 'error'} 
-                variant="contained"
-                sx={{ color: '#fff' }}
-              >
-                {confirmAction === 'approve' ? 'Yes, Approve' : 'Yes, Reject'}
-              </Button>
-            </DialogActions>
-          </Dialog>
-        </>
-      );
-    } else {
-      content = <Label color="info">Admin Approval Pending</Label>;
-    }
+    content = <Label color="info">Admin Approval Pending</Label>;
   }
 
-  // Fund Transfer Step
+  // Fund Transfer Step (Legacy support)
   else if (status === 'fund transfer pending') {
-    if (userType === 'finance' || userType === 'accounts') {
-      content = (
-        <Button variant="contained" size="small" onClick={() => handleVerify('fund transfer')}>
-          Fund Transfer
-        </Button>
-      );
-    } else {
-      content = <Label color="warning">Fund Transfer Pending</Label>;
-    }
+    content = <Label color="warning">Fund Transfer Pending</Label>;
   }
 
   return (
@@ -1005,12 +966,14 @@ function Status(props) {
         type={verifyType}
         handleClose={() => setOpenVerifyModal(false)}
         fetchData={fetchData}
+        saleType={saleType}
+        assigneeCompleted={assigneeCompleted}
       />
     </>
   );
 }
 
-function VerificationModal({ open, id, type, handleClose, fetchData }) {
+function VerificationModal({ open, id, type, handleClose, fetchData, saleType, assigneeCompleted }) {
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType?.toLowerCase();
   const isAdmin = userType === 'admin';
@@ -1086,7 +1049,8 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         if (values.isCompleted) {
           payload.financeCompleted = true;
           payload.financeCompletedAt = new Date();
-          payload.status = 'release pending';
+          const isPhys = saleType === 'physical';
+          payload.status = (isPhys || assigneeCompleted) ? 'completed' : 'release pending';
         }
       } else if (type === 'fund transfer') {
         payload.fundTransferAmount = values.amount;
@@ -1105,7 +1069,9 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         if (values.isCompleted) {
           payload.assigneeCompleted = true;
           payload.assigneeCompletedAt = new Date();
-          payload.status = 'admin approval pending';
+          payload.status = 'bullion pending';
+          payload.bullionCompleted = false;
+          payload.financeCompleted = false;
         }
       }
 
@@ -1284,7 +1250,16 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
             <Grid item xs={12}>
               <Typography variant="subtitle2" gutterBottom>Upload Proof/Photo</Typography>
               <input type="file" onChange={handleFileChange} style={{ marginBottom: '10px' }} />
-              {preview && <img src={preview} alt="Preview" style={{ width: '100%', height: 'auto', borderRadius: '8px' }} />}
+              {preview && (
+                <a
+                  href={values.proof ? (values.proof.startsWith('http') ? values.proof : `${global.baseURL}/${values.proof}`) : preview}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ cursor: 'pointer' }}
+                >
+                  <img src={preview} alt="Preview" style={{ width: '100%', height: 'auto', borderRadius: '8px' }} />
+                </a>
+              )}
             </Grid>
 
             {type === 'assignee' && (

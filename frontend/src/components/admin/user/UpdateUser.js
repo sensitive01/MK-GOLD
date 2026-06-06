@@ -57,8 +57,9 @@ function UpdateUser(props) {
           delete payload.password;
         }
       } else {
-        delete payload.branch;
-        payload.branch = null;
+        if (!payload.branch) {
+          payload.branch = null;
+        }
         if (payload.loginMethod === 'otp') {
           payload.password = 'no-password';
         } else if (!payload.password) {
@@ -156,7 +157,7 @@ function UpdateUser(props) {
                   id="select"
                   label={touched.branch && errors.branch ? errors.branch : 'Select branch'}
                   name="branch"
-                  value={values.branch}
+                  value={values.branch || ''}
                   onBlur={handleBlur}
                   onChange={handleChange}
                 >
@@ -194,6 +195,27 @@ function UpdateUser(props) {
                   />
                 </Grid>
               )}
+              <Grid item xs={12} sm={4}>
+                <FormControl fullWidth error={touched.branch && errors.branch && true}>
+                  <InputLabel id="select-branch-optional-label">Select branch (Optional)</InputLabel>
+                  <Select
+                    labelId="select-branch-optional-label"
+                    id="select-branch-optional"
+                    label={touched.branch && errors.branch ? errors.branch : 'Select branch (Optional)'}
+                    name="branch"
+                    value={values.branch || ''}
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value="">None</MenuItem>
+                    {branches?.map((e) => (
+                      <MenuItem value={e._id} key={e._id}>
+                        {e.branchId} {e.branchName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
             </>
           )}
           <Grid item xs={12} sm={4}>

@@ -339,8 +339,8 @@ export default function Customer() {
           />
 
           <Scrollbar>
-            <TableContainer sx={{ minWidth: 800 }}>
-              <Table>
+            <TableContainer>
+              <Table sx={{ minWidth: 800 }}>
                 <CustomerListHead
                   order={order}
                   orderBy={orderBy}
