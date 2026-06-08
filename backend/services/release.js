@@ -364,7 +364,10 @@ async function update(id, payload) {
     }).exec();
 
     if (updatedRelease) {
-      const linkedSales = await Sales.find({ "release._id": id }).exec();
+      const queryId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id;
+      const linkedSales = await Sales.find({
+        "release._id": { $in: [queryId, id.toString()] }
+      }).exec();
       for (const sale of linkedSales) {
         const updatedReleaseArray = sale.release.map(rel => {
           if (rel._id && rel._id.toString() === id.toString()) {
@@ -413,7 +416,10 @@ async function updateWithLog(id, setData, logEntry) {
     ).exec();
 
     if (updatedRelease) {
-      const linkedSales = await Sales.find({ "release._id": id }).exec();
+      const queryId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id;
+      const linkedSales = await Sales.find({
+        "release._id": { $in: [queryId, id.toString()] }
+      }).exec();
       const salesService = require("./sales");
       for (const sale of linkedSales) {
         const updatedReleaseArray = sale.release.map(rel => {
@@ -455,11 +461,13 @@ async function remove(id) {
   try {
     const ids = id.split(",");
     const objectIds = ids.map(idStr => new mongoose.Types.ObjectId(idStr));
+    const stringIds = ids.map(idStr => idStr.toString());
+    const queryIds = [...objectIds, ...stringIds];
     
     // Remove references/embedded documents from Sales model
     await Sales.updateMany(
-      { "release._id": { $in: objectIds } },
-      { $pull: { release: { _id: { $in: objectIds } } } }
+      { "release._id": { $in: queryIds } },
+      { $pull: { release: { _id: { $in: queryIds } } } }
     ).exec();
 
     return await Release.deleteMany({
