@@ -99,14 +99,7 @@ async function find(query = {}) {
           as: "customer",
         },
       },
-      {
-        $lookup: {
-          from: "releases",
-          localField: "release",
-          foreignField: "_id",
-          as: "release",
-        },
-      },
+
       {
         $lookup: {
           from: "fileuploads",
@@ -386,14 +379,7 @@ async function findById(id) {
           as: "customer",
         },
       },
-      {
-        $lookup: {
-          from: "releases",
-          localField: "release",
-          foreignField: "_id",
-          as: "release",
-        },
-      },
+
       {
         $lookup: {
           from: "fileuploads",
@@ -914,14 +900,7 @@ async function branchConsolidatedSaleReport(query = {}) {
     }
     return await Sales.aggregate([
       { $match: query },
-      {
-        $lookup: {
-          from: "releases",
-          localField: "release",
-          foreignField: "_id",
-          as: "release",
-        },
-      },
+
       {
         $addFields: {
           rate: {
@@ -1012,14 +991,7 @@ async function adminConsolidatedSaleReport(query = {}) {
           as: "branch",
         },
       },
-      {
-        $lookup: {
-          from: "releases",
-          localField: "release",
-          foreignField: "_id",
-          as: "release",
-        },
-      },
+
       {
         $addFields: {
           rate: {
