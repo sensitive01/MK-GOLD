@@ -1077,7 +1077,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
               </TableContainer>
             </Grid>
 
-            {type === 'assignee' && (
+            {(type === 'assignee' || type === 'release_complete') && (
               <Grid item xs={12}>
                 <Divider sx={{ my: 1 }} />
                 <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>

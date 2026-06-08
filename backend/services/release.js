@@ -380,11 +380,29 @@ async function update(id, payload) {
           release: updatedReleaseArray
         };
 
-        if (payload.status === "completed") {
+        if (payload.status === "completed" || updatedRelease.status === "completed") {
           setDataSales.status = "bullion pending";
           setDataSales.assigneeCompleted = true;
           setDataSales.bullionCompleted = false;
           setDataSales.financeCompleted = false;
+
+          let allOrnaments = [];
+          for (const rel of updatedReleaseArray) {
+            if (rel.status === "completed" && rel.ornaments) {
+              allOrnaments = allOrnaments.concat(rel.ornaments);
+            }
+          }
+          setDataSales.ornaments = allOrnaments;
+
+          const netWeight = allOrnaments.reduce((sum, orn) => sum + (Number(orn.netWeight) || 0), 0);
+          const netAmount = Math.round(allOrnaments.reduce((sum, orn) => sum + (Number(orn.netAmount) || 0), 0));
+          const totalReleasePayable = updatedReleaseArray.reduce((sum, rel) => sum + (Number(rel.payableAmount) || 0), 0);
+          const marginPercent = Number(sale.margin) || 0;
+          const payableAmount = Math.round(netAmount - (netAmount * marginPercent) / 100) - totalReleasePayable;
+
+          setDataSales.netWeight = netWeight;
+          setDataSales.netAmount = netAmount;
+          setDataSales.payableAmount = payableAmount;
         }
 
         if (payload.financeCompleted !== undefined) {
@@ -433,11 +451,29 @@ async function updateWithLog(id, setData, logEntry) {
           release: updatedReleaseArray
         };
 
-        if (setData.status === "completed") {
+        if (setData.status === "completed" || updatedRelease.status === "completed") {
           setDataSales.status = "bullion pending";
           setDataSales.assigneeCompleted = true;
           setDataSales.bullionCompleted = false;
           setDataSales.financeCompleted = false;
+
+          let allOrnaments = [];
+          for (const rel of updatedReleaseArray) {
+            if (rel.status === "completed" && rel.ornaments) {
+              allOrnaments = allOrnaments.concat(rel.ornaments);
+            }
+          }
+          setDataSales.ornaments = allOrnaments;
+
+          const netWeight = allOrnaments.reduce((sum, orn) => sum + (Number(orn.netWeight) || 0), 0);
+          const netAmount = Math.round(allOrnaments.reduce((sum, orn) => sum + (Number(orn.netAmount) || 0), 0));
+          const totalReleasePayable = updatedReleaseArray.reduce((sum, rel) => sum + (Number(rel.payableAmount) || 0), 0);
+          const marginPercent = Number(sale.margin) || 0;
+          const payableAmount = Math.round(netAmount - (netAmount * marginPercent) / 100) - totalReleasePayable;
+
+          setDataSales.netWeight = netWeight;
+          setDataSales.netAmount = netAmount;
+          setDataSales.payableAmount = payableAmount;
         }
 
         if (setData.financeCompleted !== undefined) {
