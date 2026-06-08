@@ -20,6 +20,24 @@ export default function SalePrint({ id }) {
     return null;
   }
 
+  const ornamentPhotos = [];
+  if (data?.assigneeProof) {
+    ornamentPhotos.push(data.assigneeProof);
+  }
+  if (data?.release && data.release.length > 0) {
+    data.release.forEach((rel) => {
+      if (rel.proofDocuments && rel.proofDocuments.length > 0) {
+        rel.proofDocuments.forEach((doc) => {
+          if (doc.documentFile) {
+            if (doc.documentType === 'Ornaments Photo' || rel.proofDocuments.length === 1) {
+              ornamentPhotos.push(doc.documentFile);
+            }
+          }
+        });
+      }
+    });
+  }
+
   return (
     <>
       <iframe id="iframe" style={{ display: 'none', height: '0px', width: '0px', position: 'absolute' }} title="pdf" />
@@ -59,8 +77,8 @@ export default function SalePrint({ id }) {
           </div>
         </div>
         <hr style={{ border: '0', borderBottom: '1px solid white' }} />
-        <div style={{ margin: '20px 0' }}>
-          <table style={{ width: '100%', textAlign: 'left' }}>
+        <div style={{ margin: '20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <table style={{ width: '75%', textAlign: 'left', borderCollapse: 'collapse' }}>
             <tbody>
               <tr>
                 <th style={{ width: '40%' }}>Customer Name :</th>
@@ -80,40 +98,74 @@ export default function SalePrint({ id }) {
               </tr>
             </tbody>
           </table>
+          {data?.customer?.profileImage?.uploadedFile && (
+            <div style={{ width: '80px', height: '80px', border: '1px solid white', borderRadius: '4px', overflow: 'hidden', marginLeft: '10px' }}>
+              <img
+                src={data.customer.profileImage.uploadedFile.startsWith('http') 
+                  ? data.customer.profileImage.uploadedFile 
+                  : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`}
+                alt="Customer"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+          )}
         </div>
         <hr style={{ border: '0', borderBottom: '1px solid white' }} />
-        <div style={{ display: 'block', margin: '20px 0' }}>
-          <table style={{ width: '100%', textAlign: 'left' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', margin: '20px 0' }}>
+          {/* Left side: Ornaments Photos */}
+          <div style={{ width: '45%' }}>
+            {ornamentPhotos.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <b style={{ fontSize: '12px', display: 'block', marginBottom: '5px' }}>Ornaments Photo:</b>
+                {ornamentPhotos.map((photo, index) => (
+                  <div key={index} style={{ width: '100%', maxHeight: '180px', border: '1px solid white', borderRadius: '4px', overflow: 'hidden' }}>
+                    <img
+                      src={photo.startsWith('http') ? photo : `${global.baseURL}/${photo}`}
+                      alt={`Ornaments ${index + 1}`}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ border: '1px dashed white', borderRadius: '4px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
+                No Ornaments Photo
+              </div>
+            )}
+          </div>
+
+          {/* Right side: Pricing Details */}
+          <table style={{ width: '50%', textAlign: 'left', borderCollapse: 'collapse' }}>
             <tbody>
               <tr>
-                <td style={{ width: '50%' }}>Total ornaments:</td>
-                <td style={{ width: '50%', textAlign: 'right' }}>{data?.ornaments?.length || 0}</td>
+                <td style={{ width: '60%' }}>Total ornaments:</td>
+                <td style={{ width: '40%', textAlign: 'right' }}>{data?.ornaments?.length || 0}</td>
               </tr>
               <tr>
-                <td style={{ width: '50%' }}>Gross weight:</td>
-                <td style={{ width: '50%', textAlign: 'right' }}>
+                <td>Gross weight:</td>
+                <td style={{ textAlign: 'right' }}>
                   {Math.round(data?.ornaments?.reduce((prev, cur) => (cur?.grossWeight || 0) + prev, 0) || 0)}
                 </td>
               </tr>
               <tr>
-                <td style={{ width: '50%' }}>Net weight:</td>
-                <td style={{ width: '50%', textAlign: 'right' }}>
+                <td>Net weight:</td>
+                <td style={{ textAlign: 'right' }}>
                   {Math.round(data?.ornaments?.reduce((prev, cur) => (cur?.netWeight || 0) + prev, 0) || 0)}
                 </td>
               </tr>
               <tr>
-                <td style={{ width: '50%' }}>Net Amount</td>
-                <td style={{ width: '50%', textAlign: 'right' }}>&#8377; {Math.round(data?.netAmount || 0)}</td>
+                <td>Net Amount</td>
+                <td style={{ textAlign: 'right' }}>&#8377; {Math.round(data?.netAmount || 0)}</td>
               </tr>
               <tr>
-                <td style={{ width: '50%' }}>Release</td>
-                <td style={{ width: '50%', textAlign: 'right' }}>
+                <td>Release</td>
+                <td style={{ textAlign: 'right' }}>
                   &#8377; {Math.round(data?.release?.reduce((prev, cur) => prev + (cur?.payableAmount || 0), 0) || 0)}
                 </td>
               </tr>
               <tr>
-                <td style={{ width: '50%' }}>Service Charges</td>
-                <td style={{ width: '50%', textAlign: 'right' }}>
+                <td>Service Charges</td>
+                <td style={{ textAlign: 'right' }}>
                   &#8377;{' '}
                   {Math.round(
                     (data?.netAmount || 0) -
@@ -123,8 +175,8 @@ export default function SalePrint({ id }) {
                 </td>
               </tr>
               <tr>
-                <th style={{ width: '50%' }}>Payable</th>
-                <td style={{ width: '50%', textAlign: 'right' }}>&#8377; {Math.round(data?.payableAmount || 0)}</td>
+                <th>Payable</th>
+                <td style={{ textAlign: 'right', fontWeight: 'bold' }}>&#8377; {Math.round(data?.payableAmount || 0)}</td>
               </tr>
             </tbody>
           </table>
@@ -142,9 +194,15 @@ export default function SalePrint({ id }) {
           )}
         </div>
         <hr style={{ border: '0', borderBottom: '1px solid white' }} />
-        <div style={{ textAlign: 'start', margin: '20px 0' }}>
-          Thanks For your billing
-          <br /> www.mk-gold.com
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', margin: '20px 0' }}>
+          <div style={{ textAlign: 'start' }}>
+            Thanks For your billing
+            <br /> www.mk-gold.com
+          </div>
+          <div style={{ textAlign: 'center', width: '150px' }}>
+            <div style={{ borderBottom: '1px solid white', height: '40px', marginBottom: '5px' }}></div>
+            <span style={{ fontSize: '12px' }}>Customer Signature</span>
+          </div>
         </div>
       </div>
       {(data?.status?.toLowerCase() === 'approved' || data?.status?.toLowerCase() === 'completed') && (

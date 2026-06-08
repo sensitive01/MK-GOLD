@@ -949,14 +949,14 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle sx={{ bgcolor: 'primary.main', color: '#fff', mb: 2 }}>
           {sentenceCase(type || '')} Verification
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           <Grid container spacing={4}>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={5}>
               <Typography variant="h6" gutterBottom color="primary">Payment Info</Typography>
               <TextField
                 name="amount"
@@ -984,7 +984,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={7}>
               <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
                 <Typography variant="h6" color="primary">Proof Documents</Typography>
                 <Button variant="contained" size="small" startIcon={<Iconify icon="eva:plus-fill" />} onClick={() => setShowProofForm(!showProofForm)}>
