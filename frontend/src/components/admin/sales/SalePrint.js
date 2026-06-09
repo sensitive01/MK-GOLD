@@ -9,9 +9,11 @@ export default function SalePrint({ id }) {
   const [data, setData] = useState({});
 
   useEffect(() => {
-    getSalesById(id).then((data) => {
-      setData(data.data);
-    });
+    if (id) {
+      getSalesById(id).then((data) => {
+        setData(data.data);
+      });
+    }
   }, [id]);
 
   if (!data || Object.keys(data).length === 0) {
@@ -35,6 +37,15 @@ export default function SalePrint({ id }) {
       }
     });
   }
+  if (data?.proof && data.proof.length > 0) {
+    data.proof.forEach((p) => {
+      if (p.uploadedFile && p.documentType?.toLowerCase() === 'ornaments photo') {
+        ornamentPhotos.push(p.uploadedFile);
+      }
+    });
+  }
+
+  const uniqueOrnamentPhotos = Array.from(new Set(ornamentPhotos));
 
   return (
     <>
@@ -119,46 +130,74 @@ export default function SalePrint({ id }) {
           >
             <thead>
               <tr>
-                <th style={{ border: '1px solid white', padding: '5px' }}>Gram</th>
-                <th style={{ border: '1px solid white', padding: '5px' }}>Stone</th>
-                <th style={{ border: '1px solid white', padding: '5px' }}>NetW</th>
-                <th style={{ border: '1px solid white', padding: '5px' }}>Purity</th>
-                <th style={{ border: '1px solid white', padding: '5px' }}>Amount</th>
+                <th style={{ border: '1px solid white', padding: '8px' }}>Gram</th>
+                <th style={{ border: '1px solid white', padding: '8px' }}>Stone</th>
+                <th style={{ border: '1px solid white', padding: '8px' }}>NetW</th>
+                <th style={{ border: '1px solid white', padding: '8px' }}>Purity</th>
+                <th style={{ border: '1px solid white', padding: '8px' }}>Amount</th>
               </tr>
             </thead>
             <tbody>
               {data?.ornaments?.map((e) => (
                 <tr key={e?._id}>
-                  <td style={{ border: '1px solid white', padding: '5px' }}>{(e?.grossWeight || 0).toFixed(2)} Gram</td>
-                  <td style={{ border: '1px solid white', padding: '5px' }}>{(e?.stoneWeight || 0).toFixed(2)} Gram</td>
-                  <td style={{ border: '1px solid white', padding: '5px' }}>{(e?.netWeight || 0).toFixed(2)} Gram</td>
-                  <td style={{ border: '1px solid white', padding: '5px' }}>{e?.purity} %</td>
-                  <td style={{ border: '1px solid white', padding: '5px' }}>&#8377; {Math.round(e?.netAmount || 0)}</td>
+                  <td style={{ border: '1px solid white', padding: '8px' }}>{(e?.grossWeight || 0).toFixed(2)} Gram</td>
+                  <td style={{ border: '1px solid white', padding: '8px' }}>{(e?.stoneWeight || 0).toFixed(2)} Gram</td>
+                  <td style={{ border: '1px solid white', padding: '8px' }}>{(e?.netWeight || 0).toFixed(2)} Gram</td>
+                  <td style={{ border: '1px solid white', padding: '8px' }}>{e?.purity} %</td>
+                  <td style={{ border: '1px solid white', padding: '8px' }}>&#8377; {Math.round(e?.netAmount || 0)}</td>
                 </tr>
               ))}
+              {uniqueOrnamentPhotos.length > 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ border: '1px solid white', padding: '12px', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <b style={{ fontSize: '13px' }}>Ornaments Photos:</b>
+                      <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '15px' }}>
+                        {uniqueOrnamentPhotos.map((photo, index) => (
+                          <div
+                            key={index}
+                            style={{
+                              width: '120px',
+                              height: '90px',
+                              border: '1px solid rgba(255, 255, 255, 0.5)',
+                              borderRadius: '4px',
+                              overflow: 'hidden',
+                              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                            }}
+                          >
+                            <img
+                              src={photo.startsWith('http') ? photo : `${global.baseURL}/${photo}`}
+                              alt={`Ornaments ${index + 1}`}
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                <tr>
+                  <td colSpan={5} style={{ border: '1px solid white', padding: '12px', textAlign: 'center', fontSize: '12px' }}>
+                    No Ornaments Photo
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
         <hr style={{ border: '0', borderBottom: '1px solid white' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', margin: '20px 0' }}>
-          {/* Left side: Ornaments Photos */}
-          <div style={{ width: '45%' }}>
-            {ornamentPhotos.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <b style={{ fontSize: '12px', display: 'block', marginBottom: '5px' }}>Ornaments Photo:</b>
-                {ornamentPhotos.map((photo, index) => (
-                  <div key={index} style={{ width: '100%', maxHeight: '180px', border: '1px solid white', borderRadius: '4px', overflow: 'hidden' }}>
-                    <img
-                      src={photo.startsWith('http') ? photo : `${global.baseURL}/${photo}`}
-                      alt={`Ornaments ${index + 1}`}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    />
-                  </div>
-                ))}
+          {/* Left side: Approval Details */}
+          <div style={{ width: '45%', fontSize: '12px', textAlign: 'left' }}>
+            {data?.actionBy && (
+              <div style={{ marginTop: '10px' }}>
+                <b>Approved By:</b> {data?.actionBy?.name} ({data?.actionBy?.employeeId})
               </div>
-            ) : (
-              <div style={{ border: '1px dashed white', borderRadius: '4px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
-                No Ornaments Photo
+            )}
+            {data?.actionAt && (
+              <div style={{ marginTop: '5px' }}>
+                <b>Approved At:</b> {new Date(data?.actionAt).toLocaleString()}
               </div>
             )}
           </div>
@@ -167,18 +206,34 @@ export default function SalePrint({ id }) {
           <table style={{ width: '50%', textAlign: 'left', borderCollapse: 'collapse' }}>
             <tbody>
               <tr>
-                <td style={{ width: '60%' }}>Net Amount</td>
-                <td style={{ width: '40%', textAlign: 'right' }}>&#8377; {Math.round(data?.netAmount || 0)}</td>
+                <td style={{ width: '60%', padding: '4px 0' }}>Total ornaments:</td>
+                <td style={{ width: '40%', textAlign: 'right', padding: '4px 0' }}>{data?.ornaments?.length || 0}</td>
               </tr>
               <tr>
-                <td>Release</td>
-                <td style={{ textAlign: 'right' }}>
+                <td style={{ padding: '4px 0' }}>Gross weight:</td>
+                <td style={{ textAlign: 'right', padding: '4px 0' }}>
+                  {Math.round(data?.ornaments?.reduce((prev, cur) => (cur?.grossWeight || 0) + prev, 0) || 0)}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ padding: '4px 0' }}>Net weight:</td>
+                <td style={{ textAlign: 'right', padding: '4px 0' }}>
+                  {Math.round(data?.ornaments?.reduce((prev, cur) => (cur?.netWeight || 0) + prev, 0) || 0)}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ padding: '4px 0' }}>Net Amount</td>
+                <td style={{ textAlign: 'right', padding: '4px 0' }}>&#8377; {Math.round(data?.netAmount || 0)}</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '4px 0' }}>Release</td>
+                <td style={{ textAlign: 'right', padding: '4px 0' }}>
                   &#8377; {Math.round(data?.release?.reduce((prev, cur) => prev + (cur?.payableAmount || 0), 0) || 0)}
                 </td>
               </tr>
               <tr>
-                <td>Service Charges</td>
-                <td style={{ textAlign: 'right' }}>
+                <td style={{ padding: '4px 0' }}>Service Charges</td>
+                <td style={{ textAlign: 'right', padding: '4px 0' }}>
                   &#8377;{' '}
                   {Math.round(
                     (data?.netAmount || 0) -
@@ -188,23 +243,13 @@ export default function SalePrint({ id }) {
                 </td>
               </tr>
               <tr>
-                <th>Payable</th>
-                <td style={{ textAlign: 'right', fontWeight: 'bold' }}>&#8377; {Math.round(data?.payableAmount || 0)}</td>
+                <th style={{ padding: '6px 0', fontSize: '15px' }}>Payable</th>
+                <td style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '15px', padding: '6px 0' }}>
+                  &#8377; {Math.abs(Math.round(data?.payableAmount || 0))}
+                </td>
               </tr>
             </tbody>
           </table>
-        </div>
-        <div style={{ display: 'block', margin: '20px 0' }}>
-          {data?.actionBy && (
-            <div style={{ marginTop: '10px', fontSize: '12px' }}>
-              <b>Approved By:</b> {data?.actionBy?.name} ({data?.actionBy?.employeeId})
-            </div>
-          )}
-          {data?.actionAt && (
-            <div style={{ marginTop: '5px', fontSize: '12px' }}>
-              <b>Approved At:</b> {new Date(data?.actionAt).toLocaleString()}
-            </div>
-          )}
         </div>
         <hr style={{ border: '0', borderBottom: '1px solid white' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', margin: '20px 0' }}>
