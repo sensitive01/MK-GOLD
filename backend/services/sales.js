@@ -85,14 +85,47 @@ async function find(query = {}) {
             {
               $lookup: {
                 from: "fileuploads",
-                localField: "_id",
-                foreignField: "uploadId",
+                let: { customerId: "$_id" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }] },
+                          { $eq: ["$uploadType", "profile_image"] }
+                        ]
+                      }
+                    }
+                  },
+                  { $sort: { createdAt: -1 } }
+                ],
                 as: "profileImage",
+              },
+            },
+            {
+              $lookup: {
+                from: "fileuploads",
+                let: { customerId: "$_id" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }] },
+                          { $eq: ["$uploadType", "signature"] }
+                        ]
+                      }
+                    }
+                  },
+                  { $sort: { createdAt: -1 } }
+                ],
+                as: "signatureImage",
               },
             },
             {
               $addFields: {
                 profileImage: { $first: "$profileImage" },
+                signatureImage: { $first: "$signatureImage" },
               },
             },
           ],
@@ -365,14 +398,47 @@ async function findById(id) {
             {
               $lookup: {
                 from: "fileuploads",
-                localField: "_id",
-                foreignField: "uploadId",
+                let: { customerId: "$_id" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }] },
+                          { $eq: ["$uploadType", "profile_image"] }
+                        ]
+                      }
+                    }
+                  },
+                  { $sort: { createdAt: -1 } }
+                ],
                 as: "profileImage",
+              },
+            },
+            {
+              $lookup: {
+                from: "fileuploads",
+                let: { customerId: "$_id" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }] },
+                          { $eq: ["$uploadType", "signature"] }
+                        ]
+                      }
+                    }
+                  },
+                  { $sort: { createdAt: -1 } }
+                ],
+                as: "signatureImage",
               },
             },
             {
               $addFields: {
                 profileImage: { $first: "$profileImage" },
+                signatureImage: { $first: "$signatureImage" },
               },
             },
           ],

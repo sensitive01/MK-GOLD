@@ -253,13 +253,29 @@ export default function SalePrint({ id }) {
         </div>
         <hr style={{ border: '0', borderBottom: '1px solid white' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', margin: '20px 0' }}>
-          <div style={{ textAlign: 'start' }}>
+          <div style={{ textAlign: 'center', width: '150px' }}>
+            <div style={{ height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '5px' }}>
+              {data?.customer?.signatureImage?.uploadedFile ? (
+                <img
+                  src={data.customer.signatureImage.uploadedFile.startsWith('http') 
+                    ? data.customer.signatureImage.uploadedFile 
+                    : `${global.baseURL}/${data.customer.signatureImage.uploadedFile}`}
+                  alt="Customer Signature"
+                  style={{ maxHeight: '40px', maxWidth: '150px', objectFit: 'contain', backgroundColor: 'white', padding: '2px', borderRadius: '2px' }}
+                />
+              ) : (
+                <div style={{ borderBottom: '1px solid white', width: '100%', height: '100%' }}></div>
+              )}
+            </div>
+            <span style={{ fontSize: '12px' }}>Customer Signature</span>
+          </div>
+          <div style={{ textAlign: 'center' }}>
             Thanks For your billing
             <br /> www.mk-gold.com
           </div>
           <div style={{ textAlign: 'center', width: '150px' }}>
             <div style={{ borderBottom: '1px solid white', height: '40px', marginBottom: '5px' }}></div>
-            <span style={{ fontSize: '12px' }}>Customer Signature</span>
+            <span style={{ fontSize: '12px' }}>Authorized Signatory</span>
           </div>
         </div>
       </div>
@@ -277,7 +293,7 @@ export default function SalePrint({ id }) {
           const content = document.getElementById('pdf');
           const pri = document.getElementById('iframe').contentWindow;
           pri.document.open();
-          pri.document.write(content.outerHTML);
+          pri.document.write('<html><head><meta charset="utf-8"><title>Print Bill</title></head><body style="margin:0;">' + content.outerHTML + '</body></html>');
           pri.document.close();
           pri.onload = () => {
             pri.focus();
