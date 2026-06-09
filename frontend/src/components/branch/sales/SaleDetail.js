@@ -543,6 +543,14 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
             <Grid item xs={12}>
               <Ornament />
             </Grid>
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
+                Release Detail:
+              </Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Release />
+            </Grid>
             {data?.paymentType === 'bank' && (
               <>
                 <Grid item xs={12}>
@@ -566,14 +574,6 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                 </Grid>
               </>
             )}
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
-                Release Detail:
-              </Typography>
-            </Grid>
-            <Grid item xs={12}>
-              <Release />
-            </Grid>
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
                 Proof Documents

@@ -67,13 +67,14 @@ import { createFile } from '../../apis/branch/fileupload';
 
 const TABLE_HEAD = [
   { id: 'billId', label: 'Bill Id', alignRight: false },
-  { id: 'saleType', label: 'Sale Type', alignRight: false },
-  { id: 'netAmount', label: 'Net Amount', alignRight: false },
-  { id: 'branch', label: 'Branch Id', alignRight: false },
-  { id: 'branch', label: 'Branch Name', alignRight: false },
-  { id: 'purchaseType', label: 'Ornament Type', alignRight: false },
-  { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
+  { id: 'customer', label: 'Customer', alignRight: false },
+  { id: 'branchId', label: 'Branch Id', alignRight: false },
+  { id: 'branchName', label: 'Branch Name', alignRight: false },
+  { id: 'saleType', label: 'Sale Type', alignRight: false },
+  { id: 'purchaseType', label: 'Ornament Type', alignRight: false },
+  { id: 'netAmount', label: 'Net Amount', alignRight: false },
+  { id: 'status', label: 'Status', alignRight: false },
   { id: '' },
 ];
 
@@ -422,11 +423,25 @@ export default function Sale() {
                           />
                         </TableCell>
                         <TableCell align="left">{billId}</TableCell>
-                        <TableCell align="left">{sentenceCase(saleType)}</TableCell>
+                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                        <TableCell align="left">
+                          {row.customer ? (
+                            <Typography variant="subtitle2">
+                              {row.customer.name}
+                              <br />
+                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                {row.customer.phoneNumber}
+                              </Typography>
+                            </Typography>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell align="left">{branch?.branchId || '-'}</TableCell>
+                        <TableCell align="left">{branch?.branchName || '-'}</TableCell>
+                        <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
+                        <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
                         <TableCell align="left">&#8377; {netAmount}</TableCell>
-                        <TableCell align="left">{branch?.branchId}</TableCell>
-                        <TableCell align="left">{branch?.branchName}</TableCell>
-                        <TableCell align="left">{sentenceCase(purchaseType)}</TableCell>
                         <TableCell align="left" onClick={(e) => e.stopPropagation()}>
                           <Status 
                             status={status} 
@@ -437,7 +452,6 @@ export default function Sale() {
                             assigneeCompleted={row.assigneeCompleted}
                           />
                         </TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton
                             size="large"

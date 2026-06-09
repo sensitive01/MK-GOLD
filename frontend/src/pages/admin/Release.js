@@ -556,6 +556,7 @@ export default function Release() {
         }}
       >
         <MenuItem
+          disabled={selectedReleaseObj?.status === 'completed'}
           onClick={() => {
             setOpen(null);
             handleOpenEditModal();
@@ -566,7 +567,8 @@ export default function Release() {
         </MenuItem>
         {global.canDelete(userType) && (
           <MenuItem
-            sx={{ color: 'error.main' }}
+            disabled={selectedReleaseObj?.status === 'completed'}
+            sx={{ color: selectedReleaseObj?.status === 'completed' ? 'text.disabled' : 'error.main' }}
             onClick={() => {
               setOpen(null);
               setDeleteType('single');

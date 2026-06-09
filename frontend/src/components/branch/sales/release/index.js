@@ -353,6 +353,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                           <Button
                             variant="contained"
                             size="small"
+                            disabled={e.status === 'completed'}
                             onClick={() => {
                               setIsEdit(true);
                               setEditId(e._id);
@@ -382,6 +383,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                             variant="contained"
                             color="error"
                             size="small"
+                            disabled={e.status === 'completed'}
                             startIcon={<DeleteIcon />}
                             onClick={() => {
                               setOpenId(e._id);

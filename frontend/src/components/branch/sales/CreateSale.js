@@ -563,6 +563,14 @@ function CreateSale(props) {
                 onChange={handleChange}
               />
             </Grid>
+            {values.saleType === 'pledged' && (
+              <Release
+                selectedUser={selectedUser}
+                selectedRelease={selectedRelease}
+                setSelectedRelease={setSelectedRelease}
+                {...props}
+              />
+            )}
             {showOrnaments && (
               <Ornament
                 ornaments={ornaments}
@@ -578,14 +586,6 @@ function CreateSale(props) {
                 selectedUser={selectedUser}
                 selectedBank={selectedBank}
                 setSelectedBank={setSelectedBank}
-                {...props}
-              />
-            )}
-            {values.saleType === 'pledged' && (
-              <Release
-                selectedUser={selectedUser}
-                selectedRelease={selectedRelease}
-                setSelectedRelease={setSelectedRelease}
                 {...props}
               />
             )}
