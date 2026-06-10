@@ -326,12 +326,14 @@ export default function SalePrint({ id }) {
                         &#8377; {sgstAmount.toLocaleString('en-IN')}
                       </td>
                     </tr>
-                    <tr>
-                      <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>Release Charges =</td>
-                      <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>
-                        &#8377; {releaseChargesAmount.toLocaleString('en-IN')}
-                      </td>
-                    </tr>
+                    {data?.saleType === 'pledged' && (
+                      <tr>
+                        <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>Release Charges =</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>
+                          &#8377; {releaseChargesAmount.toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    )}
                     <tr style={{ backgroundColor: '#FFD700' }}>
                       <td style={{ border: '1px solid #000', padding: '8px 6px', fontWeight: 'bold', fontSize: '13px' }}>Payable Amount =</td>
                       <td style={{ border: '1px solid #000', padding: '8px 6px', textAlign: 'right', fontWeight: 'bold', fontSize: '15px' }}>
