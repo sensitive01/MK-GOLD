@@ -617,7 +617,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                         Release Amount:{' '}
                         {Math.round(data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0)) ?? 0}
                       </TableCell>
-                      <TableCell align="left">Payable Amount: {Math.round(data.payableAmount)}</TableCell>
+                      <TableCell align="left">Payable Amount: {Math.abs(Math.round(data.payableAmount || 0))}</TableCell>
                     </TableRow>
                     <TableRow tabIndex={-1}>
                       <TableCell align="left">Status: {sentenceCase(data.status || '')}</TableCell>

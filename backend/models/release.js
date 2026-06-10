@@ -116,8 +116,10 @@ const Release = mongoose.model(
           ornamentType: { type: String },
           quantity: { type: Number },
           grossWeight: { type: Number },
+          stoneWeight: { type: Number },
           netWeight: { type: Number },
           purity: { type: Number },
+          netAmount: { type: Number },
         },
       ],
       proofDocuments: [

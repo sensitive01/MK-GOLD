@@ -874,29 +874,83 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
     documentFile: '',
   });
 
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
+  const handleCloseVerifyModal = () => {
+    setSelectedFiles([]);
+    setUploading(false);
+    handleClose();
+  };
+
   const [goldRate, setGoldRate] = useState(0);
   const [silverRate, setSilverRate] = useState(0);
 
   const auth = useSelector((state) => state.auth);
 
   useEffect(() => {
-    if (open && auth.user?.branch?.address?.state) {
-      getGoldRateByState({
-        state: auth.user.branch.address.state,
-        type: 'gold',
-        date: moment().format('YYYY-MM-DD'),
-      }).then((data) => {
-        if (data.status) setGoldRate(data.data?.rate || 0);
-      });
-      getGoldRateByState({
-        state: auth.user.branch.address.state,
-        type: 'silver',
-        date: moment().format('YYYY-MM-DD'),
-      }).then((data) => {
-        if (data.status) setSilverRate(data.data?.rate || 0);
-      });
+    if (open) {
+      setOrnaments([]);
+      setProofDocuments([]);
+      setShowOrnamentForm(false);
+      setShowProofForm(false);
+      setOrnamentValues({ ornamentType: '', quantity: '', grossWeight: '', stoneWeight: '', netWeight: '', purity: '', netAmount: '' });
+      setProofValues({ documentType: '', documentNo: '', documentFile: '' });
+
+      if (auth.user?.branch?.address?.state) {
+        getGoldRateByState({
+          state: auth.user.branch.address.state,
+          type: 'gold',
+          date: moment().format('YYYY-MM-DD'),
+        }).then((data) => {
+          if (data.status) setGoldRate(data.data?.rate || 0);
+        });
+        getGoldRateByState({
+          state: auth.user.branch.address.state,
+          type: 'silver',
+          date: moment().format('YYYY-MM-DD'),
+        }).then((data) => {
+          if (data.status) setSilverRate(data.data?.rate || 0);
+        });
+      }
     }
   }, [open, auth.user?.branch?.address?.state]);
+
+  useEffect(() => {
+    const { ornamentType, grossWeight, stoneWeight, purity } = ornamentValues;
+    if (!ornamentType && !grossWeight && !stoneWeight && !purity) {
+      return;
+    }
+
+    const isSilver = ['Anklets', 'Toe Ring'].includes(ornamentType);
+    const rate = isSilver ? silverRate : goldRate;
+    const gWt = parseFloat(grossWeight) || 0;
+    const sWt = parseFloat(stoneWeight) || 0;
+    const pVal = parseFloat(purity) || 0;
+
+    const calculatedNetWeight = Math.max(0, gWt - sWt);
+    const calculatedNetAmount = Math.round(((calculatedNetWeight * pVal) / 100) * rate);
+
+    if (
+      calculatedNetWeight !== parseFloat(ornamentValues.netWeight) ||
+      calculatedNetAmount !== parseFloat(ornamentValues.netAmount)
+    ) {
+      setOrnamentValues((prev) => ({
+        ...prev,
+        netWeight: calculatedNetWeight || '',
+        netAmount: calculatedNetAmount || '',
+      }));
+    }
+  }, [
+    ornamentValues.ornamentType,
+    ornamentValues.grossWeight,
+    ornamentValues.stoneWeight,
+    ornamentValues.purity,
+    goldRate,
+    silverRate,
+    ornamentValues.netWeight,
+    ornamentValues.netAmount,
+  ]);
 
   const schema = Yup.object({
     amount: Yup.number().required('Amount is required'),
@@ -927,7 +981,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
       updateRelease(id, payload).then((data) => {
         setLoading(false);
         if (data.status) {
-          handleClose();
+          handleCloseVerifyModal();
           fetchData();
         }
       });
@@ -935,21 +989,35 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
   });
 
   const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const formData = new FormData();
-      formData.append('uploadedFile', file); // Updated field name to match backend
-      formData.append('uploadName', file.name); // Added uploadName for backend validation
-      formData.append('uploadId', id);
-      const res = await createFile(formData);
-      if (res.status) {
-        setProofValues({ ...proofValues, documentFile: res.data.uploadedFile });
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      setUploading(true);
+      const uploadedList = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('uploadedFile', file);
+        formData.append('uploadName', file.name);
+        formData.append('uploadId', id);
+        try {
+          const res = await createFile(formData);
+          if (res.status) {
+            uploadedList.push({
+              name: file.name,
+              url: res.data.uploadedFile,
+            });
+          }
+        } catch (error) {
+          console.error('File upload failed:', error);
+        }
       }
+      setSelectedFiles((prev) => [...prev, ...uploadedList]);
+      setUploading(false);
+      e.target.value = '';
     }
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
+    <Dialog open={open} onClose={handleCloseVerifyModal} maxWidth="lg" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle sx={{ bgcolor: 'primary.main', color: '#fff', mb: 2 }}>
           {sentenceCase(type || '')} Verification
@@ -1023,18 +1091,113 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                     </Grid>
                     <Grid item xs={12}>
                       <Stack direction="row" spacing={1} alignItems="center">
-                        <input type="file" onChange={handleFileChange} style={{ fontSize: '12px' }} />
-                        {proofValues.documentFile && <Iconify icon="eva:checkmark-circle-fill" sx={{ color: 'success.main' }} />}
+                        <input
+                          type="file"
+                          multiple
+                          onChange={handleFileChange}
+                          style={{ fontSize: '12px' }}
+                          disabled={uploading}
+                        />
                       </Stack>
                     </Grid>
+                    {uploading && (
+                      <Grid item xs={12}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <CircularProgress size={16} />
+                          <Typography variant="caption" color="text.secondary">
+                            Uploading files...
+                          </Typography>
+                        </Stack>
+                      </Grid>
+                    )}
+                    {selectedFiles.length > 0 && (
+                      <Grid item xs={12}>
+                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                          Selected Files ({selectedFiles.length}):
+                        </Typography>
+                        <Stack spacing={1} sx={{ mb: 2 }}>
+                          {selectedFiles.map((file, idx) => {
+                            const isImage = file.url?.match(/\.(jpeg|jpg|gif|png|webp|svg)/i);
+                            const src = file.url?.startsWith('http') ? file.url : `${global.baseURL}/${file.url}`;
+                            return (
+                              <Stack
+                                key={idx}
+                                direction="row"
+                                alignItems="center"
+                                spacing={1.5}
+                                sx={{
+                                  p: 1,
+                                  px: 2,
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '6px',
+                                  bgcolor: '#f8fafc',
+                                }}
+                              >
+                                {isImage ? (
+                                  <img
+                                    src={src}
+                                    alt={file.name}
+                                    style={{ width: '30px', height: '30px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                  />
+                                ) : (
+                                  <img src="/assets/doc.svg" alt="doc" style={{ width: '28px', height: '28px' }} />
+                                )}
+                                <Typography variant="body2" sx={{ flexGrow: 1, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontWeight: 500, color: '#334155' }}>
+                                  {file.name}
+                                </Typography>
+                                {file.url && (
+                                  <IconButton
+                                    component="a"
+                                    href={src}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    color="primary"
+                                    size="small"
+                                    title="Preview File"
+                                    sx={{ bgcolor: '#fff', border: '1px solid #cbd5e1' }}
+                                  >
+                                    <Iconify icon="mdi:eye" width={16} height={16} />
+                                  </IconButton>
+                                )}
+                                <IconButton
+                                  color="error"
+                                  size="small"
+                                  title="Remove File"
+                                  sx={{ bgcolor: '#fff', border: '1px solid #fecaca' }}
+                                  onClick={() => {
+                                    setSelectedFiles((prev) => prev.filter((_, i) => i !== idx));
+                                  }}
+                                >
+                                  <Iconify icon="mdi:delete" width={16} height={16} />
+                                </IconButton>
+                              </Stack>
+                            );
+                          })}
+                        </Stack>
+                      </Grid>
+                    )}
                     <Grid item xs={12}>
-                      <Button variant="contained" fullWidth size="small" onClick={() => {
-                        if (proofValues.documentType && proofValues.documentFile) {
-                          setProofDocuments([...proofDocuments, proofValues]);
-                          setProofValues({ documentType: '', documentNo: '', documentFile: '' });
-                          setShowProofForm(false);
-                        }
-                      }}>Add Document</Button>
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        size="small"
+                        disabled={uploading || selectedFiles.length === 0 || !proofValues.documentType}
+                        onClick={() => {
+                          if (proofValues.documentType && selectedFiles.length > 0) {
+                            const newDocs = selectedFiles.map((f) => ({
+                              documentType: proofValues.documentType,
+                              documentNo: proofValues.documentNo,
+                              documentFile: f.url,
+                            }));
+                            setProofDocuments([...proofDocuments, ...newDocs]);
+                            setProofValues({ documentType: '', documentNo: '', documentFile: '' });
+                            setSelectedFiles([]);
+                            setShowProofForm(false);
+                          }
+                        }}
+                      >
+                        Add Document
+                      </Button>
                     </Grid>
                   </Grid>
                 </Box>
@@ -1137,13 +1300,31 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                         <TextField label="Stone Wt" size="small" type="number" value={ornamentValues.stoneWeight} onChange={(e) => setOrnamentValues({ ...ornamentValues, stoneWeight: e.target.value })} fullWidth />
                       </Grid>
                       <Grid item xs={6} md={3}>
-                        <TextField label="Net Wt" size="small" type="number" value={ornamentValues.netWeight} onChange={(e) => setOrnamentValues({ ...ornamentValues, netWeight: e.target.value })} fullWidth />
+                        <TextField
+                          label="Net Wt"
+                          size="small"
+                          type="number"
+                          value={ornamentValues.netWeight}
+                          fullWidth
+                          InputProps={{
+                            readOnly: true,
+                          }}
+                        />
                       </Grid>
                       <Grid item xs={6} md={3}>
                         <TextField label="Purity" size="small" type="number" value={ornamentValues.purity} onChange={(e) => setOrnamentValues({ ...ornamentValues, purity: e.target.value })} fullWidth />
                       </Grid>
                       <Grid item xs={12} md={3}>
-                        <TextField label="Net Amount" size="small" type="number" value={ornamentValues.netAmount} onChange={(e) => setOrnamentValues({ ...ornamentValues, netAmount: e.target.value })} fullWidth />
+                        <TextField
+                          label="Net Amount"
+                          size="small"
+                          type="number"
+                          value={ornamentValues.netAmount}
+                          fullWidth
+                          InputProps={{
+                            readOnly: true,
+                          }}
+                        />
                       </Grid>
                       <Grid item xs={12} md={3}>
                         <Button variant="contained" fullWidth onClick={() => {
@@ -1205,7 +1386,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
           </Grid>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
-          <Button onClick={handleClose} variant="outlined" color="inherit">Cancel</Button>
+          <Button onClick={handleCloseVerifyModal} variant="outlined" color="inherit">Cancel</Button>
           <LoadingButton type="submit" variant="contained" loading={loading} sx={{ minWidth: 200 }}>
             Save & Update Status
           </LoadingButton>

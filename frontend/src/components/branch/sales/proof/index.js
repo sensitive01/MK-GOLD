@@ -53,7 +53,11 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
   const [openId, setOpenId] = useState(null);
   const [ornamentModal, setProofDocumentModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState(null);
+  
+  // Custom states for multiple file uploads
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [previewUrls, setPreviewUrls] = useState([]);
+
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
   const [page, setPage] = useState(0);
@@ -71,6 +75,17 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
+  // Cleanup blob URLs to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((p) => {
+        if (p.url && p.url.startsWith('blob:')) {
+          URL.revokeObjectURL(p.url);
+        }
+      });
+    };
+  }, [previewUrls]);
+
   if (width < 899) {
     style.width = '80%';
   } else {
@@ -87,6 +102,13 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
     setRowsPerPage(parseInt(event.target.value, 10));
   };
 
+  const handleCloseModal = () => {
+    setProofDocumentModal(false);
+    setSelectedFiles([]);
+    setPreviewUrls([]);
+    resetForm();
+  };
+
   // Form validation
   const schema = Yup.object({
     documentType: Yup.string().required('Document type is required'),
@@ -100,13 +122,26 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
     },
     validationSchema: schema,
     onSubmit: (values) => {
-      setProofDocument([...proofDocument, values]);
-      setProofDocumentModal(false);
-      resetForm();
-      setPreviewUrl(null);
+      if (selectedFiles.length === 0) {
+        setNotify({
+          open: true,
+          message: 'Please choose at least one file',
+          severity: 'error',
+        });
+        return;
+      }
+
+      const newDocs = selectedFiles.map((file) => ({
+        documentType: values.documentType,
+        documentNo: values.documentNo,
+        documentFile: file,
+      }));
+
+      setProofDocument([...proofDocument, ...newDocs]);
+      handleCloseModal();
       setNotify({
         open: true,
-        message: 'Proof document uploaded',
+        message: `${newDocs.length} proof document(s) uploaded`,
         severity: 'success',
       });
     },
@@ -154,7 +189,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
                         if (!file) return 'No File';
                         if (file instanceof File || file instanceof Blob) {
                           if (file.type && file.type.match(/image\/.*/)) {
-                            return <img key={index} src={URL.createObjectURL(file)} alt="document" style={{ width: '80px' }} />;
+                            return <img key={index} src={URL.createObjectURL(file)} alt="document" style={{ width: '80px', maxHeight: '80px', objectFit: 'contain' }} />;
                           }
                           return <img key={index} src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />;
                         }
@@ -162,7 +197,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
                           const isImage = file.match(/\.(jpeg|jpg|gif|png|webp|svg)/i);
                           const src = file.startsWith('http') ? file : `${global.baseURL}/${file}`;
                           if (isImage) {
-                            return <img key={index} src={src} alt="document" style={{ width: '80px' }} />;
+                            return <img key={index} src={src} alt="document" style={{ width: '80px', maxHeight: '80px', objectFit: 'contain' }} />;
                           }
                         }
                         return <img key={index} src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />;
@@ -246,7 +281,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
 
       <Modal
         open={ornamentModal}
-        onClose={() => setProofDocumentModal(false)}
+        onClose={handleCloseModal}
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
       >
@@ -256,10 +291,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
             <Button
               sx={{ color: '#222', float: 'right' }}
               startIcon={<CloseIcon />}
-              onClick={() => {
-                setProofDocumentModal(false);
-                setPreviewUrl(null);
-              }}
+              onClick={handleCloseModal}
             />
           </Typography>
           <form
@@ -274,13 +306,13 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
                 <FormControl fullWidth error={touched.documentType && errors.documentType && true}>
                   <InputLabel id="select-documentType">Select document type</InputLabel>
                   <Select
-                    labelId="select-documentType"
-                    id="select"
-                    label={touched.documentType && errors.documentType ? errors.documentType : 'Select document type'}
-                    name="documentType"
-                    value={values.documentType}
-                    onBlur={handleBlur}
-                    onChange={handleChange}
+                      labelId="select-documentType"
+                      id="select"
+                      label={touched.documentType && errors.documentType ? errors.documentType : 'Select document type'}
+                      name="documentType"
+                      value={values.documentType}
+                      onBlur={handleBlur}
+                      onChange={handleChange}
                   >
                     <MenuItem value="ornaments photo">Ornaments Photo</MenuItem>
                     <MenuItem value="purchase bill">Purchase bill</MenuItem>
@@ -303,39 +335,115 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
                 />
               </Grid>
               <Grid item xs={12} md={4}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <TextField
-                      name="documentFile"
-                      type={'file'}
-                      fullWidth
-                      onBlur={handleBlur}
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        setFieldValue('documentFile', file);
-                        if (file) {
-                          setPreviewUrl(URL.createObjectURL(file));
-                        } else {
-                          setPreviewUrl(null);
-                        }
-                      }}
-                      required
-                    />
-                  </Box>
-                  {previewUrl && (
-                    <IconButton
-                      component="a"
-                      href={previewUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      color="secondary"
-                      title="View Document"
-                    >
-                      <Iconify icon="mdi:eye" />
-                    </IconButton>
-                  )}
-                </Stack>
+                <TextField
+                  name="documentFile"
+                  type={'file'}
+                  fullWidth
+                  inputProps={{ multiple: true }}
+                  onBlur={handleBlur}
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files);
+                    if (files.length > 0) {
+                      // Filter out duplicates by name and size to support appending
+                      const newFiles = files.filter(
+                        (file) => !selectedFiles.some((prevFile) => prevFile.name === file.name && prevFile.size === file.size)
+                      );
+
+                      if (newFiles.length > 0) {
+                        setSelectedFiles((prev) => [...prev, ...newFiles]);
+
+                        const newPreviews = newFiles.map((file) => {
+                          let url = '/assets/doc.svg';
+                          let type = 'other';
+                          if (file.type && file.type.match(/image\/.*/)) {
+                            url = URL.createObjectURL(file);
+                            type = 'image';
+                          }
+                          return { url, name: file.name, type };
+                        });
+                        setPreviewUrls((prev) => [...prev, ...newPreviews]);
+                      }
+                    }
+                    // Reset input value so selecting the same files again triggers onChange
+                    e.target.value = '';
+                  }}
+                />
               </Grid>
+
+              {/* Multiple Previews / File List section with eye and delete button */}
+              {selectedFiles.length > 0 && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Selected Files ({selectedFiles.length}):
+                  </Typography>
+                  <Stack spacing={1}>
+                    {selectedFiles.map((file, idx) => {
+                      const p = previewUrls[idx];
+                      return (
+                        <Stack
+                          key={idx}
+                          direction="row"
+                          alignItems="center"
+                          spacing={1.5}
+                          sx={{
+                            p: 1,
+                            px: 2,
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '6px',
+                            bgcolor: '#f8fafc',
+                          }}
+                        >
+                          {/* File Icon or Tiny Preview Thumbnail */}
+                          {p?.type === 'image' ? (
+                            <img
+                              src={p.url}
+                              alt={file.name}
+                              style={{ width: '30px', height: '30px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                            />
+                          ) : (
+                            <img src="/assets/doc.svg" alt="doc" style={{ width: '28px', height: '28px' }} />
+                          )}
+
+                          {/* File Name */}
+                          <Typography variant="body2" sx={{ flexGrow: 1, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontWeight: 500, color: '#334155' }}>
+                            {file.name}
+                          </Typography>
+
+                          {/* Action Buttons: Eye and Delete */}
+                          {p?.url && (
+                            <IconButton
+                              component="a"
+                              href={p.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              color="primary"
+                              size="small"
+                              title="Preview File"
+                              sx={{ bgcolor: '#fff', border: '1px solid #cbd5e1' }}
+                            >
+                              <Iconify icon="mdi:eye" width={16} height={16} />
+                            </IconButton>
+                          )}
+
+                          <IconButton
+                            color="error"
+                            size="small"
+                            title="Remove File"
+                            sx={{ bgcolor: '#fff', border: '1px solid #fecaca' }}
+                            onClick={() => {
+                              setSelectedFiles((prev) => prev.filter((_, i) => i !== idx));
+                              setPreviewUrls((prev) => prev.filter((_, i) => i !== idx));
+                            }}
+                          >
+                            <Iconify icon="mdi:delete" width={16} height={16} />
+                          </IconButton>
+                        </Stack>
+                      );
+                    })}
+                  </Stack>
+                </Grid>
+              )}
+
               <Grid item xs={12}>
                 <LoadingButton size="large" type="submit" variant="contained" startIcon={<SaveIcon />}>
                   Save
@@ -346,10 +454,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
                   color="error"
                   sx={{ ml: 2 }}
                   startIcon={<CloseIcon />}
-                  onClick={() => {
-                    setProofDocumentModal(false);
-                    setPreviewUrl(null);
-                  }}
+                  onClick={handleCloseModal}
                 >
                   Close
                 </Button>
@@ -396,4 +501,3 @@ ProofDocument.propTypes = {
 };
 
 export default ProofDocument;
-

@@ -549,7 +549,7 @@ export default function SaleDetail({ id, setNotify }) {
                               onChange={handleChange}
                             />
                           ) : (
-                            <>Payable Amount: {Math.round(data.payableAmount)}</>
+                            <>Payable Amount: {Math.abs(Math.round(data.payableAmount || 0))}</>
                           )}
                         </TableCell>
                       </TableRow>
