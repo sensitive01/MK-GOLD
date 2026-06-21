@@ -176,12 +176,12 @@ export default function SaleDetail({ id, setNotify }) {
               {data?.release?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e) => (
                 <TableRow hover key={e._id} tabIndex={-1}>
                   <TableCell align="left">{e.pledgeId}</TableCell>
-                  <TableCell align="left">{sentenceCase(e.pledgedIn)}</TableCell>
+                  <TableCell align="left">{sentenceCase(e.pledgedIn || '')}</TableCell>
                   <TableCell align="left">{e.weight?.toFixed(2)}</TableCell>
                   <TableCell align="left">{Math.round(e.pledgeAmount)}</TableCell>
                   <TableCell align="left">{moment(e.pledgedDate).format('YYYY-MM-DD')}</TableCell>
                   <TableCell align="left">{Math.round(e.payableAmount)}</TableCell>
-                  <TableCell align="left">{sentenceCase(e.paymentType)}</TableCell>
+                  <TableCell align="left">{sentenceCase(e.paymentType || '')}</TableCell>
                 </TableRow>
               ))}
               {emptyRows > 0 && (
@@ -247,7 +247,7 @@ export default function SaleDetail({ id, setNotify }) {
             <TableBody>
               {data?.proof?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
                 <TableRow hover key={e._id} tabIndex={-1}>
-                  <TableCell align="left">{sentenceCase(e.documentType)}</TableCell>
+                  <TableCell align="left">{sentenceCase(e.documentType || '')}</TableCell>
                   <TableCell align="left">{e.documentNo}</TableCell>
                   <TableCell align="left">
                     {e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
@@ -343,7 +343,7 @@ export default function SaleDetail({ id, setNotify }) {
             <TableBody>
               {data?.customer?.address?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
                 <TableRow hover key={e._id} tabIndex={-1}>
-                  <TableCell align="left">{sentenceCase(e.address)}</TableCell>
+                  <TableCell align="left">{sentenceCase(e.address || '')}</TableCell>
                   <TableCell align="left">{e.area}</TableCell>
                   <TableCell align="left">{e.city}</TableCell>
                   <TableCell align="left">{e.pincode}</TableCell>
