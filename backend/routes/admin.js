@@ -34,6 +34,8 @@ const locker = require("../controllers/admin/locker");
 const announcement = require("../controllers/admin/announcement");
 const designation = require("../controllers/admin/designation");
 const qrEnquiry = require("../controllers/qrEnquiry");
+const transit = require("../controllers/admin/transit");
+const vendor = require("../controllers/admin/vendor");
 
 const { isAdmin, canDelete } = require("../middlewares/authorization");
 const multer = require("../config/multer");
@@ -62,7 +64,10 @@ adminRouter.get("/lead/get", lead.find);
 adminRouter.post("/lead/create", lead.create);
 
 adminRouter.get("/melting/get", melting.find);
+adminRouter.post("/melting/get", melting.find);
 adminRouter.post("/melting/create", melting.create);
+adminRouter.post("/melting/update/:id", melting.update);
+adminRouter.post("/melting/delete/:id", canDelete, melting.remove);
 
 adminRouter.get("/locker/get", locker.find);
 adminRouter.post("/locker/create", locker.create);
@@ -163,6 +168,18 @@ adminRouter.get("/release/get/:id", release.findById);
 adminRouter.post("/release/create", release.create);
 adminRouter.post("/release/update/:id", release.update);
 adminRouter.post("/release/delete/:id", canDelete, release.remove);
+
+adminRouter.get("/transit/get", transit.findTransitData);
+adminRouter.post("/transit/get", transit.findTransitData);
+adminRouter.post("/transit/update-status/:id", transit.updateTransitStatus);
+adminRouter.post("/transit/delete/:id", canDelete, transit.deleteTransitData);
+
+adminRouter.get("/vendor/get", vendor.find);
+adminRouter.post("/vendor/get", vendor.find);
+adminRouter.get("/vendor/get/:id", vendor.findById);
+adminRouter.post("/vendor/create", vendor.create);
+adminRouter.post("/vendor/update/:id", vendor.update);
+adminRouter.post("/vendor/delete/:id", canDelete, vendor.remove);
 
 adminRouter.get("/customer/get", customer.find);
 adminRouter.post("/customer/get", customer.find);

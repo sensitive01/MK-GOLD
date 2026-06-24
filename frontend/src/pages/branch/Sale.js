@@ -56,6 +56,7 @@ import PropTypes from 'prop-types';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import Grid from '@mui/material/Grid';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 // ----------------------------------------------------------------------
 
@@ -105,6 +106,9 @@ function applySortFilter(array, comparator, query) {
 
 export default function Sale() {
   const auth = useSelector((state) => state.auth);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const isSelectForTransit = searchParams.get('selectForTransit') === 'true';
   const [branch, setBranch] = useState({});
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
@@ -137,7 +141,7 @@ export default function Sale() {
     (query = {}) => {
       if (!query.branch) query.branch = branch?._id;
       findSales(query).then((data) => {
-        setData(data.data);
+        setData(Array.isArray(data?.data) ? data.data : []);
         setOpenBackdrop(false);
       });
     },
@@ -167,6 +171,7 @@ export default function Sale() {
   };
 
   const handleSelectAllClick = (event) => {
+    if (isSelectForTransit) return;
     if (event.target.checked) {
       const newSelecteds = data?.map((n) => n._id);
       setSelected(newSelecteds);
@@ -176,6 +181,14 @@ export default function Sale() {
   };
 
   const handleClick = (event, _id) => {
+    if (isSelectForTransit) {
+      const selectedSaleItem = data?.find(s => s._id === _id);
+      if (selectedSaleItem?.status !== 'completed') {
+         setNotify({ open: true, message: 'Only completed sales can be selected for transit', severity: 'warning' });
+         return;
+      }
+      // Allow multiple selection
+    }
     const selectedIndex = selected.indexOf(_id);
     let newSelected = [];
     if (selectedIndex === -1) {
@@ -255,7 +268,7 @@ export default function Sale() {
   return (
     <>
       <Helmet>
-        <title> Sale | MK Gold </title>
+        <title> Billing | MK Gold </title>
       </Helmet>
 
       <Snackbar
@@ -284,20 +297,32 @@ export default function Sale() {
         <Container maxWidth="xl">
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Sale
+            Billing
           </Typography>
           <Stack direction="row" spacing={2}>
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="eva:plus-fill" />}
-              onClick={() => {
-                setSaleIdToEdit(null);
-                setToggleContainer(true);
-                setToggleContainerType('create');
-              }}
-            >
-              New Sale
-            </Button>
+            {isSelectForTransit ? (
+              <Button
+                variant="contained"
+                disabled={selected.length === 0}
+                onClick={() => {
+                  navigate(`/branch/transit?createTransit=true&saleIds=${selected.join(',')}`);
+                }}
+              >
+                Next
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                startIcon={<Iconify icon="eva:plus-fill" />}
+                onClick={() => {
+                  setSaleIdToEdit(null);
+                  setToggleContainer(true);
+                  setToggleContainerType('create');
+                }}
+              >
+                New Sale
+              </Button>
+            )}
           </Stack>
         </Stack>
 
@@ -336,9 +361,13 @@ export default function Sale() {
                         role="checkbox"
                         selected={selectedData}
                         onClick={() => {
-                          setSaleIdToEdit(_id);
-                          setToggleContainer(true);
-                          setToggleContainerType('detail');
+                          if (isSelectForTransit) {
+                            handleClick(null, _id);
+                          } else {
+                            setSaleIdToEdit(_id);
+                            setToggleContainer(true);
+                            setToggleContainerType('detail');
+                          }
                         }}
                         style={{ cursor: 'pointer' }}
                       >
@@ -347,6 +376,7 @@ export default function Sale() {
                             checked={selectedData}
                             onChange={(event) => handleClick(event, _id)}
                             onClick={(e) => e.stopPropagation()}
+                            disabled={isSelectForTransit && status !== 'completed'}
                           />
                         </TableCell>
                         <TableCell align="left">{billId}</TableCell>
@@ -534,7 +564,7 @@ export default function Sale() {
         }}
       >
         <MenuItem
-          disabled={selectedSale?.status === 'completed'}
+          disabled={['completed', 'intransit', 'moved', 'melted'].includes(selectedSale?.status)}
           onClick={() => {
             setOpen(null);
             setToggleContainer(true);
@@ -574,8 +604,8 @@ export default function Sale() {
           Process Log & Timeline
         </MenuItem>
         <MenuItem
-          disabled={selectedSale?.status === 'completed'}
-          sx={{ color: selectedSale?.status === 'completed' ? 'text.disabled' : 'error.main' }}
+          disabled={['completed', 'intransit', 'moved', 'melted'].includes(selectedSale?.status)}
+          sx={{ color: ['completed', 'intransit', 'moved', 'melted'].includes(selectedSale?.status) ? 'text.disabled' : 'error.main' }}
           onClick={() => {
             setOpen(null);
             setDeleteType('single');
@@ -841,7 +871,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     if (file) {
       setPreview(URL.createObjectURL(file));
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('uploadedFile', file);
       formData.append('uploadId', id);
       const res = await createFile(formData);
       if (res.status) {

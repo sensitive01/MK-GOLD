@@ -566,6 +566,14 @@ export default function SaleDetail({ id, setNotify }) {
                           </TableCell>
                         )}
                       </TableRow>
+                      {data.comments && (
+                        <TableRow tabIndex={-1}>
+                          <TableCell align="left" colSpan={4}>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold', display: 'inline' }}>Comments: </Typography>
+                            {data.comments}
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </TableContainer>

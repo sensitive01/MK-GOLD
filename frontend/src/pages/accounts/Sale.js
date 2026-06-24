@@ -304,7 +304,7 @@ export default function Sale() {
   return (
     <>
       <Helmet>
-        <title> Sale | MK Gold </title>
+        <title> Billing | MK Gold </title>
       </Helmet>
 
       <Snackbar
@@ -332,7 +332,7 @@ export default function Sale() {
       <Container maxWidth={false} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Sale
+            Billing
           </Typography>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
             <Button
@@ -1037,7 +1037,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         setPdfBlobUrl(null);
       }
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('uploadedFile', file);
       formData.append('uploadId', id);
       const res = await createFile(formData);
       if (res.status) {

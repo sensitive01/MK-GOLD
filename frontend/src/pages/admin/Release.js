@@ -4,31 +4,31 @@ import { forwardRef, useEffect, useRef, useState, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
-    Backdrop,
-    Box,
-    Button,
-    Card,
-    Checkbox,
-    CircularProgress,
-    Container,
-    Grid,
-    IconButton,
-    InputLabel,
-    MenuItem,
-    Modal,
-    Paper,
-    Popover,
-    Select,
-    Snackbar,
-    Stack,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TablePagination,
-    TableRow,
-    TextField,
-    Typography,
+  Backdrop,
+  Box,
+  Button,
+  Card,
+  Checkbox,
+  CircularProgress,
+  Container,
+  Grid,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Modal,
+  Paper,
+  Popover,
+  Select,
+  Snackbar,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TablePagination,
+  TableRow,
+  TextField,
+  Typography,
 } from '@mui/material';
 import Label from '../../components/label';
 import MuiAlert from '@mui/material/Alert';
@@ -108,7 +108,7 @@ export default function Release() {
   const [open, setOpen] = useState(null);
   const [openId, setOpenId] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
-  const [filterOpen, setFilterOpen] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
   const auth = useSelector((state) => state.auth);
@@ -357,6 +357,8 @@ export default function Release() {
       </Stack>
     );
   }
+
+  const selectedReleaseObj = data?.find(item => item._id === openId);
 
   return (
     <>

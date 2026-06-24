@@ -1,7 +1,15 @@
-﻿const Model = require('../models/melting');
+const Model = require('../models/melting');
 
 async function find(query = {}) {
-  return await Model.find(query).sort({ createdAt: -1 }).exec();
+  return await Model.find(query)
+    .populate('transitIds')
+    .populate('transitId')
+    .populate('saleIds')
+    .populate('meltProof')
+    .populate('createdBy', 'name')
+    .populate('vendor')
+    .sort({ createdAt: -1 })
+    .exec();
 }
 
 async function create(payload) {

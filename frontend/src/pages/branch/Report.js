@@ -93,13 +93,13 @@ export default function Report() {
         },
       }
     ) => {
-      if (!query.branch) query.branch = branch._id;
+      if (!query.branch) query.branch = branch?._id || branch;
       consolidatedSaleReport(query).then((data) => {
-        setData(data.data);
+        setData(Array.isArray(data?.data) ? data.data : []);
         setOpenBackdrop(false);
       });
     },
-    [branch._id]
+    [branch?._id || branch]
   );
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function Report() {
         $gte: moment()?.format("YYYY-MM-DD"),
         $lte: moment()?.format("YYYY-MM-DD"),
       },
-      branch: auth.user.branch._id,
+      branch: auth.user?.branch?._id || auth.user?.branch,
     });
   }, [auth.user.branch, fetchData]);
 

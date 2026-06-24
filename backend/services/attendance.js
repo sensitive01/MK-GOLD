@@ -32,7 +32,7 @@ async function find(query = {}, user = null) {
 
     if (query.branch) {
       if (typeof query.branch === 'string' && mongoose.Types.ObjectId.isValid(query.branch)) {
-        query.branch = new mongoose.Types.ObjectId(query.branch);
+        if (mongoose.Types.ObjectId.isValid(String(query.branch))) { query.branch = new mongoose.Types.ObjectId(String(query.branch)); } else { delete query.branch; }
       } else if (query.branch.$in) {
         query.branch.$in = query.branch.$in.map(id => typeof id === 'string' && mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id);
       }

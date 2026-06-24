@@ -114,7 +114,7 @@ export default function BranchEmployee() {
 
   const fetchData = (query = {}) => {
     getEmployee(query).then((data) => {
-      setData(data.data);
+      setData(Array.isArray(data?.data) ? data.data : []);
       setOpenBackdrop(false);
     });
   };

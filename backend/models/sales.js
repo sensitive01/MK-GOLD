@@ -214,6 +214,9 @@ const Sales = mongoose.model(
           timeTaken: { type: Number }, // in seconds
         },
       ],
+      comments: {
+        type: String,
+      },
     },
     { timestamps: true }
   )

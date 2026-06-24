@@ -28,7 +28,7 @@ async function find(query = {}) {
       ];
     }
     if (query.branch) {
-      query.branch = new mongoose.Types.ObjectId(query.branch);
+      if (mongoose.Types.ObjectId.isValid(String(query.branch))) { query.branch = new mongoose.Types.ObjectId(String(query.branch)); } else { delete query.branch; }
     } else {
       delete query.branch;
     }
@@ -44,10 +44,17 @@ async function find(query = {}) {
     } else {
       delete query.branchName;
     }
-    if (query.customer) {
-      query.customer = new mongoose.Types.ObjectId(query.customer);
+    if (query.customer && mongoose.Types.ObjectId.isValid(String(query.customer))) {
+      query.customer = new mongoose.Types.ObjectId(String(query.customer));
     } else {
       delete query.customer;
+    }
+    if (query._id) {
+      if (query._id.$in) {
+        query._id.$in = query._id.$in.map(id => new mongoose.Types.ObjectId(id));
+      } else if (typeof query._id === "string") {
+        query._id = new mongoose.Types.ObjectId(query._id);
+      }
     }
     const results = await Sales.aggregate([
       // ... (existing aggregation stages here)
@@ -960,7 +967,7 @@ async function branchConsolidatedSaleReport(query = {}) {
       );
     }
     if (query.branch) {
-      query.branch = new mongoose.Types.ObjectId(query.branch);
+      if (mongoose.Types.ObjectId.isValid(String(query.branch))) { query.branch = new mongoose.Types.ObjectId(String(query.branch)); } else { delete query.branch; }
     } else {
       delete query.branch;
     }
@@ -1043,7 +1050,7 @@ async function adminConsolidatedSaleReport(query = {}) {
       );
     }
     if (query.branch) {
-      query.branch = new mongoose.Types.ObjectId(query.branch);
+      if (mongoose.Types.ObjectId.isValid(String(query.branch))) { query.branch = new mongoose.Types.ObjectId(String(query.branch)); } else { delete query.branch; }
     } else {
       delete query.branch;
     }

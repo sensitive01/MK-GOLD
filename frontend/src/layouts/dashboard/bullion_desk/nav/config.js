@@ -20,7 +20,7 @@ const navConfig = [
     icon: icon('ic_analytics'),
   },
   {
-    title: 'Sale',
+    title: 'Billing',
     path: '/bullion-desk/sale',
     icon: <SellIcon sx={{ width: 1, height: 1 }} />,
   },

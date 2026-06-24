@@ -522,6 +522,14 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                     <TableRow tabIndex={-1}>
                       <TableCell align="left">Status: {data.status}</TableCell>
                     </TableRow>
+                    {data.comments && (
+                      <TableRow tabIndex={-1}>
+                        <TableCell align="left" colSpan={4}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', display: 'inline' }}>Comments: </Typography>
+                          {data.comments}
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -676,7 +684,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         setPdfBlobUrl(null);
       }
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('uploadedFile', file);
       formData.append('uploadId', id);
       const res = await createFile(formData);
       if (res.status) {

@@ -11,7 +11,7 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'mk_gold_expenses',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'pdf', 'webp', 'heic'],
+    allowed_formats: ['jpg', 'png', 'jpeg', 'pdf', 'webp', 'heic', 'avif'],
     upload_preset: 'goldbilling', // Ensure this exists in your Cloudinary console
   },
 });

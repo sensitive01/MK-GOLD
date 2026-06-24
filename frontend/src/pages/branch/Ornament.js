@@ -135,9 +135,9 @@ export default function Ornament() {
           $gte: values.fromDate?.format("YYYY-MM-DD"),
           $lte: values.toDate?.format("YYYY-MM-DD"),
         },
-        branch: branch._id,
+        branch: branch?._id || branch,
       }).then((data) => {
-        setData(data.data);
+        setData(Array.isArray(data?.data) ? data.data : []);
         setOpenBackdrop(false);
       });
       setFilterOpen(false);
@@ -153,13 +153,13 @@ export default function Ornament() {
         },
       }
     ) => {
-      if (!query.branch) query.branch = branch._id;
+      if (!query.branch) query.branch = branch?._id || branch;
       getOrnament(query).then((data) => {
-        setData(data.data);
+        setData(Array.isArray(data?.data) ? data.data : []);
         setOpenBackdrop(false);
       });
     },
-    [branch._id, values.fromDate, values.toDate]
+    [branch?._id || branch, values.fromDate, values.toDate]
   );
 
   useEffect(() => {
@@ -169,7 +169,7 @@ export default function Ornament() {
         $gte: values.fromDate ?? moment()?.format("YYYY-MM-DD"),
         $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
       },
-      branch: auth.user.branch._id,
+      branch: auth.user?.branch?._id || auth.user?.branch,
     });
   }, [auth.user.branch, values.fromDate, values.toDate, fetchData]);
 
@@ -439,7 +439,7 @@ export default function Ornament() {
           </Button>
         </Stack>
 
-        <Print data={{ branch: branch._id }} />
+        <Print data={{ branch: branch?._id || branch }} />
       </Container>
 
       <Modal

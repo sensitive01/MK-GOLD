@@ -41,6 +41,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectError, setRejectError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [bullionComment, setBullionComment] = useState('');
 
   const userType = auth.user?.userType?.toLowerCase();
   const isAuthorized = ['bullion_desk', 'admin'].includes(userType);
@@ -52,8 +53,8 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
         status: 'finance pending',
         bullionCompleted: true,
         bullionCompletedAt: new Date(),
-        bullionComments: 'Approved by Bullion Desk',
-        comments: 'Approved by Bullion Desk',
+        bullionComments: bullionComment.trim() || 'Approved by Bullion Desk',
+        comments: bullionComment.trim() || 'Approved by Bullion Desk',
       };
       const response = await updateSales(id, payload);
       if (response.status) {
@@ -632,6 +633,14 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                         </TableCell>
                       )}
                     </TableRow>
+                    {data.comments && (
+                      <TableRow tabIndex={-1}>
+                        <TableCell align="left" colSpan={4}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', display: 'inline' }}>Comments: </Typography>
+                          {data.comments}
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -644,12 +653,27 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
 
             {isAuthorized && data.status === 'bullion pending' && (
               <Grid item xs={12}>
-                <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  label="Bullion Desk Comments"
+                  value={bullionComment}
+                  onChange={(e) => setBullionComment(e.target.value)}
+                  placeholder="Type any comments before approving/rejecting (Optional for approval)"
+                  sx={{ mb: 2 }}
+                />
+                <Stack direction="row" spacing={2} justifyContent="flex-end">
                   <Button
                     variant="outlined"
                     color="error"
                     disabled={actionLoading}
-                    onClick={() => setOpenRejectDialog(true)}
+                    onClick={() => {
+                      if (bullionComment.trim()) {
+                        setRejectReason(bullionComment);
+                      }
+                      setOpenRejectDialog(true);
+                    }}
                   >
                     Reject Sale
                   </Button>

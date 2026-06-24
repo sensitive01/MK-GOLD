@@ -103,7 +103,7 @@ async function find(query = {}) {
 async function getLatestPrint(query = {}) {
   try {
     if (query.branch) {
-      query.branch = new mongoose.Types.ObjectId(query.branch);
+      if (mongoose.Types.ObjectId.isValid(String(query.branch))) { query.branch = new mongoose.Types.ObjectId(String(query.branch)); } else { delete query.branch; }
     } else {
       delete query.branch;
     }
@@ -157,7 +157,7 @@ async function groupByBranchAndMovedAt(query = {}) {
       );
     }
     if (query.branch) {
-      query.branch = new mongoose.Types.ObjectId(query.branch);
+      if (mongoose.Types.ObjectId.isValid(String(query.branch))) { query.branch = new mongoose.Types.ObjectId(String(query.branch)); } else { delete query.branch; }
     } else {
       delete query.branch;
     }

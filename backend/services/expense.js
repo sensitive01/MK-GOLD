@@ -16,7 +16,7 @@ async function find(query = {}) {
     // Convert string IDs to ObjectIds for aggregation
     if (query.branch && typeof query.branch === 'string') {
       const mongoose = require("mongoose");
-      query.branch = new mongoose.Types.ObjectId(query.branch);
+      if (mongoose.Types.ObjectId.isValid(String(query.branch))) { query.branch = new mongoose.Types.ObjectId(String(query.branch)); } else { delete query.branch; }
     }
     if (query._id && typeof query._id === 'string') {
       const mongoose = require("mongoose");

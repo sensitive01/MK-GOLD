@@ -120,7 +120,7 @@ export default function Expense() {
     }
   ) => {
     getExpense(query).then((data) => {
-      setData(data.data);
+      setData(Array.isArray(data?.data) ? data.data : []);
       setOpenBackdrop(false);
     });
   };

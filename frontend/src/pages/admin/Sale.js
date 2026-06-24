@@ -138,8 +138,8 @@ export default function Sale() {
 
   // Form validation
   const schema = Yup.object({
-    fromDate: Yup.string().required('From date is required'),
-    toDate: Yup.string().required('To date is required'),
+    fromDate: Yup.string().nullable(),
+    toDate: Yup.string().nullable(),
   });
 
   const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
@@ -152,14 +152,18 @@ export default function Sale() {
     validationSchema: schema,
     onSubmit: (values) => {
       setOpenBackdrop(true);
-      findSales({
-        createdAt: {
-          $gte: values.fromDate?.format("YYYY-MM-DD"),
-          $lte: values.toDate?.format("YYYY-MM-DD"),
-        },
+      const query = {
         branch: values.branch,
         phoneNumber: values.phoneNumber,
-      }).then((data) => {
+      };
+      
+      if (values.fromDate || values.toDate) {
+        query.createdAt = {};
+        if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
+        if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
+      }
+
+      findSales(query).then((data) => {
         setData(data.data);
         setOpenBackdrop(false);
       });
@@ -315,7 +319,7 @@ export default function Sale() {
   return (
     <>
       <Helmet>
-        <title> Sale | MK Gold </title>
+        <title> Billing | MK Gold </title>
       </Helmet>
 
       <Snackbar
@@ -343,7 +347,7 @@ export default function Sale() {
       <Container maxWidth={false} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Sale
+            Billing
           </Typography>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
             <Button
@@ -1106,7 +1110,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     if (file) {
       setPreview(URL.createObjectURL(file));
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('uploadedFile', file);
       formData.append('uploadId', id);
       const res = await createFile(formData);
       if (res.status) {

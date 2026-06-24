@@ -101,19 +101,19 @@ export default function Balancesheet() {
         toDate: moment()?.format("YYYY-MM-DD"),
       }
     ) => {
-      if (!query.branch) query.branch = branch._id;
+      if (!query.branch) query.branch = branch?._id || branch;
       getBalancesheet(query).then((data) => {
-        setData(data.data);
+        setData(Array.isArray(data?.data) ? data.data : []);
         setOpenBackdrop(false);
       });
     },
-    [branch._id]
+    [branch?._id || branch]
   );
 
   useEffect(() => {
     setBranch(auth.user.branch);
     fetchData({
-      branch: auth.user.branch._id,
+      branch: auth.user?.branch?._id || auth.user?.branch,
       fromDate: moment()?.format("YYYY-MM-DD"),
       toDate: moment()?.format("YYYY-MM-DD"),
     });

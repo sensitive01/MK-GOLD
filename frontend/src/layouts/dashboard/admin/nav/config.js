@@ -11,6 +11,8 @@ import SafetyCheckIcon from '@mui/icons-material/SafetyCheck';
 import RequestPageIcon from '@mui/icons-material/RequestPage';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import QrCodeIcon from '@mui/icons-material/QrCode';
+import StoreIcon from '@mui/icons-material/Store';
+import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -70,7 +72,12 @@ const navConfig = [
     icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
   },
   {
-    title: 'Sale',
+    title: 'Transit',
+    path: '/admin/transit',
+    icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Billing',
     path: '/admin/sale',
     icon: <SellIcon sx={{ width: 1, height: 1 }} />,
   },
@@ -105,6 +112,11 @@ const navConfig = [
     icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
   },
   {
+    title: 'Melting',
+    path: '/admin/melting',
+    icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
     title: 'Designation',
     path: '/admin/designation',
     icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
@@ -118,6 +130,16 @@ const navConfig = [
     title: 'QR Enquiries',
     path: '/admin/qr-enquiry',
     icon: <QrCodeIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Vendor',
+    path: '/admin/vendor',
+    icon: <StoreIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Sell Gold',
+    path: '/admin/sell-gold',
+    icon: <PointOfSaleIcon sx={{ width: 1, height: 1 }} />,
   },
 ];
 

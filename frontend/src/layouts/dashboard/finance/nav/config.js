@@ -40,7 +40,7 @@ const navConfig = [
     icon: <RequestQuoteIcon sx={{ width: 1, height: 1 }} />,
   },
   {
-    title: 'Sale',
+    title: 'Billing',
     path: '/finance/sale',
     icon: <SellIcon sx={{ width: 1, height: 1 }} />,
   },

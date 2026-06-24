@@ -196,6 +196,7 @@ function CreateSale(props) {
             bankAmount: sale.bankAmount || '',
             margin: sale.margin,
             status: sale.status,
+            comments: sale.comments || '',
           });
           setBranch(sale.branch);
           setSelectedUser(sale.customer);
@@ -275,6 +276,7 @@ function CreateSale(props) {
       bankAmount: '',
       margin: 3,
       status: 'pending',
+      comments: '',
     },
     validationSchema: schema,
     onSubmit: (values) => {
@@ -352,6 +354,7 @@ function CreateSale(props) {
   payload.paymentType = values.paymentType;
   payload.netWeight = payload.netWeight?.toFixed(2);
   payload.margin = Math.round(values.margin);
+  payload.comments = values.comments;
   payload.ornaments = ornaments;
   payload.cashAmount = Math.round(values.cashAmount);
   payload.bankAmount = Math.round(values.bankAmount);
@@ -589,6 +592,18 @@ function CreateSale(props) {
                 {...props}
               />
             )}
+            <Grid item xs={12}>
+              <TextField
+                name="comments"
+                value={values.comments}
+                label="Comments (Optional)"
+                fullWidth
+                multiline
+                rows={3}
+                onBlur={handleBlur}
+                onChange={handleChange}
+              />
+            </Grid>
             <Grid item xs={12}>
               <LoadingButton
                 size="large"

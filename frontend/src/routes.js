@@ -25,6 +25,10 @@ import AdminOrnament from './pages/admin/Ornament';
 import AdminDesignation from './pages/admin/Designation';
 import AdminAnnouncement from './pages/admin/Announcements';
 import AdminQREnquiry from './pages/admin/QREnquiry';
+import AdminTransit from './pages/admin/Transit';
+import AdminMelting from './pages/admin/Melting';
+import AdminVendor from './pages/admin/Vendor';
+import AdminSellGold from './pages/admin/SellGold';
 import PublicEnquiry from './pages/PublicEnquiry';
 
 // New Roles
@@ -74,6 +78,7 @@ import BranchBalancesheet from './pages/branch/Balancesheet';
 import BranchOrnament from './pages/branch/Ornament';
 import BranchEmployee from './pages/branch/BranchEmployee';
 import BranchQREnquiry from './pages/branch/QREnquiry';
+import BranchTransit from './pages/branch/Transit';
 
 // ----------------------------------------------------------------------
 
@@ -120,6 +125,10 @@ export default function Router() {
         { path: 'designation', element: <AdminDesignation /> },
         { path: 'announcement', element: <AdminAnnouncement /> },
         { path: 'qr-enquiry', element: <AdminQREnquiry /> },
+        { path: 'transit', element: <AdminTransit /> },
+        { path: 'melting', element: <AdminMelting /> },
+        { path: 'vendor', element: <AdminVendor /> },
+        { path: 'sell-gold', element: <AdminSellGold /> },
       ],
     },
     {
@@ -183,6 +192,7 @@ export default function Router() {
         { path: 'ornament', element: <BranchOrnament /> },
         { path: 'employee', element: <BranchEmployee /> },
         { path: 'qr-enquiry', element: <BranchQREnquiry /> },
+        { path: 'transit', element: <BranchTransit /> },
       ],
     },
     {

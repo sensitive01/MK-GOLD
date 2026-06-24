@@ -23,6 +23,7 @@ const importedLead = require("../controllers/branch/importedLead");
 const qrEnquiry = require("../controllers/qrEnquiry");
 const fileUpload = require("../controllers/branch/fileupload");
 const { isBranch } = require("../middlewares/authorization");
+const transit = require("../controllers/branch/transit");
 const multer = require("../config/multer");
 
 branchRouter.get("/", function (req, res, next) {
@@ -133,6 +134,12 @@ branchRouter.get("/leave/get/:id", leave.findById);
 branchRouter.post("/leave/create", leave.create);
 branchRouter.post("/leave/update/:id", leave.update);
 branchRouter.post("/leave/delete/:id", leave.remove);
+
+branchRouter.get("/transit/get", transit.findTransitData);
+branchRouter.post("/transit/get", transit.findTransitData);
+branchRouter.post("/transit/create", transit.createTransitData);
+branchRouter.delete("/transit/delete/:id", transit.deleteTransitById);
+branchRouter.post("/transit/delete/:id", transit.deleteTransitById);
 
 branchRouter.get("/file-upload/get", fileUpload.find);
 branchRouter.post("/file-upload/get", fileUpload.find);

@@ -15,8 +15,8 @@ async function find(query = {}) {
         new Date(query.createdAt["$lte"]).toISOString().replace(/T.*Z/, "T23:59:59Z")
       );
     }
-    if (query.branch) {
-      query.branch = new mongoose.Types.ObjectId(query.branch);
+    if (query.branch && mongoose.Types.ObjectId.isValid(String(query.branch))) {
+      query.branch = new mongoose.Types.ObjectId(String(query.branch));
     } else {
       delete query.branch;
     }
@@ -26,8 +26,8 @@ async function find(query = {}) {
     } else {
       delete query.phoneNumber;
     }
-    if (query.customer) {
-      query.customer = new mongoose.Types.ObjectId(query.customer);
+    if (query.customer && mongoose.Types.ObjectId.isValid(String(query.customer))) {
+      query.customer = new mongoose.Types.ObjectId(String(query.customer));
     } else {
       delete query.customer;
     }
