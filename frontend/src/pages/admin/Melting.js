@@ -91,6 +91,7 @@ export default function Melting() {
     setSelectedSales([]);
     setSelectedOrnaments([]);
     setNotes('');
+    setMeltProof(null);
     setOpenWizard(true);
   };
 
@@ -197,6 +198,10 @@ export default function Melting() {
       notes,
       fineGoldDifference: 0
     };
+
+    if (meltProof) {
+      payload.meltProof = typeof meltProof === 'object' ? meltProof._id : meltProof;
+    }
 
     const res = await createMelting(payload);
     if (res.status) {
@@ -653,6 +658,26 @@ export default function Melting() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
+              <Button
+                variant="contained"
+                component="label"
+                disabled={uploadLoading}
+                sx={{ mt: 2 }}
+              >
+                {uploadLoading ? 'Uploading...' : 'Upload Proof'}
+                <input
+                  type="file"
+                  hidden
+                  onChange={handleFileUpload}
+                />
+              </Button>
+              {meltProof && typeof meltProof === 'object' && meltProof.uploadedFile ? (
+                <Box component="img" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} alt="Proof" sx={{ width: '100%', maxHeight: 200, objectFit: 'contain', mt: 2 }} />
+              ) : meltProof ? (
+                <Typography variant="body2" sx={{ color: 'success.main', mt: 1 }}>
+                  Proof uploaded successfully!
+                </Typography>
+              ) : null}
             </Box>
           )}
 
