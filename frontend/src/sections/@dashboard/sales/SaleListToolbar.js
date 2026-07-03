@@ -59,7 +59,7 @@ export default function SaleListToolbar({ handleDelete, numSelected, filterName,
         <StyledSearch
           value={filterName}
           onChange={onFilterName}
-          placeholder="Search sale..."
+          placeholder="Search Billing"
           startAdornment={
             <InputAdornment position="start">
               <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled', width: 20, height: 20 }} />

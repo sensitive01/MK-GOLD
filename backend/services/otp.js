@@ -3,14 +3,12 @@ const OTP = require("../models/otp");
 async function find(query = {}) {
   try {
     if (query.createdAt && "$gte" in query.createdAt) {
-      query.createdAt["$gte"] = new Date(
-        new Date(query.createdAt["$gte"]).toISOString().replace(/T.*Z/, "T00:00:00Z")
-      );
+      const dateStr = String(query.createdAt["$gte"]).substring(0, 10);
+      query.createdAt["$gte"] = new Date(`${dateStr}T00:00:00.000+05:30`);
     }
     if (query.createdAt && "$lte" in query.createdAt) {
-      query.createdAt["$lte"] = new Date(
-        new Date(query.createdAt["$lte"]).toISOString().replace(/T.*Z/, "T23:59:59Z")
-      );
+      const dateStr = String(query.createdAt["$lte"]).substring(0, 10);
+      query.createdAt["$lte"] = new Date(`${dateStr}T23:59:59.999+05:30`);
     }
     return await OTP.find(query).sort({ createdAt: -1 }).exec();
   } catch (err) {

@@ -202,6 +202,55 @@ function Customer(props) {
     if (!enquiryId) return;
     setFetchingEnquiry(true);
     try {
+      // First try to find a full customer by enqID
+      const customerRes = await findCustomer({ enqID: enquiryId, all: true });
+      if (customerRes.data && customerRes.data.length > 0) {
+        const e = customerRes.data[0];
+        setOpenId(e._id);
+        setValues({
+          name: e.name || '',
+          phoneNumber: e.phoneNumber || '',
+          alternatePhoneNumber: e.alternatePhoneNumber || '',
+          email: e.email || '',
+          dob: e.dob || null,
+          gender: e.gender || '',
+          maritalStatus: e.maritalStatus || '',
+          source: e.source || '',
+          status: e.status || 'active',
+          chooseId: e.chooseId || '',
+          idNo: e.idNo || '',
+          enqID: e.enqID || enquiryId,
+        });
+        
+        // Fetch profile image if exists
+        const profileImg = e.profileImage?.uploadedFile;
+        if (profileImg) {
+          setImg(profileImg.startsWith('http') ? profileImg : `${global.baseURL}/${profileImg}`);
+        } else {
+          setImg(null);
+        }
+
+        // Fetch ID Proof and Signature
+        if (e.idProof?.uploadedFile) {
+          const idImg = e.idProof.uploadedFile;
+          setUploadIdPreview(idImg.startsWith('http') ? idImg : `${global.baseURL}/${idImg}`);
+        } else {
+          setUploadIdPreview(null);
+        }
+
+        if (e.signatureImage?.uploadedFile) {
+          const sigImg = e.signatureImage.uploadedFile;
+          setSignaturePreview(sigImg.startsWith('http') ? sigImg : `${global.baseURL}/${sigImg}`);
+        } else {
+          setSignaturePreview(null);
+        }
+
+        setNotify({ open: true, message: 'Full customer profile loaded from KYC', severity: 'success' });
+        setFetchingEnquiry(false);
+        return;
+      }
+
+      // Fallback: Fetch basic enquiry details
       const res = await getEnquiryByEnqId(enquiryId);
       if (res.status) {
         setValues({
@@ -210,7 +259,7 @@ function Customer(props) {
           phoneNumber: res.data.phoneNumber || values.phoneNumber,
           email: res.data.email || values.email,
         });
-        setNotify({ open: true, message: 'Enquiry details fetched', severity: 'success' });
+        setNotify({ open: true, message: 'Basic enquiry details fetched', severity: 'success' });
       } else {
         setNotify({ open: true, message: res.message, severity: 'error' });
       }
@@ -585,17 +634,17 @@ function Customer(props) {
                     <TableCell padding="checkbox">
                       <Checkbox checked={selectedUser?._id === e._id} onChange={() => handleSelect(e)} />
                     </TableCell>
-                    <TableCell align="left">{sentenceCase(e.name ?? '')}</TableCell>
+                    <TableCell align="left">{e.name ? sentenceCase(e.name) : ''}</TableCell>
                     <TableCell align="left">{e.email}</TableCell>
                     <TableCell align="left">{global.maskPhoneNumber(e.phoneNumber)}</TableCell>
-                    <TableCell align="left">{sentenceCase(e.gender ?? '')}</TableCell>
+                    <TableCell align="left">{e.gender ? sentenceCase(e.gender) : ''}</TableCell>
                     <TableCell align="left">
                       <Label
                         color={
                           (e.status === 'active' && 'success') || (e.status === 'deactive' && 'error') || 'warning'
                         }
                       >
-                        {sentenceCase(e.status ?? '')}
+                        {e.status ? sentenceCase(e.status) : ''}
                       </Label>
                     </TableCell>
                     <TableCell align="left">

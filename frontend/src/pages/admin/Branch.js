@@ -358,7 +358,7 @@ export default function Branch() {
                           {image?.uploadedFile ? (
                             <img
                               key={image._id ?? _id}
-                              src={`${global.baseURL}/${image?.uploadedFile}`}
+                              src={image.uploadedFile.startsWith('http') ? image.uploadedFile : `${global.baseURL}/${image.uploadedFile.replace(/\\/g, '/')}`}
                               alt="logo"
                               style={{ width: '80px' }}
                             />

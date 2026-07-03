@@ -544,6 +544,23 @@ export default function PublicEnquiry() {
                     >
                         {t.submit}
                     </LoadingButton>
+
+                    <Box sx={{ textAlign: 'center', mt: 2 }}>
+                        <Button
+                            variant="text"
+                            onClick={() => window.location.href = `/kyc/${branchId}`}
+                            sx={{
+                                color: '#8A1B9F',
+                                textDecoration: 'underline',
+                                '&:hover': {
+                                    backgroundColor: 'transparent',
+                                    color: '#711683',
+                                },
+                            }}
+                        >
+                            {lang === 'en' ? 'Already Registered? Proceed to KYC' : 'ಈಗಾಗಲೇ ನೋಂದಾಯಿಸಲಾಗಿದೆಯೇ? KYC ಗೆ ಮುಂದುವರಿಯಿರಿ'}
+                        </Button>
+                    </Box>
                   </Stack>
                 </>
               )}

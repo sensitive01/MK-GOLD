@@ -30,6 +30,7 @@ import AdminMelting from './pages/admin/Melting';
 import AdminVendor from './pages/admin/Vendor';
 import AdminSellGold from './pages/admin/SellGold';
 import PublicEnquiry from './pages/PublicEnquiry';
+import PublicKYC from './pages/PublicKYC';
 
 // New Roles
 import MasterDashboardLayout from './layouts/dashboard/master';
@@ -300,6 +301,10 @@ export default function Router() {
     {
       path: '/enquiry/:branchId',
       element: <PublicEnquiry />,
+    },
+    {
+      path: '/kyc/:branchId',
+      element: <PublicKYC />,
     },
     {
       element: <ErrorPageLayout />,

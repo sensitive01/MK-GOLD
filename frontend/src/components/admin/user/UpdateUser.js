@@ -149,26 +149,41 @@ function UpdateUser(props) {
             </FormControl>
           </Grid>
           {['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(values.userType) ? (
-            <Grid item xs={12} sm={4}>
-              <FormControl fullWidth error={touched.branch && errors.branch && true}>
-                <InputLabel id="select-label">Select branch</InputLabel>
-                <Select
-                  labelId="select-label"
-                  id="select"
-                  label={touched.branch && errors.branch ? errors.branch : 'Select branch'}
-                  name="branch"
-                  value={values.branch || ''}
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                >
-                  {branches?.map((e) => (
-                    <MenuItem value={e._id} key={e._id}>
-                      {e.branchId} {e.branchName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+            <>
+              <Grid item xs={12} sm={4}>
+                <FormControl fullWidth error={touched.branch && errors.branch && true}>
+                  <InputLabel id="select-label">Select branch</InputLabel>
+                  <Select
+                    labelId="select-label"
+                    id="select"
+                    label={touched.branch && errors.branch ? errors.branch : 'Select branch'}
+                    name="branch"
+                    value={values.branch || ''}
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                  >
+                    {branches?.map((e) => (
+                      <MenuItem value={e._id} key={e._id}>
+                        {e.branchId} {e.branchName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              {values.loginMethod === 'password' && (
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    name="password"
+                    value={values.password || ''}
+                    error={touched.password && errors.password && true}
+                    label={touched.password && errors.password ? errors.password : 'Password'}
+                    fullWidth
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                  />
+                </Grid>
+              )}
+            </>
           ) : (
             <>
               <Grid item xs={12} sm={4}>

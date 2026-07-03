@@ -513,7 +513,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                             />
                           </a>
                         ) : (
-                          <img src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />
+                          <span style={{ marginLeft: 8 }}>N/A</span>
                         )}
                       </TableCell>
                       <TableCell align="left">Customer Name: {data?.customer?.name}</TableCell>

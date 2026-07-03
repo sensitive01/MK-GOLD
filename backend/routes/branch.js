@@ -151,7 +151,7 @@ branchRouter.post(
 );
 branchRouter.post("/file-upload/delete/:id", fileUpload.remove);
 
-branchRouter.get("/qr-enquiry/get-by-enqid/:enqId", qrEnquiry.findByEnqId);
+branchRouter.get("/qr-enquiry/get-by-enqid/:enqId", qrEnquiry.findByEnqIdStrict);
 branchRouter.post("/qr-enquiry/get", qrEnquiry.getEnquiries);
 
 branchRouter.get("/profile", profile.get);

@@ -25,7 +25,7 @@ import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
 import global from '../../utils/global';
 import { getQrEnquiries } from '../../apis/admin/qrEnquiry';
-import { BranchListHead } from '../../sections/@dashboard/branch';
+import { ListHead } from '../../sections/@dashboard/report';
 
 const TABLE_HEAD = [
   { id: 'enqID', label: 'Enquiry ID', alignRight: false },
@@ -95,11 +95,10 @@ export default function QREnquiry() {
           <Scrollbar>
             <TableContainer>
               <Table sx={{ minWidth: 800 }}>
-                <BranchListHead
+                <ListHead
                   headLabel={TABLE_HEAD}
                   rowCount={data?.length ?? 0}
                   onRequestSort={() => {}}
-                  onSelectAllClick={() => {}}
                 />
                 <TableBody>
                   {data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {

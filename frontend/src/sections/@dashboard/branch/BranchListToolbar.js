@@ -59,7 +59,7 @@ export default function BranchListToolbar({ handleDelete, numSelected, filterNam
         <StyledSearch
           value={filterName}
           onChange={onFilterName}
-          placeholder="Search rate..."
+          placeholder="Search branch..."
           startAdornment={
             <InputAdornment position="start">
               <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled', width: 20, height: 20 }} />

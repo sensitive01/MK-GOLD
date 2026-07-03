@@ -120,4 +120,26 @@ async function findByEnqId(req, res) {
   }
 }
 
-module.exports = { sendOtp, verifyOtp, verifyAndSubmit, getEnquiries, findByEnqId };
+async function findByEnqIdStrict(req, res) {
+  try {
+    const { enqId } = req.params;
+    if (!enqId) {
+        return res.json({ status: false, message: "Enquiry ID is required" });
+    }
+    
+    // Only search by enqID without fallbacks for public security
+    const trimmedId = enqId.trim();
+    let result = await qrService.findOne({ 
+        enqID: { $regex: new RegExp("^" + trimmedId + "$", "i") } 
+    });
+    
+    if (!result) {
+        return res.json({ status: false, message: "Enquiry not found or Invalid ID" });
+    }
+    res.json({ status: true, data: result });
+  } catch (err) {
+    res.json({ status: false, message: err.message });
+  }
+}
+
+module.exports = { sendOtp, verifyOtp, verifyAndSubmit, getEnquiries, findByEnqId, findByEnqIdStrict };

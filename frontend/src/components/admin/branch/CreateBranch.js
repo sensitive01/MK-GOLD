@@ -189,8 +189,8 @@ function CreateBranch(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                {global.states?.map((state) => (
-                  <MenuItem value={state}>{state}</MenuItem>
+                {global.states?.map((state, index) => (
+                  <MenuItem key={index} value={state}>{state}</MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -207,8 +207,8 @@ function CreateBranch(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                {global.cities[values.state]?.split('|')?.map((city) => (
-                  <MenuItem value={city}>{city}</MenuItem>
+                {global.cities[values.state]?.split('|')?.map((city, index) => (
+                  <MenuItem key={index} value={city}>{city}</MenuItem>
                 ))}
               </Select>
             </FormControl>

@@ -383,11 +383,16 @@ export default function Sale() {
           </Stack>
         </Stack>
 
-        <p style={{ color: '#fff' }}>
-          From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
-          {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}, Branch:{' '}
-          {branches?.find((e) => e._id === values.branch)?.branchName}, Phone Number: {global.maskPhoneNumber(values.phoneNumber)}
-        </p>
+        {(values.fromDate || values.toDate || values.branch || values.phoneNumber) && (
+          <p style={{ color: '#fff' }}>
+            {[
+              values.fromDate ? `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}` : null,
+              values.toDate ? `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}` : null,
+              values.branch ? `Branch: ${branches?.find((e) => e._id === values.branch)?.branchName || ''}` : null,
+              values.phoneNumber ? `Phone Number: ${global.maskPhoneNumber(values.phoneNumber)}` : null,
+            ].filter(Boolean).join(', ')}
+          </p>
+        )}
 
         <Card>
           <SaleListToolbar

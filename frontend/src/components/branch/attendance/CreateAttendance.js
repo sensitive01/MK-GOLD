@@ -121,6 +121,11 @@ function CreateAttendance(props) {
                 }}
                 disabled={Boolean(auth.user?.employee || localStorage.getItem('empId'))}
               >
+                {values.employee && !employees?.some((e) => e._id === values.employee) && (
+                  <MenuItem value={values.employee} sx={{ display: 'none' }}>
+                    {values.employee}
+                  </MenuItem>
+                )}
                 {employees?.map((e) => (
                   <MenuItem key={e._id} value={e._id}>{e.employeeId} {e.name}</MenuItem>
                 ))}

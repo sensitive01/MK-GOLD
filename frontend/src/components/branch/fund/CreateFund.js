@@ -30,6 +30,8 @@ function CreateFund(props) {
   // Form validation
   const schema = Yup.object({
     type: Yup.string().required('Type is required'),
+    from: Yup.string().required('From branch is required'),
+    to: Yup.string().required('To branch is required'),
     amount: Yup.string().required('Amount is required'),
     note: Yup.string().required('Note is required'),
   });
@@ -97,6 +99,14 @@ function CreateFund(props) {
                 onBlur={handleBlur}
                 onChange={(e) => {
                   if (e.target.value === 'fund_request') {
+                    if (!headOffice) {
+                      props.setNotify({
+                        open: true,
+                        message: 'Head Office not found. Please contact admin to create a Head Office.',
+                        severity: 'error',
+                      });
+                      return;
+                    }
                     setFieldValue('from', headOffice?._id);
                     setFieldValue('to', branch?._id);
                   } else {

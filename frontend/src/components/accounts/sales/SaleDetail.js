@@ -405,22 +405,26 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                     <TableRow tabIndex={-1}>
                       <TableCell align="left">
                         Photo:
-                        <a
-                          href={data?.customer?.profileImage?.uploadedFile?.startsWith('http') 
-                            ? data?.customer?.profileImage?.uploadedFile 
-                            : `${global.baseURL}/${data?.customer?.profileImage?.uploadedFile}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <img
-                            src={data?.customer?.profileImage?.uploadedFile?.startsWith('http') 
-                              ? data?.customer?.profileImage?.uploadedFile 
-                              : `${global.baseURL}/${data?.customer?.profileImage?.uploadedFile}`}
-                            alt="document"
-                            style={{ width: '80px' }}
-                          />
-                        </a>
+                        {data?.customer?.profileImage?.uploadedFile ? (
+                          <a
+                            href={data.customer.profileImage.uploadedFile.startsWith('http') 
+                              ? data.customer.profileImage.uploadedFile 
+                              : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <img
+                              src={data.customer.profileImage.uploadedFile.startsWith('http') 
+                                ? data.customer.profileImage.uploadedFile 
+                                : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`}
+                              alt="document"
+                              style={{ width: '80px' }}
+                            />
+                          </a>
+                        ) : (
+                          <span style={{ marginLeft: 8 }}>N/A</span>
+                        )}
                       </TableCell>
                       <TableCell align="left">Customer Name: {data?.customer?.name}</TableCell>
                       <TableCell align="left">Customer Email: {data?.customer?.email}</TableCell>
