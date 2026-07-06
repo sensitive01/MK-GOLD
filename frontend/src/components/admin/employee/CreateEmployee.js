@@ -121,6 +121,12 @@ function CreateEmployee(props) {
             message: 'Employee created successfully!',
             severity: 'success',
           });
+          
+          getNextEmployeeId().then((res) => {
+            if (res.status) {
+              setFieldValue('employeeId', res.data);
+            }
+          });
         }
       });
     },
