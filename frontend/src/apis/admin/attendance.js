@@ -45,4 +45,13 @@ async function deleteAttendanceById(id) {
   }
 }
 
-export { getAttendance, getAttendanceById, createAttendance, updateAttendance, deleteAttendanceById };
+async function getConsolidatedAttendance(query = {}) {
+  try {
+    const response = await apiClient().post('/api/v1.0/hr/attendance/consolidated', query);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+export { getAttendance, getAttendanceById, createAttendance, updateAttendance, deleteAttendanceById, getConsolidatedAttendance };

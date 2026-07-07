@@ -104,7 +104,7 @@ export default function Ornament() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [data, setData] = useState([]);
   const [toggleContainer, setToggleContainer] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
   const form = useRef();
 
   const [notify, setNotify] = useState({
@@ -789,6 +789,7 @@ function Print({ data }) {
     </>
   );
 }
+
 
 
 

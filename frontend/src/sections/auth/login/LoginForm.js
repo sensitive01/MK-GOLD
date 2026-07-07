@@ -73,6 +73,15 @@ export default function LoginForm() {
     if (userType === 'bullion_desk') {
       return <Navigate to="/bullion-desk/dashboard" />;
     }
+    if (userType === 'auditor') {
+      return <Navigate to="/auditor/dashboard" />;
+    }
+    if (userType === 'marketing') {
+      return <Navigate to="/marketing/dashboard" />;
+    }
+    if (userType === 'admin_desk') {
+      return <Navigate to="/admin-desk/dashboard" />;
+    }
     return <Navigate to="/404" />;
   }
 

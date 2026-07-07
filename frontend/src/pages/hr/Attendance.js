@@ -50,7 +50,7 @@ import Scrollbar from '../../components/scrollbar';
 // sections
 import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashboard/attendance';
 // mock
-import { deleteAttendanceById, getAttendance } from '../../apis/hr/attendance';
+import { deleteAttendanceById, getAttendance, getConsolidatedAttendance } from '../../apis/hr/attendance';
 import { getBranchAttendanceStats } from '../../apis/branch/attendance';
 import CreateAttendance from '../../components/branch/attendance/CreateAttendance';
 import global from '../../utils/global';
@@ -103,7 +103,7 @@ export default function Attendance() {
   
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
-  const [filterOpen, setFilterOpen] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
   const form = useRef();
 
   const [notify, setNotify] = useState({
@@ -138,10 +138,17 @@ export default function Attendance() {
         }
         query.employee = empId;
       }
-      getAttendance(query).then((data) => {
-        setData(data.data || []);
-        setOpenBackdrop(false);
-      });
+      if (currentTab === 'consolidated_attendance') {
+        getConsolidatedAttendance({ date: values.fromDate?.format('YYYY-MM-DD') || moment().format('YYYY-MM-DD') }).then((res) => {
+          setData(res.data || []);
+          setOpenBackdrop(false);
+        });
+      } else {
+        getAttendance(query).then((data) => {
+          setData(data.data || []);
+          setOpenBackdrop(false);
+        });
+      }
       setFilterOpen(false);
     },
   });
@@ -168,10 +175,17 @@ export default function Attendance() {
             $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
           };
       }
-      getAttendance(query).then((data) => {
-        setData(data.data || []);
-        setOpenBackdrop(false);
-      });
+      if (currentTab === 'consolidated_attendance') {
+        getConsolidatedAttendance({ date: values.fromDate?.format('YYYY-MM-DD') || moment().format('YYYY-MM-DD') }).then((res) => {
+          setData(res.data || []);
+          setOpenBackdrop(false);
+        });
+      } else {
+        getAttendance(query).then((data) => {
+          setData(data.data || []);
+          setOpenBackdrop(false);
+        });
+      }
     },
     [currentTab, auth.user.employee, values.fromDate, values.toDate]
   );
@@ -234,14 +248,51 @@ export default function Attendance() {
   };
 
   const handleExport = (fileData, fileName) => {
+    if (currentTab === 'consolidated_attendance') {
+      const exportData = data.map(row => ({
+        'Employee ID': row.employee?.employeeId,
+        'Employee Name': row.employee?.name,
+        'Branch Name': row.employee?.branchName,
+        'Working Days': row.workingDays,
+        'Present': row.present,
+        'Absent': row.absent,
+        'Late Days': row.lateDays,
+        'Allowances': row.allowances,
+        'Deductions': row.deductions,
+        'Advance': row.advance,
+        'Salary': row.salary,
+        'Payable': row.payable
+      }));
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = { Sheets: { data: ws }, SheetNames: ['data'] };
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+      FileSaver.saveAs(blob, `${fileName}.xlsx`);
+      return;
+    }
     const ws = XLSX.utils.json_to_sheet(fileData);
     const wb = { Sheets: { data: ws }, SheetNames: ['data'] };
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
-    FileSaver.saveAs(data, `${fileName}.xlsx`);
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+    FileSaver.saveAs(blob, `${fileName}.xlsx`);
   };
 
-  const TABLE_HEAD = [
+  const CONSOLIDATED_TABLE_HEAD = [
+    { id: 'employeeId', label: 'Employee Id', alignRight: false },
+    { id: 'employeeName', label: 'Employee Name', alignRight: false },
+    { id: 'branchName', label: 'Branch Name', alignRight: false },
+    { id: 'workingDays', label: 'Working Days', alignRight: false },
+    { id: 'present', label: 'Present', alignRight: false },
+    { id: 'absent', label: 'Absent', alignRight: false },
+    { id: 'lateDays', label: 'Late Days', alignRight: false },
+    { id: 'allowances', label: 'Allowances', alignRight: false },
+    { id: 'deductions', label: 'Deductions', alignRight: false },
+    { id: 'advance', label: 'Advance', alignRight: false },
+    { id: 'salary', label: 'Salary', alignRight: false },
+    { id: 'payable', label: 'Payable', alignRight: false },
+  ];
+
+  const TABLE_HEAD = currentTab === 'consolidated_attendance' ? CONSOLIDATED_TABLE_HEAD : [
     ...(currentTab === 'all_attendance' ? [
         { id: 'employeeId', label: 'Employee Id', alignRight: false },
         { id: 'employeeName', label: 'Employee Name', alignRight: false },
@@ -311,6 +362,7 @@ export default function Attendance() {
               <Tabs value={currentTab} onChange={(e, v) => setCurrentTab(v)} aria-label="attendance tabs">
                 <Tab value="all_attendance" label="All Attendance" />
                 <Tab value="my_attendance" label="My Attendance" />
+                <Tab value="consolidated_attendance" label="Consolidated Attendance" />
               </Tabs>
             </Box>
             
@@ -327,7 +379,27 @@ export default function Attendance() {
                   <Table sx={{ minWidth: 800 }}>
                     <AttendanceListHead order={order} orderBy={orderBy} headLabel={TABLE_HEAD} rowCount={data?.length || 0} numSelected={selected?.length} onRequestSort={handleRequestSort} onSelectAllClick={handleSelectAllClick} />
                     <TableBody>
-                      {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
+                      {currentTab === 'consolidated_attendance' && filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row, index) => {
+                        const { employee, present, absent, lateDays, allowances, deductions, advance, salary, payable, workingDays } = row;
+                        return (
+                          <TableRow hover key={index} tabIndex={-1}>
+                            <TableCell padding="checkbox"></TableCell>
+                            <TableCell align="left">{employee?.employeeId}</TableCell>
+                            <TableCell align="left">{employee?.name}</TableCell>
+                            <TableCell align="left">{employee?.branchName}</TableCell>
+                            <TableCell align="left">{workingDays}</TableCell>
+                            <TableCell align="left">{present}</TableCell>
+                            <TableCell align="left">{absent}</TableCell>
+                            <TableCell align="left">{lateDays}</TableCell>
+                            <TableCell align="left">₹{allowances}</TableCell>
+                            <TableCell align="left">₹{deductions}</TableCell>
+                            <TableCell align="left">₹{advance}</TableCell>
+                            <TableCell align="left">₹{salary}</TableCell>
+                            <TableCell align="left">₹{payable}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {currentTab !== 'consolidated_attendance' && filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
                         const { _id, employee, attendance, createdAt } = row;
                         const selectedData = selected.indexOf(_id) !== -1;
                         return (
@@ -420,3 +492,4 @@ export default function Attendance() {
     </>
   );
 }
+

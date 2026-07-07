@@ -109,7 +109,7 @@ export default function Support() {
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
-  const [filterOpen, setFilterOpen] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
   const form = useRef();
 
   const [notify, setNotify] = useState({
@@ -633,6 +633,7 @@ export default function Support() {
     </>
   );
 }
+
 
 
 

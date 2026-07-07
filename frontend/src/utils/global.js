@@ -112,6 +112,8 @@ export default {
     { label: 'Tele-Calling', value: 'telecalling' },
     { label: 'Transaction Executive', value: 'transaction_executive' },
     { label: 'Bullion Desk', value: 'bullion_desk' },
+    { label: 'Marketing', value: 'marketing' },
+    { label: 'Admin Desk', value: 'admin_desk' },
   ],
   employmentTypes: [
     { label: 'Full Time', value: 'full-time' },

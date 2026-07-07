@@ -113,7 +113,7 @@ function applySortFilter(array, comparator, query) {
 export default function Sale() {
   const [branches, setBranches] = useState([]);
   const [open, setOpen] = useState(null);
-  const [filterOpen, setFilterOpen] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [saleIdToEdit, setSaleIdToEdit] = useState(null);
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType;
@@ -936,6 +936,7 @@ function Status(props) {
         (status === 'release pending' && 'warning') ||
         (status === 'admin approval pending' && 'info') ||
         (status === 'fund transfer pending' && 'warning') ||
+        (status === 'intransit' && 'info') ||
         'error'
       }
     >
@@ -1403,6 +1404,7 @@ VerificationModal.propTypes = {
   handleClose: PropTypes.func,
   fetchData: PropTypes.func,
 };
+
 
 
 

@@ -103,7 +103,7 @@ export default function Ornament() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [data, setData] = useState([]);
   const [toggleContainer, setToggleContainer] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [selected, setSelected] = useState([]);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
@@ -821,6 +821,7 @@ function Print({ data }) {
     </>
   );
 }
+
 
 
 

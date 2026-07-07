@@ -35,6 +35,15 @@ import PublicKYC from './pages/PublicKYC';
 // New Roles
 import MasterDashboardLayout from './layouts/dashboard/master';
 import MasterDashboard from './pages/master/Dashboard';
+import AuditorDashboardLayout from './layouts/dashboard/auditor';
+import AuditorDashboard from './pages/auditor/Dashboard';
+import AuditorGoldRate from './pages/auditor/GoldRate';
+import AuditorExpense from './pages/auditor/Expense';
+import AuditorFund from './pages/auditor/Fund';
+import AuditorMelting from './pages/auditor/Melting';
+import AuditorSellGold from './pages/auditor/SellGold';
+import AuditorAttendance from './pages/auditor/Attendance';
+import AuditorSale from './pages/auditor/Sale';
 import OperationsDashboardLayout from './layouts/dashboard/operations';
 import OperationsDashboard from './pages/operations/Dashboard';
 import FinanceDashboardLayout from './layouts/dashboard/finance';
@@ -80,6 +89,18 @@ import BranchOrnament from './pages/branch/Ornament';
 import BranchEmployee from './pages/branch/BranchEmployee';
 import BranchQREnquiry from './pages/branch/QREnquiry';
 import BranchTransit from './pages/branch/Transit';
+
+import MarketingDashboardLayout from './layouts/dashboard/marketing/MarketingDashboardLayout';
+import MarketingDashboard from './pages/marketing/Dashboard';
+import MarketingExpense from './pages/marketing/Expense';
+import MarketingLeave from './pages/marketing/Leave';
+import MarketingAttendance from './pages/marketing/Attendance';
+
+import AdminDeskDashboardLayout from './layouts/dashboard/admin_desk/AdminDeskDashboardLayout';
+import AdminDeskDashboard from './pages/admin_desk/Dashboard';
+import AdminDeskExpense from './pages/admin_desk/Expense';
+import AdminDeskLeave from './pages/admin_desk/Leave';
+import AdminDeskAttendance from './pages/admin_desk/Attendance';
 
 // ----------------------------------------------------------------------
 
@@ -224,6 +245,25 @@ export default function Router() {
       ],
     },
     {
+      path: '/auditor',
+      element: (
+        <Protected>
+          <AuditorDashboardLayout />
+        </Protected>
+      ),
+      children: [
+        { element: <Navigate to="/auditor/dashboard" />, index: true },
+        { path: 'dashboard', element: <AuditorDashboard /> },
+        { path: 'gold-rate', element: <AuditorGoldRate /> },
+        { path: 'expense', element: <AuditorExpense /> },
+        { path: 'fund', element: <AuditorFund /> },
+        { path: 'sale', element: <AuditorSale /> },
+        { path: 'melting', element: <AuditorMelting /> },
+        { path: 'sell-gold', element: <AuditorSellGold /> },
+        { path: 'attendance', element: <AuditorAttendance /> },
+      ],
+    },
+    {
       path: '/operations',
       element: (
         <Protected>
@@ -288,6 +328,36 @@ export default function Router() {
         { path: 'attendance', element: <BranchAttendance /> },
         { path: 'release', element: <BranchRelease /> },
         { path: 'sale', element: <BranchSale /> },
+      ],
+    },
+    {
+      path: '/marketing',
+      element: (
+        <Protected>
+          <MarketingDashboardLayout />
+        </Protected>
+      ),
+      children: [
+        { element: <Navigate to="/marketing/dashboard" />, index: true },
+        { path: 'dashboard', element: <MarketingDashboard /> },
+        { path: 'attendance', element: <MarketingAttendance /> },
+        { path: 'leave', element: <MarketingLeave /> },
+        { path: 'expense', element: <MarketingExpense /> },
+      ],
+    },
+    {
+      path: '/admin-desk',
+      element: (
+        <Protected>
+          <AdminDeskDashboardLayout />
+        </Protected>
+      ),
+      children: [
+        { element: <Navigate to="/admin-desk/dashboard" />, index: true },
+        { path: 'dashboard', element: <AdminDeskDashboard /> },
+        { path: 'attendance', element: <AdminDeskAttendance /> },
+        { path: 'leave', element: <AdminDeskLeave /> },
+        { path: 'expense', element: <AdminDeskExpense /> },
       ],
     },
     {

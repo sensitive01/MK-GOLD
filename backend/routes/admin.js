@@ -37,7 +37,7 @@ const qrEnquiry = require("../controllers/qrEnquiry");
 const transit = require("../controllers/admin/transit");
 const vendor = require("../controllers/admin/vendor");
 
-const { isAdmin, canDelete } = require("../middlewares/authorization");
+const { isAdmin, canDelete, enforceAuditorReadOnly } = require("../middlewares/authorization");
 const multer = require("../config/multer");
 
 adminRouter.get("/", function (req, res, next) {
@@ -262,6 +262,7 @@ router.use(
     })(req, res, next);
   },
   isAdmin,
+  enforceAuditorReadOnly,
   adminRouter
 );
 

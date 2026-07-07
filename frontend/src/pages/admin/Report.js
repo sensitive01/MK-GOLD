@@ -103,7 +103,7 @@ export default function Report() {
   const [data, setData] = useState([]);
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
-  const [filterOpen, setFilterOpen] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
   const form = useRef();
 
   const [notify, setNotify] = useState({
@@ -444,6 +444,7 @@ export default function Report() {
     </>
   );
 }
+
 
 
 

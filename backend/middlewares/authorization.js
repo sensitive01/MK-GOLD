@@ -1,6 +1,6 @@
 function isAdmin(req, res, next) {
   const userType = req.user?.userType?.toLowerCase();
-  if (userType === "admin" || userType === "subadmin") {
+  if (userType === "admin" || userType === "subadmin" || userType === "auditor") {
     return next();
   }
 
@@ -45,11 +45,14 @@ function isBranch(req, res, next) {
     userType === "transaction_executive" ||
     userType === "telecalling" ||
     userType === "bullion_desk" ||
+    userType === "marketing" ||
+    userType === "admin_desk" ||
     userType === "admin" ||
     userType === "finance" ||
     userType === "operations" ||
     userType === "subadmin" ||
-    userType === "hr"
+    userType === "hr" ||
+    userType === "auditor"
   ) {
     return next();
   }
@@ -87,4 +90,21 @@ function notFinance(req, res, next) {
   });
 }
 
-module.exports = { isAdmin, isHr, isAccounts, isBranch, canDelete, notFinance };
+function enforceAuditorReadOnly(req, res, next) {
+  if (req.user?.userType?.toLowerCase() === "auditor") {
+    const path = req.path.toLowerCase();
+    
+    const isWriteAction = path.includes("/create") || path.includes("/update") || path.includes("/delete") || path.includes("/remove");
+
+    if (isWriteAction) {
+      return res.status(403).json({
+        status: false,
+        message: "Unauthorized: Auditor has read-only access for this action",
+        data: {},
+      });
+    }
+  }
+  return next();
+}
+
+module.exports = { isAdmin, isHr, isAccounts, isBranch, canDelete, notFinance, enforceAuditorReadOnly };

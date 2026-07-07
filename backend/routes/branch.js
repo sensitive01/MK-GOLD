@@ -22,7 +22,7 @@ const lead = require("../controllers/branch/lead");
 const importedLead = require("../controllers/branch/importedLead");
 const qrEnquiry = require("../controllers/qrEnquiry");
 const fileUpload = require("../controllers/branch/fileupload");
-const { isBranch } = require("../middlewares/authorization");
+const { isBranch, enforceAuditorReadOnly } = require("../middlewares/authorization");
 const transit = require("../controllers/branch/transit");
 const multer = require("../config/multer");
 
@@ -183,6 +183,7 @@ router.use(
     })(req, res, next);
   },
   isBranch,
+  enforceAuditorReadOnly,
   branchRouter
 );
 

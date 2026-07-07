@@ -101,7 +101,7 @@ export default function Balancesheet() {
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [data, setData] = useState([]);
-  const [filterOpen, setFilterOpen] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
   const form = useRef();
 
   const [notify, setNotify] = useState({
@@ -439,6 +439,7 @@ export default function Balancesheet() {
     </>
   );
 }
+
 
 
 

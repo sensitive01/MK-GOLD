@@ -171,11 +171,16 @@ export default function Melting() {
   };
 
   const summary = selectedOrnaments.reduce((acc, curr) => {
+    const nw = Number(curr.netWeight || 0);
+    const p = Number(curr.purity || 0);
     acc.grossWeight += Number(curr.grossWeight || 0);
-    acc.netWeight += Number(curr.netWeight || 0);
+    acc.netWeight += nw;
     acc.netAmount += Number(curr.netAmount || 0);
+    acc.totalPureWeight += (nw * p) / 100;
     return acc;
-  }, { grossWeight: 0, netWeight: 0, netAmount: 0 });
+  }, { grossWeight: 0, netWeight: 0, netAmount: 0, totalPureWeight: 0 });
+
+  summary.avgPurity = summary.netWeight > 0 ? (summary.totalPureWeight / summary.netWeight) * 100 : 0;
 
   const handleProceedToMelt = async () => {
     let totalFineGoldBefore = 0;
@@ -647,6 +652,7 @@ export default function Melting() {
                   <Typography variant="body1"><strong>Total Ornaments:</strong> {selectedOrnaments.reduce((acc, curr) => acc + (Number(curr.quantity) || 1), 0)}</Typography>
                   <Typography variant="body1"><strong>Total Gross Weight:</strong> {summary.grossWeight.toFixed(2)}</Typography>
                   <Typography variant="body1"><strong>Total Net Weight:</strong> {summary.netWeight.toFixed(2)}</Typography>
+                  <Typography variant="body1"><strong>Average Purity:</strong> {summary.avgPurity.toFixed(2)}%</Typography>
                   <Typography variant="body1"><strong>Total Net Amount:</strong> {summary.netAmount.toFixed(2)}</Typography>
                 </Stack>
               </Card>

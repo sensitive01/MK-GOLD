@@ -112,7 +112,7 @@ function applySortFilter(array, comparator, query) {
 export default function Sale() {
   const [branches, setBranches] = useState([]);
   const [open, setOpen] = useState(null);
-  const [filterOpen, setFilterOpen] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [openId, setOpenId] = useState(null);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
@@ -1224,6 +1224,7 @@ VerificationModal.propTypes = {
   handleClose: PropTypes.func,
   fetchData: PropTypes.func,
 };
+
 
 
 

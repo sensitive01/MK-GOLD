@@ -102,7 +102,7 @@ export default function Customer() {
   const [openId, setOpenId] = useState(null);
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType;
-  const [filterOpen, setFilterOpen] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [page, setPage] = useState(0);
@@ -641,6 +641,7 @@ export default function Customer() {
     </>
   );
 }
+
 
 
 
