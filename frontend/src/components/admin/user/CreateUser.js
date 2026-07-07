@@ -26,20 +26,12 @@ function CreateUser(props) {
 
   // Form validation
   const schema = Yup.object({
-    username: Yup.string().when(['userType', 'loginMethod'], {
-      is: (userType, loginMethod) => 
-        !['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(userType) && 
-        loginMethod === 'password',
-      then: Yup.string().required('Username is required'),
-    }),
     branch: Yup.string().when('userType', {
       is: (v) => ['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(v),
       then: Yup.string().required('Branch is required'),
     }),
-    password: Yup.string().when(['userType', 'loginMethod'], {
-      is: (userType, loginMethod) => 
-        !['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(userType) && 
-        loginMethod === 'password',
+    password: Yup.string().when('loginMethod', {
+      is: 'password',
       then: Yup.string().required('Password is required'),
     }),
     userType: Yup.string().required('User type is required'),
@@ -60,18 +52,18 @@ function CreateUser(props) {
     validationSchema: schema,
     onSubmit: (values) => {
       const payload = { ...values };
-      if (['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(payload.userType)) {
-        payload.username = employees?.find((e) => e._id === payload.employee)?.phoneNumber ?? null;
-        if (payload.loginMethod === 'otp') {
-          payload.password = 'no-password';
-        }
-      } else {
+      
+      // Phone number becomes the default username
+      payload.username = employees?.find((e) => e._id === payload.employee)?.phoneNumber ?? null;
+
+      if (!['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(payload.userType)) {
         if (!payload.branch) {
           payload.branch = null;
         }
-        if (payload.loginMethod === 'otp') {
-          payload.password = 'no-password';
-        }
+      }
+      
+      if (payload.loginMethod === 'otp') {
+        payload.password = 'no-password';
       }
 
       createUser(payload).then((data) => {
@@ -93,6 +85,25 @@ function CreateUser(props) {
         }
       });
     },
+  });
+
+  const filteredEmployees = employees?.filter((e) => {
+    if (!values.userType) return true;
+    const userTypeObj = global.userTypes?.find(t => t.value === values.userType);
+    if (!userTypeObj) return true;
+    
+    const label = userTypeObj.label.toLowerCase();
+    const designation = e.designation ? e.designation.toLowerCase() : '';
+
+    if (values.userType === 'branch') {
+      return designation.includes('branch manager') && !designation.includes('assistant');
+    }
+    
+    if (values.userType === 'assistant_branch_manager') {
+      return designation.includes('assistant branch manager');
+    }
+    
+    return designation.includes(label) || designation.includes(values.userType.toLowerCase().replace('_', ' '));
   });
 
   return (
@@ -133,7 +144,7 @@ function CreateUser(props) {
               </Select>
             </FormControl>
           </Grid>
-          {['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(values.userType) ? (
+          {['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(values.userType) && (
             <Grid item xs={12} sm={4}>
               <FormControl fullWidth error={touched.branch && errors.branch && true}>
                 <InputLabel id="select-label">Select branch</InputLabel>
@@ -154,52 +165,6 @@ function CreateUser(props) {
                 </Select>
               </FormControl>
             </Grid>
-          ) : (
-            <>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  name="username"
-                  error={touched.username && errors.username && true}
-                  label={touched.username && errors.username ? errors.username : 'Username'}
-                  fullWidth
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                />
-              </Grid>
-              {values.loginMethod === 'password' && (
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    name="password"
-                    error={touched.password && errors.password && true}
-                    label={touched.password && errors.password ? errors.password : 'Password'}
-                    fullWidth
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                  />
-                </Grid>
-              )}
-              <Grid item xs={12} sm={4}>
-                <FormControl fullWidth error={touched.branch && errors.branch && true}>
-                  <InputLabel id="select-branch-optional-label">Select branch (Optional)</InputLabel>
-                  <Select
-                    labelId="select-branch-optional-label"
-                    id="select-branch-optional"
-                    label={touched.branch && errors.branch ? errors.branch : 'Select branch (Optional)'}
-                    name="branch"
-                    value={values.branch}
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                  >
-                    <MenuItem value="">None</MenuItem>
-                    {branches?.map((e) => (
-                      <MenuItem value={e._id} key={e._id}>
-                        {e.branchId} {e.branchName}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </>
           )}
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth error={touched.employee && errors.employee && true}>
@@ -213,7 +178,7 @@ function CreateUser(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                {employees?.map((e) => (
+                {filteredEmployees?.map((e) => (
                   <MenuItem value={e._id} key={e._id}>
                     {e.employeeId} {e.name}
                   </MenuItem>
@@ -238,6 +203,18 @@ function CreateUser(props) {
               </Select>
             </FormControl>
           </Grid>
+          {values.loginMethod === 'password' && (
+            <Grid item xs={12} sm={4}>
+              <TextField
+                name="password"
+                error={touched.password && errors.password && true}
+                label={touched.password && errors.password ? errors.password : 'Password'}
+                fullWidth
+                onBlur={handleBlur}
+                onChange={handleChange}
+              />
+            </Grid>
+          )}
           <Grid item xs={12}>
             <LoadingButton size="large" type="submit" variant="contained">
               Save

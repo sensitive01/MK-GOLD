@@ -309,16 +309,12 @@ export default function Attendance() {
 
   return (
     <>
-      <Helmet><title> Attendance | MK Gold </title></Helmet>
       <Snackbar anchorOrigin={{ vertical: 'top', horizontal: 'right' }} open={notify.open} onClose={() => setNotify({ ...notify, open: false })} autoHideDuration={3000}>
         <Alert onClose={() => setNotify({ ...notify, open: false })} severity={notify.severity} sx={{ width: '100%', color: 'white' }}>{notify.message}</Alert>
       </Snackbar>
 
-      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
-          <Typography variant="h4" sx={{ color: '#fff' }}>
-            Attendance
-          </Typography>
+      <Box sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
+        <Stack direction="row" alignItems="center" justifyContent="flex-end" mb={3}>
           {currentTab === 'my_attendance' && (
             <Button
               variant="contained"
@@ -445,7 +441,7 @@ export default function Attendance() {
             </Box>
           </Box>
         </Card>
-      </Container>
+      </Box>
 
       <Popover open={Boolean(open)} anchorEl={open} onClose={handleCloseMenu} anchorOrigin={{ vertical: 'top', horizontal: 'left' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }} PaperProps={{ sx: { p: 1, width: 140, '& .MuiMenuItem-root': { px: 1, typography: 'body2', borderRadius: 0.75 } } }}>
         <MenuItem sx={{ color: 'error.main' }} onClick={() => { setOpen(null); setDeleteType('single'); handleOpenDeleteModal(); }}><Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} /> Delete</MenuItem>

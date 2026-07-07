@@ -51,16 +51,7 @@ const navConfig = [
     path: '/admin/expense',
     icon: <RequestQuoteIcon sx={{ width: 1, height: 1 }} />,
   },
-  {
-    title: 'Leave',
-    path: '/admin/leave',
-    icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Attendance',
-    path: '/admin/attendance',
-    icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
-  },
+
   {
     title: 'Customer',
     path: '/admin/customer',

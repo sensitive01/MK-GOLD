@@ -82,6 +82,9 @@ export default function LoginForm() {
     if (userType === 'admin_desk') {
       return <Navigate to="/admin-desk/dashboard" />;
     }
+    if (userType === 'melting') {
+      return <Navigate to="/melting/dashboard" />;
+    }
     return <Navigate to="/404" />;
   }
 

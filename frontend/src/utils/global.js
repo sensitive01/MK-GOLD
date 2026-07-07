@@ -102,18 +102,19 @@ export default {
   userTypes: [
     { label: 'Admin', value: 'admin' },
     { label: 'Subadmin', value: 'subadmin' },
-    { label: 'Operations', value: 'operations' },
+    // { label: 'Operations', value: 'operations' },
     { label: 'Finance', value: 'finance' },
     { label: 'Accounts', value: 'accounts' },
     { label: 'HR', value: 'hr' },
     { label: 'Branch / Branch Manager', value: 'branch' },
     { label: 'Assistant Branch Manager', value: 'assistant_branch_manager' }, // Added for 7.2
-    { label: 'Branch Executive', value: 'branch_executive' }, // Added for 7.3
+    // { label: 'Branch Executive', value: 'branch_executive' }, // Added for 7.3
     { label: 'Tele-Calling', value: 'telecalling' },
     { label: 'Transaction Executive', value: 'transaction_executive' },
     { label: 'Bullion Desk', value: 'bullion_desk' },
-    { label: 'Marketing', value: 'marketing' },
+    { label: 'Marketing Team', value: 'marketing' },
     { label: 'Admin Desk', value: 'admin_desk' },
+    { label: 'Melting', value: 'melting' },
   ],
   employmentTypes: [
     { label: 'Full Time', value: 'full-time' },

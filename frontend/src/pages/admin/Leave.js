@@ -320,10 +320,6 @@ export default function Leave() {
 
   return (
     <>
-      <Helmet>
-        <title> Leave | MK Gold </title>
-      </Helmet>
-
       <Snackbar
         anchorOrigin={{
           vertical: 'top',
@@ -346,11 +342,8 @@ export default function Leave() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Leave
-          </Typography>
+      <Box sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
+        <Stack direction="row" alignItems="center" justifyContent="flex-end" mb={5}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
             <Button
               variant="contained"
@@ -499,7 +492,7 @@ export default function Leave() {
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
         </Card>
-      </Container>
+      </Box>
 
       <Container
         maxWidth="xl"

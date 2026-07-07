@@ -360,10 +360,6 @@ export default function Attendance() {
 
   return (
     <>
-      <Helmet>
-        <title> Attendance | MK Gold </title>
-      </Helmet>
-
       <Snackbar
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         open={notify.open}
@@ -375,11 +371,8 @@ export default function Attendance() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
-          <Typography variant="h4" sx={{ color: '#fff' }}>
-            Attendance
-          </Typography>
+      <Box sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
+        <Stack direction="row" alignItems="center" justifyContent="flex-end" mb={3}>
           {currentTab === 'my_attendance' && (
             <Button
               variant="contained"
@@ -543,7 +536,7 @@ export default function Attendance() {
             </Box>
           </Box>
         </Card>
-      </Container>
+      </Box>
 
       <Popover
         open={Boolean(open)}

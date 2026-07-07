@@ -102,6 +102,9 @@ import AdminDeskExpense from './pages/admin_desk/Expense';
 import AdminDeskLeave from './pages/admin_desk/Leave';
 import AdminDeskAttendance from './pages/admin_desk/Attendance';
 
+import MeltingDashboardLayout from './layouts/dashboard/melting';
+import MeltingDashboard from './pages/melting/Dashboard';
+
 // ----------------------------------------------------------------------
 
 function Protected({ children }) {
@@ -275,6 +278,25 @@ export default function Router() {
         { path: 'dashboard', element: <OperationsDashboard /> },
         { path: 'leave', element: <BranchLeave /> },
         { path: 'attendance', element: <BranchAttendance /> },
+      ],
+    },
+    {
+      path: '/melting',
+      element: (
+        <Protected>
+          <MeltingDashboardLayout />
+        </Protected>
+      ),
+      children: [
+        { element: <Navigate to="/melting/dashboard" />, index: true },
+        { path: 'dashboard', element: <MeltingDashboard /> },
+        { path: 'transit', element: <AdminTransit /> },
+        { path: 'melting', element: <AdminMelting /> },
+        { path: 'sell-gold', element: <AdminSellGold /> },
+        { path: 'vendor', element: <AdminVendor /> },
+        { path: 'sale', element: <AdminSale /> },
+        { path: 'employee', element: <AdminEmployee /> },
+        { path: 'expense', element: <AdminExpense /> },
       ],
     },
     {

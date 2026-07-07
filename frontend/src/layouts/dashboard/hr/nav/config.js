@@ -25,16 +25,7 @@ const navConfig = [
     path: '/hr/user',
     icon: icon('ic_user'),
   },
-  {
-    title: 'Leave',
-    path: '/hr/leave',
-    icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Attendance',
-    path: '/hr/attendance',
-    icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
-  },
+
   {
     title: 'Employee',
     path: '/hr/employee',
