@@ -135,6 +135,7 @@ adminRouter.post("/fund/delete/:id", canDelete, fund.remove);
 
 adminRouter.get("/attendance/get", attendance.find);
 adminRouter.post("/attendance/get", attendance.find);
+adminRouter.post("/attendance/consolidated", attendance.consolidated);
 adminRouter.get("/attendance/get/:id", attendance.findById);
 adminRouter.post("/attendance/update/:id", attendance.update);
 adminRouter.post("/attendance/delete/:id", canDelete, attendance.remove);

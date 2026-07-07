@@ -47,7 +47,7 @@ async function deleteAttendanceById(id) {
 
 async function getConsolidatedAttendance(query = {}) {
   try {
-    const response = await apiClient().post('/api/v1.0/hr/attendance/consolidated', query);
+    const response = await apiClient().post('/api/v1.0/admin/attendance/consolidated', query);
     return response.data;
   } catch (err) {
     return err;

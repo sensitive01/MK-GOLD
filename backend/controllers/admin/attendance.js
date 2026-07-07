@@ -76,4 +76,12 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { find, findById, create, update, remove };
+async function consolidated(req, res) {
+  res.json({
+    status: true,
+    message: "",
+    data: await attendanceService.consolidated(req.body ?? {}),
+  });
+}
+
+module.exports = { find, findById, create, update, remove, consolidated };
