@@ -95,6 +95,10 @@ import MarketingDashboard from './pages/marketing/Dashboard';
 import MarketingExpense from './pages/marketing/Expense';
 import MarketingLeave from './pages/marketing/Leave';
 import MarketingAttendance from './pages/marketing/Attendance';
+import CampaignList from './pages/marketing/campaign/CampaignList';
+import CampaignCreate from './pages/marketing/campaign/CampaignCreate';
+import CampaignView from './pages/marketing/campaign/CampaignView';
+import MarketingCalendar from './pages/marketing/Calendar.js';
 
 import AdminDeskDashboardLayout from './layouts/dashboard/admin_desk/AdminDeskDashboardLayout';
 import AdminDeskDashboard from './pages/admin_desk/Dashboard';
@@ -365,6 +369,10 @@ export default function Router() {
         { path: 'attendance', element: <MarketingAttendance /> },
         { path: 'leave', element: <MarketingLeave /> },
         { path: 'expense', element: <MarketingExpense /> },
+        { path: 'campaigns', element: <CampaignList /> },
+        { path: 'campaigns/new', element: <CampaignCreate /> },
+        { path: 'campaigns/view/:id', element: <CampaignView /> },
+        { path: 'calendar', element: <MarketingCalendar /> },
       ],
     },
     {

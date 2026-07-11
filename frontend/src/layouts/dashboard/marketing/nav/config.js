@@ -9,6 +9,8 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import SellIcon from '@mui/icons-material/Sell';
 import SafetyCheckIcon from '@mui/icons-material/SafetyCheck';
 import RequestPageIcon from '@mui/icons-material/RequestPage';
+import CampaignIcon from '@mui/icons-material/Campaign';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -36,6 +38,16 @@ const navConfig = [
     title: 'Expenses',
     path: '/marketing/expense',
     icon: <RequestQuoteIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Campaigns',
+    path: '/marketing/campaigns',
+    icon: <CampaignIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Calendar',
+    path: '/marketing/calendar',
+    icon: <CalendarMonthIcon sx={{ width: 1, height: 1 }} />,
   },
 ];
 

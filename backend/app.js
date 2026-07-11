@@ -18,6 +18,7 @@ const branchRouter = require("./routes/branch");
 const customerRouter = require("./routes/customer");
 const announcementRouter = require("./routes/announcement");
 const publicRouter = require("./routes/public");
+const campaignRouter = require("./routes/campaign");
 
 const app = express();
 
@@ -69,6 +70,8 @@ app.use("/api/v1.0/branch", branchRouter);
 app.use("/api/v1.0/customer", customerRouter);
 app.use("/api/v1.0/announcement", announcementRouter);
 app.use("/api/v1.0/public", publicRouter);
+app.use("/api/v1.0/campaign", campaignRouter);
+app.use("/api/v1.0/schedule", require("./routes/schedule"));
 
 // health check (VERY USEFUL)
 app.get("/", (req, res) => {
