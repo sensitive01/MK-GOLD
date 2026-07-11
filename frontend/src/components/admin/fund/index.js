@@ -1,3 +1,2 @@
-import UpdateFund from './UpdateFund';
-
-export { UpdateFund };
+export { default as UpdateFund } from './UpdateFund';
+export { default as CreateFund } from './CreateFund';

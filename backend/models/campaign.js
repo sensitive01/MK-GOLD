@@ -33,26 +33,26 @@ const CampaignSchema = mongoose.Schema(
     campaignName: { type: String, required: true },
     campaignId: { type: String, required: true, unique: true }, // Manual entry
     campaignType: { type: String, required: true }, // Awareness, Lead Generation, Engagement, Sales, etc.
-    campaignStatus: { type: String, required: true, enum: ["Active", "Running", "Paused", "Inactive"], default: "Active" },
+    campaignStatus: { type: String, default: "Active" },
     objective: { type: String },
     description: { type: String },
     mailId: { type: String },
     teamMembers: { type: String }, 
     
     // Platform & Targeting
-    adPlatform: [{ type: String }],
-    targetPlatform: [{ type: String }],
-    accountNameUrl: { type: String },
-    landingPageUrl: { type: String },
-    adType: { type: String }, // Image, Video, Carousel, Reel, Story, Text
+    adPlatform: { type: String, required: true },
+    targetPlatform: { type: [String], required: true },
+    accountNameUrl: { type: String }, // optional
+    landingPageUrl: { type: String }, // optional
+    adType: { type: String },
+    adFormat: { type: String },
+    adFiles: { type: [String] }, // Array of uploaded image/video URLs // Image, Video, Carousel, Reel, Story, Text
     contentCalendar: { type: String },
     ctaLink: { type: String },
     
     // Audience
     targetAudienceDemography: { type: String },
     targetAudienceLocation: { type: String },
-    targetAgeGroup: { type: String },
-    targetGender: { type: String },
     
     // Creative Details
     postHeadings: [{ type: String }],

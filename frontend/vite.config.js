@@ -33,14 +33,14 @@ export default defineConfig({
       },
     },
   },
-server: {
-  host: 'localhost',
-  port: 5173,
-  open: true,
-  hmr: {
+  server: {
     host: 'localhost',
+    port: 5173,
+    open: true,
+    hmr: {
+      host: 'localhost',
+    },
   },
-},
   build: {
     outDir: 'dist',
   },

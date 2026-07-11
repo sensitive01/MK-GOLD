@@ -44,7 +44,7 @@ import moment from 'moment';
 import * as XLSX from 'xlsx';
 import * as Yup from 'yup';
 // components
-import { UpdateExpense } from '../../components/admin/expense';
+import { UpdateExpense, CreateExpense } from '../../components/admin/expense';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
@@ -379,6 +379,16 @@ export default function Expense() {
             </Button>
             <Button
               variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setToggleContainerType('create');
+                setToggleContainer(true);
+              }}
+            >
+              New Expense
+            </Button>
+            <Button
+              variant="contained"
               startIcon={<Iconify icon="carbon:document-export" />}
               onClick={() => {
                 handleExport(
@@ -529,6 +539,28 @@ export default function Expense() {
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
         </Card>
+      </Container>
+
+      <Container
+        maxWidth="xl"
+        sx={{ display: toggleContainer === true && toggleContainerType === 'create' ? 'block' : 'none' }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+            
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mdi:arrow-left" />}
+            onClick={() => {
+              setToggleContainer(!toggleContainer);
+            }}
+          >
+            Back
+          </Button>
+        </Stack>
+
+        <CreateExpense setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
       </Container>
 
       <Container

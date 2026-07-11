@@ -29,6 +29,7 @@ import {
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
 // components
+import { CreatePayprocess } from '../../components/admin/payprocess';
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
 // sections
@@ -88,6 +89,8 @@ export default function Payprocess() {
   const [orderBy, setOrderBy] = useState(null);
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [toggleContainer, setToggleContainer] = useState(false);
+  const [toggleContainerType, setToggleContainerType] = useState('');
 
   const [data, setData] = useState([]);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
@@ -100,10 +103,6 @@ export default function Payprocess() {
     message: '',
     severity: 'success',
   });
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   const fetchData = useCallback(
     (
@@ -121,6 +120,11 @@ export default function Payprocess() {
     },
     []
   );
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -245,11 +249,24 @@ export default function Payprocess() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="xl">
+      <Container
+        maxWidth="xl"
+        sx={{ display: toggleContainer === false ? 'block' : 'none' }}
+      >
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Payprocess
           </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="eva:plus-fill" />}
+            onClick={() => {
+              setToggleContainerType('create');
+              setToggleContainer(true);
+            }}
+          >
+            New Payprocess
+          </Button>
         </Stack>
 
         <Card>
@@ -364,7 +381,28 @@ export default function Payprocess() {
         </Card>
       </Container>
 
-      <Popover
+      {toggleContainer === true && toggleContainerType === 'create' && (
+        <Container maxWidth="xl">
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+              New Payprocess
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="mdi:arrow-left" />}
+              onClick={() => {
+                setToggleContainer(!toggleContainer);
+              }}
+            >
+              Back
+            </Button>
+          </Stack>
+
+          <CreatePayprocess setToggleContainer={setToggleContainer} setNotify={setNotify} />
+        </Container>
+      )}
+
+      {/* Delete Modal */}<Popover
         open={Boolean(open)}
         anchorEl={open}
         onClose={handleCloseMenu}

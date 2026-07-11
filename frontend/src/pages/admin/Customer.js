@@ -42,7 +42,7 @@ import { useFormik } from 'formik';
 import moment from 'moment';
 import * as Yup from 'yup';
 // components
-import { CustomerDetail } from '../../components/admin/customer';
+import { CustomerDetail, CreateCustomer } from '../../components/admin/customer';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
@@ -312,13 +312,25 @@ export default function Customer() {
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Customer
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
-            onClick={handleFilterOpen}
-          >
-            Filter
-          </Button>
+          <Stack direction="row" alignItems="center" gap={2}>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+              onClick={handleFilterOpen}
+            >
+              Filter
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setToggleContainerType('create');
+                setToggleContainer(true);
+              }}
+            >
+              New Customer
+            </Button>
+          </Stack>
         </Stack>
 
         <p style={{ color: '#fff' }}>
@@ -447,6 +459,28 @@ export default function Customer() {
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
         </Card>
+      </Container>
+
+      <Container
+        maxWidth="xl"
+        sx={{ display: toggleContainer === true && toggleContainerType === 'create' ? 'block' : 'none' }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+            New Customer
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mdi:arrow-left" />}
+            onClick={() => {
+              setToggleContainer(!toggleContainer);
+            }}
+          >
+            Back
+          </Button>
+        </Stack>
+
+        <CreateCustomer setToggleContainer={setToggleContainer} setNotify={setNotify} />
       </Container>
 
       {toggleContainer === true && (toggleContainerType === 'detail') === true && (

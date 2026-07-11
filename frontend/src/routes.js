@@ -10,6 +10,7 @@ import AdminGoldRate from './pages/admin/GoldRate';
 import AdminBranch from './pages/admin/Branch';
 import AdminUser from './pages/admin/User';
 import AdminFund from './pages/admin/Fund';
+import AdminLeads from './pages/admin/Leads';
 import AdminExpense from './pages/admin/Expense';
 import AdminSale from './pages/admin/Sale';
 import AdminLeave from './pages/admin/Leave';
@@ -17,6 +18,7 @@ import AdminCustomer from './pages/admin/Customer';
 import AdminRelease from './pages/admin/Release';
 import AdminAttendance from './pages/admin/Attendance';
 import AdminEmployee from './pages/admin/Employee';
+import AdminPayprocess from './pages/admin/Payprocess';
 import AdminReport from './pages/admin/Report';
 import AdminSupport from './pages/admin/Support';
 import AdminOTP from './pages/admin/OTP';
@@ -99,6 +101,7 @@ import CampaignList from './pages/marketing/campaign/CampaignList';
 import CampaignCreate from './pages/marketing/campaign/CampaignCreate';
 import CampaignView from './pages/marketing/campaign/CampaignView';
 import MarketingCalendar from './pages/marketing/Calendar.js';
+import MarketingLeads from './pages/marketing/Leads';
 
 import AdminDeskDashboardLayout from './layouts/dashboard/admin_desk/AdminDeskDashboardLayout';
 import AdminDeskDashboard from './pages/admin_desk/Dashboard';
@@ -158,6 +161,8 @@ export default function Router() {
         { path: 'melting', element: <AdminMelting /> },
         { path: 'vendor', element: <AdminVendor /> },
         { path: 'sell-gold', element: <AdminSellGold /> },
+        { path: 'leads', element: <AdminLeads /> },
+        { path: 'payprocess', element: <AdminPayprocess /> },
       ],
     },
     {
@@ -373,6 +378,7 @@ export default function Router() {
         { path: 'campaigns/new', element: <CampaignCreate /> },
         { path: 'campaigns/view/:id', element: <CampaignView /> },
         { path: 'calendar', element: <MarketingCalendar /> },
+        { path: 'leads', element: <MarketingLeads /> },
       ],
     },
     {

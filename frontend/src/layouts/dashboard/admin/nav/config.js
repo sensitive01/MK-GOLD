@@ -58,6 +58,11 @@ const navConfig = [
     icon: icon('ic_user'),
   },
   {
+    title: 'Leads',
+    path: '/admin/leads',
+    icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
     title: 'Release',
     path: '/admin/release',
     icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
@@ -76,6 +81,16 @@ const navConfig = [
     title: 'Employee',
     path: '/admin/employee',
     icon: icon('ic_user'),
+  },
+  {
+    title: 'Payprocess',
+    path: '/admin/payprocess',
+    icon: <AttachMoneyIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Leave',
+    path: '/admin/leave',
+    icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Report',

@@ -5,7 +5,7 @@ import { Helmet } from 'react-helmet-async';
 import moment from 'moment';
 import {
   Card, Table, Stack, Paper, Button, TableRow, TableBody, TableCell,
-  Container, Typography, TableContainer, TablePagination, TableHead
+  Container, Typography, TableContainer, TablePagination, TableHead, Grid
 } from '@mui/material';
 import Iconify from '../../../components/iconify';
 import Scrollbar from '../../../components/scrollbar';
@@ -68,6 +68,35 @@ export default function CampaignList() {
             New Campaign
           </Button>
         </Stack>
+
+        <Grid container spacing={3} mb={5}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'info.main', color: 'white' }}>
+              <Typography variant="h6">Total Campaigns</Typography>
+              <Typography variant="h4">{data?.length || 0}</Typography>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
+              <Typography variant="h6">Active Campaigns</Typography>
+              <Typography variant="h4">{data?.filter(c => c.campaignStatus === 'Active')?.length || 0}</Typography>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'error.main', color: 'white' }}>
+              <Typography variant="h6">Paused Campaigns</Typography>
+              <Typography variant="h4">{data?.filter(c => c.campaignStatus === 'Paused' || c.campaignStatus === 'paused')?.length || 0}</Typography>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'warning.main', color: 'white' }}>
+              <Typography variant="h6">Available Funds</Typography>
+              <Typography variant="h4">
+                ₹0
+              </Typography>
+            </Card>
+          </Grid>
+        </Grid>
 
         <Card>
           <Scrollbar>

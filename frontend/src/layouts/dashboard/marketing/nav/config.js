@@ -11,6 +11,7 @@ import SafetyCheckIcon from '@mui/icons-material/SafetyCheck';
 import RequestPageIcon from '@mui/icons-material/RequestPage';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import GroupsIcon from '@mui/icons-material/Groups';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -48,6 +49,11 @@ const navConfig = [
     title: 'Calendar',
     path: '/marketing/calendar',
     icon: <CalendarMonthIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Leads',
+    path: '/marketing/leads',
+    icon: <GroupsIcon sx={{ width: 1, height: 1 }} />,
   },
 ];
 

@@ -44,7 +44,7 @@ import { useFormik } from 'formik';
 import moment from 'moment';
 import * as Yup from 'yup';
 // components
-import { UpdateLeave } from '../../components/admin/leave';
+import { UpdateLeave, CreateLeave } from '../../components/admin/leave';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
@@ -352,6 +352,16 @@ export default function Leave() {
             >
               Filter
             </Button>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setToggleContainerType('create');
+                setToggleContainer(true);
+              }}
+            >
+              New Leave
+            </Button>
           </Stack>
         </Stack>
 
@@ -493,6 +503,28 @@ export default function Leave() {
           />
         </Card>
       </Box>
+
+      <Container
+        maxWidth="xl"
+        sx={{ display: toggleContainer === true && toggleContainerType === 'create' ? 'block' : 'none' }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+            New Leave
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mdi:arrow-left" />}
+            onClick={() => {
+              setToggleContainer(!toggleContainer);
+            }}
+          >
+            Back
+          </Button>
+        </Stack>
+
+        <CreateLeave setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
+      </Container>
 
       <Container
         maxWidth="xl"
