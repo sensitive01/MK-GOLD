@@ -29,6 +29,7 @@ function UpdateLead(props) {
     weight: Yup.number().required('Weight is required').min(0),
     unit: Yup.string().required('Unit is required'),
     type: Yup.string().required('Type is required'),
+    status: Yup.string().required('Status is required'),
   });
 
   const formik = useFormik({
@@ -45,6 +46,7 @@ function UpdateLead(props) {
       type: 'physical',
       releaseAmount: 0,
       pledgedAmount: 0,
+      status: 'pending',
     },
     validationSchema: schema,
     onSubmit: (values) => {
@@ -96,6 +98,7 @@ function UpdateLead(props) {
             type: data.data.type || 'physical',
             releaseAmount: data.data.releaseAmount || 0,
             pledgedAmount: data.data.pledgedAmount || 0,
+            status: data.data.status || 'pending',
           });
           if (data.data.lead?.uploadedFile) {
             setCurrentImage(
@@ -241,6 +244,17 @@ function UpdateLead(props) {
               <Select label="Type" name="type" value={formik.values.type} onChange={formik.handleChange}>
                 <MenuItem value="physical">Physical</MenuItem>
                 <MenuItem value="pledged">Pledged</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
+              <Select label="Status" name="status" value={formik.values.status} onChange={formik.handleChange} sx={{ textTransform: 'capitalize' }}>
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="converted">Converted</MenuItem>
+                <MenuItem value="rejected">Rejected</MenuItem>
               </Select>
             </FormControl>
           </Grid>

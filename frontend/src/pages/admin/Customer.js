@@ -96,7 +96,7 @@ function applySortFilter(array, comparator, query) {
   return stabilizedThis?.map((el) => el[0]);
 }
 
-export default function Customer() {
+export default function Customer({ title = "Customers" }) {
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
@@ -310,7 +310,7 @@ export default function Customer() {
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Customer
+            {title}
           </Typography>
           <Stack direction="row" alignItems="center" gap={2}>
             <Button

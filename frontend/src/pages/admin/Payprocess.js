@@ -40,8 +40,8 @@ import { deletePayprocessById, getPayprocess } from '../../apis/admin/payprocess
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
-  { id: 'employee', label: 'Employee Id', alignRight: false },
-  { id: 'employee', label: 'Employee Name', alignRight: false },
+  { id: 'employeeId', label: 'Employee Id', alignRight: false },
+  { id: 'name', label: 'Employee Name', alignRight: false },
   { id: 'amount', label: 'Amount', alignRight: false },
   { id: 'note', label: 'Note', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },

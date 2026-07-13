@@ -90,7 +90,7 @@ function applySortFilter(array, comparator, query) {
   return stabilizedThis?.map((el) => el[0]);
 }
 
-export default function Leads() {
+export default function Leads({ title = "Leads Management" }) {
   const auth = useSelector((state) => state.auth);
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
@@ -406,7 +406,7 @@ export default function Leads() {
       <Container maxWidth={false} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Leads Management
+            {title}
           </Typography>
           <Stack direction="row" spacing={2}>
             {auth.user?.userType?.toLowerCase() === 'telecalling' && (

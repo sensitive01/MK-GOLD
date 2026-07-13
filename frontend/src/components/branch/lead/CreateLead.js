@@ -52,7 +52,11 @@ function CreateLead(props) {
     },
     validationSchema: schema,
     onSubmit: (values) => {
-      createLead(values).then(async (data) => {
+      const payload = {
+        ...values,
+        leadSource: props.leadSource || 'admin',
+      };
+      createLead(payload).then(async (data) => {
         if (data.status === false) {
           props.setNotify({
             open: true,

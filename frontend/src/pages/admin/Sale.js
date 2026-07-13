@@ -360,7 +360,7 @@ export default function Sale() {
       <Container maxWidth={false} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Billing
+            Purchases
           </Typography>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
             {isSelectForTransit && (

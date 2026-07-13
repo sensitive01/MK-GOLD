@@ -32,11 +32,7 @@ const navConfig = [
     path: '/admin/branch',
     icon: <HomeWorkIcon sx={{ width: 1, height: 1 }} />,
   },
-  {
-    title: 'user',
-    path: '/admin/user',
-    icon: icon('ic_user'),
-  },
+
   {
     title: 'funds',
     path: '/admin/fund',
@@ -75,6 +71,11 @@ const navConfig = [
   {
     title: 'Employee',
     path: '/admin/employee',
+    icon: icon('ic_user'),
+  },
+  {
+    title: 'user',
+    path: '/admin/user',
     icon: icon('ic_user'),
   },
   {

@@ -3,10 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Box, Container, Tab, Tabs, Typography, Card } from '@mui/material';
 
-// Import the actual page components
-import Melting from './Melting';
-import Vendor from './Vendor';
-import SoldGoldRecords from './SoldGoldRecords';
+import Sale from './Sale';
+import Release from './Release';
+import Customer from './Customer';
+import RegistrationOTP from './RegistrationOTP';
 
 // ----------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ function a11yProps(index) {
   };
 }
 
-export default function SellGold() {
+export default function PurchaseTabs({ isNested = false }) {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') ? parseInt(searchParams.get('tab'), 10) : 0;
   const [value, setValue] = useState(initialTab);
@@ -55,35 +55,44 @@ export default function SellGold() {
 
   return (
     <>
-      <Helmet>
-        <title> Sell Gold | MK Gold </title>
-      </Helmet>
+      {!isNested && (
+        <Helmet>
+          <title> Purchase | MK Gold </title>
+        </Helmet>
+      )}
 
-      <Container maxWidth="xl">
-        <Typography variant="h4" sx={{ mb: 5, color: '#fff' }}>
-          Sell Gold
-        </Typography>
+      <Container maxWidth={isNested ? false : "xl"} disableGutters={isNested}>
+        {!isNested && (
+          <Typography variant="h4" sx={{ mb: 5, color: '#fff' }}>
+            Purchase
+          </Typography>
+        )}
 
-        <Card sx={{ p: 2 }}>
+        <Card sx={{ p: isNested ? 0 : 2, boxShadow: isNested ? 'none' : undefined, background: isNested ? 'transparent' : undefined }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={value} onChange={handleChange} aria-label="sell gold tabs" variant="scrollable" scrollButtons="auto">
-              <Tab label="Melting" {...a11yProps(0)} />
-              <Tab label="Vendors" {...a11yProps(1)} />
-              <Tab label="Gatty Sales" {...a11yProps(2)} />
+            <Tabs value={value} onChange={handleChange} aria-label="purchase tabs" variant="scrollable" scrollButtons="auto">
+              <Tab label="Purchases" {...a11yProps(0)} />
+              <Tab label="Release" {...a11yProps(1)} />
+              <Tab label="Customer" {...a11yProps(2)} />
+              <Tab label="Registration OTP" {...a11yProps(3)} />
             </Tabs>
           </Box>
         </Card>
 
         <CustomTabPanel value={value} index={0}>
-          <Melting />
+          <Sale />
         </CustomTabPanel>
         
         <CustomTabPanel value={value} index={1}>
-          <Vendor />
+          <Release />
         </CustomTabPanel>
         
         <CustomTabPanel value={value} index={2}>
-          <SoldGoldRecords />
+          <Customer />
+        </CustomTabPanel>
+        
+        <CustomTabPanel value={value} index={3}>
+          <RegistrationOTP />
         </CustomTabPanel>
 
       </Container>

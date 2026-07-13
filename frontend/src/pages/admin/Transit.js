@@ -356,8 +356,8 @@ export default function Transit() {
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Transit Management
           </Typography>
-          {userType === 'melting' && (
-            <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={() => navigate('/melting/sale?selectForTransit=true')}>
+          {['admin', 'melting'].includes(userType) && (
+            <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={() => navigate(`/${userType}/purchase?tab=0&selectForTransit=true`)}>
               New Transit
             </Button>
           )}

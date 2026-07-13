@@ -84,6 +84,11 @@ const leadSchema = new mongoose.Schema(
         },
       },
     ],
+    leadSource: {
+      type: String,
+      enum: ["admin", "marketing", "telecalling", "branch"],
+      default: "admin",
+    },
   },
   { timestamps: true }
 );

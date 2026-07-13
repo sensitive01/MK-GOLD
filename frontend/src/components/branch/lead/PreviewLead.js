@@ -102,13 +102,15 @@ function PreviewLead(props) {
         <Typography variant="h5" sx={{ color: '#000' }}>
           Lead Details
         </Typography>
-        <Button
-          variant="contained"
-          onClick={() => setOpenModal(true)}
-          sx={{ bgcolor: '#FFD700', color: '#000', '&:hover': { bgcolor: '#FFC800' } }}
-        >
-          Add Call Log
-        </Button>
+        {data.leadSource !== 'marketing' && (
+          <Button
+            variant="contained"
+            onClick={() => setOpenModal(true)}
+            sx={{ bgcolor: '#FFD700', color: '#000', '&:hover': { bgcolor: '#FFC800' } }}
+          >
+            Add Call Log
+          </Button>
+        )}
       </Stack>
 
       <Grid container spacing={3}>
@@ -188,45 +190,47 @@ function PreviewLead(props) {
           </Grid>
         )}
 
-        <Grid item xs={12}>
-          <Divider sx={{ my: 4 }} />
-          <Typography variant="h6" gutterBottom sx={{ color: '#000' }}>
-            Tele-Calling Logs History
-          </Typography>
-          
-          <TableContainer component={Paper}>
-            <Table size="small">
-              <TableHead sx={{ bgcolor: '#f0f0f0' }}>
-                <TableRow>
-                  <TableCell>Date & Time</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Remark</TableCell>
-                  <TableCell>Done By</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.dispositions && data.dispositions?.length > 0 ? (
-                  data.dispositions?.slice().reverse()?.map((log, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{moment(log.createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>{log.status}</TableCell>
-                      <TableCell>{log.remark || '-'}</TableCell>
-                      <TableCell>
-                        {log.createdBy?.employee
-                          ? `${log.createdBy.employee.name} (${log.createdBy.employee.employeeId})`
-                          : log.createdBy?.username || 'Self/System'}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
+        {data.leadSource !== 'marketing' && (
+          <Grid item xs={12}>
+            <Divider sx={{ my: 4 }} />
+            <Typography variant="h6" gutterBottom sx={{ color: '#000' }}>
+              Tele-Calling Logs History
+            </Typography>
+            
+            <TableContainer component={Paper}>
+              <Table size="small">
+                <TableHead sx={{ bgcolor: '#f0f0f0' }}>
                   <TableRow>
-                    <TableCell colSpan={4} align="center">No call logs found</TableCell>
+                    <TableCell>Date & Time</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Remark</TableCell>
+                    <TableCell>Done By</TableCell>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Grid>
+                </TableHead>
+                <TableBody>
+                  {data.dispositions && data.dispositions?.length > 0 ? (
+                    data.dispositions?.slice().reverse()?.map((log, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{moment(log.createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>{log.status}</TableCell>
+                        <TableCell>{log.remark || '-'}</TableCell>
+                        <TableCell>
+                          {log.createdBy?.employee
+                            ? `${log.createdBy.employee.name} (${log.createdBy.employee.employeeId})`
+                            : log.createdBy?.username || 'Self/System'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center">No call logs found</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Grid>
+        )}
       </Grid>
 
       <Modal open={openModal} onClose={() => setOpenModal(false)}>

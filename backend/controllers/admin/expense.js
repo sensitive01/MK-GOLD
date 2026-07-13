@@ -24,6 +24,26 @@ async function findById(req, res) {
   }
 }
 
+async function create(req, res) {
+  try {
+    let createdData = await expenseService.create(req.body);
+    res.json({
+      status: true,
+      message: "",
+      data: {
+        data: createdData,
+        fileUpload: { uploadId: createdData._id, uploadName: "expense" },
+      },
+    });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: err.errors ?? err.message,
+      data: {},
+    });
+  }
+}
+
 async function update(req, res) {
   try {
     res.json({
@@ -56,4 +76,4 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { find, findById, update, remove };
+module.exports = { find, findById, create, update, remove };

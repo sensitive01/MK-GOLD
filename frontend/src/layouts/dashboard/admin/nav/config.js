@@ -13,6 +13,7 @@ import CampaignIcon from '@mui/icons-material/Campaign';
 import QrCodeIcon from '@mui/icons-material/QrCode';
 import StoreIcon from '@mui/icons-material/Store';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
+import SettingsIcon from '@mui/icons-material/Settings';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -22,40 +23,81 @@ const icon = (name) => <SvgColor src={`/assets/icons/navbar/${name}.svg`} sx={{ 
 
 const navConfig = [
   {
-    title: 'dashboard',
+    title: 'Dashboard',
     path: '/admin/dashboard',
     icon: icon('ic_analytics'),
   },
   {
-    title: 'gold-rate',
+    title: 'Gold-Rate',
     path: '/admin/gold-rate',
     icon: <MonetizationOnIcon sx={{ width: 1, height: 1 }} />,
   },
   {
-    title: 'branch',
+    title: 'Branch',
     path: '/admin/branch',
     icon: <HomeWorkIcon sx={{ width: 1, height: 1 }} />,
   },
   {
-    title: 'user',
-    path: '/admin/user',
+    title: 'Employees',
     icon: icon('ic_user'),
+    children: [
+      {
+        title: 'Attendances',
+        path: '/admin/employee/attendance',
+        icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'Leaves',
+        path: '/admin/employee/leave',
+        icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'Employees',
+        path: '/admin/employee/details',
+        icon: icon('ic_user'),
+      },
+      {
+        title: 'Users',
+        path: '/admin/employee/user',
+        icon: icon('ic_user'),
+      },
+    ]
   },
   {
-    title: 'funds',
+    title: 'Billing',
+    icon: <SellIcon sx={{ width: 1, height: 1 }} />,
+    children: [
+      {
+        title: 'Transit',
+        path: '/admin/transit',
+        icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'Report',
+        path: '/admin/report',
+        icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'Purchases',
+        path: '/admin/purchase',
+        icon: <StoreIcon sx={{ width: 1, height: 1 }} />,
+      }
+    ]
+  },
+  {
+    title: 'Expenses',
+    path: '/admin/expense',
+    icon: <RequestQuoteIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Funds',
     path: '/admin/fund',
     icon: <AttachMoneyIcon sx={{ width: 1, height: 1 }} />,
   },
   {
-    title: 'expenses',
-    path: '/admin/expense',
-    icon: <RequestQuoteIcon sx={{ width: 1, height: 1 }} />,
-  },
-
-  {
-    title: 'Customer',
-    path: '/admin/customer',
-    icon: icon('ic_user'),
+    title: 'Sell Gold',
+    path: '/admin/sell-gold',
+    icon: <PointOfSaleIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Leads',
@@ -63,69 +105,9 @@ const navConfig = [
     icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
   },
   {
-    title: 'Release',
-    path: '/admin/release',
-    icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Transit',
-    path: '/admin/transit',
-    icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Billing',
-    path: '/admin/sale',
-    icon: <SellIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Employee',
-    path: '/admin/employee',
-    icon: icon('ic_user'),
-  },
-  {
-    title: 'Payprocess',
-    path: '/admin/payprocess',
-    icon: <AttachMoneyIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Leave',
-    path: '/admin/leave',
-    icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Report',
-    path: '/admin/report',
-    icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Support',
-    path: '/admin/support',
-    icon: <SupportAgentIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'OTP',
-    path: '/admin/otp',
-    icon: <SafetyCheckIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Move Gold',
-    path: '/admin/ornament',
-    icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Balancesheet',
-    path: '/admin/balancesheet',
-    icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Melting',
-    path: '/admin/melting',
-    icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Designation',
-    path: '/admin/designation',
-    icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
+    title: 'Marketing',
+    path: '/admin/marketing',
+    icon: <CampaignIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Announcement',
@@ -133,19 +115,35 @@ const navConfig = [
     icon: <CampaignIcon sx={{ width: 1, height: 1 }} />,
   },
   {
-    title: 'QR Enquiries',
-    path: '/admin/qr-enquiry',
-    icon: <QrCodeIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Vendor',
-    path: '/admin/vendor',
-    icon: <StoreIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Sell Gold',
-    path: '/admin/sell-gold',
-    icon: <PointOfSaleIcon sx={{ width: 1, height: 1 }} />,
+    title: 'Settings',
+    icon: <SettingsIcon sx={{ width: 1, height: 1 }} />,
+    children: [
+      {
+        title: 'General Settings',
+        path: '/admin/settings',
+        icon: <SettingsIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'Support',
+        path: '/admin/support',
+        icon: <SupportAgentIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'Move Gold',
+        path: '/admin/ornament',
+        icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'Balancesheet',
+        path: '/admin/balancesheet',
+        icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'QR Enquiries',
+        path: '/admin/qr-enquiry',
+        icon: <QrCodeIcon sx={{ width: 1, height: 1 }} />,
+      },
+    ]
   },
 ];
 

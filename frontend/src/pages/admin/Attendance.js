@@ -54,6 +54,7 @@ import { deleteAttendanceById, getAttendance, getConsolidatedAttendance } from '
 import { getBranchAttendanceStats } from '../../apis/branch/attendance';
 import CreateAttendance from '../../components/branch/attendance/CreateAttendance';
 import global from '../../utils/global';
+import Payprocess from './Payprocess';
 
 // ----------------------------------------------------------------------
 
@@ -129,6 +130,10 @@ export default function Attendance() {
     },
     validationSchema: schema,
     onSubmit: (values) => {
+      if (currentTab === 'payprocess') {
+        setFilterOpen(false);
+        return;
+      }
       setOpenBackdrop(true);
       const query = {
         createdAt: {
@@ -163,6 +168,10 @@ export default function Attendance() {
 
   const fetchData = useCallback(
     (query = {}) => {
+      if (currentTab === 'payprocess') {
+        setOpenBackdrop(false);
+        return;
+      }
       if (currentTab === 'my_attendance') {
         const empId = auth.user.employee?._id || auth.user.employee;
         if (!empId) {
@@ -410,20 +419,29 @@ export default function Attendance() {
           </Grid>
         )}
 
+        <Typography variant="h4" sx={{ mb: 5, color: '#fff' }}>
+          Attendances
+        </Typography>
+
         <Card>
           <Box sx={{ width: '100%' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs value={currentTab} onChange={(e, v) => setCurrentTab(v)} aria-label="attendance tabs">
-                <Tab value="all_attendance" label="All Attendance" />
-                <Tab value="my_attendance" label="My Attendance" />
-                <Tab value="consolidated_attendance" label="Consolidated Attendance" />
+              <Tabs value={currentTab} onChange={(e, v) => setCurrentTab(v)} aria-label="attendance tabs" variant="scrollable" scrollButtons="auto">
+                <Tab value="all_attendance" label="All" />
+                <Tab value="my_attendance" label="My Attendances" />
+                <Tab value="consolidated_attendance" label="Consolidated" />
+                <Tab value="payprocess" label="Payprocess" />
               </Tabs>
             </Box>
             
             <Box sx={{ p: 3 }}>
-              <Button variant="contained" startIcon={<Iconify icon="material-symbols:filter-alt-off" />} onClick={() => setFilterOpen(true)} sx={{ float: 'right', mx: '10px' }}>
-                Filter
-              </Button>
+              {currentTab === 'payprocess' ? (
+                <Payprocess />
+              ) : (
+                <>
+                  <Button variant="contained" startIcon={<Iconify icon="material-symbols:filter-alt-off" />} onClick={() => setFilterOpen(true)} sx={{ float: 'right', mx: '10px' }}>
+                    Filter
+                  </Button>
               <Button variant="contained" startIcon={<Iconify icon="carbon:document-export" />} onClick={() => {
                 handleExport(data?.map(e => ({ EmployeeId: e?.employee?.employeeId, EmployeeName: e?.employee?.name, Date: e.createdAt })), 'Attendance');
               }} sx={{ float: 'right' }}>
@@ -533,6 +551,8 @@ export default function Attendance() {
                 onPageChange={handleChangePage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
               />
+                </>
+              )}
             </Box>
           </Box>
         </Card>

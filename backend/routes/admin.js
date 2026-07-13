@@ -124,6 +124,7 @@ adminRouter.post("/employee/delete/:id", canDelete, employee.remove);
 adminRouter.get("/expense/get", expense.find);
 adminRouter.post("/expense/get", expense.find);
 adminRouter.get("/expense/get/:id", expense.findById);
+adminRouter.post("/expense/create", expense.create);
 adminRouter.post("/expense/update/:id", expense.update);
 adminRouter.post("/expense/delete/:id", canDelete, expense.remove);
 

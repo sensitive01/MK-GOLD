@@ -1,6 +1,6 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
-import { forwardRef, useEffect, useState } from 'react';
+import { forwardRef, useEffect, useState, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
@@ -29,25 +29,20 @@ import {
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
 // components
-import { CreateExpense, UpdateExpense } from '../../components/branch/expense';
 import Iconify from '../../components/iconify';
-import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
+import global from '../../utils/global';
 // sections
-import { ExpenseListHead, ExpenseListToolbar } from '../../sections/@dashboard/expense';
+import { OTPListHead, OTPListToolbar } from '../../sections/@dashboard/otp';
 // mock
-import { deleteExpenseById, getExpense } from '../../apis/branch/expense';
+import { deleteOTPById, getOTP } from '../../apis/admin/otp';
 
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
+  { id: 'phoneNumber', label: 'Phone Number', alignRight: false },
   { id: 'type', label: 'Type', alignRight: false },
-  { id: 'amount', label: 'Amount', alignRight: false },
-  { id: 'branchId', label: 'Branch Id', alignRight: false },
-  { id: 'branchName', label: 'Branch Name', alignRight: false },
-  { id: 'note', label: 'Note', alignRight: false },
-  { id: 'attachments', label: 'Attachments', alignRight: false },
-  { id: 'status', label: 'Status', alignRight: false },
+  { id: 'otp', label: 'OTP', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
 ];
@@ -78,23 +73,22 @@ function applySortFilter(array, comparator, query) {
     return a[1] - b[1];
   });
   if (query) {
-    return filter(array, (row) => row?.branch?.branchName?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    return filter(array, (row) => row.phoneNumber.indexOf(query.toLowerCase()) !== -1);
   }
   return stabilizedThis?.map((el) => el[0]);
 }
 
-export default function Expense() {
+export default function RegistrationOTP() {
   const [open, setOpen] = useState(null);
-  const [openId, setOpenId] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
+  const [openId, setOpenId] = useState(null);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
   const [selected, setSelected] = useState([]);
   const [orderBy, setOrderBy] = useState(null);
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [toggleContainer, setToggleContainer] = useState(false);
-  const [toggleContainerType, setToggleContainerType] = useState('');
+
   const [data, setData] = useState([]);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
@@ -107,23 +101,27 @@ export default function Expense() {
     severity: 'success',
   });
 
+  const fetchData = useCallback(
+    (
+      query = {
+        type: { $in: ['customer_registration', 'enquiry'] },
+        createdAt: {
+          $gte: moment()?.format("YYYY-MM-DD"),
+          $lte: moment()?.format("YYYY-MM-DD"),
+        },
+      }
+    ) => {
+      getOTP(query).then((data) => {
+        setData(data.data);
+        setOpenBackdrop(false);
+      });
+    },
+    []
+  );
+
   useEffect(() => {
     fetchData();
-  }, [toggleContainer]);
-
-  const fetchData = (
-    query = {
-      createdAt: {
-        $gte: moment()?.format("YYYY-MM-DD"),
-        $lte: moment()?.format("YYYY-MM-DD"),
-      },
-    }
-  ) => {
-    getExpense(query).then((data) => {
-      setData(Array.isArray(data?.data) ? data.data : []);
-      setOpenBackdrop(false);
-    });
-  };
+  }, [fetchData]);
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -145,7 +143,7 @@ export default function Expense() {
       setSelected(newSelecteds);
       return;
     }
-    setSelected([]);
+      setSelected([]);
   };
 
   const handleClick = (event, _id) => {
@@ -182,7 +180,7 @@ export default function Expense() {
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
-    deleteExpenseById(openId).then(() => {
+    deleteOTPById(openId).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected(selected?.filter((e) => e !== openId));
@@ -190,13 +188,13 @@ export default function Expense() {
   };
 
   const handleDeleteSelected = () => {
-    deleteExpenseById(selected).then(() => {
+    deleteOTPById(selected).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected([]);
       setNotify({
         open: true,
-        message: 'Expense deleted',
+        message: 'OTP deleted',
         severity: 'success',
       });
     });
@@ -223,7 +221,7 @@ export default function Expense() {
   return (
     <>
       <Helmet>
-        <title> Expense | MK Gold </title>
+        <title> Registration OTP | MK Gold </title>
       </Helmet>
 
       <Snackbar
@@ -248,25 +246,15 @@ export default function Expense() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+      <Container maxWidth="xl" sx={{ p: 0 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Expense
+            Registration OTP
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-              setToggleContainerType('create');
-            }}
-          >
-            New Expense
-          </Button>
         </Stack>
 
         <Card>
-          <ExpenseListToolbar
+          <OTPListToolbar
             numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
@@ -279,7 +267,7 @@ export default function Expense() {
           <Scrollbar>
             <TableContainer>
               <Table sx={{ minWidth: 800 }}>
-                <ExpenseListHead
+                <OTPListHead
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
@@ -290,7 +278,7 @@ export default function Expense() {
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, type, amount, branch, note, status, createdAt } = row;
+                    const { _id, phoneNumber, type, otp, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -298,40 +286,9 @@ export default function Expense() {
                         <TableCell padding="checkbox">
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
-                        <TableCell align="left">{type}</TableCell>
-                        <TableCell align="left">{amount}</TableCell>
-                        <TableCell align="left">{branch?.branchId}</TableCell>
-                        <TableCell align="left">{branch?.branchName}</TableCell>
-                        <TableCell align="left">{note}</TableCell>
-                        <TableCell align="left">
-                          {row.attachments && row.attachments.length > 0 ? (
-                            <Stack direction="row" spacing={0.5}>
-                              {row.attachments.map((file, index) => (
-                                <IconButton
-                                  key={index}
-                                  size="small"
-                                  color="primary"
-                                  component="a"
-                                  href={file.uploadedFile}
-                                  target="_blank"
-                                >
-                                  <Iconify icon="mdi:file-eye" />
-                                </IconButton>
-                              ))}
-                            </Stack>
-                          ) : (
-                            'None'
-                          )}
-                        </TableCell>
-                        <TableCell align="left">
-                          <Label
-                            color={
-                              (status === 'approved' && 'success') || (status === 'rejected' && 'error') || 'warning'
-                            }
-                          >
-                            {sentenceCase(status)}
-                          </Label>
-                        </TableCell>
+                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
+                        <TableCell align="left">{sentenceCase(type)}</TableCell>
+                        <TableCell align="left">{otp}</TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">
                           <IconButton
@@ -355,7 +312,7 @@ export default function Expense() {
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -371,7 +328,7 @@ export default function Expense() {
                 {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -407,50 +364,6 @@ export default function Expense() {
         </Card>
       </Container>
 
-      <Container
-        maxWidth="xl"
-        sx={{ display: toggleContainer === true && toggleContainerType === 'create' ? 'block' : 'none' }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="mdi:arrow-left" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-            }}
-          >
-            Back
-          </Button>
-        </Stack>
-
-        <CreateExpense setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
-      </Container>
-
-      <Container
-        maxWidth="xl"
-        sx={{ display: toggleContainer === true && toggleContainerType === 'update' ? 'block' : 'none' }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Update Expense
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="mdi:arrow-left" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-            }}
-          >
-            Back
-          </Button>
-        </Stack>
-
-        <UpdateExpense setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
-      </Container>
-
       <Popover
         open={Boolean(open)}
         anchorEl={open}
@@ -469,17 +382,6 @@ export default function Expense() {
           },
         }}
       >
-        <MenuItem
-          onClick={() => {
-            setOpen(null);
-            setToggleContainerType('update');
-            setToggleContainer(!toggleContainer);
-          }}
-        >
-          <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
-          Edit
-        </MenuItem>
-
         <MenuItem
           sx={{ color: 'error.main' }}
           onClick={() => {
@@ -504,7 +406,7 @@ export default function Expense() {
             Delete
           </Typography>
           <Typography id="modal-modal-description" sx={{ mt: 3 }}>
-            Do you want branchId delete?
+            Do you want dates delete?
           </Typography>
           <Stack direction="row" alignItems="center" spacing={2} mt={3}>
             <Button
@@ -533,8 +435,3 @@ export default function Expense() {
     </>
   );
 }
-
-
-
-
-

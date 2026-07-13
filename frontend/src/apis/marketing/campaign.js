@@ -53,3 +53,30 @@ export const addLoadAmount = async (id, data) => {
     return error.response?.data || error;
   }
 };
+
+export const deleteCampaign = async (id) => {
+  try {
+    const response = await apiClient().delete(`/api/v1.0/campaign/${id}`);
+    return response.data;
+  } catch (error) {
+    return error.response?.data || error;
+  }
+};
+
+export const updateLoadAmountStatus = async (campaignId, loadAmountId, status) => {
+  try {
+    const response = await apiClient().put(`/api/v1.0/campaign/${campaignId}/load-amount/${loadAmountId}`, { status });
+    return response.data;
+  } catch (error) {
+    return error.response?.data || error;
+  }
+};
+
+export const getAllLoadAmounts = async () => {
+  try {
+    const response = await apiClient().get(`/api/v1.0/campaign/load-amounts/all`);
+    return response.data;
+  } catch (error) {
+    return error.response?.data || error;
+  }
+};

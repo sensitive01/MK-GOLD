@@ -89,7 +89,7 @@ function applySortFilter(array, comparator, query) {
   return stabilizedThis?.map((el) => el[0]);
 }
 
-export default function Leads() {
+export default function Leads({ title = "Leads Management" }) {
   const auth = useSelector((state) => state.auth);
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
@@ -122,7 +122,7 @@ export default function Leads() {
   const fetchData = useCallback(
     () => {
       setOpenBackdrop(true);
-      Promise.all([getLeads({}), getImportedLeads()])
+      Promise.all([getLeads({ leadSource: 'marketing' }), getImportedLeads()])
         .then(([leadsRes, importedRes]) => {
           const normalLeads = leadsRes.data || [];
           const importedLeads = (importedRes.status && importedRes.data) ? importedRes.data.map(item => ({
@@ -405,7 +405,7 @@ export default function Leads() {
       <Container maxWidth={false} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Leads Management
+            {title}
           </Typography>
           <Stack direction="row" spacing={2}>
             {auth.user?.userType?.toLowerCase() === 'telecalling' && (
@@ -592,7 +592,7 @@ export default function Leads() {
               Back
             </Button>
           </Stack>
-          <CreateLead setToggleContainer={setToggleContainer} setNotify={setNotify} />
+          <CreateLead setToggleContainer={setToggleContainer} setNotify={setNotify} leadSource="marketing" />
         </Container>
       )}
 

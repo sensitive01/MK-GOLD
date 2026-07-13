@@ -29,6 +29,8 @@ import {
     TableRow,
     TextField,
     Typography,
+    Tabs,
+    Tab
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
@@ -52,6 +54,7 @@ import Scrollbar from '../../components/scrollbar';
 import { FundListHead, FundListToolbar } from '../../sections/@dashboard/fund';
 // mock
 import { deleteFundById, getFund, updateFund } from '../../apis/accounts/fund';
+import { getAllLoadAmounts, updateLoadAmountStatus } from '../../apis/marketing/campaign';
 
 // ----------------------------------------------------------------------
 
@@ -112,6 +115,8 @@ export default function Fund() {
   const [data, setData] = useState([]);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
+  const [currentTab, setCurrentTab] = useState('branch');
+  const [campaignData, setCampaignData] = useState([]);
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -159,17 +164,24 @@ export default function Fund() {
         },
       }
     ) => {
-      getFund(query).then((data) => {
-        setData(data.data);
-        setOpenBackdrop(false);
-      });
+      if (currentTab === 'branch') {
+        getFund(query).then((data) => {
+          setData(data.data);
+          setOpenBackdrop(false);
+        });
+      } else {
+        getAllLoadAmounts().then((data) => {
+          setCampaignData(data.data);
+          setOpenBackdrop(false);
+        });
+      }
     },
-    [values.fromDate, values.toDate]
+    [values.fromDate, values.toDate, currentTab]
   );
 
   useEffect(() => {
     fetchData();
-  }, [toggleContainer, fetchData]);
+  }, [toggleContainer, fetchData, currentTab]);
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -223,8 +235,8 @@ export default function Fund() {
     setFilterName(event.target.value);
   };
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
-  const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - ((currentTab === 'branch' ? data : campaignData)?.length || 0)) : 0;
+  const filteredData = applySortFilter(currentTab === 'branch' ? data : campaignData, getComparator(order, orderBy), filterName);
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
@@ -269,13 +281,31 @@ export default function Fund() {
   };
 
   const handleExport = (fileData, fileName) => {
-    const ws = XLSX.utils.json_to_sheet(fileData);
+    const dataToExport = currentTab === 'branch' ? data?.map((e) => ({
+      Type: e.type,
+      Amount: e.amount,
+      From: e.from?.branchName,
+      To: e.to?.branchName,
+      Note: e.note,
+      Status: e.status,
+      Date: moment(e.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+    })) : campaignData?.map((e) => ({
+      Type: e.type || 'Campaign Fund',
+      Amount: e.amount,
+      From: 'Marketing',
+      To: e.campaignName,
+      Note: e.notes,
+      Status: e.status || 'Pending',
+      Date: moment(e.createdAt || e.date).format('YYYY-MM-DD HH:mm:ss'),
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = { Sheets: { data: ws }, SheetNames: ['data'] };
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const data = new Blob([excelBuffer], {
+    const blobData = new Blob([excelBuffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8',
     });
-    FileSaver.saveAs(data, `${fileName}.xlsx`);
+    FileSaver.saveAs(blobData, `${fileName}.xlsx`);
   };
 
   function AlertComponent(props, ref) {
@@ -290,9 +320,15 @@ export default function Fund() {
         <Button
           variant="contained"
           onClick={() => {
-            updateFund(props._id, { status: 'approved' }).then(() => {
-              fetchData();
-            });
+            if (currentTab === 'branch') {
+              updateFund(props._id, { status: 'approved' }).then(() => {
+                fetchData();
+              });
+            } else {
+              updateLoadAmountStatus(props.campaignId, props._id, 'Approved').then(() => {
+                fetchData();
+              });
+            }
           }}
         >
           Approve
@@ -302,9 +338,15 @@ export default function Fund() {
           color="error"
           sx={{ ml: 2 }}
           onClick={() => {
-            updateFund(props._id, { status: 'rejected' }).then(() => {
-              fetchData();
-            });
+            if (currentTab === 'branch') {
+              updateFund(props._id, { status: 'rejected' }).then(() => {
+                fetchData();
+              });
+            } else {
+              updateLoadAmountStatus(props.campaignId, props._id, 'Rejected').then(() => {
+                fetchData();
+              });
+            }
           }}
         >
           Reject
@@ -315,6 +357,7 @@ export default function Fund() {
 
   Status.propTypes = {
     _id: PropTypes.string,
+    campaignId: PropTypes.string,
   };
 
   return (
@@ -361,20 +404,7 @@ export default function Fund() {
             <Button
               variant="contained"
               startIcon={<Iconify icon="carbon:document-export" />}
-              onClick={() => {
-                handleExport(
-                  data?.map((e) => ({
-                    Type: e.type,
-                    Amount: e.amount,
-                    From: e.from?.branchName,
-                    To: e.to?.branchName,
-                    Note: e.note,
-                    Status: e.status,
-                    Date: moment(e.createdAt).format('YYYY-MM-DD HH:mm:ss'),
-                  })),
-                  'Funds'
-                );
-              }}
+              onClick={() => handleExport(null, 'Funds')}
             >
               Export
             </Button>
@@ -387,6 +417,20 @@ export default function Fund() {
         </p>
 
         <Card>
+          <Tabs 
+            value={currentTab} 
+            onChange={(e, newValue) => {
+              setPage(0);
+              setFilterName('');
+              setSelected([]);
+              setCurrentTab(newValue);
+            }} 
+            sx={{ px: 2, pt: 2 }}
+          >
+            <Tab label="Branch Funds" value="branch" />
+            <Tab label="Campaign Funds" value="campaign" />
+          </Tabs>
+
           <FundListToolbar
             numSelected={selected?.length}
             filterName={filterName}
@@ -411,7 +455,16 @@ export default function Fund() {
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, type, amount, from, to, note, status, createdAt } = row;
+                    const isBranch = currentTab === 'branch';
+                    const _id = row._id;
+                    const type = isBranch ? row.type : (row.type || 'Campaign Fund');
+                    const amount = row.amount;
+                    const fromName = isBranch ? row.from?.branchName : 'Marketing';
+                    const toName = isBranch ? row.to?.branchName : row.campaignName;
+                    const note = isBranch ? row.note : row.notes;
+                    const status = (isBranch ? row.status : row.status || 'Pending').toLowerCase();
+                    const createdAt = isBranch ? row.createdAt : (row.createdAt || row.date);
+                    
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -421,12 +474,12 @@ export default function Fund() {
                         </TableCell>
                         <TableCell align="left">{type}</TableCell>
                         <TableCell align="left">{amount}</TableCell>
-                        <TableCell align="left">{from?.branchName}</TableCell>
-                        <TableCell align="left">{to?.branchName}</TableCell>
+                        <TableCell align="left">{fromName}</TableCell>
+                        <TableCell align="left">{toName}</TableCell>
                         <TableCell align="left">{note}</TableCell>
                         <TableCell align="left">
                           {status === 'pending' ? (
-                            <Status status={status} _id={_id} />
+                            <Status status={status} _id={_id} campaignId={row.campaignId} />
                           ) : (
                             <Label
                               color={

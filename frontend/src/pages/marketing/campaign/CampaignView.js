@@ -1,5 +1,6 @@
 import { useEffect, useState, forwardRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 import moment from 'moment';
 import {
@@ -24,6 +25,9 @@ function TabPanel(props) {
 export default function CampaignView() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const auth = useSelector((state) => state.auth);
+  const userType = auth?.user?.userType || 'marketing';
+  const basePath = userType === 'admin' ? '/admin/marketing' : '/marketing/campaigns';
   const [campaign, setCampaign] = useState(null);
   const [tabValue, setTabValue] = useState(0);
   const [notify, setNotify] = useState({ open: false, message: '', severity: 'success' });
@@ -138,6 +142,10 @@ export default function CampaignView() {
 
   if (!campaign) return null;
 
+  const campaignAvailableFunds = 
+    (campaign.loadAmounts?.filter(l => l.status === 'Approved').reduce((sum, l) => sum + l.amount, 0) || 0) - 
+    (campaign.dailyStatuses?.reduce((sum, s) => sum + s.spent, 0) || 0);
+
   return (
     <>
       <Helmet><title> View Campaign | MK Gold </title></Helmet>
@@ -148,7 +156,12 @@ export default function CampaignView() {
       <Container maxWidth="xl">
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
           <Typography variant="h4" sx={{ color: '#fff' }}>Campaign: {campaign.campaignName}</Typography>
-          <Button variant="contained" startIcon={<Iconify icon="mdi:arrow-left" />} onClick={() => navigate('/marketing/campaigns')}>Back</Button>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Typography variant="h6" sx={{ color: 'warning.main', bgcolor: 'white', px: 2, py: 0.5, borderRadius: 1 }}>
+              Available Funds: ₹{campaignAvailableFunds}
+            </Typography>
+            <Button variant="contained" startIcon={<Iconify icon="mdi:arrow-left" />} onClick={() => navigate(basePath)}>Back</Button>
+          </Stack>
         </Stack>
 
         <Card>
@@ -156,7 +169,6 @@ export default function CampaignView() {
             <Tabs value={tabValue} onChange={(e, val) => setTabValue(val)}>
               <Tab label="Details" />
               <Tab label="Daily Status" />
-              <Tab label="Budget Loads" />
             </Tabs>
           </Box>
 
@@ -379,65 +391,6 @@ export default function CampaignView() {
                       <TableCell>{row.clicks}</TableCell>
                       <TableCell>{row.leads}</TableCell>
                       <TableCell>{row.conversions}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </TabPanel>
-
-          {/* Budget Loads Tab */}
-          <TabPanel value={tabValue} index={2}>
-            <Box mb={4}>
-              <Typography variant="h6" mb={2}>Load Amount</Typography>
-              <form onSubmit={handleLoadSubmit}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={3}>
-                    <TextField fullWidth required type="date" label="Date" InputLabelProps={{ shrink: true }} value={loadDate} onChange={(e) => setLoadDate(e.target.value)} />
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <TextField fullWidth required type="number" label="Amount" value={loadAmount} onChange={(e) => setLoadAmount(e.target.value)} />
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <TextField fullWidth required select label="Mode" value={loadMode} onChange={(e) => setLoadMode(e.target.value)}>
-                      {["Net banking", "Credit / debit card", "UPi / QR", "Bank transfer", "Promotion", "Others"].map(m => (
-                        <MenuItem key={m} value={m}>{m}</MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid>
-                  <Grid item xs={12} md={3}>
-                    <TextField fullWidth label="Type" value={loadType} onChange={(e) => setLoadType(e.target.value)} />
-                  </Grid>
-                  <Grid item xs={12} md={8}>
-                    <TextField fullWidth label="Notes" value={loadNotes} onChange={(e) => setLoadNotes(e.target.value)} />
-                  </Grid>
-                  <Grid item xs={12} md={4} display="flex" alignItems="center">
-                    <Button type="submit" variant="contained">Load Amount</Button>
-                  </Grid>
-                </Grid>
-              </form>
-            </Box>
-
-            <Typography variant="h6" mb={2}>Load History</Typography>
-            <TableContainer component={Paper}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Date</TableCell>
-                    <TableCell>Amount</TableCell>
-                    <TableCell>Mode</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell>Notes</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {campaign.loadAmounts?.sort((a,b)=> new Date(b.date) - new Date(a.date)).map((row, i) => (
-                    <TableRow key={i}>
-                      <TableCell>{row.date}</TableCell>
-                      <TableCell>₹{row.amount}</TableCell>
-                      <TableCell>{row.mode}</TableCell>
-                      <TableCell>{row.type || '-'}</TableCell>
-                      <TableCell>{row.notes || '-'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -1,5 +1,6 @@
-import { useState, forwardRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, forwardRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 import {
   Card, Stack, Button, Container, Typography, TextField, Grid, MenuItem, 
@@ -8,7 +9,7 @@ import {
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import Iconify from '../../../components/iconify';
-import { createCampaign } from '../../../apis/marketing/campaign';
+import { createCampaign, getCampaignById, updateCampaign } from '../../../apis/marketing/campaign';
 import apiClient from '../../../apis/http';
 import AudienceLocationPicker from './AudienceLocationPicker';
 
@@ -17,7 +18,11 @@ const Alert = forwardRef((props, ref) => <MuiAlert elevation={6} ref={ref} varia
 const steps = ['Basic Details', 'Accounts & Platform', 'Creative & Targeting'];
 
 export default function CampaignCreate() {
+  const { id } = useParams();
   const navigate = useNavigate();
+  const auth = useSelector((state) => state.auth);
+  const userType = auth?.user?.userType || 'marketing';
+  const basePath = userType === 'admin' ? '/admin/marketing' : '/marketing/campaigns';
   const [notify, setNotify] = useState({ open: false, message: '', severity: 'success' });
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
@@ -29,6 +34,42 @@ export default function CampaignCreate() {
     targetAudienceLocation: [], bidStrategy: '',
     postHeadings: [], postDescriptions: []
   });
+
+  useEffect(() => {
+    if (id) {
+      fetchCampaign();
+    }
+  }, [id]);
+
+  const fetchCampaign = async () => {
+    const res = await getCampaignById(id);
+    if (res?.status) {
+      const camp = res.data;
+      setFormData({
+        campaignName: camp.campaignName || '',
+        campaignId: camp.campaignId || '',
+        campaignType: camp.campaignType || '',
+        objective: camp.objective || '',
+        description: camp.description || '',
+        mailId: camp.mailId || '',
+        teamMembers: camp.teamMembers || '',
+        adPlatform: camp.adPlatform || '',
+        targetPlatform: camp.targetPlatform || [],
+        accountNameUrl: camp.accountNameUrl || '',
+        landingPageUrl: camp.landingPageUrl || '',
+        adFormat: camp.adFormat || '',
+        adType: camp.adType || '',
+        adFiles: camp.adFiles || [],
+        contentCalendar: camp.contentCalendar ? JSON.parse(camp.contentCalendar) : [{ days: 'Mondays - Fridays', startTime: '09:00', endTime: '19:00' }],
+        ctaLink: camp.ctaLink || '',
+        targetAudienceDemography: camp.targetAudienceDemography ? JSON.parse(camp.targetAudienceDemography) : [{ gender: 'Male', fromAge: '18', toAge: '65' }],
+        targetAudienceLocation: camp.targetAudienceLocation ? JSON.parse(camp.targetAudienceLocation) : [],
+        bidStrategy: camp.bidStrategy || '',
+        postHeadings: camp.postHeadings || [],
+        postDescriptions: camp.postDescriptions || []
+      });
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -123,12 +164,25 @@ export default function CampaignCreate() {
       targetAudienceLocation: JSON.stringify(formData.targetAudienceLocation)
     };
     
-    const res = await createCampaign(payload);
-    if (res?.status) {
-      setNotify({ open: true, message: 'Campaign created successfully!', severity: 'success' });
-      setTimeout(() => { navigate('/marketing/campaigns'); }, 1500);
+    let res;
+    if (id) {
+      // For edit, we might want to keep existing adFiles if no new ones are uploaded
+      // formData.adFiles might contain strings (existing URLs) or File objects (newly uploaded)
+      // We already uploaded the File objects and appended their URLs.
+      // Let's filter out File objects and keep only strings (URLs) from formData.adFiles
+      const existingUrls = formData.adFiles ? formData.adFiles.filter(f => typeof f === 'string') : [];
+      payload.adFiles = [...existingUrls, ...uploadedUrls];
+      res = await updateCampaign(id, payload);
     } else {
-      setNotify({ open: true, message: res?.message || 'Error creating campaign', severity: 'error' });
+      payload.adFiles = uploadedUrls;
+      res = await createCampaign(payload);
+    }
+
+    if (res?.status) {
+      setNotify({ open: true, message: `Campaign ${id ? 'updated' : 'created'} successfully!`, severity: 'success' });
+      setTimeout(() => { navigate(basePath); }, 1500);
+    } else {
+      setNotify({ open: true, message: res?.message || `Error ${id ? 'updating' : 'creating'} campaign`, severity: 'error' });
     }
     setIsSubmitting(false);
   };
@@ -143,15 +197,15 @@ export default function CampaignCreate() {
 
   return (
     <>
-      <Helmet><title> New Campaign | MK Gold </title></Helmet>
+      <Helmet><title> {id ? 'Edit' : 'New'} Campaign | MK Gold </title></Helmet>
       <Snackbar open={notify.open} autoHideDuration={3000} onClose={() => setNotify({ ...notify, open: false })} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
         <Alert onClose={() => setNotify({ ...notify, open: false })} severity={notify.severity}>{notify.message}</Alert>
       </Snackbar>
 
       <Container maxWidth="xl">
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>Create Campaign</Typography>
-          <Button variant="contained" startIcon={<Iconify icon="mdi:arrow-left" />} onClick={() => navigate('/marketing/campaigns')}>Back</Button>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>{id ? 'Edit' : 'Create'} Campaign</Typography>
+          <Button variant="contained" startIcon={<Iconify icon="mdi:arrow-left" />} onClick={() => navigate(basePath)}>Back</Button>
         </Stack>
 
         <Card sx={{ p: 3 }}>
@@ -178,10 +232,10 @@ export default function CampaignCreate() {
                   </TextField>
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField fullWidth multiline rows={2} label="Objective" name="objective" value={formData.objective} onChange={handleChange} />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField fullWidth multiline rows={2} label="Description" name="description" value={formData.description} onChange={handleChange} />
                 </Grid>
               </Grid>
@@ -392,7 +446,7 @@ export default function CampaignCreate() {
                 Back
               </Button>
               <Button type="submit" variant="contained" disabled={isSubmitting}>
-                {activeStep === steps.length - 1 ? (isSubmitting ? 'Submitting...' : 'Submit Campaign') : 'Next'}
+                {activeStep === steps.length - 1 ? (isSubmitting ? 'Submitting...' : (id ? 'Update Campaign' : 'Submit Campaign')) : 'Next'}
               </Button>
             </Box>
           </form>

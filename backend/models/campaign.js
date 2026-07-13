@@ -25,7 +25,8 @@ const LoadAmountSchema = mongoose.Schema({
     required: true 
   },
   type: { type: String }, // text box
-  notes: { type: String }
+  notes: { type: String },
+  status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' }
 }, { timestamps: true });
 
 const CampaignSchema = mongoose.Schema(

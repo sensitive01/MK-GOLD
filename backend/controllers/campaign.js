@@ -103,9 +103,56 @@ const addLoadAmount = async (req, res) => {
       return res.status(404).json({ status: false, message: "Campaign not found" });
     }
 
-    campaign.loadAmounts.push(req.body);
+    campaign.loadAmounts.push({ ...req.body, status: 'Pending' });
     await campaign.save();
     res.status(200).json({ status: true, message: "Load amount added successfully", data: campaign });
+  } catch (error) {
+    res.status(500).json({ status: false, message: "Server Error", error: error.message });
+  }
+};
+
+// Update Load Amount Status
+const updateLoadAmountStatus = async (req, res) => {
+  try {
+    const { campaignId, loadAmountId } = req.params;
+    const { status } = req.body;
+
+    const campaign = await Campaign.findById(campaignId);
+    if (!campaign) {
+      return res.status(404).json({ status: false, message: "Campaign not found" });
+    }
+
+    const loadAmount = campaign.loadAmounts.id(loadAmountId);
+    if (!loadAmount) {
+      return res.status(404).json({ status: false, message: "Load amount not found" });
+    }
+
+    loadAmount.status = status;
+    await campaign.save();
+
+    res.status(200).json({ status: true, message: "Status updated successfully", data: campaign });
+  } catch (error) {
+    res.status(500).json({ status: false, message: "Server Error", error: error.message });
+  }
+};
+
+// Get All Load Amounts
+const getAllLoadAmounts = async (req, res) => {
+  try {
+    const campaigns = await Campaign.find();
+    let allLoadAmounts = [];
+    campaigns.forEach(campaign => {
+      campaign.loadAmounts.forEach(load => {
+        allLoadAmounts.push({
+          ...load._doc,
+          campaignName: campaign.campaignName,
+          campaignId: campaign._id
+        });
+      });
+    });
+    
+    allLoadAmounts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.status(200).json({ status: true, data: allLoadAmounts });
   } catch (error) {
     res.status(500).json({ status: false, message: "Server Error", error: error.message });
   }
@@ -117,5 +164,7 @@ module.exports = {
   getCampaignById,
   updateCampaign,
   addDailyStatus,
-  addLoadAmount
+  addLoadAmount,
+  updateLoadAmountStatus,
+  getAllLoadAmounts
 };

@@ -59,8 +59,8 @@ import { deleteExpenseById, getExpense, updateExpense } from '../../apis/account
 const TABLE_HEAD = [
   { id: 'type', label: 'Type', alignRight: false },
   { id: 'amount', label: 'Amount', alignRight: false },
-  { id: 'branch', label: 'Branch Id', alignRight: false },
-  { id: 'branch', label: 'Branch Name', alignRight: false },
+  { id: 'branchId', label: 'Branch Id', alignRight: false },
+  { id: 'branchName', label: 'Branch Name', alignRight: false },
   { id: 'note', label: 'Note', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },

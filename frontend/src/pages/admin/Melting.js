@@ -383,7 +383,7 @@ export default function Melting() {
                 Melting Management
               </Typography>
               <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={handleOpenWizard}>
-                New Add Melting
+                Add Melting
               </Button>
             </Stack>
 

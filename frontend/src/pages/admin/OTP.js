@@ -104,6 +104,7 @@ export default function OTP() {
   const fetchData = useCallback(
     (
       query = {
+        type: 'employee',
         createdAt: {
           $gte: moment()?.format("YYYY-MM-DD"),
           $lte: moment()?.format("YYYY-MM-DD"),

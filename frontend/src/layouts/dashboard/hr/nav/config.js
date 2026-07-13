@@ -20,15 +20,15 @@ const navConfig = [
     path: '/hr/branch',
     icon: <HomeWorkIcon sx={{ width: 1, height: 1 }} />,
   },
-  {
-    title: 'user',
-    path: '/hr/user',
-    icon: icon('ic_user'),
-  },
 
   {
     title: 'Employee',
     path: '/hr/employee',
+    icon: icon('ic_user'),
+  },
+  {
+    title: 'user',
+    path: '/hr/user',
     icon: icon('ic_user'),
   },
   {

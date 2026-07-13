@@ -1,87 +1,35 @@
-import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Box, Container, Tab, Tabs, Typography, Card } from '@mui/material';
+import { Container, Typography } from '@mui/material';
 import { useSelector } from 'react-redux';
 
 // Import the actual page components
 import EmployeeDetails from './EmployeeDetails';
-import Attendance from './Attendance';
-import Leave from './Leave';
 
 // ----------------------------------------------------------------------
 
-function CustomTabPanel(props) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`simple-tabpanel-${index}`}
-      aria-labelledby={`simple-tab-${index}`}
-      {...other}
-      style={{ paddingTop: '24px' }}
-    >
-      {value === index && (
-        <Box sx={{ p: 0 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
-}
-
-function a11yProps(index) {
-  return {
-    id: `simple-tab-${index}`,
-    'aria-controls': `simple-tabpanel-${index}`,
-  };
-}
-
 export default function Employee() {
-  const [value, setValue] = useState(0);
   const auth = useSelector((state) => state.auth);
   const userType = auth?.user?.userType?.toLowerCase();
   
-  // If user is melting, they don't see employee details, so default tab is 0 which maps to Attendance
+  // If user is melting, they don't see employee details
   const showEmployeeDetails = userType !== 'melting';
-
-  const handleChange = (event, newValue) => {
-    setValue(newValue);
-  };
 
   return (
     <>
       <Helmet>
-        <title> Employee | MK Gold </title>
+        <title> Employee Details | MK Gold </title>
       </Helmet>
 
       <Container maxWidth="xl">
         <Typography variant="h4" sx={{ mb: 5, color: '#fff' }}>
-          Employee Management
+          Employee Details
         </Typography>
 
-        <Card sx={{ p: 2 }}>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={value} onChange={handleChange} aria-label="employee management tabs">
-              {showEmployeeDetails && <Tab label="Employee Details" {...a11yProps(0)} />}
-              <Tab label="Attendance" {...a11yProps(showEmployeeDetails ? 1 : 0)} />
-              <Tab label="Leaves" {...a11yProps(showEmployeeDetails ? 2 : 1)} />
-            </Tabs>
-          </Box>
-        </Card>
-
-        {showEmployeeDetails && (
-          <CustomTabPanel value={value} index={0}>
-            <EmployeeDetails />
-          </CustomTabPanel>
+        {showEmployeeDetails ? (
+          <EmployeeDetails />
+        ) : (
+          <Typography variant="body1" sx={{ color: '#fff' }}>You do not have permission to view employee details.</Typography>
         )}
-        <CustomTabPanel value={value} index={showEmployeeDetails ? 1 : 0}>
-          <Attendance />
-        </CustomTabPanel>
-        <CustomTabPanel value={value} index={showEmployeeDetails ? 2 : 1}>
-          <Leave />
-        </CustomTabPanel>
 
       </Container>
     </>

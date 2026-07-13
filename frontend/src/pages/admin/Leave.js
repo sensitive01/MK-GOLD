@@ -56,10 +56,10 @@ import { deleteLeaveById, getLeave, updateLeave } from '../../apis/admin/leave';
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
-  { id: 'branch', label: 'Branch Id', alignRight: false },
-  { id: 'branch', label: 'Branch Name', alignRight: false },
-  { id: 'employee', label: 'Employee Id', alignRight: false },
-  { id: 'employee', label: 'Employee Name', alignRight: false },
+  { id: 'branchId', label: 'Branch Id', alignRight: false },
+  { id: 'branchName', label: 'Branch Name', alignRight: false },
+  { id: 'employeeId', label: 'Employee Id', alignRight: false },
+  { id: 'employeeName', label: 'Employee Name', alignRight: false },
   { id: 'leaveType', label: 'Leave Type', alignRight: false },
   { id: 'dates', label: 'Dates', alignRight: false },
   { id: 'note', label: 'Note', alignRight: false },

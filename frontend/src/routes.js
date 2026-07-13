@@ -10,7 +10,7 @@ import AdminGoldRate from './pages/admin/GoldRate';
 import AdminBranch from './pages/admin/Branch';
 import AdminUser from './pages/admin/User';
 import AdminFund from './pages/admin/Fund';
-import AdminLeads from './pages/admin/Leads';
+import AdminLeadsTabs from './pages/admin/LeadsTabs';
 import AdminExpense from './pages/admin/Expense';
 import AdminSale from './pages/admin/Sale';
 import AdminLeave from './pages/admin/Leave';
@@ -23,11 +23,16 @@ import AdminReport from './pages/admin/Report';
 import AdminSupport from './pages/admin/Support';
 import AdminOTP from './pages/admin/OTP';
 import AdminBalancesheet from './pages/admin/Balancesheet';
+import AdminSettings from './pages/admin/Settings';
+import AdminRegistrationOTP from './pages/admin/RegistrationOTP';
+import AdminPurchaseTabs from './pages/admin/PurchaseTabs';
+import AdminEmployeeUserTabs from './pages/admin/EmployeeUserTabs';
 import AdminOrnament from './pages/admin/Ornament';
 import AdminDesignation from './pages/admin/Designation';
 import AdminAnnouncement from './pages/admin/Announcements';
 import AdminQREnquiry from './pages/admin/QREnquiry';
 import AdminTransit from './pages/admin/Transit';
+import AdminMarketingTabs from './pages/admin/MarketingTabs';
 import AdminMelting from './pages/admin/Melting';
 import AdminVendor from './pages/admin/Vendor';
 import AdminSellGold from './pages/admin/SellGold';
@@ -148,12 +153,19 @@ export default function Router() {
         { path: 'attendance', element: <AdminAttendance /> },
         { path: 'customer', element: <AdminCustomer /> },
         { path: 'release', element: <AdminRelease /> },
-        { path: 'employee', element: <AdminEmployee /> },
+        { path: 'employee', element: <Navigate to="/admin/employee/details" replace /> },
+        { path: 'employee/details', element: <AdminEmployee /> },
+        { path: 'employee/user', element: <AdminEmployeeUserTabs /> },
+        { path: 'employee/attendance', element: <AdminAttendance /> },
+        { path: 'employee/leave', element: <AdminLeave /> },
         { path: 'report', element: <AdminReport /> },
         { path: 'ornament', element: <AdminOrnament /> },
         { path: 'support', element: <AdminSupport /> },
         { path: 'otp', element: <AdminOTP /> },
+        { path: 'purchase', element: <AdminPurchaseTabs /> },
+        { path: 'registration-otp', element: <AdminRegistrationOTP /> },
         { path: 'balancesheet', element: <AdminBalancesheet /> },
+        { path: 'settings', element: <AdminSettings /> },
         { path: 'designation', element: <AdminDesignation /> },
         { path: 'announcement', element: <AdminAnnouncement /> },
         { path: 'qr-enquiry', element: <AdminQREnquiry /> },
@@ -161,8 +173,12 @@ export default function Router() {
         { path: 'melting', element: <AdminMelting /> },
         { path: 'vendor', element: <AdminVendor /> },
         { path: 'sell-gold', element: <AdminSellGold /> },
-        { path: 'leads', element: <AdminLeads /> },
+        { path: 'leads', element: <AdminLeadsTabs /> },
         { path: 'payprocess', element: <AdminPayprocess /> },
+        { path: 'marketing', element: <AdminMarketingTabs /> },
+        { path: 'marketing/campaigns/new', element: <CampaignCreate /> },
+        { path: 'marketing/campaigns/edit/:id', element: <CampaignCreate /> },
+        { path: 'marketing/campaigns/view/:id', element: <CampaignView /> },
       ],
     },
     {
@@ -376,6 +392,7 @@ export default function Router() {
         { path: 'expense', element: <MarketingExpense /> },
         { path: 'campaigns', element: <CampaignList /> },
         { path: 'campaigns/new', element: <CampaignCreate /> },
+        { path: 'campaigns/edit/:id', element: <CampaignCreate /> },
         { path: 'campaigns/view/:id', element: <CampaignView /> },
         { path: 'calendar', element: <MarketingCalendar /> },
         { path: 'leads', element: <MarketingLeads /> },

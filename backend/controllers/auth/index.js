@@ -26,7 +26,9 @@ function login(req, res, next) {
           Math.floor(100000 + Math.random() * 900000)
         ).substring(0, 6);
 
-        console.log("BYPASSING SMS: OTP for", user.employee?.phoneNumber, "is", otp);
+        const phoneNumber = user.employee?.phoneNumber || req.body.username || user.username;
+
+        console.log("BYPASSING SMS: OTP for", phoneNumber, "is", otp);
 
         const token = jwt.sign(
           {
@@ -43,7 +45,7 @@ function login(req, res, next) {
         otpService.create({
           type: "employee",
           otp: otp,
-          phoneNumber: user.employee?.phoneNumber,
+          phoneNumber: phoneNumber,
         });
 
         return res.json({

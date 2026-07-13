@@ -1,4 +1,4 @@
-import { TextField, Card, Grid, Typography, Button, Stack, IconButton } from '@mui/material';
+import { TextField, Card, Grid, Typography, Button, Stack, IconButton, MenuItem } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import { useEffect, useState, useRef } from 'react';
 import { useFormik } from 'formik';
@@ -12,16 +12,19 @@ import Iconify from '../../../components/iconify';
 function CreateExpense(props) {
   const auth = useSelector((state) => state.auth);
   const form = useRef();
-  const [branch, setBranch] = useState({});
+  const [branches, setBranches] = useState([]);
   const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setBranch(auth.user.branch);
+    getBranch().then((res) => {
+      if (res?.status) setBranches(res.data);
+    });
   }, []);
 
   // Form validation
   const schema = Yup.object({
+    branch: Yup.string().required('Branch is required'),
     type: Yup.string().required('Type is required'),
     amount: Yup.string().required('Amount is required'),
     note: Yup.string().required('Note is required'),
@@ -29,16 +32,15 @@ function CreateExpense(props) {
 
   const { handleSubmit, handleChange, handleBlur, values, touched, errors, setValues, resetForm } = useFormik({
     initialValues: {
+      branch: '',
       type: '',
       amount: '',
-      branch: '',
       note: '',
       status: 'pending',
     },
     validationSchema: schema,
     onSubmit: (values) => {
       setLoading(true);
-      values.branch = branch?._id;
       createExpense(values).then((data) => {
         if (data.status === false) {
           props.setNotify({
@@ -117,7 +119,25 @@ function CreateExpense(props) {
         autoComplete="off"
       >
         <Grid container spacing={3}>
-          <Grid item xs={12} sm={4}>
+          <Grid item xs={12} sm={3}>
+            <TextField
+              select
+              name="branch"
+              value={values.branch}
+              error={touched.branch && errors.branch && true}
+              label={touched.branch && errors.branch ? errors.branch : 'Branch'}
+              fullWidth
+              onBlur={handleBlur}
+              onChange={handleChange}
+            >
+              {branches?.map((option) => (
+                <MenuItem key={option._id} value={option._id}>
+                  {option.branchName}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={12} sm={3}>
             <TextField
               name="type"
               value={values.type}
@@ -128,7 +148,7 @@ function CreateExpense(props) {
               onChange={handleChange}
             />
           </Grid>
-          <Grid item xs={12} sm={4}>
+          <Grid item xs={12} sm={3}>
             <TextField
               name="amount"
               value={values.amount}
