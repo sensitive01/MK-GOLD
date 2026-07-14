@@ -288,6 +288,7 @@ export default function Router() {
         { path: 'sale', element: <AuditorSale /> },
         { path: 'melting', element: <AuditorMelting /> },
         { path: 'sell-gold', element: <AuditorSellGold /> },
+        { path: 'leave', element: <BranchLeave /> },
         { path: 'attendance', element: <AuditorAttendance /> },
       ],
     },

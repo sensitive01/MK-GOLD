@@ -5,6 +5,7 @@ import SellIcon from '@mui/icons-material/Sell';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import DescriptionIcon from '@mui/icons-material/Description';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -47,6 +48,11 @@ const navConfig = [
     title: 'Sell Gold',
     path: '/auditor/sell-gold',
     icon: <PointOfSaleIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Leaves',
+    path: '/auditor/leave',
+    icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Attendance',
