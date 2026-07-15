@@ -12,6 +12,7 @@ import { LoadingButton } from '@mui/lab';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useState } from 'react';
+import moment from 'moment';
 import { createLead } from '../../../apis/branch/lead';
 import { createFile } from '../../../apis/branch/fileupload';
 import global from '../../../utils/global';
@@ -49,12 +50,17 @@ function CreateLead(props) {
       type: 'physical',
       releaseAmount: 0,
       pledgedAmount: 0,
+      date: moment().format('YYYY-MM-DD'),
+      place: '',
+      remarks: '',
+      status: 'pending',
+      source: '',
+      leadSource: props.leadSource || 'admin',
     },
     validationSchema: schema,
     onSubmit: (values) => {
       const payload = {
         ...values,
-        leadSource: props.leadSource || 'admin',
       };
       createLead(payload).then(async (data) => {
         if (data.status === false) {
@@ -93,7 +99,7 @@ function CreateLead(props) {
     <Card sx={{ p: 4, my: 4 }}>
       <form onSubmit={handleSubmit} autoComplete="off">
         <Grid container spacing={3}>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={4}>
             <TextField
               fullWidth
               label="Name"
@@ -106,7 +112,39 @@ function CreateLead(props) {
               required
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              type="date"
+              label="Date"
+              name="date"
+              value={values.date}
+              onBlur={handleBlur}
+              onChange={handleChange}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              label="Source"
+              name="source"
+              value={values.source}
+              onBlur={handleBlur}
+              onChange={handleChange}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
+              <Select label="Status" name="status" value={values.status} onChange={handleChange}>
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="converted">Converted</MenuItem>
+                <MenuItem value="rejected">Rejected</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={4}>
             <TextField
               fullWidth
               label="Mobile"
@@ -123,6 +161,16 @@ function CreateLead(props) {
               required
             />
           </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth>
+              <InputLabel>Category</InputLabel>
+              <Select label="Category" name="category" value={values.category} onChange={handleChange}>
+                <MenuItem value="gold">Gold</MenuItem>
+                <MenuItem value="silver">Silver</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
           <Grid item xs={12} sm={12}>
             <TextField
               fullWidth
@@ -131,6 +179,16 @@ function CreateLead(props) {
               multiline
               rows={2}
               value={values.address}
+              onBlur={handleBlur}
+              onChange={handleChange}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              label="Place"
+              name="place"
+              value={values.place}
               onBlur={handleBlur}
               onChange={handleChange}
             />
@@ -184,15 +242,6 @@ function CreateLead(props) {
           </Grid>
 
           <Grid item xs={12} sm={4}>
-            <FormControl fullWidth>
-              <InputLabel>Category</InputLabel>
-              <Select label="Category" name="category" value={values.category} onChange={handleChange}>
-                <MenuItem value="gold">Gold</MenuItem>
-                <MenuItem value="silver">Silver</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={4}>
             <TextField
               fullWidth
               type="number"
@@ -224,6 +273,18 @@ function CreateLead(props) {
                 <MenuItem value="pledged">Pledged</MenuItem>
               </Select>
             </FormControl>
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Remarks"
+              name="remarks"
+              multiline
+              rows={2}
+              value={values.remarks}
+              onBlur={handleBlur}
+              onChange={handleChange}
+            />
           </Grid>
 
           {values.type === 'pledged' && (

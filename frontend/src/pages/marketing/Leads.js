@@ -39,9 +39,11 @@ import { CreateLead, UpdateLead, PreviewLead } from '../../components/branch/lea
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
 // sections
-import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashboard/attendance';
+import { AttendanceListHead } from '../../sections/@dashboard/attendance';
+import LeadListToolbar from '../../sections/@dashboard/lead/LeadListToolbar';
+import LeadFilterSidebar from '../../sections/@dashboard/lead/LeadFilterSidebar';
 // apis
-import { deleteLeadById, getLeads } from '../../apis/branch/lead';
+import { deleteLeadById, getLeads, bulkCreateLeads } from '../../apis/branch/lead';
 import { getImportedLeads, importLeads, deleteImportedLead } from '../../apis/branch/importedLead';
 import global from '../../utils/global';
 
@@ -52,9 +54,9 @@ const TABLE_HEAD = [
   { id: 'mobile', label: 'Mobile', alignRight: false },
   { id: 'category', label: 'Category', alignRight: false },
   { id: 'type', label: 'Type', alignRight: false },
-  { id: 'attachment', label: 'Attachment', alignRight: false },
+  { id: 'weight', label: 'Weight', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
-  { id: 'createdAt', label: 'Date', alignRight: false },
+  { id: 'date', label: 'Date', alignRight: false },
   { id: '' },
 ];
 
@@ -76,17 +78,41 @@ function getComparator(order, orderBy) {
     : (a, b) => -descendingComparator(a, b, orderBy);
 }
 
-function applySortFilter(array, comparator, query) {
+function applySortFilter(array, comparator, query, filters) {
   const stabilizedThis = array?.map((el, index) => [el, index]) || [];
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) return order;
     return a[1] - b[1];
   });
+  
+  let filteredArray = stabilizedThis?.map((el) => el[0]) || [];
+
   if (query) {
-    return filter(array, (row) => row?.name?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    filteredArray = filter(filteredArray, (row) => row?.name?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
-  return stabilizedThis?.map((el) => el[0]);
+
+  if (filters) {
+    if (filters.status && filters.status !== 'all') {
+      filteredArray = filteredArray.filter((row) => row.status?.toLowerCase() === filters.status.toLowerCase());
+    }
+    if (filters.category && filters.category !== 'all') {
+      filteredArray = filteredArray.filter((row) => row.category?.toLowerCase() === filters.category.toLowerCase());
+    }
+    if (filters.type && filters.type !== 'all') {
+      filteredArray = filteredArray.filter((row) => row.type?.toLowerCase() === filters.type.toLowerCase());
+    }
+    if (filters.startDate) {
+      const start = new Date(filters.startDate).getTime();
+      filteredArray = filteredArray.filter((row) => row.date && new Date(row.date).getTime() >= start);
+    }
+    if (filters.endDate) {
+      const end = new Date(filters.endDate).getTime();
+      filteredArray = filteredArray.filter((row) => row.date && new Date(row.date).getTime() <= end);
+    }
+  }
+
+  return filteredArray;
 }
 
 export default function Leads({ title = "Leads Management" }) {
@@ -103,6 +129,16 @@ export default function Leads({ title = "Leads Management" }) {
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
+  
+  const [openFilter, setOpenFilter] = useState(false);
+  const [filters, setFilters] = useState({
+    startDate: '',
+    endDate: '',
+    status: 'all',
+    category: 'all',
+    type: 'all'
+  });
+
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
@@ -112,6 +148,10 @@ export default function Leads({ title = "Leads Management" }) {
   const [importFile, setImportFile] = useState(null);
   const [importPreview, setImportPreview] = useState([]);
   const [isImportedLead, setIsImportedLead] = useState(false);
+
+  const [openBulkUploadModal, setOpenBulkUploadModal] = useState(false);
+  const [bulkUploadFile, setBulkUploadFile] = useState(null);
+  const [bulkUploadPreview, setBulkUploadPreview] = useState([]);
 
   const [notify, setNotify] = useState({
     open: false,
@@ -270,6 +310,147 @@ export default function Leads({ title = "Leads Management" }) {
       });
   };
 
+  const handleBulkUploadFileChange = (event) => {
+    const selectedFile = event.target.files[0];
+    if (selectedFile) {
+      const nameLower = selectedFile.name.toLowerCase();
+      const isCSV = selectedFile.type === 'text/csv' || nameLower.endsWith('.csv');
+      const isExcel = nameLower.endsWith('.xlsx') || nameLower.endsWith('.xls');
+      if (!isCSV && !isExcel) {
+        setNotify({ open: true, message: 'Please upload a valid CSV or Excel file.', severity: 'error' });
+        return;
+      }
+      setBulkUploadFile(selectedFile);
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const arrayBuffer = e.target.result;
+          const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+          
+          if (json.length === 0) {
+            setNotify({ open: true, message: 'The uploaded file is empty.', severity: 'warning' });
+            return;
+          }
+          
+          let hasError = false;
+          let errorMsg = '';
+          const mapped = json.map((row, index) => {
+            const keys = Object.keys(row);
+            const getVal = (possibleKeys) => {
+              const matchedKey = keys.find(k => possibleKeys.includes(k.toLowerCase().trim()));
+              return matchedKey ? String(row[matchedKey]).trim() : '';
+            };
+            
+            const name = getVal(['name', 'full name', 'lead name']);
+            const mobile = getVal(['phone', 'phone number', 'mobile', 'mobile number']);
+            const date = getVal(['date', 'lead date']);
+            const source = getVal(['source', 'lead source']);
+            const place = getVal(['place', 'location']);
+            const weight = parseFloat(getVal(['weight', 'qty', 'quantity', 'approximate weight'])) || 0;
+            const remarks = getVal(['comments', 'comment', 'remarks', 'remark', 'desc']);
+            const status = getVal(['status']) || 'pending';
+            const address = getVal(['address']);
+            const city = getVal(['city']);
+            const state = getVal(['state']);
+            const pincode = getVal(['pincode', 'pin']);
+            const category = getVal(['category']) || 'gold';
+            const type = getVal(['type']) || 'physical';
+            const unit = getVal(['unit']) || 'gm';
+            
+            if (!name || !mobile || !date || !source) {
+              hasError = true;
+              errorMsg = `Row ${index + 1} is missing mandatory fields (Name, Phone Number, Date, or Source).`;
+            }
+
+            let parsedDate = moment().format('YYYY-MM-DD');
+            if (date) {
+              const mDate = moment(date, ['YYYY-MM-DD', 'DD-MM-YYYY', 'MM/DD/YYYY', 'DD/MM/YYYY', 'M/D/YY', 'MM-DD-YYYY']);
+              if (mDate.isValid()) {
+                parsedDate = mDate.format('YYYY-MM-DD');
+              } else {
+                hasError = true;
+                errorMsg = `Row ${index + 1} has an invalid date format: "${date}". Please use a standard format like YYYY-MM-DD.`;
+              }
+            }
+
+            return {
+              name,
+              mobile,
+              date: parsedDate,
+              source,
+              place,
+              weight,
+              remarks,
+              status: status.toLowerCase(),
+              address,
+              city,
+              state,
+              pincode,
+              category: category.toLowerCase(),
+              type: type.toLowerCase(),
+              unit: unit.toLowerCase(),
+              leadSource: 'marketing',
+            };
+          });
+
+          if (hasError) {
+             setNotify({ open: true, message: errorMsg, severity: 'error' });
+             setBulkUploadFile(null);
+             return;
+          }
+
+          setBulkUploadPreview(mapped);
+          setNotify({
+            open: true,
+            message: `Successfully validated ${mapped.length} rows.`,
+            severity: 'success',
+          });
+        } catch (error) {
+          setNotify({ open: true, message: 'Error parsing file.', severity: 'error' });
+        }
+      };
+      reader.readAsArrayBuffer(selectedFile);
+    }
+  };
+
+  const handleDownloadBulkTemplate = () => {
+    const headers = ['Name', 'Phone Number', 'Date', 'Source', 'Place', 'Approximate Weight', 'Remarks', 'Status', 'Address', 'City', 'State', 'Pincode', 'Category', 'Type', 'Unit'];
+    const csvContent = 'data:text/csv;charset=utf-8,' + headers.join(',');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'bulk_upload_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleSubmitBulkUpload = () => {
+    if (bulkUploadPreview.length === 0) return;
+    setOpenBackdrop(true);
+    bulkCreateLeads({ leads: bulkUploadPreview })
+      .then((res) => {
+        if (res.status) {
+          setNotify({ open: true, message: res.message || 'Leads uploaded successfully', severity: 'success' });
+          setBulkUploadPreview([]);
+          setBulkUploadFile(null);
+          setOpenBulkUploadModal(false);
+          fetchData();
+        } else {
+          setNotify({ open: true, message: res.message || 'Failed to upload leads', severity: 'error' });
+          setOpenBackdrop(false);
+        }
+      })
+      .catch((err) => {
+        setNotify({ open: true, message: err.message || 'An error occurred', severity: 'error' });
+        setOpenBackdrop(false);
+      });
+  };
+
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
   };
@@ -323,7 +504,7 @@ export default function Leads({ title = "Leads Management" }) {
   };
 
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
-  const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
+  const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName, filters);
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
@@ -408,7 +589,7 @@ export default function Leads({ title = "Leads Management" }) {
             {title}
           </Typography>
           <Stack direction="row" spacing={2}>
-            {auth.user?.userType?.toLowerCase() === 'telecalling' && (
+            {/* {auth.user?.userType?.toLowerCase() === 'telecalling' && (
               <Button
                 variant="outlined"
                 color="inherit"
@@ -417,6 +598,21 @@ export default function Leads({ title = "Leads Management" }) {
                   setImportFile(null);
                   setImportPreview([]);
                   setOpenImportModal(true);
+                }}
+                sx={{ color: '#fff', borderColor: '#fff', '&:hover': { borderColor: '#e1bee7', bgcolor: 'rgba(255,255,255,0.08)' } }}
+              >
+                Import Leads
+              </Button>
+            )} */}
+            {auth.user?.userType?.toLowerCase() === 'marketing' && (
+              <Button
+                variant="outlined"
+                color="inherit"
+                startIcon={<Iconify icon="eva:cloud-upload-fill" />}
+                onClick={() => {
+                  setBulkUploadFile(null);
+                  setBulkUploadPreview([]);
+                  setOpenBulkUploadModal(true);
                 }}
                 sx={{ color: '#fff', borderColor: '#fff', '&:hover': { borderColor: '#e1bee7', bgcolor: 'rgba(255,255,255,0.08)' } }}
               >
@@ -437,7 +633,7 @@ export default function Leads({ title = "Leads Management" }) {
         </Stack>
 
         <Card>
-          <AttendanceListToolbar
+          <LeadListToolbar
             numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
@@ -445,6 +641,15 @@ export default function Leads({ title = "Leads Management" }) {
               setDeleteType('selected');
               handleOpenDeleteModal();
             }}
+            filterComponent={
+              <LeadFilterSidebar
+                openFilter={openFilter}
+                onOpenFilter={() => setOpenFilter(true)}
+                onCloseFilter={() => setOpenFilter(false)}
+                filters={filters}
+                setFilters={setFilters}
+              />
+            }
           />
 
           <Scrollbar>
@@ -461,7 +666,7 @@ export default function Leads({ title = "Leads Management" }) {
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, name, mobile, category, type, status, createdAt, lead } = row;
+                    const { _id, name, mobile, category, type, status, date, lead } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -490,23 +695,13 @@ export default function Leads({ title = "Leads Management" }) {
                         <TableCell align="left">{global.maskPhoneNumber(mobile)}</TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{category}</TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{type}</TableCell>
-                        <TableCell align="left">
-                          {lead?.uploadedFile ? (
-                            <img
-                              src={lead.uploadedFile.startsWith('http') ? lead.uploadedFile : `${global.baseURL}/${lead.uploadedFile}`}
-                              alt="lead"
-                              style={{ width: '80px', borderRadius: '4px' }}
-                            />
-                          ) : (
-                            'No Image'
-                          )}
-                        </TableCell>
+                        <TableCell align="left">{row.weight ? `${row.weight} ${row.unit || 'gm'}` : 'N/A'}</TableCell>
                         <TableCell align="left">
                            <Box sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: status === 'pending' ? 'warning.main' : status === 'converted' ? 'success.main' : 'error.main', color: '#fff', width: 'fit-content', textTransform: 'capitalize' }}>
                              {status}
                            </Box>
                         </TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                        <TableCell align="left">{date ? moment(date).format('YYYY-MM-DD') : 'N/A'}</TableCell>
                         <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton
                             size="large"
@@ -793,6 +988,129 @@ export default function Leads({ title = "Leads Management" }) {
             }}
           >
             Import {importPreview.length} Leads
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={openBulkUploadModal} onClose={() => setOpenBulkUploadModal(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 2 }}>
+          <Typography variant="h6" sx={{ color: '#8A1B9F', fontWeight: 'bold' }}>
+            Bulk Upload Leads via CSV
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<Iconify icon="eva:download-outline" />}
+            onClick={handleDownloadBulkTemplate}
+            size="small"
+            sx={{
+              color: '#8A1B9F',
+              borderColor: '#8A1B9F',
+              fontWeight: 'bold',
+              '&:hover': {
+                borderColor: '#7B1FA2',
+                bgcolor: 'rgba(138, 27, 159, 0.04)',
+              }
+            }}
+          >
+            Download Template
+          </Button>
+        </DialogTitle>
+        <DialogContent
+          sx={{
+            p: 3,
+            overflowY: 'auto',
+            '&::-webkit-scrollbar': { display: 'none' },
+            msOverflowStyle: 'none',
+            scrollbarWidth: 'none',
+          }}
+        >
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" color="textSecondary" gutterBottom>
+              Select a CSV or Excel file containing columns for <strong>Name, Phone Number, Date, Source, Place, Approximate Weight, Remarks, Status, Address, City, State, Pincode, Category, Type, Unit</strong>.
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              <span style={{ color: 'red' }}>*</span> Name, Phone Number, Date, and Source are mandatory.
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '2px dashed #8A1B9F',
+              borderRadius: 2,
+              p: 4,
+              textAlign: 'center',
+              cursor: 'pointer',
+              bgcolor: 'rgba(138, 27, 159, 0.04)',
+              transition: 'all 0.3s',
+              width: '100%',
+              boxSizing: 'border-box',
+              '&:hover': {
+                bgcolor: 'rgba(138, 27, 159, 0.08)',
+                borderColor: '#b39ddb',
+              },
+            }}
+            component="label"
+          >
+            <input type="file" accept=".csv, .xlsx, .xls" hidden onChange={handleBulkUploadFileChange} />
+            <Iconify icon="eva:cloud-upload-fill" sx={{ fontSize: 48, color: '#8A1B9F', mb: 1 }} />
+            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+              {bulkUploadFile ? bulkUploadFile.name : 'Click to select CSV or Excel File'}
+            </Typography>
+            <Typography variant="caption" color="textSecondary">
+              Accepts CSV or Excel files up to 5MB
+            </Typography>
+          </Box>
+
+          {bulkUploadPreview.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', color: '#8A1B9F', fontWeight: 'bold' }}>
+                <Iconify icon="eva:list-fill" sx={{ mr: 1 }} /> Preview (First 5 Rows)
+              </Typography>
+              <TableContainer component={Paper} sx={{ maxHeight: 180, border: '1px solid #f0f0f0', borderRadius: 1 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ bgcolor: '#f5f5f5' }}>Name</TableCell>
+                      <TableCell sx={{ bgcolor: '#f5f5f5' }}>Phone</TableCell>
+                      <TableCell sx={{ bgcolor: '#f5f5f5' }}>Date</TableCell>
+                      <TableCell sx={{ bgcolor: '#f5f5f5' }}>Source</TableCell>
+                      <TableCell sx={{ bgcolor: '#f5f5f5' }}>Place</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {bulkUploadPreview.slice(0, 5).map((row, index) => (
+                      <TableRow key={index} hover>
+                        <TableCell>{row.name || '-'}</TableCell>
+                        <TableCell>{row.mobile || '-'}</TableCell>
+                        <TableCell>{row.date || '-'}</TableCell>
+                        <TableCell>{row.source || '-'}</TableCell>
+                        <TableCell>{row.place || '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid #f0f0f0' }}>
+          <Button variant="outlined" onClick={() => setOpenBulkUploadModal(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleSubmitBulkUpload}
+            disabled={bulkUploadPreview.length === 0}
+            sx={{
+              color: '#fff',
+              bgcolor: '#8A1B9F',
+              '&:hover': { bgcolor: '#7B1FA2' },
+              '&.Mui-disabled': { bgcolor: 'rgba(0, 0, 0, 0.12)', color: 'rgba(0, 0, 0, 0.26)' }
+            }}
+          >
+            Upload {bulkUploadPreview.length} Leads
           </Button>
         </DialogActions>
       </Dialog>

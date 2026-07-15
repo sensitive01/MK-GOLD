@@ -16,6 +16,22 @@ const leadSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    date: {
+      type: Date,
+      default: Date.now,
+    },
+    place: {
+      type: String,
+      trim: true,
+    },
+    source: {
+      type: String,
+      trim: true,
+    },
+    remarks: {
+      type: String,
+      trim: true,
+    },
     pincode: {
       type: String,
       trim: true,

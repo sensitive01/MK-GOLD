@@ -83,7 +83,7 @@ const navConfig = [
     path: '/admin/report',
     icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
   },
-  {
+  /* {
     title: 'Support',
     path: '/admin/support',
     icon: <SupportAgentIcon sx={{ width: 1, height: 1 }} />,
@@ -97,7 +97,7 @@ const navConfig = [
     title: 'Move Gold',
     path: '/admin/ornament',
     icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
-  },
+  }, */
   {
     title: 'Balancesheet',
     path: '/admin/balancesheet',

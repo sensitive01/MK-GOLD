@@ -16,6 +16,7 @@ import { useState, useEffect } from 'react';
 import { getLeadById, updateLead } from '../../../apis/branch/lead';
 import { createFile } from '../../../apis/branch/fileupload';
 import global from '../../../utils/global';
+import moment from 'moment';
 
 function UpdateLead(props) {
   const [file, setFile] = useState(null);
@@ -47,6 +48,11 @@ function UpdateLead(props) {
       releaseAmount: 0,
       pledgedAmount: 0,
       status: 'pending',
+      date: '',
+      place: '',
+      remarks: '',
+      source: '',
+      leadSource: 'admin',
     },
     validationSchema: schema,
     onSubmit: (values) => {
@@ -99,6 +105,11 @@ function UpdateLead(props) {
             releaseAmount: data.data.releaseAmount || 0,
             pledgedAmount: data.data.pledgedAmount || 0,
             status: data.data.status || 'pending',
+            date: data.data.date ? moment(data.data.date).format('YYYY-MM-DD') : '',
+            place: data.data.place || '',
+            remarks: data.data.remarks || '',
+            source: data.data.source || '',
+            leadSource: data.data.leadSource || 'admin',
           });
           if (data.data.lead?.uploadedFile) {
             setCurrentImage(
@@ -145,6 +156,48 @@ function UpdateLead(props) {
               required
             />
           </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              type="date"
+              label="Date"
+              name="date"
+              value={formik.values.date}
+              onBlur={formik.handleBlur}
+              onChange={formik.handleChange}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              label="Source"
+              name="source"
+              value={formik.values.source}
+              onBlur={formik.handleBlur}
+              onChange={formik.handleChange}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
+              <Select label="Status" name="status" value={formik.values.status} onChange={formik.handleChange} sx={{ textTransform: 'capitalize' }}>
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="converted">Converted</MenuItem>
+                <MenuItem value="rejected">Rejected</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth>
+              <InputLabel>Category</InputLabel>
+              <Select label="Category" name="category" value={formik.values.category} onChange={formik.handleChange}>
+                <MenuItem value="gold">Gold</MenuItem>
+                <MenuItem value="silver">Silver</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
           <Grid item xs={12} sm={12}>
             <TextField
               fullWidth
@@ -153,6 +206,16 @@ function UpdateLead(props) {
               multiline
               rows={2}
               value={formik.values.address}
+              onBlur={formik.handleBlur}
+              onChange={formik.handleChange}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              label="Place"
+              name="place"
+              value={formik.values.place}
               onBlur={formik.handleBlur}
               onChange={formik.handleChange}
             />
@@ -206,15 +269,6 @@ function UpdateLead(props) {
           </Grid>
 
           <Grid item xs={12} sm={4}>
-            <FormControl fullWidth>
-              <InputLabel>Category</InputLabel>
-              <Select label="Category" name="category" value={formik.values.category} onChange={formik.handleChange}>
-                <MenuItem value="gold">Gold</MenuItem>
-                <MenuItem value="silver">Silver</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={4}>
             <TextField
               fullWidth
               type="number"
@@ -248,15 +302,17 @@ function UpdateLead(props) {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
-              <Select label="Status" name="status" value={formik.values.status} onChange={formik.handleChange} sx={{ textTransform: 'capitalize' }}>
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="converted">Converted</MenuItem>
-                <MenuItem value="rejected">Rejected</MenuItem>
-              </Select>
-            </FormControl>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Remarks"
+              name="remarks"
+              multiline
+              rows={2}
+              value={formik.values.remarks}
+              onBlur={formik.handleBlur}
+              onChange={formik.handleChange}
+            />
           </Grid>
 
           {formik.values.type === 'pledged' && (

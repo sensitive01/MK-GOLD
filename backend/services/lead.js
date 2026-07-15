@@ -69,6 +69,15 @@ async function findById(id) {
 
 async function create(data) {
   try {
+    if (data.mobile && data.date) {
+      const existing = await Lead.findOne({
+        mobile: data.mobile,
+        date: new Date(data.date)
+      }).lean();
+      if (existing) {
+        throw new Error("A lead with this mobile number already exists for this date.");
+      }
+    }
     return await Lead.create(data);
   } catch (err) {
     throw err;
@@ -138,5 +147,44 @@ async function getLeadStats(user = null) {
     throw err;
   }
 }
+async function bulkCreate(leadsArray) {
+  try {
+    if (!leadsArray || leadsArray.length === 0) return { insertedCount: 0, duplicateCount: 0, insertedLeads: [] };
 
-module.exports = { find, findById, create, update, remove, addDisposition, getLeadStats };
+    const mobiles = leadsArray.map(l => l.mobile);
+    const dates = leadsArray.map(l => new Date(l.date));
+
+    const existingLeads = await Lead.find({
+      mobile: { $in: mobiles },
+      date: { $in: dates }
+    }, { mobile: 1, date: 1 }).lean();
+
+    const existingSet = new Set(
+      existingLeads.map(l => `${l.mobile}_${l.date.toISOString()}`)
+    );
+
+    const uniqueLeads = [];
+    const currentSet = new Set();
+    let duplicateCount = 0;
+
+    for (const lead of leadsArray) {
+      const key = `${lead.mobile}_${new Date(lead.date).toISOString()}`;
+      if (!existingSet.has(key) && !currentSet.has(key)) {
+        uniqueLeads.push(lead);
+        currentSet.add(key);
+      } else {
+        duplicateCount++;
+      }
+    }
+
+    if (uniqueLeads.length > 0) {
+      await Lead.insertMany(uniqueLeads);
+    }
+    
+    return { insertedCount: uniqueLeads.length, duplicateCount, insertedLeads: uniqueLeads };
+  } catch (err) {
+    throw err;
+  }
+}
+
+module.exports = { find, findById, create, bulkCreate, update, remove, addDisposition, getLeadStats };

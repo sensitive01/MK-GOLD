@@ -138,6 +138,22 @@ function PreviewLead(props) {
           <Typography variant="subtitle2" color="textSecondary">State</Typography>
           <Typography variant="body1">{data.state || 'N/A'}</Typography>
         </Grid>
+        <Grid item xs={12} sm={4}>
+          <Typography variant="subtitle2" color="textSecondary">Place</Typography>
+          <Typography variant="body1">{data.place || 'N/A'}</Typography>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <Typography variant="subtitle2" color="textSecondary">Lead Date</Typography>
+          <Typography variant="body1">{data.date ? moment(data.date).format('LL') : 'N/A'}</Typography>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <Typography variant="subtitle2" color="textSecondary">Source</Typography>
+          <Typography variant="body1">{data.source || 'N/A'}</Typography>
+        </Grid>
+        <Grid item xs={12} sm={12}>
+          <Typography variant="subtitle2" color="textSecondary">Remarks</Typography>
+          <Typography variant="body1">{data.remarks || 'N/A'}</Typography>
+        </Grid>
 
         <Grid item xs={12}><Divider /></Grid>
 

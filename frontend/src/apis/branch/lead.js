@@ -63,4 +63,13 @@ async function getLeadStats() {
   }
 }
 
-export { getLeads, getLeadById, createLead, updateLead, deleteLeadById, addDisposition, getLeadStats };
+async function bulkCreateLeads(data) {
+  try {
+    const response = await apiClient().post('/api/v1.0/branch/lead/bulk-create', data);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+export { getLeads, getLeadById, createLead, bulkCreateLeads, updateLead, deleteLeadById, addDisposition, getLeadStats };

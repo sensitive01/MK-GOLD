@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import {
   Card,
@@ -19,7 +19,15 @@ import {
   Button,
   Box,
   Divider,
+  Grid,
+  FormControl,
+  TextField,
 } from '@mui/material';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import moment from 'moment';
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
@@ -46,6 +54,44 @@ export default function QREnquiry() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [openLogModal, setOpenLogModal] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const form = useRef();
+
+  // Form validation
+  const schema = Yup.object({
+    fromDate: Yup.string().required('From date is required'),
+    toDate: Yup.string().required('To date is required'),
+  });
+
+  const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
+    initialValues: {
+      fromDate: null,
+      toDate: null,
+      phoneNumber: '',
+    },
+    validationSchema: schema,
+    onSubmit: (values) => {
+      const query = {
+        createdAt: {
+          $gte: values.fromDate?.format("YYYY-MM-DD"),
+          $lte: values.toDate?.format("YYYY-MM-DD"),
+        }
+      };
+      if (values.phoneNumber) {
+        query.phoneNumber = values.phoneNumber;
+      }
+      fetchData(query);
+      setFilterOpen(false);
+    },
+  });
+
+  const handleFilterOpen = () => {
+    setFilterOpen(true);
+  };
+
+  const handleFilterClose = () => {
+    setFilterOpen(false);
+  };
 
   const handleOpenLogModal = (enquiry) => {
     setSelectedEnquiry(enquiry);
@@ -61,8 +107,8 @@ export default function QREnquiry() {
     fetchData();
   }, []);
 
-  const fetchData = () => {
-    getQrEnquiries({}).then((res) => {
+  const fetchData = (query = {}) => {
+    getQrEnquiries(query).then((res) => {
       if (res.status) {
         setData(res.data ?? []);
       }
@@ -89,7 +135,21 @@ export default function QREnquiry() {
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             QR Enquiries (Branch Leads)
           </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+            onClick={handleFilterOpen}
+          >
+            Filter
+          </Button>
         </Stack>
+
+        {(values.fromDate || values.toDate) && (
+          <p style={{ color: '#fff', marginBottom: '20px' }}>
+            From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
+            {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
+          </p>
+        )}
 
         <Card>
           <Scrollbar>
@@ -198,6 +258,86 @@ export default function QREnquiry() {
         <DialogActions>
           <Button onClick={handleCloseLogModal}>Close</Button>
         </DialogActions>
+      </Dialog>
+
+      <Dialog open={filterOpen} onClose={handleFilterClose}>
+        <form
+          ref={form}
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit(e);
+          }}
+          autoComplete="off"
+        >
+          <DialogTitle>Filter</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={3} sx={{ p: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  name="phoneNumber"
+                  type="number"
+                  value={values.phoneNumber}
+                  error={touched.phoneNumber && errors.phoneNumber && true}
+                  label={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber : 'Phone Number'}
+                  fullWidth
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl sx={{ minWidth: 120 }}>
+                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
+                    <DesktopDatePicker
+                      label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
+                      inputFormat="MM/DD/YYYY"
+                      name="fromDate"
+                      value={values.fromDate}
+                      onChange={(value) => {
+                        setFieldValue('fromDate', value, true);
+                      }}
+                      renderInput={(params) => <TextField {...params} fullWidth />}
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl sx={{ minWidth: 120 }}>
+                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
+                    <DesktopDatePicker
+                      label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
+                      inputFormat="MM/DD/YYYY"
+                      name="toDate"
+                      value={values.toDate}
+                      onChange={(value) => {
+                        setFieldValue('toDate', value, true);
+                      }}
+                      renderInput={(params) => <TextField {...params} fullWidth />}
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => {
+                setFilterOpen(false);
+                resetForm();
+                fetchData({});
+              }}
+            >
+              Clear
+            </Button>
+            <Button variant="contained" onClick={handleFilterClose}>
+              Close
+            </Button>
+            <Button variant="contained" type="submit">
+              Filter
+            </Button>
+          </DialogActions>
+        </form>
       </Dialog>
     </>
   );

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Box, Container, Tab, Tabs, Card } from '@mui/material';
 
-import Customer from './Customer';
+import QREnquiry from './QREnquiry';
 import MarketingLeads from '../marketing/Leads';
 import BranchLeads from '../branch/Leads';
 
@@ -50,7 +50,7 @@ export default function LeadsTabs() {
         <Card sx={{ p: 2, mb: 3 }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={value} onChange={handleChange} aria-label="leads tabs">
-              <Tab label="Walk in Customers" {...a11yProps(0)} />
+              <Tab label="QR Enquiries" {...a11yProps(0)} />
               <Tab label="Marketing Leads" {...a11yProps(1)} />
               <Tab label="TeleCalling Leads" {...a11yProps(2)} />
             </Tabs>
@@ -58,7 +58,7 @@ export default function LeadsTabs() {
         </Card>
 
         <CustomTabPanel value={value} index={0}>
-          <Customer title="Walk in Customers" />
+          <QREnquiry />
         </CustomTabPanel>
         
         <CustomTabPanel value={value} index={1}>

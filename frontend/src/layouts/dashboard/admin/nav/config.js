@@ -123,6 +123,7 @@ const navConfig = [
         path: '/admin/settings',
         icon: <SettingsIcon sx={{ width: 1, height: 1 }} />,
       },
+      /*
       {
         title: 'Support',
         path: '/admin/support',
@@ -133,15 +134,11 @@ const navConfig = [
         path: '/admin/ornament',
         icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
       },
+      */
       {
         title: 'Balancesheet',
         path: '/admin/balancesheet',
         icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
-      },
-      {
-        title: 'QR Enquiries',
-        path: '/admin/qr-enquiry',
-        icon: <QrCodeIcon sx={{ width: 1, height: 1 }} />,
       },
     ]
   },

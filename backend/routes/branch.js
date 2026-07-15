@@ -103,6 +103,7 @@ branchRouter.post("/lead/get", lead.find);
 branchRouter.get("/lead/get-stats", lead.getStats);
 branchRouter.get("/lead/get/:id", lead.findById);
 branchRouter.post("/lead/create", lead.create);
+branchRouter.post("/lead/bulk-create", lead.bulkCreate);
 branchRouter.post("/lead/update/:id", lead.update);
 branchRouter.post("/lead/delete/:id", lead.remove);
 branchRouter.post("/lead/disposition/:id", lead.addDisposition);

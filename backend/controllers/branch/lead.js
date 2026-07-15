@@ -81,5 +81,41 @@ async function getStats(req, res) {
     res.json({ status: false, message: err.message, data: {} });
   }
 }
+async function bulkCreate(req, res) {
+  try {
+    const leads = req.body.leads;
+    if (!Array.isArray(leads)) {
+      return res.json({ status: false, message: "Invalid payload format", data: {} });
+    }
 
-module.exports = { find, findById, create, update, remove, addDisposition, getStats };
+    // Attach branch and createdBy if available
+    const enrichedLeads = leads.map(lead => {
+      if (req.user) {
+        lead.branch = req.user.branch?._id || req.user.branch;
+        lead.createdBy = req.user._id;
+      }
+      return lead;
+    });
+
+    const createdData = await leadService.bulkCreate(enrichedLeads);
+
+    let message = `${createdData.insertedCount} leads imported successfully!`;
+    if (createdData.duplicateCount > 0) {
+      if (createdData.insertedCount === 0) {
+        message = `No new leads imported. ${createdData.duplicateCount} duplicate leads were found and skipped.`;
+      } else {
+        message = `${createdData.insertedCount} leads imported successfully! (${createdData.duplicateCount} duplicate leads skipped).`;
+      }
+    }
+
+    res.json({
+      status: true,
+      message: message,
+      data: createdData.insertedLeads,
+    });
+  } catch (err) {
+    res.json({ status: false, message: err.message, data: {} });
+  }
+}
+
+module.exports = { find, findById, create, bulkCreate, update, remove, addDisposition, getStats };
