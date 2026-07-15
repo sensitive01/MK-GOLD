@@ -39,9 +39,11 @@ import { CreateLead, UpdateLead, PreviewLead } from '../../components/admin/lead
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
 // sections
-import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashboard/attendance';
+import { AttendanceListHead } from '../../sections/@dashboard/attendance';
+import LeadListToolbar from '../../sections/@dashboard/lead/LeadListToolbar';
+import LeadFilterSidebar from '../../sections/@dashboard/lead/LeadFilterSidebar';
 // apis
-import { deleteLeadById, getLeads } from '../../apis/admin/lead';
+import { deleteLeadById, getLeads, markLeadsExclusive } from '../../apis/admin/lead';
 // Note: importedLead API might not exist for Admin, but leaving as is unless it breaks.
 import { getImportedLeads, importLeads, deleteImportedLead } from '../../apis/branch/importedLead';
 import global from '../../utils/global';
@@ -90,6 +92,14 @@ function applySortFilter(array, comparator, query) {
   return stabilizedThis?.map((el) => el[0]);
 }
 
+function applyExclusiveFilter(array, isExclusiveFilter) {
+  if (isExclusiveFilter && isExclusiveFilter !== 'all') {
+    const exclusiveVal = isExclusiveFilter === 'exclusive';
+    return array.filter((row) => !!row.isExclusive === exclusiveVal);
+  }
+  return array;
+}
+
 export default function Leads({ title = "Leads Management" }) {
   const auth = useSelector((state) => state.auth);
   const [open, setOpen] = useState(null);
@@ -100,6 +110,16 @@ export default function Leads({ title = "Leads Management" }) {
   const [selected, setSelected] = useState([]);
   const [orderBy, setOrderBy] = useState(null);
   const [filterName, setFilterName] = useState('');
+  const [filterExclusive, setFilterExclusive] = useState('all');
+  const [openFilter, setOpenFilter] = useState(false);
+  const [filters, setFilters] = useState({
+    startDate: '',
+    endDate: '',
+    status: 'all',
+    category: 'all',
+    type: 'all',
+    isExclusive: 'all'
+  });
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
@@ -113,6 +133,7 @@ export default function Leads({ title = "Leads Management" }) {
   const [importFile, setImportFile] = useState(null);
   const [importPreview, setImportPreview] = useState([]);
   const [isImportedLead, setIsImportedLead] = useState(false);
+  const [showExclusiveTip, setShowExclusiveTip] = useState(true);
 
   const [notify, setNotify] = useState({
     open: false,
@@ -324,7 +345,27 @@ export default function Leads({ title = "Leads Management" }) {
   };
 
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
-  const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
+  let filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
+  
+  if (filters.status && filters.status !== 'all') {
+    filteredData = filteredData.filter((row) => row.status === filters.status);
+  }
+  if (filters.category && filters.category !== 'all') {
+    filteredData = filteredData.filter((row) => row.category === filters.category);
+  }
+  if (filters.type && filters.type !== 'all') {
+    filteredData = filteredData.filter((row) => row.type === filters.type);
+  }
+  if (filters.startDate) {
+    const start = new Date(filters.startDate).getTime();
+    filteredData = filteredData.filter((row) => row.date && new Date(row.date).getTime() >= start);
+  }
+  if (filters.endDate) {
+    const end = new Date(filters.endDate).getTime();
+    filteredData = filteredData.filter((row) => row.date && new Date(row.date).getTime() <= end);
+  }
+  
+  filteredData = applyExclusiveFilter(filteredData, filters.isExclusive);
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
@@ -341,6 +382,26 @@ export default function Leads({ title = "Leads Management" }) {
         setSelected(selected?.filter((e) => e !== openId));
       });
     }
+  };
+
+  const handleMarkExclusive = () => {
+    const selectedRows = data.filter(item => selected.includes(item._id) && !item.isImported);
+    const ids = selectedRows.map(item => item._id);
+    if (ids.length === 0) return;
+    
+    setOpenBackdrop(true);
+    markLeadsExclusive({ ids, isExclusive: true }).then((res) => {
+      setOpenBackdrop(false);
+      if (res?.status) {
+        fetchData();
+        setSelected([]);
+        setNotify({
+          open: true,
+          message: 'Leads marked as exclusive',
+          severity: 'success',
+        });
+      }
+    });
   };
 
   const handleDeleteSelected = () => {
@@ -437,8 +498,14 @@ export default function Leads({ title = "Leads Management" }) {
           </Stack>
         </Stack>
 
+        {showExclusiveTip && (
+          <MuiAlert severity="info" sx={{ mb: 3 }} onClose={() => setShowExclusiveTip(false)}>
+            <strong>Tip:</strong> To mark leads as exclusive, check the boxes next to the leads and click the star (⭐️) icon above the table.
+          </MuiAlert>
+        )}
+
         <Card>
-          <AttendanceListToolbar
+          <LeadListToolbar
             numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
@@ -446,6 +513,16 @@ export default function Leads({ title = "Leads Management" }) {
               setDeleteType('selected');
               handleOpenDeleteModal();
             }}
+            handleMarkExclusive={handleMarkExclusive}
+            filterComponent={
+              <LeadFilterSidebar
+                openFilter={openFilter}
+                onOpenFilter={() => setOpenFilter(true)}
+                onCloseFilter={() => setOpenFilter(false)}
+                filters={filters}
+                setFilters={setFilters}
+              />
+            }
           />
 
           <Scrollbar>
@@ -487,7 +564,12 @@ export default function Leads({ title = "Leads Management" }) {
                             onClick={(e) => e.stopPropagation()}
                           />
                         </TableCell>
-                        <TableCell align="left">{name}</TableCell>
+                        <TableCell align="left">
+                          {row.isExclusive && (
+                            <Iconify icon="eva:star-fill" sx={{ color: 'warning.main', mr: 1, verticalAlign: 'text-bottom' }} />
+                          )}
+                          {name}
+                        </TableCell>
                         <TableCell align="left">{global.maskPhoneNumber(mobile)}</TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{category}</TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{type}</TableCell>

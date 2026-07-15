@@ -22,7 +22,9 @@ async function findById(req, res) {
 async function create(req, res) {
   try {
     if (req.user) {
-      req.body.branch = req.user.branch?._id || req.user.branch;
+      if (req.user.userType?.toLowerCase() !== 'telecalling') {
+        req.body.branch = req.user.branch?._id || req.user.branch;
+      }
       req.body.createdBy = req.user._id;
     }
     const createdData = await leadService.create(req.body);
@@ -66,6 +68,9 @@ async function addDisposition(req, res) {
     if (req.user) {
       req.body.createdBy = req.user._id;
     }
+    if (req.file) {
+      req.body.attachment = req.file.path;
+    }
     const data = await leadService.addDisposition(req.params.id, req.body);
     res.json({ status: true, message: "Call log added successfully!", data });
   } catch (err) {
@@ -91,7 +96,9 @@ async function bulkCreate(req, res) {
     // Attach branch and createdBy if available
     const enrichedLeads = leads.map(lead => {
       if (req.user) {
-        lead.branch = req.user.branch?._id || req.user.branch;
+        if (req.user.userType?.toLowerCase() !== 'telecalling') {
+          lead.branch = req.user.branch?._id || req.user.branch;
+        }
         lead.createdBy = req.user._id;
       }
       return lead;
@@ -118,4 +125,17 @@ async function bulkCreate(req, res) {
   }
 }
 
-module.exports = { find, findById, create, bulkCreate, update, remove, addDisposition, getStats };
+async function markExclusive(req, res) {
+  try {
+    const { ids, isExclusive } = req.body;
+    if (!ids || ids.length === 0) {
+      return res.json({ status: false, message: "No leads selected", data: {} });
+    }
+    const data = await leadService.markExclusive(ids, isExclusive);
+    res.json({ status: true, message: "Leads exclusivity updated successfully!", data });
+  } catch (err) {
+    res.json({ status: false, message: err.message, data: {} });
+  }
+}
+
+module.exports = { find, findById, create, bulkCreate, update, remove, addDisposition, getStats, markExclusive };

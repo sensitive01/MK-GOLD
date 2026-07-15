@@ -8,8 +8,7 @@ async function find(query = {}, user = null) {
     if (
       userType === "branch" ||
       userType === "assistant_branch_manager" ||
-      userType === "branch_executive" ||
-      userType === "telecalling"
+      userType === "branch_executive"
     ) {
       query.branch = user.branch?._id || user.branch;
     }
@@ -105,11 +104,13 @@ async function remove(id) {
 
 async function addDisposition(id, payload) {
   try {
+    const update = { $push: { dispositions: payload } };
+    if ((payload.status === "Branch Visit Confirmed" || payload.status === "Planning to Visit") && payload.branch) {
+      update.$set = { branch: payload.branch };
+    }
     return await Lead.findByIdAndUpdate(
       id,
-      {
-        $push: { dispositions: payload },
-      },
+      update,
       { new: true }
     ).exec();
   } catch (err) {
@@ -124,8 +125,7 @@ async function getLeadStats(user = null) {
     if (
       userType === "branch" ||
       userType === "assistant_branch_manager" ||
-      userType === "branch_executive" ||
-      userType === "telecalling"
+      userType === "branch_executive"
     ) {
       const branchId = user.branch?._id || user.branch;
       if (branchId) {
@@ -187,4 +187,16 @@ async function bulkCreate(leadsArray) {
   }
 }
 
-module.exports = { find, findById, create, bulkCreate, update, remove, addDisposition, getLeadStats };
+async function markExclusive(ids, isExclusive) {
+  try {
+    const idArray = Array.isArray(ids) ? ids : ids.split(",");
+    return await Lead.updateMany(
+      { _id: { $in: idArray } },
+      { $set: { isExclusive: isExclusive } }
+    );
+  } catch (err) {
+    throw err;
+  }
+}
+
+module.exports = { find, findById, create, bulkCreate, update, remove, addDisposition, getLeadStats, markExclusive };

@@ -98,12 +98,21 @@ const leadSchema = new mongoose.Schema(
           type: Date,
           default: Date.now,
         },
+        attachment: {
+          type: String,
+        },
+        callbackDate: String,
+        callbackTime: String,
       },
     ],
     leadSource: {
       type: String,
       enum: ["admin", "marketing", "telecalling", "branch"],
       default: "admin",
+    },
+    isExclusive: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }

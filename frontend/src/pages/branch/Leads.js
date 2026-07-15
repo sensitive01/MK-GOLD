@@ -43,7 +43,7 @@ import { AttendanceListHead } from '../../sections/@dashboard/attendance';
 import LeadListToolbar from '../../sections/@dashboard/lead/LeadListToolbar';
 import LeadFilterSidebar from '../../sections/@dashboard/lead/LeadFilterSidebar';
 // apis
-import { deleteLeadById, getLeads, bulkCreateLeads } from '../../apis/branch/lead';
+import { deleteLeadById, getLeads, bulkCreateLeads, markLeadsExclusive } from '../../apis/branch/lead';
 import { getImportedLeads, importLeads, deleteImportedLead } from '../../apis/branch/importedLead';
 import global from '../../utils/global';
 
@@ -110,6 +110,10 @@ function applySortFilter(array, comparator, query, filters) {
       const end = new Date(filters.endDate).getTime();
       filteredArray = filteredArray.filter((row) => row.date && new Date(row.date).getTime() <= end);
     }
+    if (filters.isExclusive && filters.isExclusive !== 'all') {
+      const exclusiveVal = filters.isExclusive === 'exclusive';
+      filteredArray = filteredArray.filter((row) => !!row.isExclusive === exclusiveVal);
+    }
   }
 
   return filteredArray;
@@ -136,7 +140,8 @@ export default function Leads({ title = "Leads Management" }) {
     endDate: '',
     status: 'all',
     category: 'all',
-    type: 'all'
+    type: 'all',
+    isExclusive: 'all'
   });
 
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
@@ -148,6 +153,7 @@ export default function Leads({ title = "Leads Management" }) {
   const [importFile, setImportFile] = useState(null);
   const [importPreview, setImportPreview] = useState([]);
   const [isImportedLead, setIsImportedLead] = useState(false);
+  const [showExclusiveTip, setShowExclusiveTip] = useState(true);
 
   const [openBulkUploadModal, setOpenBulkUploadModal] = useState(false);
   const [bulkUploadFile, setBulkUploadFile] = useState(null);
@@ -162,7 +168,10 @@ export default function Leads({ title = "Leads Management" }) {
   const fetchData = useCallback(
     () => {
       setOpenBackdrop(true);
-      Promise.all([getLeads({ leadSource: 'telecalling' }), getImportedLeads()])
+      const query = auth.user?.userType?.toLowerCase() === 'telecalling' 
+        ? { leadSource: 'telecalling' } 
+        : {};
+      Promise.all([getLeads(query), getImportedLeads()])
         .then(([leadsRes, importedRes]) => {
           const normalLeads = leadsRes.data || [];
           const importedLeads = (importedRes.status && importedRes.data) ? importedRes.data.map(item => ({
@@ -523,6 +532,26 @@ export default function Leads({ title = "Leads Management" }) {
     }
   };
 
+  const handleMarkExclusive = () => {
+    const selectedRows = data.filter(item => selected.includes(item._id) && !item.isImported);
+    const ids = selectedRows.map(item => item._id);
+    if (ids.length === 0) return;
+    
+    setOpenBackdrop(true);
+    markLeadsExclusive({ ids, isExclusive: true }).then((res) => {
+      setOpenBackdrop(false);
+      if (res?.status) {
+        fetchData();
+        setSelected([]);
+        setNotify({
+          open: true,
+          message: 'Leads marked as exclusive',
+          severity: 'success',
+        });
+      }
+    });
+  };
+
   const handleDeleteSelected = () => {
     const selectedRows = data.filter(item => selected.includes(item._id));
     const normalIds = selectedRows.filter(item => !item.isImported).map(item => item._id);
@@ -632,6 +661,12 @@ export default function Leads({ title = "Leads Management" }) {
           </Stack>
         </Stack>
 
+        {showExclusiveTip && (
+          <MuiAlert severity="info" sx={{ mb: 3 }} onClose={() => setShowExclusiveTip(false)}>
+            <strong>Tip:</strong> To mark leads as exclusive, check the boxes next to the leads and click the star (⭐️) icon above the table.
+          </MuiAlert>
+        )}
+
         <Card>
           <LeadListToolbar
             numSelected={selected?.length}
@@ -641,6 +676,7 @@ export default function Leads({ title = "Leads Management" }) {
               setDeleteType('selected');
               handleOpenDeleteModal();
             }}
+            handleMarkExclusive={handleMarkExclusive}
             filterComponent={
               <LeadFilterSidebar
                 openFilter={openFilter}
@@ -691,7 +727,12 @@ export default function Leads({ title = "Leads Management" }) {
                             onClick={(e) => e.stopPropagation()}
                           />
                         </TableCell>
-                        <TableCell align="left">{name}</TableCell>
+                        <TableCell align="left">
+                          {row.isExclusive && (
+                            <Iconify icon="eva:star-fill" sx={{ color: 'warning.main', mr: 1, verticalAlign: 'text-bottom' }} />
+                          )}
+                          {name}
+                        </TableCell>
                         <TableCell align="left">{global.maskPhoneNumber(mobile)}</TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{category}</TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{type}</TableCell>

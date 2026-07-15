@@ -28,13 +28,14 @@ const StyledSearch = styled(OutlinedInput)(({ theme }) => ({
 
 LeadListToolbar.propTypes = {
   handleDelete: PropTypes.func,
+  handleMarkExclusive: PropTypes.func,
   numSelected: PropTypes.number,
   filterName: PropTypes.string,
   onFilterName: PropTypes.func,
   filterComponent: PropTypes.node,
 };
 
-export default function LeadListToolbar({ handleDelete, numSelected, filterName, onFilterName, filterComponent }) {
+export default function LeadListToolbar({ handleDelete, handleMarkExclusive, numSelected, filterName, onFilterName, filterComponent }) {
   return (
     <StyledRoot
       sx={{
@@ -64,11 +65,20 @@ export default function LeadListToolbar({ handleDelete, numSelected, filterName,
       <div style={{ display: 'flex', alignItems: 'center' }}>
         {filterComponent}
         {numSelected > 0 ? (
-          <Tooltip title="Delete">
-            <IconButton onClick={handleDelete} sx={{ ml: 1 }}>
-              <Iconify icon="eva:trash-2-fill" />
-            </IconButton>
-          </Tooltip>
+          <>
+            {handleMarkExclusive && (
+              <Tooltip title="Mark Exclusive">
+                <IconButton onClick={handleMarkExclusive} sx={{ ml: 1, color: 'warning.main' }}>
+                  <Iconify icon="eva:star-fill" />
+                </IconButton>
+              </Tooltip>
+            )}
+            <Tooltip title="Delete">
+              <IconButton onClick={handleDelete} sx={{ ml: 1 }}>
+                <Iconify icon="eva:trash-2-fill" />
+              </IconButton>
+            </Tooltip>
+          </>
         ) : null}
       </div>
     </StyledRoot>

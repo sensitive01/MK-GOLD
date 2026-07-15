@@ -63,4 +63,13 @@ async function getLeadStats() {
   }
 }
 
-export { getLeads, getLeadById, createLead, updateLead, deleteLeadById, addDisposition, getLeadStats };
+async function markLeadsExclusive(data) {
+  try {
+    const response = await apiClient().post('/api/v1.0/branch/lead/mark-exclusive', data);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+export { getLeads, getLeadById, createLead, updateLead, deleteLeadById, addDisposition, getLeadStats, markLeadsExclusive };

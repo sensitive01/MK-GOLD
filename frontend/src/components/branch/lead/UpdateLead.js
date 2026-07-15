@@ -213,7 +213,7 @@ function UpdateLead(props) {
           <Grid item xs={12} sm={4}>
             <TextField
               fullWidth
-              label="Place"
+              label="Landmark"
               name="place"
               value={formik.values.place}
               onBlur={formik.handleBlur}

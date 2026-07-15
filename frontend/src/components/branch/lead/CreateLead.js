@@ -186,7 +186,7 @@ function CreateLead(props) {
           <Grid item xs={12} sm={4}>
             <TextField
               fullWidth
-              label="Place"
+              label="Landmark"
               name="place"
               value={values.place}
               onBlur={handleBlur}

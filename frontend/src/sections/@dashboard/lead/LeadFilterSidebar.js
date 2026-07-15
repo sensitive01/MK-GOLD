@@ -21,6 +21,7 @@ import Scrollbar from '../../../components/scrollbar';
 export const STATUS_OPTIONS = ['all', 'pending', 'converted', 'rejected'];
 export const CATEGORY_OPTIONS = ['all', 'gold', 'silver'];
 export const TYPE_OPTIONS = ['all', 'physical', 'pledged'];
+export const EXCLUSIVE_OPTIONS = ['all', 'exclusive'];
 
 LeadFilterSidebar.propTypes = {
   openFilter: PropTypes.bool,
@@ -42,7 +43,8 @@ export default function LeadFilterSidebar({ openFilter, onOpenFilter, onCloseFil
       endDate: '',
       status: 'all',
       category: 'all',
-      type: 'all'
+      type: 'all',
+      isExclusive: 'all'
     });
   };
 
@@ -147,6 +149,25 @@ export default function LeadFilterSidebar({ openFilter, onOpenFilter, onCloseFil
                   {TYPE_OPTIONS.map((t) => (
                     <MenuItem key={t} value={t}>
                       {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </div>
+
+            <div>
+              <Typography variant="subtitle1" gutterBottom>
+                Exclusive Leads
+              </Typography>
+              <FormControl fullWidth size="small">
+                <Select
+                  name="isExclusive"
+                  value={filters.isExclusive || 'all'}
+                  onChange={handleChange}
+                >
+                  {EXCLUSIVE_OPTIONS.map((opt) => (
+                    <MenuItem key={opt} value={opt}>
+                      {opt === 'all' ? 'All Leads' : 'Exclusive Only'}
                     </MenuItem>
                   ))}
                 </Select>
