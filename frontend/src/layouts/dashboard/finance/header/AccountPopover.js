@@ -15,10 +15,12 @@ const MENU_OPTIONS = [
   {
     label: 'Profile',
     icon: 'eva:person-fill',
+    path: 'profile',
   },
   {
     label: 'Settings',
     icon: 'eva:settings-2-fill',
+    path: 'settings',
   },
 ];
 
@@ -92,7 +94,7 @@ export default function AccountPopover() {
 
         <Stack sx={{ p: 1 }}>
           {MENU_OPTIONS?.map((option) => (
-            <MenuItem key={option.label} onClick={handleClose}>
+            <MenuItem key={option.label} onClick={() => { handleClose(); if(option.path) navigate(option.path); }}>
               {option.label}
             </MenuItem>
           ))}

@@ -464,6 +464,8 @@ export default function AuditorMelting() {
                           <TableCell>Transit ID</TableCell>
                           <TableCell>Branch Name</TableCell>
                           <TableCell>Packets</TableCell>
+                          <TableCell>Ornaments</TableCell>
+                          <TableCell>Grams (Gross Wt)</TableCell>
                           <TableCell>Date</TableCell>
                         </TableRow>
                       </TableHead>
@@ -479,11 +481,13 @@ export default function AuditorMelting() {
                             <TableCell>{t.transitId}</TableCell>
                             <TableCell>{t.branch?.branchName || '-'}</TableCell>
                             <TableCell>{t.numberOfPackets}</TableCell>
+                            <TableCell>{t.numberOfOrnaments}</TableCell>
+                            <TableCell>{t.totalGrossWeight}</TableCell>
                             <TableCell>{moment(t.createdAt).format('YYYY-MM-DD')}</TableCell>
                           </TableRow>
                         ))}
                         {transits.length === 0 && (
-                          <TableRow><TableCell colSpan={5} align="center">No received transits found.</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={7} align="center">No received transits found.</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>

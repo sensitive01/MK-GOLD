@@ -14,11 +14,13 @@ const MENU_OPTIONS = [
   {
     label: 'Profile',
     icon: 'eva:person-fill',
+    path: 'profile',
     linkTo: '/telecalling/profile',
   },
   {
     label: 'Settings',
     icon: 'eva:settings-2-fill',
+    path: 'settings',
   },
 ];
 

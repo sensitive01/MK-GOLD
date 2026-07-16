@@ -23,6 +23,7 @@ import {
   Divider,
   Tabs,
   Tab,
+  IconButton,
 } from '@mui/material';
 import Customer from './Customer';
 import Iconify from '../../components/iconify';
@@ -53,6 +54,7 @@ export default function QREnquiry() {
   const [openLogModal, setOpenLogModal] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
   const [tabValue, setTabValue] = useState(0);
+  const [visiblePhoneId, setVisiblePhoneId] = useState(null);
 
   const handleOpenLogModal = (enquiry) => {
     setSelectedEnquiry(enquiry);
@@ -174,7 +176,17 @@ export default function QREnquiry() {
                             {enqID}
                           </TableCell>
                           <TableCell align="left">{name}</TableCell>
-                          <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
+                          <TableCell align="left">
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              {visiblePhoneId === _id ? phoneNumber : global.maskPhoneNumber(phoneNumber)}
+                              <IconButton size="small" onClick={(e) => {
+                                e.stopPropagation();
+                                setVisiblePhoneId(visiblePhoneId === _id ? null : _id);
+                              }} sx={{ ml: 1 }}>
+                                <Iconify icon={visiblePhoneId === _id ? 'eva:eye-off-fill' : 'eva:eye-fill'} />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
                           <TableCell align="left">{email}</TableCell>
                           <TableCell align="left" sx={{ textTransform: 'capitalize' }}>
                             {type}

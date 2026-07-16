@@ -19,7 +19,7 @@ import { LoadingButton } from '@mui/lab';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import moment from 'moment';
-import { getProfileApi, updateProfileApi } from '../../apis/auth';
+import { getProfileApi, updateProfileApi } from '../apis/auth';
 
 export default function Profile() {
   const [notify, setNotify] = useState({ open: false, message: '', severity: 'success' });

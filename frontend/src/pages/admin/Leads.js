@@ -105,6 +105,7 @@ export default function Leads({ title = "Leads Management" }) {
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
+  const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
   const [selected, setSelected] = useState([]);
@@ -573,7 +574,17 @@ export default function Leads({ title = "Leads Management" }) {
                           )}
                           {name}
                         </TableCell>
-                        <TableCell align="left">{global.maskPhoneNumber(mobile)}</TableCell>
+                        <TableCell align="left">
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            {visiblePhoneId === _id ? mobile : global.maskPhoneNumber(mobile)}
+                            <IconButton size="small" onClick={(e) => {
+                              e.stopPropagation();
+                              setVisiblePhoneId(visiblePhoneId === _id ? null : _id);
+                            }} sx={{ ml: 1 }}>
+                              <Iconify icon={visiblePhoneId === _id ? 'eva:eye-off-fill' : 'eva:eye-fill'} />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{category}</TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{type}</TableCell>
                         <TableCell align="left">

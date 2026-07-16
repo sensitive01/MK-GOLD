@@ -6,6 +6,7 @@ import { Box, Container, Tab, Tabs, Typography, Card } from '@mui/material';
 import EmployeeDetails from './EmployeeDetails';
 import Attendance from './Attendance';
 import Leave from './Leave';
+import Payprocess from './Payprocess';
 
 // ----------------------------------------------------------------------
 
@@ -61,6 +62,7 @@ export default function Employee() {
               <Tab label="Employee Details" {...a11yProps(0)} />
               <Tab label="Attendance" {...a11yProps(1)} />
               <Tab label="Leaves" {...a11yProps(2)} />
+              <Tab label="Payprocess" {...a11yProps(3)} />
             </Tabs>
           </Box>
         </Card>
@@ -73,6 +75,9 @@ export default function Employee() {
         </CustomTabPanel>
         <CustomTabPanel value={value} index={2}>
           <Leave />
+        </CustomTabPanel>
+        <CustomTabPanel value={value} index={3}>
+          <Payprocess />
         </CustomTabPanel>
 
       </Container>

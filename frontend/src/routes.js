@@ -57,7 +57,7 @@ import FinanceDashboardLayout from './layouts/dashboard/finance';
 import FinanceDashboard from './pages/finance/Dashboard';
 import TelecallingDashboardLayout from './layouts/dashboard/telecalling';
 import TelecallingDashboard from './pages/telecalling/Dashboard';
-import TelecallingProfile from './pages/telecalling/Profile';
+import Profile from './pages/Profile';
 
 import TransactionExecutiveDashboardLayout from './layouts/dashboard/transaction_executive';
 import TransactionExecutiveDashboard from './pages/transaction_executive/Dashboard';
@@ -70,6 +70,7 @@ import HrLeave from './pages/hr/Leave';
 import HrAttendance from './pages/hr/Attendance';
 import HrEmployee from './pages/hr/Employee';
 import HrPayprocess from './pages/hr/Payprocess';
+import HrLeads from './pages/hr/Leads';
 import AccountsDashboardLayout from './layouts/dashboard/accounts';
 import AccountsDashboard from './pages/accounts/Dashboard';
 import AccountsGoldRate from './pages/accounts/GoldRate';
@@ -141,6 +142,7 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/admin/dashboard" />, index: true },
         { path: 'dashboard', element: <AdminDashboard /> },
         { path: 'gold-rate', element: <AdminGoldRate /> },
@@ -189,6 +191,7 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/hr/dashboard" />, index: true },
         { path: 'dashboard', element: <HrDashboard /> },
         { path: 'branch', element: <HrBranch /> },
@@ -197,6 +200,7 @@ export default function Router() {
         { path: 'attendance', element: <HrAttendance /> },
         { path: 'employee', element: <HrEmployee /> },
         { path: 'payprocess', element: <HrPayprocess /> },
+        { path: 'leads', element: <HrLeads /> },
       ],
     },
     {
@@ -207,6 +211,7 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/accounts/dashboard" />, index: true },
         { path: 'dashboard', element: <AccountsDashboard /> },
         { path: 'gold-rate', element: <AccountsGoldRate /> },
@@ -227,6 +232,7 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/branch/dashboard" />, index: true },
         { path: 'dashboard', element: <BranchDashboard /> },
         { path: 'fund', element: <BranchFund /> },
@@ -253,6 +259,7 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/bullion-desk/dashboard" />, index: true },
         { path: 'dashboard', element: <BranchDashboard /> },
         { path: 'sale', element: <BranchSale /> },
@@ -268,6 +275,7 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/master/dashboard" />, index: true },
         { path: 'dashboard', element: <MasterDashboard /> },
       ],
@@ -280,6 +288,7 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/auditor/dashboard" />, index: true },
         { path: 'dashboard', element: <AuditorDashboard /> },
         { path: 'gold-rate', element: <AuditorGoldRate /> },
@@ -300,6 +309,7 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/operations/dashboard" />, index: true },
         { path: 'dashboard', element: <OperationsDashboard /> },
         { path: 'leave', element: <BranchLeave /> },
@@ -314,6 +324,7 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/melting/dashboard" />, index: true },
         { path: 'dashboard', element: <MeltingDashboard /> },
         { path: 'transit', element: <AdminTransit /> },
@@ -333,6 +344,7 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/finance/dashboard" />, index: true },
         { path: 'dashboard', element: <FinanceDashboard /> },
         { path: 'gold-rate', element: <AccountsGoldRate /> },
@@ -353,12 +365,13 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/telecalling/dashboard" />, index: true },
         { path: 'dashboard', element: <TelecallingDashboard /> },
         { path: 'leads', element: <BranchLeads /> },
         { path: 'attendance', element: <BranchAttendance /> },
         { path: 'leaves', element: <BranchLeave /> },
-        { path: 'profile', element: <TelecallingProfile /> },
+        
       ],
     },
     {
@@ -369,6 +382,7 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/transaction-executive/dashboard" />, index: true },
         { path: 'dashboard', element: <TransactionExecutiveDashboard /> },
         { path: 'fund', element: <BranchFund /> },
@@ -386,6 +400,7 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/marketing/dashboard" />, index: true },
         { path: 'dashboard', element: <MarketingDashboard /> },
         { path: 'attendance', element: <MarketingAttendance /> },
@@ -407,6 +422,7 @@ export default function Router() {
         </Protected>
       ),
       children: [
+        { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/admin-desk/dashboard" />, index: true },
         { path: 'dashboard', element: <AdminDeskDashboard /> },
         { path: 'attendance', element: <AdminDeskAttendance /> },
@@ -433,6 +449,7 @@ export default function Router() {
     {
       element: <ErrorPageLayout />,
       children: [
+        { path: 'profile', element: <Profile /> },
         { path: '404', element: <Page404 /> },
         { path: '*', element: <Navigate to="/404" /> },
       ],

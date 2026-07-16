@@ -22,6 +22,7 @@ import {
   Grid,
   FormControl,
   TextField,
+  IconButton,
 } from '@mui/material';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
@@ -32,7 +33,7 @@ import moment from 'moment';
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
 import global from '../../utils/global';
-import { getQrEnquiries } from '../../apis/admin/qrEnquiry';
+import { getQrEnquiries } from '../../apis/branch/qrEnquiry';
 import { ListHead } from '../../sections/@dashboard/report';
 
 const TABLE_HEAD = [
@@ -55,6 +56,7 @@ export default function QREnquiry() {
   const [openLogModal, setOpenLogModal] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const form = useRef();
 
   // Form validation
@@ -170,7 +172,17 @@ export default function QREnquiry() {
                           {enqID}
                         </TableCell>
                         <TableCell align="left">{name}</TableCell>
-                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
+                        <TableCell align="left">
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            {visiblePhoneId === _id ? phoneNumber : global.maskPhoneNumber(phoneNumber)}
+                            <IconButton size="small" onClick={(e) => {
+                              e.stopPropagation();
+                              setVisiblePhoneId(visiblePhoneId === _id ? null : _id);
+                            }} sx={{ ml: 1 }}>
+                              <Iconify icon={visiblePhoneId === _id ? 'eva:eye-off-fill' : 'eva:eye-fill'} />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
                         <TableCell align="left">{email}</TableCell>
                         <TableCell align="left">{branch?.branchName}</TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>

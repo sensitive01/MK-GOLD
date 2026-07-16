@@ -27,14 +27,14 @@ const navConfig = [
     icon: icon('ic_user'),
   },
   {
+    title: 'Leads',
+    path: '/hr/leads',
+    icon: icon('ic_analytics'),
+  },
+  {
     title: 'user',
     path: '/hr/user',
     icon: icon('ic_user'),
-  },
-  {
-    title: 'Payprocess',
-    path: '/hr/payprocess',
-    icon: <MonetizationOnIcon sx={{ width: 1, height: 1 }} />,
   },
 ];
 

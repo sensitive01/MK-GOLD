@@ -110,14 +110,7 @@ export default function User() {
     fetchData();
   }, [toggleContainer]);
 
-  const fetchData = (
-    query = {
-      createdAt: {
-        $gte: moment()?.format("YYYY-MM-DD"),
-        $lte: moment()?.format("YYYY-MM-DD"),
-      },
-    }
-  ) => {
+  const fetchData = (query = {}) => {
     getUser(query).then((data) => {
       setData(data.data);
       setOpenBackdrop(false);

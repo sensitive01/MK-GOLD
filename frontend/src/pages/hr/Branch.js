@@ -107,14 +107,7 @@ export default function Branch() {
     findData();
   }, [toggleContainer]);
 
-  const findData = (
-    query = {
-      createdAt: {
-        $gte: moment()?.format("YYYY-MM-DD"),
-        $lte: moment()?.format("YYYY-MM-DD"),
-      },
-    }
-  ) => {
+  const findData = (query = {}) => {
     getBranch(query).then((data) => {
       setData(data.data);
       setOpenBackdrop(false);
