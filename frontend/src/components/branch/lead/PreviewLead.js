@@ -22,6 +22,7 @@ import {
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { getLeadById, addDisposition } from '../../../apis/branch/lead';
 import { getBranch } from '../../../apis/branch/branch';
 import global from '../../../utils/global';
@@ -54,10 +55,13 @@ const modalStyle = {
 };
 
 function PreviewLead(props) {
+  const auth = useSelector((state) => state.auth);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [addingLog, setAddingLog] = useState(false);
   const [openModal, setOpenModal] = useState(false);
+  const [viewLogModal, setViewLogModal] = useState(false);
+  const [selectedLog, setSelectedLog] = useState(null);
   const [branches, setBranches] = useState([]);
   const [logForm, setLogForm] = useState({
     status: '',
@@ -132,7 +136,7 @@ function PreviewLead(props) {
             Created: {moment(data.createdAt).format('LLLL')}
           </Typography>
         </Stack>
-        {data.leadSource !== 'marketing' && (
+        {auth?.user?.userType !== 'marketing' && (
           <Button
             variant="contained"
             onClick={() => setOpenModal(true)}
@@ -172,37 +176,38 @@ function PreviewLead(props) {
 
         <Grid item xs={12}><Divider /></Grid>
 
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={data.type === 'pledged' ? 2 : 3}>
           <Typography variant="subtitle2" sx={{ color: 'purple' }}>Category</Typography>
           <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>{data.category}</Typography>
         </Grid>
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={data.type === 'pledged' ? 2 : 3}>
           <Typography variant="subtitle2" sx={{ color: 'purple' }}>Weight</Typography>
           <Typography variant="body1">{data.weight} {data.unit}</Typography>
         </Grid>
-        <Grid item xs={12} sm={3}>
+        <Grid item xs={12} sm={data.type === 'pledged' ? 2 : 3}>
           <Typography variant="subtitle2" sx={{ color: 'purple' }}>Type</Typography>
           <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>{data.type}</Typography>
         </Grid>
-        <Grid item xs={12} sm={3}>
-          <Typography variant="subtitle2" sx={{ color: 'purple' }}>Status</Typography>
-          <Box sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: data.status === 'pending' ? 'warning.main' : data.status === 'converted' ? 'success.main' : 'error.main', color: '#fff', width: 'fit-content', textTransform: 'capitalize', mt: 1 }}>
-            {data.status}
-          </Box>
-        </Grid>
-
+        
         {data.type === 'pledged' && (
           <>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={2}>
               <Typography variant="subtitle2" sx={{ color: 'purple' }}>Overall Release Amount</Typography>
               <Typography variant="body1">{data.releaseAmount}</Typography>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={2}>
               <Typography variant="subtitle2" sx={{ color: 'purple' }}>Pledged Amount</Typography>
               <Typography variant="body1">{data.pledgedAmount}</Typography>
             </Grid>
           </>
         )}
+
+        <Grid item xs={12} sm={data.type === 'pledged' ? 2 : 3}>
+          <Typography variant="subtitle2" sx={{ color: 'purple' }}>Status</Typography>
+          <Box sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: data.status === 'pending' ? 'warning.main' : data.status === 'converted' ? 'success.main' : 'error.main', color: '#fff', width: 'fit-content', textTransform: 'capitalize', mt: 1 }}>
+            {data.status}
+          </Box>
+        </Grid>
 
         <Grid item xs={12}><Divider /></Grid>
 
@@ -223,63 +228,146 @@ function PreviewLead(props) {
           </Grid>
         )}
 
-        {data.leadSource !== 'marketing' && (
+        {auth?.user?.userType !== 'marketing' && (
           <Grid item xs={12}>
             <Divider sx={{ my: 4 }} />
             <Typography variant="h6" gutterBottom sx={{ color: '#000' }}>
-              Tele-Calling Logs History
-            </Typography>
-            
-            <TableContainer component={Paper}>
-              <Table size="small">
-                <TableHead sx={{ bgcolor: '#f0f0f0' }}>
-                  <TableRow>
-                    <TableCell>Date & Time</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Remark</TableCell>
-                    <TableCell>Attachment</TableCell>
-                    <TableCell>Done By</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {data.dispositions && data.dispositions?.length > 0 ? (
-                    data.dispositions?.slice().reverse()?.map((log, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{moment(log.createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>{log.status}</TableCell>
-                        <TableCell>
-                          {log.remark || '-'}
-                          {(log.status === 'Callback' || log.status === 'Planning to Visit') && (log.callbackDate || log.callbackTime) && (
-                            <div style={{ fontSize: '0.85em', color: 'gray', marginTop: '4px' }}>
-                              Date: {log.callbackDate || '-'} | Time: {log.callbackTime || '-'}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {log.attachment ? (
-                            <a href={log.attachment.startsWith('http') ? log.attachment : `${global.baseURL}/${log.attachment}`} target="_blank" rel="noreferrer">
-                              View
-                            </a>
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell>
-                          {log.createdBy?.employee
-                            ? `${log.createdBy.employee.name} (${log.createdBy.employee.employeeId})`
-                            : log.createdBy?.username || 'Self/System'}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} align="center">No call logs found</TableCell>
+            Tele-Calling Logs History
+          </Typography>
+          
+          <TableContainer component={Paper}>
+            <Table size="small">
+              <TableHead sx={{ bgcolor: '#f0f0f0' }}>
+                <TableRow>
+                  <TableCell>Date & Time</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Remark</TableCell>
+                  <TableCell>Attachment</TableCell>
+                  <TableCell>Done By</TableCell>
+                  <TableCell align="center">Action</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {data.dispositions && data.dispositions?.length > 0 ? (
+                  data.dispositions?.slice().reverse()?.map((log, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{moment(log.createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>{log.status}</TableCell>
+                      <TableCell>
+                        {log.remark || '-'}
+                        {(log.status === 'Callback' || log.status === 'Planning to Visit') && (log.callbackDate || log.callbackTime) && (
+                          <div style={{ fontSize: '0.85em', color: 'gray', marginTop: '4px' }}>
+                            Date: {log.callbackDate || '-'} | Time: {log.callbackTime || '-'}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {log.attachment ? (
+                          <a href={log.attachment.startsWith('http') ? log.attachment : `${global.baseURL}/${log.attachment}`} target="_blank" rel="noreferrer">
+                            View
+                          </a>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {log.createdBy?.employee
+                          ? `${log.createdBy.employee.name} (${log.createdBy.employee.employeeId})`
+                          : log.createdBy?.username || 'Self/System'}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => {
+                            setSelectedLog(log);
+                            setViewLogModal(true);
+                          }}
+                        >
+                          View
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Grid>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">No call logs found</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Grid>
         )}
       </Grid>
+
+      {/* View Log Details Modal */}
+      <Modal open={viewLogModal} onClose={() => { setViewLogModal(false); setSelectedLog(null); }}>
+        <Box sx={modalStyle}>
+          <Typography variant="h6" gutterBottom>Call Log Details</Typography>
+          {selectedLog && (
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="textSecondary">Date & Time</Typography>
+                <Typography variant="body1">{moment(selectedLog.createdAt).format('YYYY-MM-DD HH:mm:ss')}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="textSecondary">Status</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>{selectedLog.status}</Typography>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" color="textSecondary">Remark</Typography>
+                <Typography variant="body1">{selectedLog.remark || 'N/A'}</Typography>
+              </Grid>
+              
+              {(selectedLog.status === 'Callback' || selectedLog.status === 'Planning to Visit') && (selectedLog.callbackDate || selectedLog.callbackTime) && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="textSecondary">Follow-up / Visit Info</Typography>
+                  <Typography variant="body1">
+                    Date: {selectedLog.callbackDate || 'N/A'} | Time: {selectedLog.callbackTime || 'N/A'}
+                  </Typography>
+                </Grid>
+              )}
+
+              {(selectedLog.status === 'Branch Visit Confirmed' || selectedLog.status === 'Planning to Visit') && (selectedLog.branch || data.branch) && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="textSecondary">Branch Details</Typography>
+                  <Typography variant="body1">{
+                     branches.find(b => b._id === (selectedLog.branch || data.branch))?.branchName || (selectedLog.branch || data.branch)
+                  }</Typography>
+                </Grid>
+              )}
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="textSecondary">Done By</Typography>
+                <Typography variant="body1">
+                  {selectedLog.createdBy?.employee
+                    ? `${selectedLog.createdBy.employee.name} (${selectedLog.createdBy.employee.employeeId})`
+                    : selectedLog.createdBy?.username || 'Self/System'}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="textSecondary">Attachment</Typography>
+                <Typography variant="body1">
+                  {selectedLog.attachment ? (
+                    <a href={selectedLog.attachment.startsWith('http') ? selectedLog.attachment : `${global.baseURL}/${selectedLog.attachment}`} target="_blank" rel="noreferrer">
+                      View Attachment
+                    </a>
+                  ) : 'N/A'}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sx={{ mt: 2 }}>
+                <Stack direction="row" justifyContent="flex-end">
+                  <Button variant="contained" onClick={() => { setViewLogModal(false); setSelectedLog(null); }}>
+                    Close
+                  </Button>
+                </Stack>
+              </Grid>
+            </Grid>
+          )}
+        </Box>
+      </Modal>
 
       <Modal open={openModal} onClose={() => setOpenModal(false)}>
         <Box sx={modalStyle}>

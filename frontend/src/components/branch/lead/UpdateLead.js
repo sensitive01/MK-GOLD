@@ -302,19 +302,6 @@ function UpdateLead(props) {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Remarks"
-              name="remarks"
-              multiline
-              rows={2}
-              value={formik.values.remarks}
-              onBlur={formik.handleBlur}
-              onChange={formik.handleChange}
-            />
-          </Grid>
-
           {formik.values.type === 'pledged' && (
             <>
               <Grid item xs={12} sm={4}>
@@ -337,30 +324,46 @@ function UpdateLead(props) {
                   onChange={formik.handleChange}
                 />
               </Grid>
-              <Grid item xs={12}>
-                {currentImage && (
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Current Attachment
-                    </Typography>
-                    <img
-                      src={currentImage}
-                      alt="current attachment"
-                      style={{ width: '200px', borderRadius: '8px', border: '1px solid #ccc' }}
-                    />
-                  </Box>
-                )}
-                <Typography variant="subtitle2" gutterBottom>
-                  Updated Attachment (Leave blank to keep current)
-                </Typography>
-                <input
-                  type="file"
-                  onChange={(e) => setFile(e.target.files[0])}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}
-                />
-              </Grid>
             </>
           )}
+
+          {formik.values.type === 'pledged' && (
+            <Grid item xs={12}>
+              {currentImage && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Current Attachment
+                  </Typography>
+                  <img
+                    src={currentImage}
+                    alt="current attachment"
+                    style={{ width: '200px', borderRadius: '8px', border: '1px solid #ccc' }}
+                  />
+                </Box>
+              )}
+              <Typography variant="subtitle2" gutterBottom>
+                Updated Attachment (Leave blank to keep current)
+              </Typography>
+              <input
+                type="file"
+                onChange={(e) => setFile(e.target.files[0])}
+                style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}
+              />
+            </Grid>
+          )}
+
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Remarks"
+              name="remarks"
+              multiline
+              rows={2}
+              value={formik.values.remarks}
+              onBlur={formik.handleBlur}
+              onChange={formik.handleChange}
+            />
+          </Grid>
 
           <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
             <LoadingButton size="large" type="submit" variant="contained" sx={{ px: 8 }}>

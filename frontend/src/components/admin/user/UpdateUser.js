@@ -117,6 +117,10 @@ function UpdateUser(props) {
     if (values.userType === 'assistant_branch_manager') {
       return designation.includes('assistant branch manager');
     }
+
+    if (values.userType === 'telecalling') {
+      return designation.includes('tele');
+    }
     
     return designation.includes(label) || designation.includes(values.userType.toLowerCase().replace('_', ' '));
   });

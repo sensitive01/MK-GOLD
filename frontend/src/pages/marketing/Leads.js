@@ -534,15 +534,17 @@ export default function Leads({ title = "Leads Management" }) {
     const ids = selectedRows.map(item => item._id);
     if (ids.length === 0) return;
     
+    const isAllExclusive = selectedRows.every(item => item.isExclusive);
+    
     setOpenBackdrop(true);
-    markLeadsExclusive({ ids, isExclusive: true }).then((res) => {
+    markLeadsExclusive({ ids, isExclusive: !isAllExclusive }).then((res) => {
       setOpenBackdrop(false);
       if (res?.status) {
         fetchData();
         setSelected([]);
         setNotify({
           open: true,
-          message: 'Leads marked as exclusive',
+          message: isAllExclusive ? 'Leads unmarked as exclusive' : 'Leads marked as exclusive',
           severity: 'success',
         });
       }
@@ -674,6 +676,7 @@ export default function Leads({ title = "Leads Management" }) {
               handleOpenDeleteModal();
             }}
             handleMarkExclusive={handleMarkExclusive}
+            isAllExclusive={selected?.length > 0 && selected.every(id => data?.find(item => item._id === id)?.isExclusive)}
             filterComponent={
               <LeadFilterSidebar
                 openFilter={openFilter}

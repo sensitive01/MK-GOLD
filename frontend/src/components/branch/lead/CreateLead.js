@@ -274,19 +274,6 @@ function CreateLead(props) {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Remarks"
-              name="remarks"
-              multiline
-              rows={2}
-              value={values.remarks}
-              onBlur={handleBlur}
-              onChange={handleChange}
-            />
-          </Grid>
-
           {values.type === 'pledged' && (
             <>
               <Grid item xs={12} sm={4}>
@@ -309,19 +296,34 @@ function CreateLead(props) {
                   onChange={handleChange}
                 />
               </Grid>
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Attachment
-                </Typography>
-                <input
-                  type="file"
-                  onChange={(e) => setFile(e.target.files[0])}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}
-                />
-              </Grid>
             </>
           )}
 
+          {values.type === 'pledged' && (
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>
+                Attachment
+              </Typography>
+              <input
+                type="file"
+                onChange={(e) => setFile(e.target.files[0])}
+                style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}
+              />
+            </Grid>
+          )}
+
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Remarks"
+              name="remarks"
+              multiline
+              rows={2}
+              value={values.remarks}
+              onBlur={handleBlur}
+              onChange={handleChange}
+            />
+          </Grid>
           <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
             <LoadingButton size="large" type="submit" variant="contained" sx={{ px: 8 }}>
               Save Lead

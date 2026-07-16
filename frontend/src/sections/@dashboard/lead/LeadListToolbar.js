@@ -29,13 +29,14 @@ const StyledSearch = styled(OutlinedInput)(({ theme }) => ({
 LeadListToolbar.propTypes = {
   handleDelete: PropTypes.func,
   handleMarkExclusive: PropTypes.func,
+  isAllExclusive: PropTypes.bool,
   numSelected: PropTypes.number,
   filterName: PropTypes.string,
   onFilterName: PropTypes.func,
   filterComponent: PropTypes.node,
 };
 
-export default function LeadListToolbar({ handleDelete, handleMarkExclusive, numSelected, filterName, onFilterName, filterComponent }) {
+export default function LeadListToolbar({ handleDelete, handleMarkExclusive, isAllExclusive, numSelected, filterName, onFilterName, filterComponent }) {
   return (
     <StyledRoot
       sx={{
@@ -67,10 +68,12 @@ export default function LeadListToolbar({ handleDelete, handleMarkExclusive, num
         {numSelected > 0 ? (
           <>
             {handleMarkExclusive && (
-              <Tooltip title="Mark Exclusive">
-                <IconButton onClick={handleMarkExclusive} sx={{ ml: 1, color: 'warning.main' }}>
-                  <Iconify icon="eva:star-fill" />
-                </IconButton>
+              <Tooltip title={isAllExclusive ? "Unmark Exclusive" : "Mark Exclusive"}>
+                <span>
+                  <IconButton onClick={handleMarkExclusive} sx={{ ml: 1, color: 'warning.main' }}>
+                    <Iconify icon={isAllExclusive ? "eva:star-outline" : "eva:star-fill"} />
+                  </IconButton>
+                </span>
               </Tooltip>
             )}
             <Tooltip title="Delete">

@@ -7,7 +7,7 @@ import { useTheme } from '@mui/material/styles';
 
 // ----------------------------------------------------------------------
 
-const Logo = forwardRef(({ disabledLink = false, sx, ...other }, ref) => {
+const Logo = forwardRef(({ disabledLink = false, isLight = false, sx, ...other }, ref) => {
   // const theme = useTheme();
   // const PRIMARY_LIGHT = theme.palette.primary.light;
   // const PRIMARY_MAIN = theme.palette.primary.main;
@@ -28,14 +28,14 @@ const Logo = forwardRef(({ disabledLink = false, sx, ...other }, ref) => {
       ref={ref}
       component="div"
       sx={{
-        width: 40,
-        height: 40,
+        width: 120,
+        height: 50,
         display: 'inline-flex',
         ...sx,
       }}
       {...other}
     >
-      <img alt="Logo" src="/newLogo.jpeg" />
+      <img alt="Logo" src={isLight ? "/assets/icons/navbar/MK%20Gold%20Logo%20light.png" : "/newLogo.jpeg"} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'left' }} />
     </Box>
   );
 

@@ -134,6 +134,10 @@ async function getLeadStats(user = null) {
         // If user has no branch, look for leads with no branch
         query.branch = { $in: [null, undefined] };
       }
+    } else if (userType === "telecalling") {
+      query.leadSource = { $in: ["telecalling", "marketing"] };
+    } else if (userType === "marketing") {
+      query.leadSource = "marketing";
     }
 
     const totalLeads = await Lead.countDocuments(query);

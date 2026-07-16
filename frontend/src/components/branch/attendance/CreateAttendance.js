@@ -104,7 +104,7 @@ function CreateAttendance(props) {
             xs={12}
             sm={12}
             sx={{
-              display: (auth.user?.employee || localStorage.getItem('empId')) ? 'none' : 'block',
+              display: 'none',
             }}
           >
             <FormControl fullWidth error={touched.employee && errors.employee && true}>
@@ -133,6 +133,14 @@ function CreateAttendance(props) {
             </FormControl>
           </Grid>
 
+          {!values.employee && (
+            <Grid item xs={12}>
+              <div style={{ color: 'red', textAlign: 'center', marginBottom: '10px' }}>
+                Your account is not mapped to an employee profile. You cannot mark attendance.
+              </div>
+            </Grid>
+          )}
+
           <Grid item xs={12} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {img === null ? (
               <>
@@ -160,7 +168,7 @@ function CreateAttendance(props) {
             )}
           </Grid>
           <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-            <LoadingButton size="large" type="submit" variant="contained" sx={{ px: 8 }}>
+            <LoadingButton size="large" type="submit" variant="contained" sx={{ px: 8 }} disabled={!values.employee}>
               Save Attendance
             </LoadingButton>
           </Grid>

@@ -90,6 +90,10 @@ const leadSchema = new mongoose.Schema(
       {
         status: String,
         remark: String,
+        branch: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "branches",
+        },
         createdBy: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "users",
