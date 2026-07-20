@@ -11,6 +11,13 @@ async function find(query = {}, user = null) {
       userType === "branch_executive"
     ) {
       query.branch = user.branch?._id || user.branch;
+    } else if (userType === "telecalling") {
+      // Telecallers only see unclaimed leads, or leads they have specifically claimed
+      query.$or = [
+        { assignedTo: null },
+        { assignedTo: { $exists: false } },
+        { assignedTo: user._id }
+      ];
     }
 
     if (query.createdAt && "$gte" in query.createdAt) {
@@ -83,8 +90,12 @@ async function create(data) {
   }
 }
 
-async function update(id, data) {
+async function update(id, data, user = null) {
   try {
+    const lead = await Lead.findById(id);
+    if (user && user.userType?.toLowerCase() === 'telecalling' && !lead.assignedTo) {
+      data.assignedTo = user._id;
+    }
     return await Lead.findByIdAndUpdate(id, data, { new: true });
   } catch (err) {
     throw err;
@@ -102,12 +113,21 @@ async function remove(id) {
   }
 }
 
-async function addDisposition(id, payload) {
+async function addDisposition(id, payload, user = null) {
   try {
     const update = { $push: { dispositions: payload } };
     if ((payload.status === "Branch Visit Confirmed" || payload.status === "Planning to Visit") && payload.branch) {
       update.$set = { branch: payload.branch };
     }
+
+    if (user && user.userType?.toLowerCase() === 'telecalling') {
+      const lead = await Lead.findById(id);
+      if (!lead.assignedTo) {
+        if (!update.$set) update.$set = {};
+        update.$set.assignedTo = user._id;
+      }
+    }
+
     return await Lead.findByIdAndUpdate(
       id,
       update,
@@ -134,9 +154,14 @@ async function getLeadStats(user = null) {
         // If user has no branch, look for leads with no branch
         query.branch = { $in: [null, undefined] };
       }
-    } else if (userType === "telecalling") {
-      query.leadSource = { $in: ["telecalling", "marketing"] };
-    } else if (userType === "marketing") {
+      } else if (userType === "telecalling") {
+        query.leadSource = { $in: ["telecalling", "marketing"] };
+        query.$or = [
+          { assignedTo: null },
+          { assignedTo: { $exists: false } },
+          { assignedTo: user._id }
+        ];
+      } else if (userType === "marketing") {
       query.leadSource = "marketing";
     }
 
@@ -191,13 +216,15 @@ async function bulkCreate(leadsArray) {
   }
 }
 
-async function markExclusive(ids, isExclusive) {
+async function markExclusive(ids, isExclusive, user = null) {
   try {
     const idArray = Array.isArray(ids) ? ids : ids.split(",");
+    const updatePayload = { $set: { isExclusive: isExclusive } };
+
     return await Lead.updateMany(
       { _id: { $in: idArray } },
-      { $set: { isExclusive: isExclusive } }
-    );
+      updatePayload
+    ).exec();
   } catch (err) {
     throw err;
   }

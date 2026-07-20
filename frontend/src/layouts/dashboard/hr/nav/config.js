@@ -36,6 +36,11 @@ const navConfig = [
     path: '/hr/user',
     icon: icon('ic_user'),
   },
+  {
+    title: 'expenses',
+    path: '/hr/expense',
+    icon: <MonetizationOnIcon sx={{ width: 1, height: 1 }} />,
+  },
 ];
 
 export default navConfig;

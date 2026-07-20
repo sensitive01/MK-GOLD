@@ -75,6 +75,61 @@ export default function DashboardAppPage() {
             />
           </Grid>
 
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Female Employees"
+              total={count?.femaleEmployeeCount}
+              icon={'mdi:human-female'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Male Employees"
+              total={count?.maleEmployeeCount}
+              icon={'mdi:human-male'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Leaves Applied Today"
+              total={count?.leavesTodayCount}
+              icon={'mdi:calendar-remove'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Permissions Requested Today"
+              total={count?.permissionsTodayCount}
+              icon={'mdi:calendar-clock'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Expenses Today"
+              total={count?.expensesTodayCount}
+              icon={'mdi:cash'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+            />
+          </Grid>
+
           {/* <Grid item xs={12} md={6} lg={8}>
             <AppWebsiteVisits
               title="Website Visits"

@@ -188,7 +188,15 @@ async function consolidated(payload) {
     let toDate = new Date(salaryMonth);
     toDate.setMonth(salaryMonth.getMonth() + 1);
 
-    let employees = await Employee.aggregate([
+    const mongoose = require('mongoose');
+    let pipeline = [];
+    if (payload.employeeId) {
+      pipeline.push({
+        $match: { _id: new mongoose.Types.ObjectId(payload.employeeId) }
+      });
+    }
+
+    let employees = await Employee.aggregate(pipeline.concat([
       {
         $lookup: {
           from: "users",
@@ -211,6 +219,17 @@ async function consolidated(payload) {
           ],
           as: "user",
         },
+      },
+      {
+        $lookup: {
+          from: "branches",
+          localField: "branch",
+          foreignField: "_id",
+          as: "employeeBranch",
+        },
+      },
+      {
+        $unwind: { path: "$employeeBranch", preserveNullAndEmptyArrays: true },
       },
       {
         $lookup: {
@@ -396,8 +415,8 @@ async function consolidated(payload) {
           salary: 1,
           shiftEndTime: 1,
           shiftStartTime: 1,
-          branchId: "$user.branch.branchId",
-          branchName: "$user.branch.branchName",
+          branchId: { $ifNull: ["$employeeBranch.branchId", "$user.branch.branchId"] },
+          branchName: { $ifNull: ["$employeeBranch.branchName", "$user.branch.branchName"] },
           present: "$attendance.present",
           lateMins: "$attendance.lateMins",
           lateDays: "$attendance.lateDays",
@@ -407,7 +426,7 @@ async function consolidated(payload) {
           leave: "$leave.leave",
         },
       },
-    ]).exec();
+    ])).exec();
 
     let report = [];
     for (let e of employees) {

@@ -51,7 +51,7 @@ import Scrollbar from '../../components/scrollbar';
 import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashboard/attendance';
 // mock
 import { deleteAttendanceById, getAttendance } from '../../apis/admin/attendance';
-import { getBranchAttendanceStats } from '../../apis/branch/attendance';
+import { getBranchAttendanceStats, getConsolidatedAttendance } from '../../apis/branch/attendance';
 import CreateAttendance from '../../components/branch/attendance/CreateAttendance';
 import global from '../../utils/global';
 
@@ -102,7 +102,7 @@ export default function AuditorAttendance() {
   const [deleteType, setDeleteType] = useState('single');
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
-  
+  const [currentTab, setCurrentTab] = useState('all_attendance');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -134,6 +134,15 @@ export default function AuditorAttendance() {
           $lte: values.toDate?.format("YYYY-MM-DD"),
         },
       };
+      if (currentTab === 'consolidated_attendance') {
+        getConsolidatedAttendance({ date: values.fromDate?.format('YYYY-MM-DD') || moment().format('YYYY-MM-DD') }).then((res) => {
+          setData(res.data || []);
+          setOpenBackdrop(false);
+        });
+        setFilterOpen(false);
+        return;
+      }
+
       getAttendance(query).then((data) => {
         setData(data.data || []);
         setOpenBackdrop(false);
@@ -150,6 +159,14 @@ export default function AuditorAttendance() {
             $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
           };
       }
+      if (currentTab === 'consolidated_attendance') {
+        getConsolidatedAttendance({ date: values.fromDate?.format('YYYY-MM-DD') || moment().format('YYYY-MM-DD') }).then((res) => {
+          setData(res.data || []);
+          setOpenBackdrop(false);
+        });
+        return;
+      }
+
       getAttendance(query).then((data) => {
         setData(data.data || []);
         setOpenBackdrop(false);
@@ -160,7 +177,7 @@ export default function AuditorAttendance() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData, toggleContainer]);
+  }, [fetchData, toggleContainer, currentTab]);
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -254,7 +271,22 @@ export default function AuditorAttendance() {
     FileSaver.saveAs(data, `${fileName}.xlsx`);
   };
 
-  const TABLE_HEAD = [
+  const CONSOLIDATED_TABLE_HEAD = [
+    { id: 'employeeId', label: 'Employee Id', alignRight: false },
+    { id: 'employeeName', label: 'Employee Name', alignRight: false },
+    { id: 'branchName', label: 'Branch Name', alignRight: false },
+    { id: 'workingDays', label: 'Total Working Days', alignRight: false },
+    { id: 'present', label: 'Present Days', alignRight: false },
+    { id: 'absent', label: 'Absent Days', alignRight: false },
+    { id: 'lateDays', label: 'Total Late Days', alignRight: false },
+    { id: 'allowances', label: 'Total Allowances', alignRight: false },
+    { id: 'deductions', label: 'Total Deductions', alignRight: false },
+    { id: 'advance', label: 'Total Advances', alignRight: false },
+    { id: 'salary', label: 'Actual Salary', alignRight: false },
+    { id: 'payable', label: 'Total Payable', alignRight: false },
+  ];
+
+  const TABLE_HEAD = currentTab === 'consolidated_attendance' ? CONSOLIDATED_TABLE_HEAD : [
     { id: 'employeeId', label: 'Employee Id', alignRight: false },
     { id: 'employeeName', label: 'Employee Name', alignRight: false },
     { id: 'attendance', label: 'Photo', alignRight: false },
@@ -307,27 +339,46 @@ export default function AuditorAttendance() {
 
         <Card>
           <Box sx={{ width: '100%' }}>
-            
-            <Box sx={{ p: 3 }}>
-              <Button variant="contained" startIcon={<Iconify icon="material-symbols:filter-alt-off" />} onClick={() => setFilterOpen(true)} sx={{ float: 'right', mx: '10px' }}>
-                Filter
-              </Button>
-              <Button variant="contained" startIcon={<Iconify icon="carbon:document-export" />} onClick={() => {
-                handleExport(data?.map(e => ({ EmployeeId: e?.employee?.employeeId, EmployeeName: e?.employee?.name, Date: e.createdAt })), 'Attendance');
-              }} sx={{ float: 'right' }}>
-                Export
-              </Button>
-
+            <Tabs
+              value={currentTab}
+              onChange={(event, newValue) => setCurrentTab(newValue)}
+              sx={{
+                '& .MuiTab-root': { color: 'white', opacity: 0.7 },
+                '& .Mui-selected': { color: 'white !important', opacity: 1 },
+                '& .MuiTabs-indicator': { backgroundColor: 'white' },
+                bgcolor: 'primary.main',
+                px: 2,
+                borderRadius: '8px 8px 0 0',
+              }}
+            >
+              <Tab value="all_attendance" label="All Attendance" />
+              <Tab value="consolidated_attendance" label="My Consolidated Attendance" />
+            </Tabs>
+            <Box sx={{ p: 3, pb: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <p style={{ color: '#fff' }}>
                 From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date: {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
               </p>
+              <div>
+                <Button variant="contained" startIcon={<Iconify icon="material-symbols:filter-alt-off" />} onClick={() => setFilterOpen(true)} sx={{ mx: '10px' }}>
+                  Filter
+                </Button>
+                <Button variant="contained" startIcon={<Iconify icon="carbon:document-export" />} onClick={() => {
+                  handleExport(data?.map(e => ({ EmployeeId: e?.employee?.employeeId, EmployeeName: e?.employee?.name, Date: e.createdAt })), 'Attendance');
+                }}>
+                  Export
+                </Button>
+              </div>
+            </Box>
 
-              <AttendanceListToolbar
-                numSelected={selected?.length}
-                filterName={filterName}
-                onFilterName={handleFilterByName}
-                handleDelete={() => { setDeleteType('selected'); handleOpenDeleteModal(); }}
-              />
+            <Box sx={{ p: 3 }}>
+              {currentTab !== 'consolidated_attendance' && (
+                <AttendanceListToolbar
+                  numSelected={selected?.length}
+                  filterName={filterName}
+                  onFilterName={handleFilterByName}
+                  handleDelete={() => { setDeleteType('selected'); handleOpenDeleteModal(); }}
+                />
+              )}
 
               <Scrollbar>
                 <TableContainer>
@@ -340,9 +391,29 @@ export default function AuditorAttendance() {
                       numSelected={selected?.length}
                       onRequestSort={handleRequestSort}
                       onSelectAllClick={handleSelectAllClick}
+                      checkboxSelection={currentTab !== 'consolidated_attendance'}
                     />
                     <TableBody>
-                      {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
+                      {currentTab === 'consolidated_attendance' && filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row, index) => {
+                        const { employee, present, absent, workingDays, lateDays, salary, payable, allowances, deductions, advance } = row;
+                        return (
+                          <TableRow hover key={index} tabIndex={-1}>
+                            <TableCell align="left">{employee?.employeeId}</TableCell>
+                            <TableCell align="left">{employee?.name}</TableCell>
+                            <TableCell align="left">{employee?.branchName || ''}</TableCell>
+                            <TableCell align="left">{workingDays}</TableCell>
+                            <TableCell align="left">{present}</TableCell>
+                            <TableCell align="left">{absent}</TableCell>
+                            <TableCell align="left">{lateDays}</TableCell>
+                            <TableCell align="left">₹{allowances}</TableCell>
+                            <TableCell align="left">₹{deductions}</TableCell>
+                            <TableCell align="left">₹{advance}</TableCell>
+                            <TableCell align="left">₹{salary}</TableCell>
+                            <TableCell align="left">₹{payable}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {currentTab !== 'consolidated_attendance' && filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
                         const { _id, employee, attendance, createdAt } = row;
                         const selectedData = selected.indexOf(_id) !== -1;
                         return (

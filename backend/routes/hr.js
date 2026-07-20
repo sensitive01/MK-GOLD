@@ -11,6 +11,7 @@ const leave = require("../controllers/hr/leave");
 const fileUpload = require("../controllers/hr/fileupload");
 const attendance = require("../controllers/hr/attendance");
 const payprocess = require("../controllers/hr/payprocess");
+const expense = require("../controllers/hr/expense");
 const { isHr } = require("../middlewares/authorization");
 const multer = require("../config/multer");
 
@@ -80,6 +81,13 @@ hrRouter.post("/file-upload/delete/:id", fileUpload.remove);
 
 hrRouter.get("/profile", profile.get);
 hrRouter.post("/profile/change-password", profile.changePassword);
+
+hrRouter.get("/expense/get", expense.find);
+hrRouter.post("/expense/get", expense.find);
+hrRouter.get("/expense/get/:id", expense.findById);
+hrRouter.post("/expense/create", expense.create);
+hrRouter.post("/expense/update/:id", expense.update);
+hrRouter.post("/expense/delete/:id", expense.remove);
 
 router.use(
   function (req, res, next) {

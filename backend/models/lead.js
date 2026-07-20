@@ -118,6 +118,10 @@ const leadSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users",
+    },
   },
   { timestamps: true }
 );

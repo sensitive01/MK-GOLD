@@ -48,7 +48,7 @@ import Scrollbar from '../../components/scrollbar';
 // sections
 import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashboard/attendance';
 // mock
-import { deleteAttendanceById, getAttendance, getBranchAttendanceStats, updateAttendance } from '../../apis/branch/attendance';
+import { deleteAttendanceById, getAttendance, getBranchAttendanceStats, updateAttendance, getConsolidatedAttendance } from '../../apis/branch/attendance';
 import global from '../../utils/global';
 
 // ----------------------------------------------------------------------
@@ -154,6 +154,15 @@ export default function MarketingAttendance() {
           $lte: values.toDate?.format("YYYY-MM-DD"),
         },
       };
+      if (currentTab === 'consolidated_attendance') {
+        getConsolidatedAttendance({ date: values.fromDate?.format('YYYY-MM-DD') || moment().format('YYYY-MM-DD') }).then((res) => {
+          setData(res.data || []);
+          setOpenBackdrop(false);
+        });
+        setFilterOpen(false);
+        return;
+      }
+      
       if (currentTab === 'my_attendance') {
         const empId = auth.user.employee?._id || auth.user.employee;
         if (!empId) {
@@ -175,6 +184,14 @@ export default function MarketingAttendance() {
   const fetchData = useCallback(
     (query = {}) => {
       let statsEmpId = null;
+      if (currentTab === 'consolidated_attendance') {
+        getConsolidatedAttendance({ date: values.fromDate?.format('YYYY-MM-DD') || moment().format('YYYY-MM-DD') }).then((res) => {
+          setData(res.data || []);
+          setOpenBackdrop(false);
+        });
+        return;
+      }
+
       if (currentTab === 'my_attendance') {
         const empId = auth.user.employee?._id || auth.user.employee;
         if (!empId) {
@@ -298,7 +315,22 @@ export default function MarketingAttendance() {
     });
   };
 
-  const TABLE_HEAD = [
+  const CONSOLIDATED_TABLE_HEAD = [
+    { id: 'employeeId', label: 'Employee Id', alignRight: false },
+    { id: 'employeeName', label: 'Employee Name', alignRight: false },
+    { id: 'branchName', label: 'Branch Name', alignRight: false },
+    { id: 'workingDays', label: 'Total Working Days', alignRight: false },
+    { id: 'present', label: 'Present Days', alignRight: false },
+    { id: 'absent', label: 'Absent Days', alignRight: false },
+    { id: 'lateDays', label: 'Total Late Days', alignRight: false },
+    { id: 'allowances', label: 'Total Allowances', alignRight: false },
+    { id: 'deductions', label: 'Total Deductions', alignRight: false },
+    { id: 'advance', label: 'Total Advances', alignRight: false },
+    { id: 'salary', label: 'Actual Salary', alignRight: false },
+    { id: 'payable', label: 'Total Payable', alignRight: false },
+  ];
+
+  const TABLE_HEAD = currentTab === 'consolidated_attendance' ? CONSOLIDATED_TABLE_HEAD : [
     ...(currentTab === 'all_attendance' ? [
         { id: 'employeeId', label: 'Employee Id', alignRight: false },
         { id: 'employeeName', label: 'Employee Name', alignRight: false },
@@ -386,6 +418,7 @@ export default function MarketingAttendance() {
           >
             {(isManager || isHRAdmin) && <Tab value="all_attendance" label="All Attendance" />}
             <Tab value="my_attendance" label="My Attendance" />
+            <Tab value="consolidated_attendance" label="Consolidated Attendance" />
           </Tabs>
         </Box>
 
@@ -461,7 +494,27 @@ export default function MarketingAttendance() {
                   onSelectAllClick={handleSelectAllClick}
                 />
                 <TableBody>
-                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
+                  {currentTab === 'consolidated_attendance' && filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row, index) => {
+                    const { employee, present, absent, workingDays, lateDays, salary, payable, allowances, deductions, advance } = row;
+                    return (
+                      <TableRow hover key={index} tabIndex={-1}>
+                        <TableCell padding="checkbox"></TableCell>
+                        <TableCell align="left">{employee?.employeeId}</TableCell>
+                        <TableCell align="left">{employee?.name}</TableCell>
+                        <TableCell align="left">{employee?.branchName || ''}</TableCell>
+                        <TableCell align="left">{workingDays}</TableCell>
+                        <TableCell align="left">{present}</TableCell>
+                        <TableCell align="left">{absent}</TableCell>
+                        <TableCell align="left">{lateDays}</TableCell>
+                        <TableCell align="left">₹{allowances}</TableCell>
+                        <TableCell align="left">₹{deductions}</TableCell>
+                        <TableCell align="left">₹{advance}</TableCell>
+                        <TableCell align="left">₹{salary}</TableCell>
+                        <TableCell align="left">₹{payable}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {currentTab !== 'consolidated_attendance' && filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
                     const { _id, employee, attendance, createdAt, loginTime, logoutTime } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 

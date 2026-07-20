@@ -17,11 +17,7 @@ const MENU_OPTIONS = [
     path: 'profile',
     linkTo: '/telecalling/profile',
   },
-  {
-    label: 'Settings',
-    icon: 'eva:settings-2-fill',
-    path: 'settings',
-  },
+  
 ];
 
 // ----------------------------------------------------------------------

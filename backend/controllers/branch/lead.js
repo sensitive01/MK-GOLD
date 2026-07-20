@@ -43,7 +43,7 @@ async function create(req, res) {
 
 async function update(req, res) {
   try {
-    const data = await leadService.update(req.params.id, req.body);
+    const data = await leadService.update(req.params.id, req.body, req.user);
     res.json({ status: true, message: "Lead updated successfully!", data });
   } catch (err) {
     res.json({ status: false, message: err.message, data: {} });
@@ -71,7 +71,7 @@ async function addDisposition(req, res) {
     if (req.file) {
       req.body.attachment = req.file.path;
     }
-    const data = await leadService.addDisposition(req.params.id, req.body);
+    const data = await leadService.addDisposition(req.params.id, req.body, req.user);
     res.json({ status: true, message: "Call log added successfully!", data });
   } catch (err) {
     res.json({ status: false, message: err.message, data: {} });
@@ -131,7 +131,7 @@ async function markExclusive(req, res) {
     if (!ids || ids.length === 0) {
       return res.json({ status: false, message: "No leads selected", data: {} });
     }
-    const data = await leadService.markExclusive(ids, isExclusive);
+    const data = await leadService.markExclusive(ids, isExclusive, req.user);
     res.json({ status: true, message: "Leads exclusivity updated successfully!", data });
   } catch (err) {
     res.json({ status: false, message: err.message, data: {} });

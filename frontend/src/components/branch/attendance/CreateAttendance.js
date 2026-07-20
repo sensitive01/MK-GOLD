@@ -39,7 +39,7 @@ function CreateAttendance(props) {
 
   const { handleSubmit, handleChange, handleBlur, values, touched, errors, setValues, resetForm } = useFormik({
     initialValues: {
-      employee: auth.user?.employee?._id || auth.user?.employee || localStorage.getItem('empId') || '',
+      employee: auth.user?.employee?._id || auth.user?.employee || localStorage.getItem('empId') || (auth.user?.userType !== 'admin' ? auth.user?._id : ''),
     },
     validationSchema: schema,
     onSubmit: (values) => {
@@ -104,7 +104,7 @@ function CreateAttendance(props) {
             xs={12}
             sm={12}
             sx={{
-              display: 'none',
+              display: ((!auth.user?.employee && !localStorage.getItem('empId')) && auth.user?.userType === 'admin') ? 'block' : 'none',
             }}
           >
             <FormControl fullWidth error={touched.employee && errors.employee && true}>
@@ -136,7 +136,7 @@ function CreateAttendance(props) {
           {!values.employee && (
             <Grid item xs={12}>
               <div style={{ color: 'red', textAlign: 'center', marginBottom: '10px' }}>
-                Your account is not mapped to an employee profile. You cannot mark attendance.
+                Please select an employee to mark attendance.
               </div>
             </Grid>
           )}

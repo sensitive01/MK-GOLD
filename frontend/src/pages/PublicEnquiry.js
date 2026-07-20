@@ -287,14 +287,13 @@ export default function PublicEnquiry() {
             </Typography>
             <Box
               component="img"
-              src="/newLogo.jpeg"
+              src="/assets/icons/navbar/MK%20Gold%20Logo%20light.png"
               alt="Logo"
               sx={{
                 width: 200,
                 mx: 'auto',
                 borderRadius: 2,
                 boxShadow: (theme) => theme.customShadows.z24,
-                border: '4px solid #FFD700',
               }}
             />
             <Typography variant="h6" sx={{ mt: 5, color: '#FFD700', fontWeight: 'bold' }}>
@@ -359,17 +358,15 @@ export default function PublicEnquiry() {
               ) : (
                 <>
                   <Box
-                    component="div"
+                    component="img"
+                    src="/assets/icons/navbar/MK%20Gold%20Logo.png"
+                    alt="Logo"
                     sx={{
-                    width: 80,
-                    height: 80,
-                    display: 'inline-flex',
-                    mx: 'auto',
-                    mb: 2,
+                      width: 180,
+                      mx: 'auto',
+                      mb: 2,
                     }}
-                   >
-                    <img alt="Logo" src="/newLogo.jpeg" style={{ borderRadius: '8px' }} />
-                  </Box>
+                  />
 
                   <Typography variant="h4" gutterBottom sx={{ mb: 1, color: '#8A1B9F', fontWeight: 'bold' }}>
                     {branch.branchName}

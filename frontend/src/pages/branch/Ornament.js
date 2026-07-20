@@ -574,7 +574,7 @@ function Print({ data }) {
       <div id="pdf" style={{ color: 'white' }}>
         <img
           alt="Logo"
-          src="/newLogo.jpeg"
+          src="/assets/icons/navbar/MK%20Gold%20Logo.png"
           style={{ width: '100px', display: 'block', margin: '20px auto', borderRadius: '50%' }}
         />
         <div style={{ display: 'block', textAlign: 'center', margin: '10px auto' }}>

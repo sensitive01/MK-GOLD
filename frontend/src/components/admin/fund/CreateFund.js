@@ -107,10 +107,10 @@ function CreateFund(props) {
                       });
                       return;
                     }
-                    setFieldValue('from', headOffice?._id);
-                    setFieldValue('to', branch?._id);
+                    setFieldValue('from', headOffice?._id || '');
+                    setFieldValue('to', branch?._id || '');
                   } else {
-                    setFieldValue('from', branch?._id);
+                    setFieldValue('from', branch?._id || '');
                     setFieldValue('to', '');
                   }
                   handleChange(e);

@@ -71,6 +71,7 @@ import HrAttendance from './pages/hr/Attendance';
 import HrEmployee from './pages/hr/Employee';
 import HrPayprocess from './pages/hr/Payprocess';
 import HrLeads from './pages/hr/Leads';
+import HrExpense from './pages/hr/Expense';
 import AccountsDashboardLayout from './layouts/dashboard/accounts';
 import AccountsDashboard from './pages/accounts/Dashboard';
 import AccountsGoldRate from './pages/accounts/GoldRate';
@@ -201,6 +202,7 @@ export default function Router() {
         { path: 'employee', element: <HrEmployee /> },
         { path: 'payprocess', element: <HrPayprocess /> },
         { path: 'leads', element: <HrLeads /> },
+        { path: 'expense', element: <HrExpense /> },
       ],
     },
     {

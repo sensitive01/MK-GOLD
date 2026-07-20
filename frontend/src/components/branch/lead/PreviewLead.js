@@ -40,6 +40,10 @@ const DISPOSITIONS = [
   'Branch Visit Confirmed',
   'Callback',
   'Planning to Visit',
+  'Sold outside',
+  'Price issues',
+  'Release Not feasible',
+  'Location Not feasible',
 ];
 
 const modalStyle = {

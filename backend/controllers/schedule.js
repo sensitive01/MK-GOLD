@@ -54,6 +54,10 @@ const updateSchedule = async (req, res) => {
       }
     }
 
+    if (req.body.status && req.user?.userType !== 'admin') {
+      return res.status(403).json({ status: false, message: "Only admin can approve or reject schedule" });
+    }
+
     const { id } = req.params;
     const schedule = await Schedule.findByIdAndUpdate(id, req.body, { new: true });
     if (!schedule) {

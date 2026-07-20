@@ -35,7 +35,7 @@ const Logo = forwardRef(({ disabledLink = false, isLight = false, sx, ...other }
       }}
       {...other}
     >
-      <img alt="Logo" src={isLight ? "/assets/icons/navbar/MK%20Gold%20Logo%20light.png" : "/newLogo.jpeg"} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'left' }} />
+      <img alt="Logo" src={isLight ? "/assets/icons/navbar/MK%20Gold%20Logo%20light.png" : "/assets/icons/navbar/MK%20Gold%20Logo.png"} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'left' }} />
     </Box>
   );
 

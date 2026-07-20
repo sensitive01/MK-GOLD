@@ -1,0 +1,1 @@
+const mongoose = require('mongoose'); const employeeService = require('./services/employee'); mongoose.connect('mongodb://127.0.0.1:27017/mkgold').then(async () => { console.log(await employeeService.count({})); process.exit(0); });

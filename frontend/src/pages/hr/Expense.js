@@ -1,7 +1,7 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
-import { forwardRef, useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { forwardRef, useEffect, useRef, useState, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
@@ -10,9 +10,10 @@ import {
     Button,
     Card,
     Checkbox,
-    Chip,
     CircularProgress,
     Container,
+    FormControl,
+    Grid,
     IconButton,
     MenuItem,
     Modal,
@@ -24,11 +25,9 @@ import {
     TableBody,
     TableCell,
     TableContainer,
-    TableHead,
     TablePagination,
     TableRow,
-    Tabs,
-    Tab,
+    TextField,
     Typography,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
@@ -36,21 +35,19 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import moment from 'moment';
-// components
-import { CreateLeave, UpdateLeave } from '../../components/branch/leave';
-import Iconify from '../../components/iconify';
-import Label from '../../components/label';
-import Scrollbar from '../../components/scrollbar';
-// sections
-import { LeaveListHead, LeaveListToolbar } from '../../sections/@dashboard/leave';
-// mock
-import { deleteLeaveById, getLeave, updateLeave } from '../../apis/branch/leave';
-import global from '../../utils/global';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 
-// ----------------------------------------------------------------------
-
-
+const TABLE_HEAD = [
+  { id: 'amount', label: 'Amount', alignRight: false },
+  { id: 'branchId', label: 'Branch Id', alignRight: false },
+  { id: 'branchName', label: 'Branch Name', alignRight: false },
+  { id: 'note', label: 'Note', alignRight: false },
+  { id: 'status', label: 'Status', alignRight: false },
+  { id: 'createdAt', label: 'Date', alignRight: false },
+  { id: '' },
+];
 
 // ----------------------------------------------------------------------
 
@@ -78,15 +75,15 @@ function applySortFilter(array, comparator, query) {
     return a[1] - b[1];
   });
   if (query) {
-    return filter(array, (row) => row.employeeId.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    return filter(array, (row) => row?.branch?.branchName?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
   return stabilizedThis?.map((el) => el[0]);
 }
 
-export default function AdminDeskLeave() {
+export default function Expense() {
   const [open, setOpen] = useState(null);
-  const [openId, setOpenId] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
+  const [openId, setOpenId] = useState(null);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
   const [selected, setSelected] = useState([]);
@@ -100,26 +97,8 @@ export default function AdminDeskLeave() {
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
-  const [logModal, setLogModal] = useState({ open: false, logs: [] });
-  const auth = useSelector((state) => state.auth);
-  const userType = auth.user.userType?.toLowerCase();
-  const isManager = userType === 'branch';
-  const [currentTab, setCurrentTab] = useState(isManager ? 'requests' : 'my_leaves');
-
-  const TABLE_HEAD = [
-    ...(currentTab === 'requests' ? [
-      { id: 'branchId', label: 'Branch Id', alignRight: false },
-      { id: 'branchName', label: 'Branch Name', alignRight: false },
-      { id: 'employeeId', label: 'Employee Id', alignRight: false },
-      { id: 'employeeName', label: 'Employee Name', alignRight: false },
-    ] : []),
-    { id: 'leaveType', label: 'Leave Type', alignRight: false },
-    { id: 'dates', label: 'Dates', alignRight: false },
-    { id: 'note', label: 'Note', alignRight: false },
-    { id: 'status', label: 'Status', alignRight: false },
-    { id: 'createdAt', label: 'Date', alignRight: false },
-    { id: '' },
-  ];
+  const [filterOpen, setFilterOpen] = useState(false);
+  const form = useRef();
 
   const [notify, setNotify] = useState({
     open: false,
@@ -127,25 +106,53 @@ export default function AdminDeskLeave() {
     severity: 'success',
   });
 
-  const fetchData = (query = {}) => {
-    if (currentTab === 'my_leaves') {
-      query.employee = auth.user.employee?._id || auth.user.employee;
-    }
-    getLeave(query).then((data) => {
-      let filtered = data.data;
-      if (currentTab === 'requests' && isManager) {
-          // Exclude own leaves from requests list
-          const myIdStr = String(auth.user.employee?._id || auth.user.employee);
-          filtered = data.data.filter(item => String(item.employee?._id || item.employee) !== myIdStr);
+  // Form validation
+  const schema = Yup.object({
+    fromDate: Yup.string().required('From date is required'),
+    toDate: Yup.string().required('To date is required'),
+  });
+
+  const { handleSubmit, touched, errors, values, setFieldValue, resetForm } = useFormik({
+    initialValues: {
+      fromDate: null,
+      toDate: null,
+    },
+    validationSchema: schema,
+    onSubmit: (values) => {
+      setOpenBackdrop(true);
+      getExpense({
+        createdAt: {
+          $gte: values.fromDate?.format("YYYY-MM-DD"),
+          $lte: values.toDate?.format("YYYY-MM-DD"),
+        },
+      }).then((data) => {
+        setData(data.data);
+        setOpenBackdrop(false);
+      });
+      setFilterOpen(false);
+    },
+  });
+
+  const fetchData = useCallback(
+    (
+      query = {
+        createdAt: {
+          $gte: values.fromDate ?? moment()?.format("YYYY-MM-DD"),
+          $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
+        },
       }
-      setData(filtered);
-      setOpenBackdrop(false);
-    });
-  };
+    ) => {
+      getExpense(query).then((data) => {
+        setData(data.data);
+        setOpenBackdrop(false);
+      });
+    },
+    [values.fromDate, values.toDate]
+  );
 
   useEffect(() => {
     fetchData();
-  }, [toggleContainer, currentTab]); // Re-fetch on tab change
+  }, [toggleContainer, fetchData]);
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -204,44 +211,47 @@ export default function AdminDeskLeave() {
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
-    deleteLeaveById(openId).then(() => {
+    deleteExpenseById(openId).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected(selected?.filter((e) => e !== openId));
-    });
-  };
-
-  const handleApprove = () => {
-    updateLeave(openId, { bmStatus: 'approved' }).then((res) => {
-      if (res.status) {
-        fetchData();
-        setNotify({ open: true, message: 'Leave approved by BM. Moving to HR!', severity: 'success' });
-      }
-      setOpen(null);
-    });
-  };
-
-  const handleReject = () => {
-    updateLeave(openId, { bmStatus: 'rejected', status: 'rejected' }).then((res) => {
-      if (res.status) {
-        fetchData();
-        setNotify({ open: true, message: 'Leave rejected by BM', severity: 'error' });
-      }
-      setOpen(null);
+      setNotify({
+        open: true,
+        message: 'Expense Deleted Successfully!',
+        severity: 'success',
+      });
     });
   };
 
   const handleDeleteSelected = () => {
-    deleteLeaveById(selected).then(() => {
+    deleteExpenseById(selected).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected([]);
       setNotify({
         open: true,
-        message: 'Leave deleted',
+        message: 'Expense Deleted Successfully!',
         severity: 'success',
       });
     });
+  };
+
+  const handleFilterOpen = () => {
+    setFilterOpen(true);
+  };
+
+  const handleFilterClose = () => {
+    setFilterOpen(false);
+  };
+
+  const handleExport = (fileData, fileName) => {
+    const ws = XLSX.utils.json_to_sheet(fileData);
+    const wb = { Sheets: { data: ws }, SheetNames: ['data'] };
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8',
+    });
+    FileSaver.saveAs(data, `${fileName}.xlsx`);
   };
 
   const style = {
@@ -262,10 +272,57 @@ export default function AdminDeskLeave() {
 
   const Alert = forwardRef(AlertComponent);
 
+  function Status(props) {
+    return (
+      <>
+        <Button
+          variant="contained"
+          onClick={() => {
+            updateExpense(props._id, { status: 'approved' }).then(() => {
+              getExpense().then((data) => {
+                setData(data.data);
+                setNotify({
+                  open: true,
+                  message: 'Expense Approved Successfully!',
+                  severity: 'success',
+                });
+              });
+            });
+          }}
+        >
+          Approve
+        </Button>
+        <Button
+          variant="contained"
+          color="error"
+          sx={{ ml: 2 }}
+          onClick={() => {
+            updateExpense(props._id, { status: 'rejected' }).then(() => {
+              getExpense().then((data) => {
+                setData(data.data);
+                setNotify({
+                  open: true,
+                  message: 'Expense Rejected Successfully!',
+                  severity: 'success',
+                });
+              });
+            });
+          }}
+        >
+          Reject
+        </Button>
+      </>
+    );
+  }
+
+  Status.propTypes = {
+    _id: PropTypes.string,
+  };
+
   return (
     <>
       <Helmet>
-        <title> Leave | MK Gold </title>
+        <title> Expense | MK Gold </title>
       </Helmet>
 
       <Snackbar
@@ -291,41 +348,58 @@ export default function AdminDeskLeave() {
       </Snackbar>
 
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
-          <Typography variant="h4" sx={{ color: '#fff' }}>
-            Leave
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+            Expense
           </Typography>
-          {currentTab === 'my_leaves' && (
+          <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+              onClick={handleFilterOpen}
+            >
+              Filter
+            </Button>
             <Button
               variant="contained"
               startIcon={<Iconify icon="eva:plus-fill" />}
               onClick={() => {
-                setToggleContainer(!toggleContainer);
                 setToggleContainerType('create');
+                setToggleContainer(true);
               }}
             >
-              New Leave
+              New Expense
             </Button>
-          )}
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="carbon:document-export" />}
+              onClick={() => {
+                handleExport(
+                  data?.map((e) => ({
+                    Type: e.type,
+                    Amount: e.amount,
+                    BranchId: e.branch?.branchId,
+                    BranchName: e.branch?.branchName,
+                    Note: e.note,
+                    Status: e.status,
+                    Date: moment(e.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                  })),
+                  'Expenses'
+                );
+              }}
+            >
+              Export
+            </Button>
+          </Stack>
         </Stack>
 
-        <Box sx={{ mb: 3 }}>
-          <Tabs
-            value={currentTab}
-            onChange={(event, newValue) => setCurrentTab(newValue)}
-            sx={{
-              '& .MuiTab-root': { color: 'white', opacity: 0.7 },
-              '& .Mui-selected': { color: 'white !important', opacity: 1 },
-              '& .MuiTabs-indicator': { backgroundColor: 'white' },
-            }}
-          >
-            {isManager && <Tab value="requests" label="Leave Requests" />}
-            <Tab value="my_leaves" label="My Leaves" />
-          </Tabs>
-        </Box>
+        <p style={{ color: '#fff' }}>
+          From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
+          {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
+        </p>
 
         <Card>
-          <LeaveListToolbar
+          <ExpenseListToolbar
             numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
@@ -338,7 +412,7 @@ export default function AdminDeskLeave() {
           <Scrollbar>
             <TableContainer>
               <Table sx={{ minWidth: 800 }}>
-                <LeaveListHead
+                <ExpenseListHead
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
@@ -349,7 +423,7 @@ export default function AdminDeskLeave() {
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, branch, employee, leaveType, leaveCategory, startTime, endTime, dates, note, status, bmStatus, hrStatus, createdAt } = row;
+                    const { _id, type, amount, branch, note, status, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -357,30 +431,23 @@ export default function AdminDeskLeave() {
                         <TableCell padding="checkbox">
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
-                        {currentTab === 'requests' && <TableCell align="left">{branch?.branchId}</TableCell>}
-                        {currentTab === 'requests' && <TableCell align="left">{branch?.branchName}</TableCell>}
-                        {currentTab === 'requests' && <TableCell align="left">{employee?.employeeId}</TableCell>}
-                        {currentTab === 'requests' && <TableCell align="left">{employee?.name}</TableCell>}
-                        <TableCell align="left">{leaveType}</TableCell>
-                        <TableCell align="left">
-                          {leaveCategory === 'Permission' ? (
-                            `${dates?.map((date) => moment(date).format('YYYY-MM-DD')).join(', ')} (${startTime} - ${endTime})`
-                          ) : (
-                            dates?.map((date) => moment(date).format('YYYY-MM-DD')).join(', ')
-                          )}
-                        </TableCell>
+                        <TableCell align="left">{type}</TableCell>
+                        <TableCell align="left">{amount}</TableCell>
+                        <TableCell align="left">{branch?.branchId}</TableCell>
+                        <TableCell align="left">{branch?.branchName}</TableCell>
                         <TableCell align="left">{note}</TableCell>
                         <TableCell align="left">
-                          <Stack spacing={0.5}>
-                            {bmStatus !== 'not_required' && (
-                              <Label color={(bmStatus === 'approved' && 'success') || (bmStatus === 'rejected' && 'error') || 'warning'}>
-                                BM: {sentenceCase(bmStatus || 'pending')}
-                              </Label>
-                            )}
-                            <Label color={(hrStatus === 'approved' && 'success') || (hrStatus === 'rejected' && 'error') || 'warning'}>
-                              HR: {sentenceCase(hrStatus || 'pending')}
+                          {status === 'pending' ? (
+                            <Status status={status} _id={_id} />
+                          ) : (
+                            <Label
+                              color={
+                                (status === 'approved' && 'success') || (status === 'rejected' && 'error') || 'warning'
+                              }
+                            >
+                              {sentenceCase(status)}
                             </Label>
-                          </Stack>
+                          )}
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">
@@ -405,7 +472,7 @@ export default function AdminDeskLeave() {
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -421,7 +488,7 @@ export default function AdminDeskLeave() {
                 {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
-                      <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -463,7 +530,7 @@ export default function AdminDeskLeave() {
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Create Leave
+            
           </Typography>
           <Button
             variant="contained"
@@ -476,7 +543,7 @@ export default function AdminDeskLeave() {
           </Button>
         </Stack>
 
-        <CreateLeave setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
+        <CreateExpense setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
       </Container>
 
       <Container
@@ -485,7 +552,7 @@ export default function AdminDeskLeave() {
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Update Leave
+            Update Expense
           </Typography>
           <Button
             variant="contained"
@@ -498,7 +565,7 @@ export default function AdminDeskLeave() {
           </Button>
         </Stack>
 
-        <UpdateLeave setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
+        <UpdateExpense setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
       </Container>
 
       <Popover
@@ -510,7 +577,7 @@ export default function AdminDeskLeave() {
         PaperProps={{
           sx: {
             p: 1,
-            width: 180,
+            width: 140,
             '& .MuiMenuItem-root': {
               px: 1,
               typography: 'body2',
@@ -519,31 +586,6 @@ export default function AdminDeskLeave() {
           },
         }}
       >
-        {isManager && data?.find((d) => d._id === openId)?.bmStatus !== 'not_required' && (
-          <>
-            <MenuItem onClick={handleApprove} sx={{ color: 'success.main' }}>
-              <Iconify icon={'eva:checkmark-circle-2-fill'} sx={{ mr: 2 }} />
-              Approve (BM)
-            </MenuItem>
-
-            <MenuItem onClick={handleReject} sx={{ color: 'error.main' }}>
-              <Iconify icon={'eva:close-circle-fill'} sx={{ mr: 2 }} />
-              Reject (BM)
-            </MenuItem>
-          </>
-        )}
-
-        <MenuItem
-          onClick={() => {
-            setOpen(null);
-            const row = data?.find((d) => d._id === openId);
-            setLogModal({ open: true, logs: row?.actionLog || [] });
-          }}
-        >
-          <Iconify icon={'eva:file-text-fill'} sx={{ mr: 2 }} />
-          View Logs
-        </MenuItem>
-
         <MenuItem
           onClick={() => {
             setOpen(null);
@@ -555,19 +597,17 @@ export default function AdminDeskLeave() {
           Edit
         </MenuItem>
 
-        {global.canDelete(userType) && (
-          <MenuItem
-            sx={{ color: 'error.main' }}
-            onClick={() => {
-              setOpen(null);
-              setDeleteType('single');
-              handleOpenDeleteModal();
-            }}
-          >
-            <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-            Delete
-          </MenuItem>
-        )}
+        <MenuItem
+          sx={{ color: 'error.main' }}
+          onClick={() => {
+            setOpen(null);
+            setDeleteType('single');
+            handleOpenDeleteModal();
+          }}
+        >
+          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
+          Delete
+        </MenuItem>
       </Popover>
 
       <Modal
@@ -581,7 +621,7 @@ export default function AdminDeskLeave() {
             Delete
           </Typography>
           <Typography id="modal-modal-description" sx={{ mt: 3 }}>
-            Do you want to delete?
+            Do you want branchId delete?
           </Typography>
           <Stack direction="row" alignItems="center" spacing={2} mt={3}>
             <Button
@@ -604,64 +644,77 @@ export default function AdminDeskLeave() {
         </Box>
       </Modal>
 
-      {/* Action Log Modal */}
-      <Dialog
-        open={logModal.open}
-        onClose={() => setLogModal({ open: false, logs: [] })}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle sx={{ fontWeight: 'bold' }}>Leave Action Log</DialogTitle>
-        <DialogContent>
-          {logModal.logs?.length > 0 ? (
-            <TableContainer component={Paper} sx={{ mt: 1 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 'bold' }}>#</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Action</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Performed By</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Role</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Date & Time</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {logModal.logs.map((log, index) => (
-                    <TableRow key={index} hover>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={sentenceCase((log.action || '').replace(/_/g, ' '))}
-                          color={
-                            (log.action?.includes('approved') && 'success') ||
-                            (log.action?.includes('rejected') && 'error') ||
-                            'info'
-                          }
-                          size="small"
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>{log.performedByName || 'N/A'}</TableCell>
-                      <TableCell>
-                        <Chip label={sentenceCase(log.role || 'N/A')} size="small" />
-                      </TableCell>
-                      <TableCell>{moment(log.performedAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          ) : (
-            <Typography sx={{ mt: 2, textAlign: 'center', color: 'text.secondary' }}>
-              No action logs available
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button variant="contained" onClick={() => setLogModal({ open: false, logs: [] })}>
-            Close
-          </Button>
-        </DialogActions>
+      <Dialog open={filterOpen} onClose={handleFilterClose}>
+        <form
+          ref={form}
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit(e);
+          }}
+          autoComplete="off"
+        >
+          <DialogTitle>Filter</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={3} sx={{ p: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <FormControl sx={{ minWidth: 120 }}>
+                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
+                    <DesktopDatePicker
+                      label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
+                      inputFormat="MM/DD/YYYY"
+                      name="fromDate"
+                      value={values.fromDate}
+                      onChange={(value) => {
+                        setFieldValue('fromDate', value, true);
+                      }}
+                      renderInput={(params) => <TextField {...params} fullWidth />}
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl sx={{ minWidth: 120 }}>
+                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
+                    <DesktopDatePicker
+                      label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
+                      inputFormat="MM/DD/YYYY"
+                      name="toDate"
+                      value={values.toDate}
+                      onChange={(value) => {
+                        setFieldValue('toDate', value, true);
+                      }}
+                      renderInput={(params) => <TextField {...params} fullWidth />}
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => {
+                setFilterOpen(false);
+                resetForm();
+                fetchData({
+                  createdAt: {
+                    $gte: moment()?.format("YYYY-MM-DD"),
+                    $lte: moment()?.format("YYYY-MM-DD"),
+                  },
+                });
+              }}
+            >
+              Clear
+            </Button>
+            <Button variant="contained" onClick={handleFilterClose}>
+              Close
+            </Button>
+            <Button variant="contained" type="submit">
+              Filter
+            </Button>
+          </DialogActions>
+        </form>
       </Dialog>
 
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
@@ -670,6 +723,7 @@ export default function AdminDeskLeave() {
     </>
   );
 }
+
 
 
 

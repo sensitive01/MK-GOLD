@@ -72,14 +72,13 @@ export default function LoginPage() {
             </Typography>
             <Box
               component="img"
-              src="/newLogo.jpeg"
+              src="/assets/icons/navbar/MK%20Gold%20Logo%20light.png"
               alt="Logo"
               sx={{
                 width: 200,
                 mx: 'auto',
                 borderRadius: 2,
                 boxShadow: (theme) => theme.customShadows.z24,
-                border: '4px solid #FFD700', // Brand Yellow/Gold
               }}
             />
             <Typography variant="h6" sx={{ mt: 5, color: '#FFD700', fontWeight: 'bold' }}>
@@ -100,17 +99,15 @@ export default function LoginPage() {
               }}
             >
               <Box
-                component="div"
+                component="img"
+                src="/assets/icons/navbar/MK%20Gold%20Logo.png"
+                alt="Logo"
                 sx={{
-                  width: 80,
-                  height: 80,
-                  display: 'inline-flex',
+                  width: 180,
                   mx: 'auto',
                   mb: 3,
                 }}
-              >
-                <img alt="Logo" src="/newLogo.jpeg" style={{ borderRadius: '8px' }} />
-              </Box>
+              />
               
               <Typography variant="h4" gutterBottom sx={{ mb: 1, color: '#8A1B9F' }}>
                 Sign in to Continue

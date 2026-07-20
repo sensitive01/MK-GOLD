@@ -124,4 +124,20 @@ async function getStats(req, res) {
   }
 }
 
-module.exports = { find, findById, create, update, remove, getStats };
+async function consolidated(req, res) {
+  try {
+    const payload = req.body ?? {};
+    if (req.user && req.user.employee) {
+      payload.employeeId = req.user.employee._id || req.user.employee;
+    }
+    res.json({
+      status: true,
+      message: "Consolidated attendance retrieved",
+      data: await attendanceService.consolidated(payload),
+    });
+  } catch (err) {
+    res.json({ status: false, message: err.message, data: {} });
+  }
+}
+
+module.exports = { find, findById, create, update, remove, getStats, consolidated };

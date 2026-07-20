@@ -132,7 +132,7 @@ export default function SalePrint({ id }) {
               <td style={{ textAlign: 'right', verticalAlign: 'top', paddingBottom: '10px' }}>
                 <img
                   alt="Logo"
-                  src="/newLogo.jpeg"
+                  src="/assets/icons/navbar/MK%20Gold%20Logo.png"
                   style={{ width: '90px', height: 'auto', objectFit: 'contain' }}
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />

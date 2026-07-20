@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import axios from 'axios';
 import {
   Box,
@@ -27,6 +28,8 @@ import {
   Add,
   Edit,
   Delete,
+  Check,
+  Close,
 } from '@mui/icons-material';
 import {
   format,
@@ -44,6 +47,8 @@ import {
 } from 'date-fns';
 
 export default function MarketingCalendar() {
+  const auth = useSelector((state) => state.auth);
+  const isAdmin = auth.user?.userType === 'admin';
   const [currentDate, setCurrentDate] = useState(new Date()); 
   const [openCreate, setOpenCreate] = useState(false);
   const [activeTab, setActiveTab] = useState('Month');
@@ -139,6 +144,17 @@ export default function MarketingCalendar() {
     }
   };
 
+  const handleUpdateStatus = async (id, status) => {
+    try {
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/v1.0/schedule/${id}`, { status }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      fetchEvents();
+    } catch (err) {
+      console.error(`Failed to update schedule status to ${status}`, err);
+    }
+  };
+
   const nextMonth = () => {
     setCurrentDate(addMonths(currentDate, 1));
   };
@@ -174,10 +190,18 @@ export default function MarketingCalendar() {
 
 
   const getEventsForDate = (dateStr) => {
-    return events.filter(e => format(new Date(e.date), 'yyyy-MM-dd') === dateStr).map((e, idx) => ({
-      ...e,
-      color: ['#b388ff', '#d500f9', '#ab47bc', '#7e57c2', '#9c27b0'][idx % 5] // cycle colors
-    }));
+    return events.filter(e => format(new Date(e.date), 'yyyy-MM-dd') === dateStr).map((e, idx) => {
+      let eventColor = ['#b388ff', '#d500f9', '#ab47bc', '#7e57c2', '#9c27b0'][idx % 5];
+      if (e.status === 'approved') {
+        eventColor = '#4caf50'; // Green for approved
+      } else if (e.status === 'rejected') {
+        eventColor = '#f44336'; // Red for rejected
+      }
+      return {
+        ...e,
+        color: eventColor
+      };
+    });
   };
 
   const renderCells = () => {
@@ -357,25 +381,51 @@ export default function MarketingCalendar() {
             
             <List disablePadding>
               {events.length > 0 ? events.map((schedule, i) => (
-                <ListItem key={i} disablePadding sx={{ mb: 2.5, alignItems: 'center' }}>
-                  <ListItemAvatar sx={{ minWidth: 50 }}>
-                    <Avatar sx={{ width: 40, height: 40, bgcolor: ['#b388ff', '#d500f9', '#ab47bc', '#7e57c2', '#9c27b0'][i % 5] }}>
-                      {schedule.title[0]?.toUpperCase()}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={<Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{schedule.title}</Typography>}
-                    secondary={<Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>{format(new Date(schedule.date), 'MMM d, yyyy')}</Typography>}
-                  />
-                  <Box>
-                    <IconButton size="small" onClick={() => handleEditClick(schedule)}>
-                      <Edit fontSize="small" color="action" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(schedule._id)}>
-                      <Delete fontSize="small" color="error" />
-                    </IconButton>
-                  </Box>
-                </ListItem>
+                <Box key={i} sx={{ mb: 2.5 }}>
+                  <ListItem disablePadding sx={{ alignItems: 'center' }}>
+                    <ListItemAvatar sx={{ minWidth: 50 }}>
+                      <Avatar sx={{ width: 40, height: 40, bgcolor: ['#b388ff', '#d500f9', '#ab47bc', '#7e57c2', '#9c27b0'][i % 5] }}>
+                        {schedule.title[0]?.toUpperCase()}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={<Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{schedule.title}</Typography>}
+                      secondary={<Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>{format(new Date(schedule.date), 'MMM d, yyyy')} • {schedule.status || 'pending'}</Typography>}
+                    />
+                    <Box>
+                      <IconButton size="small" onClick={() => handleEditClick(schedule)}>
+                        <Edit fontSize="small" color="action" />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => handleDelete(schedule._id)}>
+                        <Delete fontSize="small" color="error" />
+                      </IconButton>
+                    </Box>
+                  </ListItem>
+                  {isAdmin && (!schedule.status || schedule.status === 'pending') && (
+                    <Box sx={{ display: 'flex', gap: 1, ml: 6, mt: 1 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="success"
+                        startIcon={<Check />}
+                        onClick={() => handleUpdateStatus(schedule._id, 'approved')}
+                        sx={{ borderRadius: 1.5, textTransform: 'none', py: 0.25 }}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        startIcon={<Close />}
+                        onClick={() => handleUpdateStatus(schedule._id, 'rejected')}
+                        sx={{ borderRadius: 1.5, textTransform: 'none', py: 0.25 }}
+                      >
+                        Reject
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
               )) : (
                 <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
                   No schedules created yet.

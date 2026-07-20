@@ -372,9 +372,11 @@ export default function MarketingLeave() {
                         <TableCell align="left">{note}</TableCell>
                         <TableCell align="left">
                           <Stack spacing={0.5}>
-                            <Label color={(bmStatus === 'approved' && 'success') || (bmStatus === 'rejected' && 'error') || 'warning'}>
-                              BM: {sentenceCase(bmStatus || 'pending')}
-                            </Label>
+                            {bmStatus !== 'not_required' && (
+                              <Label color={(bmStatus === 'approved' && 'success') || (bmStatus === 'rejected' && 'error') || 'warning'}>
+                                BM: {sentenceCase(bmStatus || 'pending')}
+                              </Label>
+                            )}
                             <Label color={(hrStatus === 'approved' && 'success') || (hrStatus === 'rejected' && 'error') || 'warning'}>
                               HR: {sentenceCase(hrStatus || 'pending')}
                             </Label>
@@ -517,7 +519,7 @@ export default function MarketingLeave() {
           },
         }}
       >
-        {isManager && (
+        {isManager && data?.find((d) => d._id === openId)?.bmStatus !== 'not_required' && (
           <>
             <MenuItem onClick={handleApprove} sx={{ color: 'success.main' }}>
               <Iconify icon={'eva:checkmark-circle-2-fill'} sx={{ mr: 2 }} />

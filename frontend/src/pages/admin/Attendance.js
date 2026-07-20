@@ -381,20 +381,6 @@ export default function Attendance() {
       </Snackbar>
 
       <Box sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="flex-end" mb={3}>
-          {currentTab === 'my_attendance' && (
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="eva:plus-fill" />}
-              onClick={() => {
-                setToggleContainer(!toggleContainer);
-                setToggleContainerType('create');
-              }}
-            >
-              Mark Attendance
-            </Button>
-          )}
-        </Stack>
 
         {currentTab === 'my_attendance' && (
           <Grid container spacing={3} mb={5}>
@@ -447,6 +433,19 @@ export default function Attendance() {
               }} sx={{ float: 'right' }}>
                 Export
               </Button>
+              {(currentTab === 'my_attendance' || currentTab === 'all_attendance') && (
+                <Button
+                  variant="contained"
+                  startIcon={<Iconify icon="eva:plus-fill" />}
+                  onClick={() => {
+                    setToggleContainer(!toggleContainer);
+                    setToggleContainerType('create');
+                  }}
+                  sx={{ float: 'right', mr: '10px' }}
+                >
+                  Mark Attendance
+                </Button>
+              )}
 
               <p style={{ color: '#fff' }}>
                 From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date: {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}

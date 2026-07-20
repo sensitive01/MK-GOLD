@@ -103,12 +103,16 @@ async function create(payload, user = null) {
       },
     ];
 
+    if (!['assistant_branch_manager', 'branch_executive', 'transaction_executive'].includes(performerRole.toLowerCase())) {
+        payload.bmStatus = 'not_required';
+    }
+
     let leave = new Leave(payload);
     const createdLeave = await leave.save();
     const populated = await Leave.findById(createdLeave._id).populate("employee").populate("branch");
 
     // NOTIFY BRANCH MANAGER
-    if (populated.branch) {
+    if (populated.branch && payload.bmStatus !== 'not_required') {
         const managerUser = await User.findOne({ branch: populated.branch, userType: 'branch' }).populate('employee');
         if (managerUser && managerUser.employee && managerUser.employee.email) {
             const subject = "New Leave Application - " + populated.employee.name;
@@ -194,4 +198,12 @@ async function remove(id) {
   }
 }
 
-module.exports = { find, findById, create, update, remove };
+async function count(query = {}) {
+  try {
+    return await Leave.countDocuments(query);
+  } catch (err) {
+    throw err;
+  }
+}
+
+module.exports = { find, findById, create, update, remove, count };

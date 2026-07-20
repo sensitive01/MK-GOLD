@@ -55,6 +55,15 @@ async function getBranchAttendanceStats(employeeId = null) {
   }
 }
 
+async function getConsolidatedAttendance(query = {}) {
+  try {
+    const response = await apiClient().post('/api/v1.0/branch/attendance/consolidated', query);
+    return response.data;
+  } catch (err) {
+    return { status: false, message: err?.response?.data?.message || err.message };
+  }
+}
+
 export {
   getAttendance,
   getAttendanceById,
@@ -62,4 +71,5 @@ export {
   updateAttendance,
   deleteAttendanceById,
   getBranchAttendanceStats,
+  getConsolidatedAttendance,
 };

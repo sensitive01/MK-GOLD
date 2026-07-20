@@ -73,8 +73,12 @@ function UpdateFund(props) {
       getFundById(props.id).then((data) => {
         const payload = {
           ...data.data,
-          from: data.data.from?._id,
-          to: data.data.to?._id,
+          from: data.data.from?._id || '',
+          to: data.data.to?._id || '',
+          type: data.data.type || '',
+          status: data.data.status || 'pending',
+          note: data.data.note || '',
+          amount: data.data.amount || '',
         };
         setValues(payload ?? {});
       });
@@ -112,7 +116,7 @@ function UpdateFund(props) {
                 onBlur={handleBlur}
                 onChange={(e) => {
                   if (e.target.value === 'fund_request') {
-                    setFieldValue('from', headOffice._id);
+                    setFieldValue('from', headOffice?._id || '');
                   } else {
                     setFieldValue('from', '');
                   }
@@ -138,7 +142,7 @@ function UpdateFund(props) {
                 disabled
               >
                 {branches?.map((e) => (
-                  <MenuItem value={e._id}>
+                  <MenuItem key={e._id} value={e._id}>
                     {e.branchId} {e.branchName}
                   </MenuItem>
                 ))}
@@ -159,7 +163,7 @@ function UpdateFund(props) {
                 disabled={isReadOnly}
               >
                 {branches?.map((e) => (
-                  <MenuItem value={e._id}>
+                  <MenuItem key={e._id} value={e._id}>
                     {e.branchId} {e.branchName}
                   </MenuItem>
                 ))}

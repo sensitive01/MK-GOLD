@@ -129,6 +129,7 @@ branchRouter.get("/attendance/get/:id", attendance.findById);
 branchRouter.post("/attendance/create", attendance.create);
 branchRouter.post("/attendance/update/:id", attendance.update);
 branchRouter.post("/attendance/delete/:id", attendance.remove);
+branchRouter.post("/attendance/consolidated", attendance.consolidated);
 
 branchRouter.get("/leave/get", leave.find);
 branchRouter.post("/leave/get", leave.find);
