@@ -1,4 +1,4 @@
-import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid } from '@mui/material';
+import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid, Typography } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import { useEffect, useState } from 'react';
 import { useFormik } from 'formik';
@@ -11,6 +11,7 @@ import global from '../../../utils/global';
 function UpdateUser(props) {
   const [employees, setEmloyees] = useState([]);
   const [branches, setBranches] = useState([]);
+  const [lastEditedBy, setLastEditedBy] = useState(null);
 
   // Form validation
   const schema = Yup.object({
@@ -78,7 +79,9 @@ function UpdateUser(props) {
     resetForm();
     if (props.id) {
       getUserById(props.id).then((data) => {
-        setValues({ ...data.data, employee: data.data?.employee?._id, branch: data.data?.branch?._id });
+        setValues({ ...data.data, employee: data.data?.employee?._id, branch: data.data?.branch?._id, password: '' });
+        const editor = data.data.lastEditedBy;
+        setLastEditedBy(editor ? `${editor.username} (${editor.userType})` : null);
         getLoginNotCreatedEmployee().then((employee) => {
           const employees = [...employee.data];
           if (data.data.employee && !employees?.find((e) => e._id === data.data.employee._id)) {
@@ -209,6 +212,11 @@ function UpdateUser(props) {
             </FormControl>
           </Grid>
           <Grid item xs={12}>
+            {lastEditedBy && (
+              <Typography variant="body2" color="textSecondary" sx={{ mb: 2, fontStyle: 'italic' }}>
+                Last Edited By: {lastEditedBy}
+              </Typography>
+            )}
             <LoadingButton size="large" type="submit" variant="contained">
               Save
             </LoadingButton>

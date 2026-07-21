@@ -105,6 +105,10 @@ const Employee = mongoose.model(
         type: mongoose.Schema.Types.ObjectId,
         ref: "branches",
       },
+      lastEditedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+      },
     },
     { timestamps: true }
   )

@@ -555,7 +555,7 @@ export default function AdminDeskLeave() {
           Edit
         </MenuItem>
 
-        {global.canDelete(userType) && (
+        {/* global.canDelete(userType) && (
           <MenuItem
             sx={{ color: 'error.main' }}
             onClick={() => {
@@ -567,7 +567,7 @@ export default function AdminDeskLeave() {
             <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
             Delete
           </MenuItem>
-        )}
+        ) */}
       </Popover>
 
       <Modal

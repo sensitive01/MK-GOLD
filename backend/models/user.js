@@ -32,6 +32,10 @@ const User = mongoose.Schema(
       enum: ["password", "otp"],
       default: "password",
     },
+    lastEditedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users",
+    },
   },
   { timestamps: true }
 );

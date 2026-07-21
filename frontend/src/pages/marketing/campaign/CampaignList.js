@@ -234,14 +234,14 @@ export default function CampaignList() {
                             >
                               Edit
                             </Button>
-                            <Button 
+                            {/* <Button 
                               variant="outlined" 
                               color="error"
                               size="small"
                               onClick={() => handleDelete(_id)}
                             >
                               Delete
-                            </Button>
+                            </Button> */}
                           </Stack>
                         </TableCell>
                       </TableRow>

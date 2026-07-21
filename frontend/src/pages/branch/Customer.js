@@ -491,7 +491,7 @@ export default function Customer({ isTab = false }) {
           <Iconify icon={'carbon:view-filled'} sx={{ mr: 2 }} />
           View
         </MenuItem>
-        <MenuItem
+        {/* <MenuItem
           sx={{ color: 'error.main' }}
           onClick={() => {
             setOpen(null);
@@ -501,7 +501,7 @@ export default function Customer({ isTab = false }) {
         >
           <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
           Delete
-        </MenuItem>
+        </MenuItem> */}
       </Popover>
 
       <Modal

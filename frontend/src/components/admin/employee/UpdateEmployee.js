@@ -33,7 +33,11 @@ const initialValues = {
 };
 
 function UpdateEmployee(props) {
+  const [focusedField, setFocusedField] = useState(null);
   const [designations, setDesignations] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [files, setFiles] = useState([]);
+  const [lastEditedBy, setLastEditedBy] = useState(null);
   const [photo, setPhoto] = useState(null);
   const [documents, setDocuments] = useState([]);
   // Form validation
@@ -121,6 +125,9 @@ function UpdateEmployee(props) {
           ...empData,
           languages: empData.languages ?? []
         });
+        const editor = empData.lastEditedBy;
+        const displayName = editor?.employeeDetails?.name || editor?.employeeDetails?.phoneNumber || editor?.username || null;
+        setLastEditedBy(displayName ? `${displayName} (${editor?.userType})` : null);
       });
     }
     getDesignation({ status: 'active' }).then((data) => {
@@ -425,6 +432,11 @@ function UpdateEmployee(props) {
           </Grid>
 
           <Grid item xs={12}>
+            {lastEditedBy && (
+              <Typography variant="body2" color="textSecondary" sx={{ mb: 2, fontStyle: 'italic' }}>
+                Last Edited By: {lastEditedBy}
+              </Typography>
+            )}
             <LoadingButton size="large" type="submit" variant="contained">
               Save
             </LoadingButton>

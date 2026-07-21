@@ -27,14 +27,14 @@ hrRouter.get("/branch/get-next-id", branch.getNextBranchId);
 hrRouter.get("/branch/get/:id", branch.findById);
 hrRouter.post("/branch/create", branch.create);
 hrRouter.post("/branch/update/:id", branch.update);
-hrRouter.post("/branch/delete/:id", branch.remove);
+// hrRouter.post("/branch/delete/:id", branch.remove);
 
 hrRouter.get("/user/get", user.find);
 hrRouter.post("/user/get", user.find);
 hrRouter.get("/user/get/:id", user.findById);
 hrRouter.post("/user/create", user.create);
 hrRouter.post("/user/update/:id", user.update);
-hrRouter.post("/user/delete/:id", user.remove);
+// hrRouter.post("/user/delete/:id", user.remove);
 
 hrRouter.get("/employee/get", employee.find);
 hrRouter.post("/employee/get", employee.find);
@@ -46,28 +46,28 @@ hrRouter.get("/employee/get-next-id", employee.getNextEmployeeId);
 hrRouter.get("/employee/get/:id", employee.findById);
 hrRouter.post("/employee/create", employee.create);
 hrRouter.post("/employee/update/:id", employee.update);
-hrRouter.post("/employee/delete/:id", employee.remove);
+// hrRouter.post("/employee/delete/:id", employee.remove);
 
 hrRouter.get("/attendance/get", attendance.find);
 hrRouter.post("/attendance/get", attendance.find);
 hrRouter.post("/attendance/consolidated", attendance.consolidated);
 hrRouter.get("/attendance/get/:id", attendance.findById);
 hrRouter.post("/attendance/update/:id", attendance.update);
-hrRouter.post("/attendance/delete/:id", attendance.remove);
+// hrRouter.post("/attendance/delete/:id", attendance.remove);
 
 hrRouter.get("/leave/get", leave.find);
 hrRouter.post("/leave/get", leave.find);
 hrRouter.get("/leave/get/:id", leave.findById);
 hrRouter.post("/leave/create", leave.create);
 hrRouter.post("/leave/update/:id", leave.update);
-hrRouter.post("/leave/delete/:id", leave.remove);
+// hrRouter.post("/leave/delete/:id", leave.remove);
 
 hrRouter.get("/payprocess/get", payprocess.find);
 hrRouter.post("/payprocess/get", payprocess.find);
 hrRouter.get("/payprocess/get/:id", payprocess.findById);
 hrRouter.post("/payprocess/create", payprocess.create);
 hrRouter.post("/payprocess/update/:id", payprocess.update);
-hrRouter.post("/payprocess/delete/:id", payprocess.remove);
+// hrRouter.post("/payprocess/delete/:id", payprocess.remove);
 
 hrRouter.get("/file-upload/get", fileUpload.find);
 hrRouter.post("/file-upload/get", fileUpload.find);
@@ -77,7 +77,7 @@ hrRouter.post(
   multer.single("uploadedFile"),
   fileUpload.create
 );
-hrRouter.post("/file-upload/delete/:id", fileUpload.remove);
+// hrRouter.post("/file-upload/delete/:id", fileUpload.remove);
 
 hrRouter.get("/profile", profile.get);
 hrRouter.post("/profile/change-password", profile.changePassword);
@@ -87,7 +87,7 @@ hrRouter.post("/expense/get", expense.find);
 hrRouter.get("/expense/get/:id", expense.findById);
 hrRouter.post("/expense/create", expense.create);
 hrRouter.post("/expense/update/:id", expense.update);
-hrRouter.post("/expense/delete/:id", expense.remove);
+// hrRouter.post("/expense/delete/:id", expense.remove);
 
 router.use(
   function (req, res, next) {

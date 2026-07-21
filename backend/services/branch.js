@@ -36,6 +36,20 @@ async function find(query = {}) {
           image: { $first: "$image" },
         },
       },
+      {
+        $lookup: {
+          from: "users",
+          localField: "lastEditedBy",
+          foreignField: "_id",
+          as: "lastEditedBy",
+        },
+      },
+      {
+        $unwind: {
+          path: "$lastEditedBy",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
       { $sort: { createdAt: -1 } },
     ]).exec();
   } catch (err) {
@@ -58,6 +72,20 @@ async function findById(id) {
       {
         $addFields: {
           image: { $first: "$image" },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "lastEditedBy",
+          foreignField: "_id",
+          as: "lastEditedBy",
+        },
+      },
+      {
+        $unwind: {
+          path: "$lastEditedBy",
+          preserveNullAndEmptyArrays: true,
         },
       },
       { $limit: 1 },
@@ -83,6 +111,20 @@ async function findOne(query) {
       {
         $addFields: {
           image: { $first: "$image" },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "lastEditedBy",
+          foreignField: "_id",
+          as: "lastEditedBy",
+        },
+      },
+      {
+        $unwind: {
+          path: "$lastEditedBy",
+          preserveNullAndEmptyArrays: true,
         },
       },
       { $limit: 1 },

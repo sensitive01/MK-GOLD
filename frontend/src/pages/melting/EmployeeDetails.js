@@ -1,6 +1,6 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
-import { forwardRef, useEffect, useRef, useState, useCallback } from 'react';
+import { forwardRef, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 // @mui
@@ -12,8 +12,6 @@ import {
     Checkbox,
     CircularProgress,
     Container,
-    FormControl,
-    Grid,
     IconButton,
     MenuItem,
     Modal,
@@ -27,37 +25,32 @@ import {
     TableContainer,
     TablePagination,
     TableRow,
-    TextField,
-    Typography
+    Typography,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
-import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { useFormik } from 'formik';
 import moment from 'moment';
-import * as Yup from 'yup';
 // components
-import { CreateGoldRate, UpdateGoldRate } from '../../components/accounts/gold-rate';
+import { CreateEmployee, UpdateEmployee, PreviewEmployee } from '../../components/admin/employee';
 import Iconify from '../../components/iconify';
+import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
+import global from '../../utils/global';
 // sections
-import { GoldRateListHead, GoldRateListToolbar } from '../../sections/@dashboard/gold-rate';
-import SuccessModal from '../../components/success-modal';
+import { EmployeeListHead, EmployeeListToolbar } from '../../sections/@dashboard/employee';
 // mock
-import { deleteGoldRateById, getGoldRate } from '../../apis/accounts/gold-rate';
+import { deleteEmployeeById, getEmployee } from '../../apis/admin/employee';
 
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
-  { id: 'rate', label: 'Rate', alignRight: false },
-  { id: 'type', label: 'Type', alignRight: false },
-  { id: 'state', label: 'State', alignRight: false },
-  { id: 'date', label: 'Date', alignRight: false },
+  { id: 'employeeId', label: 'Employee Id', alignRight: false },
+  { id: 'name', label: 'Name', alignRight: false },
+  { id: 'email', label: 'Email', alignRight: false },
+  { id: 'gender', label: 'Gender', alignRight: false },
+  { id: 'designation', label: 'Designation', alignRight: false },
+  { id: 'phoneNumber', label: 'Phone Number', alignRight: false },
+  { id: 'status', label: 'Status', alignRight: false },
+  { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
 ];
 
@@ -87,16 +80,18 @@ function applySortFilter(array, comparator, query) {
     return a[1] - b[1];
   });
   if (query) {
-    return filter(array, (row) => row.state.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    return filter(array || [], (row) => row.name.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
   return stabilizedThis?.map((el) => el[0]);
 }
 
-export default function GoldRate() {
+export default function Employee() {
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
   const [page, setPage] = useState(0);
+  const auth = useSelector((state) => state.auth);
+  const userType = auth.user?.userType;
   const [order, setOrder] = useState('asc');
   const [selected, setSelected] = useState([]);
   const [orderBy, setOrderBy] = useState(null);
@@ -104,15 +99,11 @@ export default function GoldRate() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
-  const auth = useSelector((state) => state.auth);
-  const userType = auth.user?.userType?.toLowerCase();
   const [data, setData] = useState([]);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const form = useRef();
 
   const [notify, setNotify] = useState({
     open: false,
@@ -120,53 +111,16 @@ export default function GoldRate() {
     severity: 'success',
   });
 
-  // Form validation
-  const schema = Yup.object({
-    fromDate: Yup.string().required('From date is required'),
-    toDate: Yup.string().required('To date is required'),
-  });
-
-  const { handleSubmit, touched, errors, values, setFieldValue, resetForm } = useFormik({
-    initialValues: {
-      fromDate: null,
-      toDate: null,
-    },
-    validationSchema: schema,
-    onSubmit: (values) => {
-      setOpenBackdrop(true);
-      getGoldRate({
-        date: {
-          $gte: values.fromDate?.format("YYYY-MM-DD"),
-          $lte: values.toDate?.format("YYYY-MM-DD"),
-        },
-      }).then((data) => {
-        setData(data.data);
-        setOpenBackdrop(false);
-      });
-      setFilterOpen(false);
-    },
-  });
-
-  const fetchData = useCallback(
-    (
-      query = {
-        date: {
-          $gte: values.fromDate ?? moment()?.format("YYYY-MM-DD"),
-          $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
-        },
-      }
-    ) => {
-      getGoldRate(query).then((data) => {
-        setData(data.data);
-        setOpenBackdrop(false);
-      });
-    },
-    [values.fromDate, values.toDate]
-  );
-
   useEffect(() => {
     fetchData();
-  }, [toggleContainer, fetchData]);
+  }, [toggleContainer]);
+
+  const fetchData = (query = {}) => {
+    getEmployee(query).then((data) => {
+      setData(data.data);
+      setOpenBackdrop(false);
+    });
+  };
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -225,32 +179,29 @@ export default function GoldRate() {
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
-    deleteGoldRateById(openId).then(() => {
+    deleteEmployeeById(openId).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected(selected?.filter((e) => e !== openId));
-    });
-  };
-
-  const handleDeleteSelected = () => {
-    deleteGoldRateById(selected).then(() => {
-      fetchData();
-      handleCloseDeleteModal();
-      setSelected([]);
       setNotify({
         open: true,
-        message: 'Gold rate deleted',
+        message: 'Employee Deleted Successfully!',
         severity: 'success',
       });
     });
   };
 
-  const handleFilterOpen = () => {
-    setFilterOpen(true);
-  };
-
-  const handleFilterClose = () => {
-    setFilterOpen(false);
+  const handleDeleteSelected = () => {
+    deleteEmployeeById(selected).then(() => {
+      fetchData();
+      handleCloseDeleteModal();
+      setSelected([]);
+      setNotify({
+        open: true,
+        message: 'Employee Deleted Successfully!',
+        severity: 'success',
+      });
+    });
   };
 
   const style = {
@@ -274,78 +225,54 @@ export default function GoldRate() {
   return (
     <>
       <Helmet>
-        <title> Gold Rate | MK Gold </title>
+        <title> Employee | MK Gold </title>
       </Helmet>
 
-      {notify.severity === 'success' ? (
-        <SuccessModal
-          open={notify.open}
-          message={notify.message}
-          onClose={() => setNotify({ ...notify, open: false })}
-        />
-      ) : (
-        <Snackbar
-          anchorOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-          open={notify.open}
+      <Snackbar
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        open={notify.open}
+        onClose={() => {
+          setNotify({ ...notify, open: false });
+        }}
+        autoHideDuration={3000}
+      >
+        <Alert
           onClose={() => {
             setNotify({ ...notify, open: false });
           }}
-          autoHideDuration={3000}
+          severity={notify.severity}
+          sx={{ width: '100%', color: 'white' }}
         >
-          <Alert
-            onClose={() => {
-              setNotify({ ...notify, open: false });
-            }}
-            severity={notify.severity}
-            sx={{ width: '100%', color: 'white' }}
-          >
-            {notify.message}
-          </Alert>
-        </Snackbar>
-      )}
+          {notify.message}
+        </Alert>
+      </Snackbar>
 
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Gold Rate
+            Employee
           </Typography>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
-            {userType !== 'finance' && (
-              <Button
-                variant="contained"
-                startIcon={<Iconify icon="eva:plus-fill" />}
-                onClick={() => {
-                  setToggleContainer(!toggleContainer);
-                  setToggleContainerType('create');
-                }}
-              >
-                New Gold Rate
-              </Button>
-            )}
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
-              onClick={handleFilterOpen}
-            >
-              Filter
-            </Button>
-          </Stack>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="eva:plus-fill" />}
+            onClick={() => {
+              setToggleContainer(!toggleContainer);
+              setToggleContainerType('create');
+            }}
+          >
+            New Employee
+          </Button>
         </Stack>
 
-        <p style={{ color: '#fff' }}>
-          From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
-          {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
-        </p>
-
         <Card>
-          <GoldRateListToolbar
+          <EmployeeListToolbar
             numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
-            hideDelete={userType === 'finance'}
+            userType={userType}
             handleDelete={() => {
               setDeleteType('selected');
               handleOpenDeleteModal();
@@ -355,7 +282,7 @@ export default function GoldRate() {
           <Scrollbar>
             <TableContainer>
               <Table sx={{ minWidth: 800 }}>
-                <GoldRateListHead
+                <EmployeeListHead
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
@@ -363,54 +290,50 @@ export default function GoldRate() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
-                  hideCheckbox={userType === 'finance'}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, rate, type, state, date } = row;
+                    const { _id, employeeId, name, email, gender, designation, phoneNumber, status, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
                       <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        {userType !== 'finance' && (
-                          <TableCell padding="checkbox">
-                            <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                          </TableCell>
-                        )}
-
-                        <TableCell align="left">{rate}</TableCell>
-
-                        <TableCell align="left">{sentenceCase(type)}</TableCell>
-
-                        <TableCell align="left">{sentenceCase(state)}</TableCell>
-
-                        <TableCell align="left">{moment(date).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-
-                        {userType !== 'finance' && (
-                          <TableCell align="right">
-                            <IconButton
-                              size="large"
-                              color="inherit"
-                              onClick={(e) => {
-                                setOpenId(_id);
-                                handleOpenMenu(e);
-                              }}
-                            >
-                              <Iconify icon={'eva:more-vertical-fill'} />
-                            </IconButton>
-                          </TableCell>
-                        )}
+                        <TableCell padding="checkbox">
+                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                        </TableCell>
+                        <TableCell align="left">{employeeId}</TableCell>
+                        <TableCell align="left">{name}</TableCell>
+                        <TableCell align="left">{email}</TableCell>
+                        <TableCell align="left">{gender}</TableCell>
+                        <TableCell align="left">{sentenceCase(designation)}</TableCell>
+                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
+                        <TableCell align="left">
+                          <Label color={(status !== 'active' && 'error') || 'success'}>{sentenceCase(status)}</Label>
+                        </TableCell>
+                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                        <TableCell align="right">
+                          <IconButton
+                            size="large"
+                            color="inherit"
+                            onClick={(e) => {
+                              setOpenId(_id);
+                              handleOpenMenu(e);
+                            }}
+                          >
+                            <Iconify icon={'eva:more-vertical-fill'} />
+                          </IconButton>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={6} />
+                      <TableCell colSpan={12} />
                     </TableRow>
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={12} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -426,7 +349,7 @@ export default function GoldRate() {
                 {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
-                      <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={12} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -468,7 +391,7 @@ export default function GoldRate() {
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Create Gold Rate
+            Create Employee
           </Typography>
           <Button
             variant="contained"
@@ -481,7 +404,7 @@ export default function GoldRate() {
           </Button>
         </Stack>
 
-        <CreateGoldRate setToggleContainer={setToggleContainer} setNotify={setNotify} />
+        <CreateEmployee setToggleContainer={setToggleContainer} setNotify={setNotify} />
       </Container>
 
       <Container
@@ -490,7 +413,7 @@ export default function GoldRate() {
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Update Gold Rate
+            Update Employee
           </Typography>
           <Button
             variant="contained"
@@ -503,7 +426,29 @@ export default function GoldRate() {
           </Button>
         </Stack>
 
-        <UpdateGoldRate setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
+        <UpdateEmployee setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
+      </Container>
+
+      <Container
+        maxWidth="xl"
+        sx={{ display: toggleContainer === true && toggleContainerType === 'preview' ? 'block' : 'none' }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+            View Employee
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mdi:arrow-left" />}
+            onClick={() => {
+              setToggleContainer(!toggleContainer);
+            }}
+          >
+            Back
+          </Button>
+        </Stack>
+
+        <PreviewEmployee id={openId} />
       </Container>
 
       <Popover
@@ -527,6 +472,17 @@ export default function GoldRate() {
         <MenuItem
           onClick={() => {
             setOpen(null);
+            setToggleContainerType('preview');
+            setToggleContainer(!toggleContainer);
+          }}
+        >
+          <Iconify icon={'eva:eye-fill'} sx={{ mr: 2 }} />
+          View
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
             setToggleContainerType('update');
             setToggleContainer(!toggleContainer);
           }}
@@ -535,17 +491,19 @@ export default function GoldRate() {
           Edit
         </MenuItem>
 
-        {/* <MenuItem
-          sx={{ color: 'error.main' }}
-          onClick={() => {
-            setOpen(null);
-            setDeleteType('single');
-            handleOpenDeleteModal();
-          }}
-        >
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-          Delete
-        </MenuItem> */}
+        {global.canDelete(userType) && (
+          <MenuItem
+            sx={{ color: 'error.main' }}
+            onClick={() => {
+              setOpen(null);
+              setDeleteType('single');
+              handleOpenDeleteModal();
+            }}
+          >
+            <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
+            Delete
+          </MenuItem>
+        )}
       </Popover>
 
       <Modal
@@ -582,87 +540,12 @@ export default function GoldRate() {
         </Box>
       </Modal>
 
-      <Dialog open={filterOpen} onClose={handleFilterClose}>
-        <form
-          ref={form}
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmit(e);
-          }}
-          autoComplete="off"
-        >
-          <DialogTitle>Filter</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={3} sx={{ p: 1 }}>
-              <Grid item xs={12} sm={6}>
-                <FormControl sx={{ minWidth: 120 }}>
-                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
-                    <DesktopDatePicker
-                      label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
-                      inputFormat="MM/DD/YYYY"
-                      name="fromDate"
-                      value={values.fromDate}
-                      onChange={(value) => {
-                        setFieldValue('fromDate', value, true);
-                      }}
-                      renderInput={(params) => <TextField {...params} fullWidth />}
-                    />
-                  </LocalizationProvider>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl sx={{ minWidth: 120 }}>
-                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
-                    <DesktopDatePicker
-                      label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
-                      inputFormat="MM/DD/YYYY"
-                      name="toDate"
-                      value={values.toDate}
-                      onChange={(value) => {
-                        setFieldValue('toDate', value, true);
-                      }}
-                      renderInput={(params) => <TextField {...params} fullWidth />}
-                    />
-                  </LocalizationProvider>
-                </FormControl>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => {
-                setFilterOpen(false);
-                resetForm();
-                fetchData({
-                  createdAt: {
-                    $gte: moment()?.format("YYYY-MM-DD"),
-                    $lte: moment()?.format("YYYY-MM-DD"),
-                  },
-                });
-              }}
-            >
-              Clear
-            </Button>
-            <Button variant="contained" onClick={handleFilterClose}>
-              Close
-            </Button>
-            <Button variant="contained" type="submit">
-              Filter
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
       </Backdrop>
     </>
   );
 }
-
-
 
 
 

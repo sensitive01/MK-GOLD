@@ -133,7 +133,8 @@ export default {
   ],
   canDelete: (userType) => {
     const role = userType?.toLowerCase();
-    return role !== 'subadmin' && role !== 'transaction_executive';
+    //return role !== 'subadmin' && role !== 'transaction_executive';
+    return role === 'admin';
   },
   maskPhoneNumber: (phone) => {
     if (!phone || phone.length < 4) return phone;

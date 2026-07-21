@@ -25,6 +25,14 @@ import {
     TablePagination,
     TableRow,
     Typography,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    FormControl,
+    InputLabel,
+    Select,
+    TextField
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
@@ -33,29 +41,22 @@ import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 import { TransitListHead, TransitListToolbar } from '../../sections/@dashboard/transit';
-import { deleteTransitById, findTransit, createTransit, updateTransit } from '../../apis/branch/transit';
+import { findTransit, updateTransitStatus, deleteTransitById } from '../../apis/admin/transit';
+import { createTransit } from '../../apis/branch/transit';
 import { createFile } from '../../apis/branch/fileupload';
+import { findSales } from '../../apis/admin/sales';
 import global from '../../utils/global';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { findSales } from '../../apis/branch/sales';
 import { LoadingButton } from '@mui/lab';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import FormControl from '@mui/material/FormControl';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
 import Grid from '@mui/material/Grid';
-import TextField from '@mui/material/TextField';
-import PropTypes from 'prop-types';
 
 const TABLE_HEAD = [
+  { id: 'branch', label: 'Branch', alignRight: false },
   { id: 'transitId', label: 'Transit ID', alignRight: false },
   { id: 'numberOfPackets', label: 'Packets', alignRight: false },
   { id: 'physical', label: 'Physical', alignRight: false },
@@ -98,7 +99,6 @@ function applySortFilter(array, comparator, query) {
 
 export default function Transit() {
   const auth = useSelector((state) => state.auth);
-  const [branch, setBranch] = useState({});
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
@@ -110,18 +110,22 @@ export default function Transit() {
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
-  const [openCreateModal, setOpenCreateModal] = useState(false);
-  const [openEditModal, setOpenEditModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
-  const userType = auth.user?.userType;
+  const [adminNotes, setAdminNotes] = useState('');
+  const [deviation, setDeviation] = useState('no');
+  const [adminProof, setAdminProof] = useState(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const fileInputRef = useRef();
+
+  const userType = auth?.user?.userType?.toLowerCase();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const createTransitMode = searchParams.get('createTransit') === 'true';
   const saleIdsString = searchParams.get('saleIds');
+  const [openCreateModal, setOpenCreateModal] = useState(false);
   const [prefillData, setPrefillData] = useState(null);
 
-  const handleOpenEditModal = () => setOpenEditModal(true);
-  const handleCloseEditModal = () => setOpenEditModal(false);
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
 
@@ -130,6 +134,25 @@ export default function Transit() {
     message: '',
     severity: 'success',
   });
+
+  const handleDelete = async () => {
+    handleCloseDeleteModal();
+    setOpenBackdrop(true);
+    try {
+      const res = await deleteTransitById(openId);
+      if (res?.status) {
+        setNotify({ open: true, message: 'Transit deleted successfully!', severity: 'success' });
+        fetchData();
+        setSelected([]);
+      } else {
+        setNotify({ open: true, message: res?.message || 'Error deleting transit', severity: 'error' });
+        setOpenBackdrop(false);
+      }
+    } catch (error) {
+      setNotify({ open: true, message: 'An error occurred', severity: 'error' });
+      setOpenBackdrop(false);
+    }
+  };
 
   const fetchData = useCallback(
     (
@@ -140,25 +163,17 @@ export default function Transit() {
         },
       }
     ) => {
-      if (!query.branch) query.branch = branch?._id || branch;
       findTransit(query).then((data) => {
-        setData(Array.isArray(data?.data) ? data.data : []);
+        setData(data.data || []);
         setOpenBackdrop(false);
       });
     },
-    [branch?._id || branch]
+    []
   );
 
   useEffect(() => {
-    setBranch(auth.user.branch);
-    fetchData({
-      createdAt: {
-        $gte: moment()?.subtract(1, 'month').format("YYYY-MM-DD"),
-        $lte: moment()?.add(1, 'days').format("YYYY-MM-DD"),
-      },
-      branch: auth.user?.branch?._id || auth.user?.branch,
-    });
-  }, [auth.user.branch, fetchData]);
+    fetchData();
+  }, [fetchData]);
 
   useEffect(() => {
     if (createTransitMode && saleIdsString) {
@@ -269,34 +284,23 @@ export default function Transit() {
   const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
   const isNotFound = !filteredData?.length && !!filterName;
 
-  const handleDelete = () => {
-    deleteTransitById(openId).then(() => {
-      fetchData();
-      handleCloseDeleteModal();
-      setSelected(selected?.filter((e) => e !== openId));
-      setNotify({ open: true, message: 'Transit deleted successfully', severity: 'success' });
+  const handleUpdateStatus = () => {
+    if (!adminProof) {
+      setNotify({ open: true, message: 'Proof is required to receive transit', severity: 'error' });
+      return;
+    }
+    const proofId = typeof adminProof === 'object' ? adminProof._id : adminProof;
+    const newStatus = deviation === 'yes' ? 'moved' : 'submitted';
+    updateTransitStatus(openId, { status: newStatus, deviations: deviation, receivedNotes: adminNotes, receivedProof: proofId }).then((data) => {
+      handleCloseMenu();
+      setViewModalOpen(false);
+      if (data.status) {
+        fetchData();
+        setNotify({ open: true, message: `Transit status updated to ${newStatus}`, severity: 'success' });
+      } else {
+        setNotify({ open: true, message: data.message || 'Error updating status', severity: 'error' });
+      }
     });
-  };
-
-  const handleDeleteSelected = () => {
-    deleteTransitById(selected).then(() => {
-      fetchData();
-      handleCloseDeleteModal();
-      setSelected([]);
-      setNotify({ open: true, message: 'Transits deleted successfully', severity: 'success' });
-    });
-  };
-
-  const style = {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 400,
-    bgcolor: 'background.paper',
-    borderRadius: 3,
-    boxShadow: 24,
-    p: 4,
   };
 
   function AlertComponent(props, ref) {
@@ -304,6 +308,25 @@ export default function Transit() {
   }
 
   const Alert = forwardRef(AlertComponent);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setUploadLoading(true);
+      const formData = new FormData();
+      formData.append('uploadedFile', file);
+      formData.append('uploadName', 'transit_received_proof');
+      formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
+      const response = await createFile(formData);
+      setUploadLoading(false);
+      if (response.status) {
+        setAdminProof(response.data?._id);
+        setNotify({ open: true, message: 'Proof uploaded successfully', severity: 'success' });
+      } else {
+        alert('File upload failed');
+      }
+    }
+  };
 
   const selectedTransitObj = data?.find(item => item._id === openId);
 
@@ -331,11 +354,13 @@ export default function Transit() {
       <Container maxWidth="xl">
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Transit
+            Transit Management
           </Typography>
-          <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={() => navigate('/branch/sale?selectForTransit=true')}>
-            New Transit
-          </Button>
+          {['admin', 'melting'].includes(userType) && (
+            <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={() => navigate(`/${userType}/purchase?tab=0&selectForTransit=true`)}>
+              New Transit
+            </Button>
+          )}
         </Stack>
 
         <Card>
@@ -343,10 +368,6 @@ export default function Transit() {
             numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
-            handleDelete={() => {
-              setDeleteType('selected');
-              handleOpenDeleteModal();
-            }}
           />
 
           <Scrollbar>
@@ -365,6 +386,7 @@ export default function Transit() {
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
                     const {
                       _id,
+                      branch,
                       transitId,
                       numberOfPackets,
                       physical,
@@ -381,6 +403,7 @@ export default function Transit() {
                         <TableCell padding="checkbox">
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
+                        <TableCell align="left">{branch?.branchName || 'N/A'}</TableCell>
                         <TableCell align="left">{transitId}</TableCell>
                         <TableCell align="left">{numberOfPackets}</TableCell>
                         <TableCell align="left">{physical}</TableCell>
@@ -388,7 +411,7 @@ export default function Transit() {
                         <TableCell align="left">{totalNetWeight}</TableCell>
                         <TableCell align="left">{sentenceCase(deliveryBy || '')}</TableCell>
                         <TableCell align="left">
-                          <Label color={status === 'moved' ? 'success' : 'warning'}>{sentenceCase(status || '')}</Label>
+                          <Label color={status === 'received' ? 'success' : 'warning'}>{sentenceCase(status || '')}</Label>
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD')}</TableCell>
                         <TableCell align="right">
@@ -408,12 +431,12 @@ export default function Transit() {
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={9} />
+                      <TableCell colSpan={10} />
                     </TableRow>
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
                         <Paper sx={{ textAlign: 'center' }}>
                           <Typography paragraph>No data in table</Typography>
                         </Paper>
@@ -425,7 +448,7 @@ export default function Transit() {
                 {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
                         <Paper sx={{ textAlign: 'center' }}>
                           <Typography variant="h6" paragraph>
                             Not found
@@ -467,77 +490,137 @@ export default function Transit() {
         }}
       >
         <MenuItem
-          disabled={['moved', 'melted'].includes(selectedTransitObj?.status)}
           onClick={() => {
-            setOpen(null);
-            handleOpenEditModal();
+            handleCloseMenu();
+            setDeviation(selectedTransitObj?.deviations || 'no');
+            setAdminNotes(selectedTransitObj?.receivedNotes || '');
+            setAdminProof(selectedTransitObj?.receivedProof || '');
+            setViewModalOpen(true);
           }}
         >
-          <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
-          Edit
+          <Iconify icon={'carbon:view-filled'} sx={{ mr: 2 }} />
+          View Sale
         </MenuItem>
-        {/* global.canDelete(userType) && (
-          <MenuItem
-            disabled={['moved', 'melted'].includes(selectedTransitObj?.status)}
-            sx={{ color: ['moved', 'melted'].includes(selectedTransitObj?.status) ? 'text.disabled' : 'error.main' }}
-            onClick={() => {
-              setOpen(null);
-              setDeleteType('single');
-              handleOpenDeleteModal();
-            }}
-          >
-            <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-            Delete
-          </MenuItem>
-        ) */}
+
+        {/* <MenuItem sx={{ color: 'error.main' }} onClick={() => { handleCloseMenu(); setDeleteType('single'); setOpenDeleteModal(true); }}>
+          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
+          Delete
+        </MenuItem> */}
       </Popover>
 
-      <Modal open={openDeleteModal} onClose={handleCloseDeleteModal}>
-        <Box sx={style}>
-          <Typography id="modal-modal-title" variant="h6" component="h2">
-            Delete
-          </Typography>
-          <Typography id="modal-modal-description" sx={{ mt: 3 }}>
-            Do you want to delete?
-          </Typography>
-          <Stack direction="row" alignItems="center" spacing={2} mt={3}>
+      <Dialog open={viewModalOpen} onClose={() => setViewModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>View Transit Details</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Notes:
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 3 }}>
+              {selectedTransitObj?.notes || 'No notes provided.'}
+            </Typography>
+            <Typography variant="subtitle1" gutterBottom>
+              Proof:
+            </Typography>
+            {selectedTransitObj?.proof?.uploadedFile ? (
+              <Box component="img" src={selectedTransitObj.proof.uploadedFile.startsWith('http') ? selectedTransitObj.proof.uploadedFile : `${global.BASE_URL}/${selectedTransitObj.proof.uploadedFile}`} alt="proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain', mb: 3 }} />
+            ) : (
+              <Typography variant="body2" sx={{ mb: 3 }}>
+                No proof uploaded.
+              </Typography>
+            )}
+            <Typography variant="h6" gutterBottom sx={{ mt: 3, borderTop: '1px solid #ccc', pt: 2 }}>
+              Received Details
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="Admin Notes"
+              value={adminNotes}
+              onChange={(e) => setAdminNotes(e.target.value)}
+              sx={{ mt: 2 }}
+            />
             <Button
               variant="contained"
-              color="error"
-              onClick={() => {
-                if (deleteType === 'single') handleDelete();
-                else handleDeleteSelected();
-              }}
+              component="label"
+              sx={{ mt: 2, mb: 1 }}
+              disabled={uploadLoading}
             >
+              {uploadLoading ? 'Uploading...' : 'Upload Proof'}
+              <input
+                type="file"
+                hidden
+                onChange={handleFileUpload}
+              />
+            </Button>
+            {adminProof && typeof adminProof === 'object' && adminProof.uploadedFile ? (
+              <Box component="img" src={adminProof.uploadedFile.startsWith('http') ? adminProof.uploadedFile : `${global.BASE_URL}/${adminProof.uploadedFile}`} alt="Admin proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain', mb: 3, mt: 2 }} />
+            ) : adminProof ? (
+              <Typography variant="body2" sx={{ color: 'success.main', mb: 2 }}>
+                Proof uploaded successfully!
+              </Typography>
+            ) : null}
+
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel id="deviations-label">Deviations</InputLabel>
+              <Select
+                labelId="deviations-label"
+                value={deviation}
+                label="Deviations"
+                onChange={(e) => setDeviation(e.target.value)}
+              >
+                <MenuItem value="yes">Yes</MenuItem>
+                <MenuItem value="no">No</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setViewModalOpen(false)} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleUpdateStatus} variant="contained" color="primary">
+            Received
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Modal
+        open={openDeleteModal}
+        onClose={handleCloseDeleteModal}
+      >
+        <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2 }}>
+          <Typography variant="h6" component="h2">
+            Delete Transit
+          </Typography>
+          <Typography sx={{ mt: 3 }}>
+            Do you want to delete this transit record?
+          </Typography>
+          <Stack direction="row" alignItems="center" spacing={2} mt={3}>
+            <Button variant="contained" color="error" onClick={handleDelete}>
               Delete
             </Button>
-            <Button variant="contained" onClick={handleCloseDeleteModal}>Close</Button>
+            <Button variant="outlined" onClick={handleCloseDeleteModal}>
+              Cancel
+            </Button>
           </Stack>
         </Box>
       </Modal>
 
-      <CreateTransitModal 
-        open={openCreateModal} 
-        handleClose={() => setOpenCreateModal(false)} 
-        fetchData={fetchData} 
-        auth={auth} 
-        setNotify={setNotify} 
-        prefillData={prefillData}
-      />
-      
-      {openEditModal && (
-        <EditTransitModal 
-          open={openEditModal} 
-          id={openId} 
-          handleClose={handleCloseEditModal} 
-          fetchData={fetchData} 
-          setNotify={setNotify} 
-        />
-      )}
-
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
       </Backdrop>
+
+      {openCreateModal && (
+        <CreateTransitModal 
+          open={openCreateModal} 
+          handleClose={() => setOpenCreateModal(false)} 
+          fetchData={fetchData} 
+          auth={auth} 
+          setNotify={setNotify} 
+          prefillData={prefillData}
+        />
+      )}
     </>
   );
 }
@@ -702,171 +785,6 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
           <LoadingButton type="submit" variant="contained" loading={loading} sx={{ color: '#fff' }}>Create</LoadingButton>
-        </DialogActions>
-      </form>
-    </Dialog>
-  );
-}
-
-function EditTransitModal({ open, id, handleClose, fetchData, setNotify }) {
-  const [loading, setLoading] = useState(false);
-  const fileInputRef = useRef();
-  const [data, setData] = useState(null);
-
-  const schema = Yup.object({
-    transitId: Yup.string().required('Transit ID is required'),
-    numberOfPackets: Yup.number().required('Number of packets is required'),
-    physical: Yup.number().required('Physical is required'),
-    released: Yup.number().required('Released is required'),
-    numberOfOrnaments: Yup.number().required('Number of ornaments is required'),
-    totalGrossWeight: Yup.number().required('Total gross weight is required'),
-    totalNetWeight: Yup.number().required('Total net weight is required'),
-    fromDate: Yup.date().required('From date is required'),
-    toDate: Yup.date().required('To date is required'),
-    numberOfDays: Yup.number().required('Number of days is required'),
-    packetWeight: Yup.number().required('Packet weight is required'),
-    deliveryBy: Yup.string().required('Delivery by is required'),
-    notes: Yup.string(),
-  });
-
-  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue } = useFormik({
-    initialValues: {
-      transitId: '',
-      numberOfPackets: '',
-      physical: '',
-      released: '',
-      numberOfOrnaments: '',
-      totalGrossWeight: '',
-      totalNetWeight: '',
-      fromDate: moment(),
-      toDate: moment(),
-      numberOfDays: '',
-      packetWeight: '',
-      deliveryBy: '',
-      notes: '',
-      proof: '',
-    },
-    validationSchema: schema,
-    onSubmit: (values) => {
-      setLoading(true);
-      updateTransit(id, values).then((data) => {
-        setLoading(false);
-        if (data.status) {
-          handleClose();
-          fetchData();
-          setNotify({ open: true, message: 'Transit updated successfully', severity: 'success' });
-        } else {
-          setNotify({ open: true, message: data.message || 'Error updating transit', severity: 'error' });
-        }
-      });
-    },
-  });
-
-  useEffect(() => {
-    if (id && open) {
-      findTransit({ _id: id }).then((res) => {
-        if (res.status && res.data?.length > 0) {
-          const transit = res.data[0];
-          setData(transit);
-          setValues({
-            transitId: transit.transitId,
-            numberOfPackets: transit.numberOfPackets,
-            physical: transit.physical,
-            released: transit.released,
-            numberOfOrnaments: transit.numberOfOrnaments,
-            totalGrossWeight: transit.totalGrossWeight,
-            totalNetWeight: transit.totalNetWeight,
-            fromDate: moment(transit.fromDate),
-            toDate: moment(transit.toDate),
-            numberOfDays: transit.numberOfDays,
-            packetWeight: transit.packetWeight,
-            deliveryBy: transit.deliveryBy,
-            notes: transit.notes,
-            proof: transit.proof,
-          });
-        }
-      });
-    }
-  }, [id, open, setValues]);
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setLoading(true);
-      const formData = new FormData();
-      formData.append('uploadedFile', file);
-      formData.append('uploadName', 'transit_proof');
-      formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
-      const response = await createFile(formData);
-      setLoading(false);
-      if (response.status) {
-        setFieldValue('proof', response.data?._id);
-      } else {
-        alert('File upload failed');
-      }
-    }
-  };
-
-  return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>Edit Transit</DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
-              <TextField name="transitId" label="Transit ID" value={values.transitId} onChange={handleChange} onBlur={handleBlur} error={touched.transitId && !!errors.transitId} helperText={touched.transitId && errors.transitId} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="numberOfPackets" type="number" label="Number of Packets" value={values.numberOfPackets} onChange={handleChange} onBlur={handleBlur} error={touched.numberOfPackets && !!errors.numberOfPackets} helperText={touched.numberOfPackets && errors.numberOfPackets} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="physical" type="number" label="Physical" value={values.physical} onChange={handleChange} onBlur={handleBlur} error={touched.physical && !!errors.physical} helperText={touched.physical && errors.physical} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="released" type="number" label="Released" value={values.released} onChange={handleChange} onBlur={handleBlur} error={touched.released && !!errors.released} helperText={touched.released && errors.released} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="numberOfOrnaments" type="number" label="Number of Ornaments" value={values.numberOfOrnaments} onChange={handleChange} onBlur={handleBlur} error={touched.numberOfOrnaments && !!errors.numberOfOrnaments} helperText={touched.numberOfOrnaments && errors.numberOfOrnaments} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="totalGrossWeight" type="number" label="Total Gross Weight" value={values.totalGrossWeight} onChange={handleChange} onBlur={handleBlur} error={touched.totalGrossWeight && !!errors.totalGrossWeight} helperText={touched.totalGrossWeight && errors.totalGrossWeight} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="totalNetWeight" type="number" label="Total Net Weight" value={values.totalNetWeight} onChange={handleChange} onBlur={handleBlur} error={touched.totalNetWeight && !!errors.totalNetWeight} helperText={touched.totalNetWeight && errors.totalNetWeight} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <LocalizationProvider dateAdapter={AdapterMoment}>
-                <DesktopDatePicker label="From Date" inputFormat="MM/DD/YYYY" value={values.fromDate} onChange={(v) => setFieldValue('fromDate', v)} renderInput={(params) => <TextField {...params} fullWidth error={touched.fromDate && !!errors.fromDate} helperText={touched.fromDate && errors.fromDate} />} />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <LocalizationProvider dateAdapter={AdapterMoment}>
-                <DesktopDatePicker label="To Date" inputFormat="MM/DD/YYYY" value={values.toDate} onChange={(v) => setFieldValue('toDate', v)} renderInput={(params) => <TextField {...params} fullWidth error={touched.toDate && !!errors.toDate} helperText={touched.toDate && errors.toDate} />} />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="numberOfDays" type="number" label="Number of Days" value={values.numberOfDays} onChange={handleChange} onBlur={handleBlur} error={touched.numberOfDays && !!errors.numberOfDays} helperText={touched.numberOfDays && errors.numberOfDays} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="packetWeight" type="number" label="Packet Weight" value={values.packetWeight} onChange={handleChange} onBlur={handleBlur} error={touched.packetWeight && !!errors.packetWeight} helperText={touched.packetWeight && errors.packetWeight} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="deliveryBy" label="Delivery By" value={values.deliveryBy} onChange={handleChange} onBlur={handleBlur} error={touched.deliveryBy && !!errors.deliveryBy} helperText={touched.deliveryBy && errors.deliveryBy} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-               <input type="file" style={{ display: 'none' }} ref={fileInputRef} accept="image/*,application/pdf" onChange={handleFileUpload} />
-               <LoadingButton loading={loading} variant="outlined" onClick={() => fileInputRef.current?.click()} fullWidth sx={{ height: 56 }}>
-                 Update Proof (Image/PDF)
-               </LoadingButton>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField name="notes" label="Notes" value={values.notes} onChange={handleChange} onBlur={handleBlur} fullWidth multiline rows={3} />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <LoadingButton type="submit" variant="contained" loading={loading} sx={{ color: '#fff' }}>Save Changes</LoadingButton>
         </DialogActions>
       </form>
     </Dialog>

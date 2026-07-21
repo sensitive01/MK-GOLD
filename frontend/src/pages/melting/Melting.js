@@ -433,9 +433,9 @@ export default function Melting() {
                                   {row.status === 'melt_updated' ? 'Sell Bar' : 'Melt Update'}
                                 </Button>
                               )}
-                              <IconButton color="error" onClick={() => handleDeleteMelting(row._id)}>
+                              {/* <IconButton color="error" onClick={() => handleDeleteMelting(row._id)}>
                                 <Iconify icon={'eva:trash-2-outline'} />
-                              </IconButton>
+                              </IconButton> */}
                             </Stack>
                           </TableCell>
                         </TableRow>

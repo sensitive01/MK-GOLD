@@ -1,4 +1,4 @@
-import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid } from '@mui/material';
+import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid, Typography } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import { useEffect, useState } from 'react';
 import { useFormik } from 'formik';
@@ -6,6 +6,8 @@ import * as Yup from 'yup';
 import { getBranchById, updateBranch } from '../../../apis/hr/branch';
 
 function UpdateBranch(props) {
+  const [lastEditedBy, setLastEditedBy] = useState(null);
+
   // Form validation
   const schema = Yup.object({
     branchId: Yup.string().required('Branch id is required'),
@@ -84,16 +86,18 @@ function UpdateBranch(props) {
         setValues({
           branchId: data.data.branchId ?? '',
           branchName: data.data.branchName ?? '',
-          address: data.data.address.address ?? '',
-          area: data.data.address.area ?? '',
-          city: data.data.address.city ?? '',
-          state: data.data.address.state ?? '',
-          pincode: data.data.address.pincode ?? '',
-          landmark: data.data.address.landmark ?? '',
-          longitude: data.data.address.longitude ?? '',
-          latitude: data.data.address.latitude ?? '',
+          address: data.data.address?.address ?? '',
+          area: data.data.address?.area ?? '',
+          city: data.data.address?.city ?? '',
+          state: data.data.address?.state ?? '',
+          pincode: data.data.address?.pincode ?? '',
+          landmark: data.data.address?.landmark ?? '',
+          longitude: data.data.address?.longitude ?? '',
+          latitude: data.data.address?.latitude ?? '',
           status: data.data.status ?? '',
         });
+        const editor = data.data.lastEditedBy;
+        setLastEditedBy(editor ? `${editor.username} (${editor.userType})` : null);
       });
     }
   }, [props.id]);
@@ -237,6 +241,11 @@ function UpdateBranch(props) {
             </FormControl>
           </Grid>
           <Grid item xs={12}>
+            {lastEditedBy && (
+              <Typography variant="body2" color="textSecondary" sx={{ mb: 2, fontStyle: 'italic' }}>
+                Last Edited By: {lastEditedBy}
+              </Typography>
+            )}
             <LoadingButton size="large" type="submit" variant="contained">
               Save
             </LoadingButton>

@@ -15,6 +15,7 @@ async function find(query = {}) {
     return await User.find(query)
       .populate("employee")
       .populate("branch")
+      .populate("lastEditedBy")
       .select("-password")
 
       .sort({ createdAt: -1 })
@@ -26,7 +27,7 @@ async function find(query = {}) {
 
 async function findById(id) {
   try {
-    return await User.findById(id).populate("employee").populate("branch").select("-password").exec();
+    return await User.findById(id).populate("employee").populate("branch").populate("lastEditedBy").select("-password").exec();
   } catch (err) {
     throw err;
   }

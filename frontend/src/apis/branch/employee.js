@@ -20,7 +20,7 @@ async function getLoginNotCreatedEmployee() {
 
 async function getEmployeeById(id) {
   try {
-    const response = await apiClient().get(`/api/v1.0/branch/employee/get/${id}`);
+    const response = await apiClient().get(`/api/v1.0/branch/employee/get/${id}?t=${new Date().getTime()}`);
     return response.data;
   } catch (err) {
     return err;

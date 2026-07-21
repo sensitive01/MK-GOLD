@@ -420,7 +420,7 @@ export default function Branch() {
           Edit
         </MenuItem>
 
-        <MenuItem
+        {/* <MenuItem
           sx={{ color: 'error.main' }}
           onClick={() => {
             setOpen(null);
@@ -430,7 +430,7 @@ export default function Branch() {
         >
           <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
           Delete
-        </MenuItem>
+        </MenuItem> */}
       </Popover>
 
       <Modal

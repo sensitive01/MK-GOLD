@@ -11,7 +11,7 @@ async function getEmployee(query = {}) {
 
 async function getEmployeeById(id) {
   try {
-    const response = await apiClient().get(`/api/v1.0/hr/employee/get/${id}`);
+    const response = await apiClient().get(`/api/v1.0/hr/employee/get/${id}?t=${new Date().getTime()}`);
     return response.data;
   } catch (err) {
     return err;

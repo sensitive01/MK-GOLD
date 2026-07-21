@@ -118,7 +118,13 @@ import AdminDeskAttendance from './pages/admin_desk/Attendance';
 
 import MeltingDashboardLayout from './layouts/dashboard/melting';
 import MeltingDashboard from './pages/melting/Dashboard';
-
+import MeltingTransit from './pages/melting/Transit';
+import MeltingMelting from './pages/melting/Melting';
+import MeltingSellGold from './pages/melting/SellGold';
+import MeltingVendor from './pages/melting/Vendor';
+import MeltingSale from './pages/melting/Sale';
+import MeltingEmployee from './pages/melting/Employee';
+import MeltingExpense from './pages/melting/Expense';
 // ----------------------------------------------------------------------
 
 function Protected({ children }) {
@@ -329,13 +335,13 @@ export default function Router() {
         { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/melting/dashboard" />, index: true },
         { path: 'dashboard', element: <MeltingDashboard /> },
-        { path: 'transit', element: <AdminTransit /> },
-        { path: 'melting', element: <AdminMelting /> },
-        { path: 'sell-gold', element: <AdminSellGold /> },
-        { path: 'vendor', element: <AdminVendor /> },
-        { path: 'sale', element: <AdminSale /> },
-        { path: 'employee', element: <AdminEmployee /> },
-        { path: 'expense', element: <AdminExpense /> },
+        { path: 'transit', element: <MeltingTransit /> },
+        { path: 'melting', element: <MeltingMelting /> },
+        { path: 'sell-gold', element: <MeltingSellGold /> },
+        { path: 'vendor', element: <MeltingVendor /> },
+        { path: 'sale', element: <MeltingSale /> },
+        { path: 'employee', element: <MeltingEmployee /> },
+        { path: 'expense', element: <MeltingExpense /> },
       ],
     },
     {

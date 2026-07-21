@@ -143,6 +143,15 @@ export default function AuditorAttendance() {
         return;
       }
 
+      if (currentTab === 'my_attendance') {
+        getAttendance({ employee: auth.user.employee?._id, ...query }).then((data) => {
+          setData(data.data || []);
+          setOpenBackdrop(false);
+        });
+        setFilterOpen(false);
+        return;
+      }
+
       getAttendance(query).then((data) => {
         setData(data.data || []);
         setOpenBackdrop(false);
@@ -167,12 +176,20 @@ export default function AuditorAttendance() {
         return;
       }
 
+      if (currentTab === 'my_attendance') {
+        getAttendance({ employee: auth.user.employee?._id, ...query }).then((data) => {
+          setData(data.data || []);
+          setOpenBackdrop(false);
+        });
+        return;
+      }
+
       getAttendance(query).then((data) => {
         setData(data.data || []);
         setOpenBackdrop(false);
       });
     },
-    [values.fromDate, values.toDate]
+    [values.fromDate, values.toDate, currentTab, auth.user.employee]
   );
 
   useEffect(() => {
@@ -335,6 +352,18 @@ export default function AuditorAttendance() {
           <Typography variant="h4" sx={{ color: '#fff' }}>
             Attendance
           </Typography>
+          {currentTab === 'my_attendance' && (
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setToggleContainer(!toggleContainer);
+                setToggleContainerType('create');
+              }}
+            >
+              Mark Attendance
+            </Button>
+          )}
         </Stack>
 
         <Card>
@@ -352,6 +381,7 @@ export default function AuditorAttendance() {
               }}
             >
               <Tab value="all_attendance" label="All Attendance" />
+              <Tab value="my_attendance" label="My Attendance" />
               <Tab value="consolidated_attendance" label="My Consolidated Attendance" />
             </Tabs>
             <Box sx={{ p: 3, pb: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -478,17 +508,17 @@ export default function AuditorAttendance() {
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         PaperProps={{ sx: { p: 1, width: 140, '& .MuiMenuItem-root': { px: 1, typography: 'body2', borderRadius: 0.75 } } }}
       >
-        <MenuItem sx={{ color: 'error.main' }} onClick={() => { setOpen(null); setDeleteType('single'); handleOpenDeleteModal(); }}>
+        {/* <MenuItem sx={{ color: 'error.main' }} onClick={() => { setOpen(null); setDeleteType('single'); handleOpenDeleteModal(); }}>
           <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} /> Delete
-        </MenuItem>
+        </MenuItem> */}
       </Popover>
 
       <Modal open={openDeleteModal} onClose={handleCloseDeleteModal}>
         <Box sx={style}>
-          <Typography variant="h6">Delete Confirmation</Typography>
+          {/* <Typography variant="h6">Delete Confirmation</Typography> */}
           <Typography sx={{ mt: 3 }}>Do you want to delete this record?</Typography>
           <Stack direction="row" spacing={2} mt={3}>
-            <Button variant="contained" color="error" onClick={() => { if (deleteType === 'single') handleDelete(); else handleDeleteSelected(); }}>Delete</Button>
+            {/* <Button variant="contained" color="error" onClick={() => { if (deleteType === 'single') handleDelete(); else handleDeleteSelected(); }}>Delete</Button> */}
             <Button variant="contained" onClick={handleCloseDeleteModal}>Close</Button>
           </Stack>
         </Box>

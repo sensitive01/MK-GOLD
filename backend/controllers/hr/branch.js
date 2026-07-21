@@ -47,10 +47,14 @@ async function create(req, res) {
 
 async function update(req, res) {
   try {
+    const payload = req.body;
+    if (req.user && req.user._id) {
+      payload.lastEditedBy = req.user._id;
+    }
     res.json({
       status: true,
       message: "",
-      data: await branchService.update(req.params.id, req.body),
+      data: await branchService.update(req.params.id, payload),
     });
   } catch (err) {
     res.json({

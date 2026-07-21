@@ -45,21 +45,21 @@ branchRouter.post("/expense/get", expense.find);
 branchRouter.get("/expense/get/:id", expense.findById);
 branchRouter.post("/expense/create", expense.create);
 branchRouter.post("/expense/update/:id", expense.update);
-branchRouter.post("/expense/delete/:id", expense.remove);
+// branchRouter.post("/expense/delete/:id", expense.remove);
 
 branchRouter.get("/fund/get", fund.find);
 branchRouter.post("/fund/find", fund.find);
 branchRouter.get("/fund/get/:id", fund.findById);
 branchRouter.post("/fund/create", fund.create);
 branchRouter.post("/fund/update/:id", fund.update);
-branchRouter.post("/fund/delete/:id", fund.remove);
+// branchRouter.post("/fund/delete/:id", fund.remove);
 
 branchRouter.get("/sales/get", sales.find);
 branchRouter.post("/sales/get", sales.find);
 branchRouter.get("/sales/get/:id", sales.findById);
 branchRouter.post("/sales/create", sales.create);
 branchRouter.post("/sales/update/:id", sales.update);
-branchRouter.post("/sales/delete/:id", sales.remove);
+// branchRouter.post("/sales/delete/:id", sales.remove);
 
 branchRouter.get("/ornament/get", ornament.find);
 branchRouter.post("/ornament/get", ornament.find);
@@ -79,24 +79,24 @@ branchRouter.post("/release/get", release.find);
 branchRouter.get("/release/get/:id", release.findById);
 branchRouter.post("/release/create", release.create);
 branchRouter.post("/release/update/:id", release.update);
-branchRouter.post("/release/delete/:id", release.remove);
+// branchRouter.post("/release/delete/:id", release.remove);
 
 branchRouter.get("/customer/get", customer.find);
 branchRouter.post("/customer/get", customer.find);
 branchRouter.get("/customer/get/:id", customer.findById);
 branchRouter.post("/customer/create", customer.create);
 branchRouter.post("/customer/update/:id", customer.update);
-branchRouter.post("/customer/delete/:id", customer.remove);
+// branchRouter.post("/customer/delete/:id", customer.remove);
 branchRouter.post("/customer/send-otp", customer.sendOtp);
 branchRouter.post("/customer/verify-otp", customer.verifyOtp);
 
 branchRouter.get("/customer-address/get/:id", customerAddress.findById);
 branchRouter.post("/customer-address/create", customerAddress.create);
-branchRouter.post("/customer-address/delete/:id", customerAddress.remove);
+// branchRouter.post("/customer-address/delete/:id", customerAddress.remove);
 
 branchRouter.get("/customer-bank/get/:id", customerBank.findById);
 branchRouter.post("/customer-bank/create", customerBank.create);
-branchRouter.post("/customer-bank/delete/:id", customerBank.remove);
+// branchRouter.post("/customer-bank/delete/:id", customerBank.remove);
 
 branchRouter.get("/lead/get", lead.find);
 branchRouter.post("/lead/get", lead.find);
@@ -106,12 +106,12 @@ branchRouter.post("/lead/create", lead.create);
 branchRouter.post("/lead/bulk-create", lead.bulkCreate);
 branchRouter.post("/lead/update/:id", lead.update);
 branchRouter.post("/lead/mark-exclusive", lead.markExclusive);
-branchRouter.post("/lead/delete/:id", lead.remove);
+// branchRouter.post("/lead/delete/:id", lead.remove);
 branchRouter.post("/lead/disposition/:id", multer.single("uploadedFile"), lead.addDisposition);
 
 branchRouter.post("/imported-lead/import", importedLead.importLeads);
 branchRouter.get("/imported-lead/get", importedLead.find);
-branchRouter.post("/imported-lead/delete/:id", importedLead.remove);
+// branchRouter.post("/imported-lead/delete/:id", importedLead.remove);
 
 branchRouter.get("/employee/get", employee.find);
 branchRouter.post("/employee/get", employee.find);
@@ -120,7 +120,7 @@ branchRouter.get("/employee/get-branch-employee/:id", employee.findByBranchId);
 branchRouter.post("/employee/create", employee.create);
 branchRouter.post("/employee/update/:id", employee.update);
 branchRouter.get("/employee/get-next-id", employee.getNextId);
-branchRouter.post("/employee/delete/:id", employee.remove);
+// branchRouter.post("/employee/delete/:id", employee.remove);
 
 branchRouter.get("/attendance/get", attendance.find);
 branchRouter.post("/attendance/get", attendance.find);
@@ -128,7 +128,7 @@ branchRouter.get("/attendance/get-stats", attendance.getStats);
 branchRouter.get("/attendance/get/:id", attendance.findById);
 branchRouter.post("/attendance/create", attendance.create);
 branchRouter.post("/attendance/update/:id", attendance.update);
-branchRouter.post("/attendance/delete/:id", attendance.remove);
+// branchRouter.post("/attendance/delete/:id", attendance.remove);
 branchRouter.post("/attendance/consolidated", attendance.consolidated);
 
 branchRouter.get("/leave/get", leave.find);
@@ -136,13 +136,13 @@ branchRouter.post("/leave/get", leave.find);
 branchRouter.get("/leave/get/:id", leave.findById);
 branchRouter.post("/leave/create", leave.create);
 branchRouter.post("/leave/update/:id", leave.update);
-branchRouter.post("/leave/delete/:id", leave.remove);
+// branchRouter.post("/leave/delete/:id", leave.remove);
 
 branchRouter.get("/transit/get", transit.findTransitData);
 branchRouter.post("/transit/get", transit.findTransitData);
 branchRouter.post("/transit/create", transit.createTransitData);
-branchRouter.delete("/transit/delete/:id", transit.deleteTransitById);
-branchRouter.post("/transit/delete/:id", transit.deleteTransitById);
+// branchRouter.delete("/transit/delete/:id", transit.deleteTransitById);
+// branchRouter.post("/transit/delete/:id", transit.deleteTransitById);
 
 branchRouter.get("/file-upload/get", fileUpload.find);
 branchRouter.post("/file-upload/get", fileUpload.find);
@@ -152,7 +152,7 @@ branchRouter.post(
   multer.single("uploadedFile"),
   fileUpload.create
 );
-branchRouter.post("/file-upload/delete/:id", fileUpload.remove);
+// branchRouter.post("/file-upload/delete/:id", fileUpload.remove);
 
 branchRouter.get("/qr-enquiry/get-by-enqid/:enqId", qrEnquiry.findByEnqIdStrict);
 branchRouter.post("/qr-enquiry/get", qrEnquiry.getEnquiries);

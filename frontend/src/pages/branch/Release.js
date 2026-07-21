@@ -550,7 +550,7 @@ export default function Release() {
             Edit
           </MenuItem>
         )}
-        {global.canDelete(userType) && (
+        {/* global.canDelete(userType) && (
           <MenuItem
             disabled={selectedReleaseObj?.status === 'completed'}
             sx={{ color: selectedReleaseObj?.status === 'completed' ? 'text.disabled' : 'error.main' }}
@@ -563,7 +563,7 @@ export default function Release() {
             <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
             Delete
           </MenuItem>
-        )}
+        ) */}
       </Popover>
 
       <Modal
@@ -1076,7 +1076,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                            <MenuItem value="Pledge Receipt">Pledge Receipt</MenuItem>
                            <MenuItem value="Interest slip">Interest slip</MenuItem>
                            <MenuItem value="Release Copy">Release Copy</MenuItem>
-                           <MenuItem value="others">others</MenuItem>
+                           {/* <MenuItem value="others">others</MenuItem>
                         </Select>
                       </FormControl>
                     </Grid>
@@ -1264,7 +1264,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                             onChange={(e) => setOrnamentValues({ ...ornamentValues, ornamentType: e.target.value })}
                             label="Ornament Type"
                           >
-                             <MenuItem value="22 Carat Bar (91.6)">22 Carat Bar (91.6)</MenuItem>
+                             <MenuItem value="22 Carat Bar (91.6)">22 Carat Bar (91.6)</MenuItem> */}
                              <MenuItem value="24 Carat Bar (99.9)">24 Carat Bar (99.9)</MenuItem>
                              <MenuItem value="22 Carat Coin (91.6)">22 Carat Coin (91.6)</MenuItem>
                              <MenuItem value="24 Carat Coin (99.9)">24 Carat Coin (99.9)</MenuItem>

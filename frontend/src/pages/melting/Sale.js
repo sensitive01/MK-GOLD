@@ -5,33 +5,33 @@ import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
-    Backdrop,
-    Box,
-    Button,
-    Card,
-    Checkbox,
-    CircularProgress,
-    Container,
-    Grid,
-    IconButton,
-    InputLabel,
-    MenuItem,
-    Modal,
-    Paper,
-    Popover,
-    Select,
-    Snackbar,
-    Stack,
-    Table,
-    TableHead,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TablePagination,
-    TableRow,
-    TextField,
-    Typography,
-    Divider,
+  Backdrop,
+  Box,
+  Button,
+  Card,
+  Checkbox,
+  CircularProgress,
+  Container,
+  Grid,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Modal,
+  Paper,
+  Popover,
+  Select,
+  Snackbar,
+  Stack,
+  Table,
+  TableHead,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TablePagination,
+  TableRow,
+  TextField,
+  Typography,
+  Divider,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import MuiAlert from '@mui/material/Alert';
@@ -57,6 +57,7 @@ import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 import global from '../../utils/global';
 import TimelineView from '../../components/TimelineView';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 // sections
 import { SaleListHead, SaleListToolbar } from '../../sections/@dashboard/sales';
 // mock
@@ -110,7 +111,7 @@ function applySortFilter(array, comparator, query) {
   return stabilizedThis?.map((el) => el[0]);
 }
 
-export default function AuditorSale() {
+export default function Sale() {
   const [branches, setBranches] = useState([]);
   const [open, setOpen] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -136,6 +137,10 @@ export default function AuditorSale() {
   const form = useRef();
   const [openBackdrop, setOpenBackdrop] = useState(true);
 
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const isSelectForTransit = searchParams.get('selectForTransit') === 'true';
+
   // Form validation
   const schema = Yup.object({
     fromDate: Yup.string().nullable(),
@@ -148,7 +153,6 @@ export default function AuditorSale() {
       toDate: null,
       branch: '',
       phoneNumber: '',
-      status: '',
     },
     validationSchema: schema,
     onSubmit: (values) => {
@@ -157,8 +161,7 @@ export default function AuditorSale() {
         branch: values.branch,
         phoneNumber: values.phoneNumber,
       };
-      if (values.status) query.status = values.status;
-      
+
       if (values.fromDate || values.toDate) {
         query.createdAt = {};
         if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
@@ -186,7 +189,6 @@ export default function AuditorSale() {
           $gte: values.fromDate ?? moment()?.format("YYYY-MM-DD"),
           $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
         },
-        ...(values.status ? { status: values.status } : {}),
       }
     ) => {
       findSales(query).then((data) => {
@@ -220,6 +222,7 @@ export default function AuditorSale() {
   };
 
   const handleSelectAllClick = (event) => {
+    if (isSelectForTransit) return;
     if (event.target.checked) {
       const newSelecteds = data?.map((n) => n._id);
       setSelected(newSelecteds);
@@ -229,6 +232,13 @@ export default function AuditorSale() {
   };
 
   const handleClick = (event, _id) => {
+    if (isSelectForTransit) {
+      const selectedSaleItem = data?.find(s => s._id === _id);
+      if (selectedSaleItem?.status !== 'completed' && selectedSaleItem?.status !== 'Completed') {
+        setNotify({ open: true, message: 'Only completed sales can be selected for transit', severity: 'warning' });
+        return;
+      }
+    }
     const selectedIndex = selected.indexOf(_id);
     let newSelected = [];
     if (selectedIndex === -1) {
@@ -350,9 +360,20 @@ export default function AuditorSale() {
       <Container maxWidth={false} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Billing
+            Purchases
           </Typography>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+            {isSelectForTransit && (
+              <Button
+                variant="contained"
+                disabled={selected.length === 0}
+                onClick={() => {
+                  navigate(`/melting/transit?createTransit=true&saleIds=${selected.join(',')}`);
+                }}
+              >
+                Next
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
@@ -393,7 +414,6 @@ export default function AuditorSale() {
               values.toDate ? `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}` : null,
               values.branch ? `Branch: ${branches?.find((e) => e._id === values.branch)?.branchName || ''}` : null,
               values.phoneNumber ? `Phone Number: ${global.maskPhoneNumber(values.phoneNumber)}` : null,
-              values.status ? `Status: ${sentenceCase(values.status)}` : null,
             ].filter(Boolean).join(', ')}
           </p>
         )}
@@ -413,131 +433,136 @@ export default function AuditorSale() {
           <TableContainer>
             <Table sx={{ minWidth: 800 }}>
               <SaleListHead
-                  order={order}
-                  orderBy={orderBy}
-                  headLabel={TABLE_HEAD}
-                  rowCount={data?.length || 0}
-                  numSelected={selected?.length}
-                  onRequestSort={handleRequestSort}
-                  onSelectAllClick={handleSelectAllClick}
-                />
-                <TableBody>
-                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, billId, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
-                    const selectedData = selected.indexOf(_id) !== -1;
+                order={order}
+                orderBy={orderBy}
+                headLabel={TABLE_HEAD}
+                rowCount={data?.length || 0}
+                numSelected={selected?.length}
+                onRequestSort={handleRequestSort}
+                onSelectAllClick={handleSelectAllClick}
+              />
+              <TableBody>
+                {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
+                  const { _id, billId, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
+                  const selectedData = selected.indexOf(_id) !== -1;
 
-                    return (
-                      <TableRow
-                        hover
-                        key={_id}
-                        tabIndex={-1}
-                        role="checkbox"
-                        selected={selectedData}
-                        onClick={() => {
+                  return (
+                    <TableRow
+                      hover
+                      key={_id}
+                      tabIndex={-1}
+                      role="checkbox"
+                      selected={selectedData}
+                      onClick={() => {
+                        if (isSelectForTransit) {
+                          handleClick(null, _id);
+                        } else {
                           setSaleIdToEdit(_id);
                           setToggleContainer(true);
                           setToggleContainerType('detail');
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedData}
-                            onChange={(event) => handleClick(event, _id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </TableCell>
-                        <TableCell align="left">{billId}</TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                        <TableCell align="left">
-                          {row.customer ? (
-                            <Typography variant="subtitle2">
-                              {row.customer.name}
-                              <br />
-                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                {row.customer.phoneNumber}
-                              </Typography>
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedData}
+                          onChange={(event) => handleClick(event, _id)}
+                          onClick={(e) => e.stopPropagation()}
+                          disabled={isSelectForTransit && status !== 'completed' && status !== 'Completed'}
+                        />
+                      </TableCell>
+                      <TableCell align="left">{billId}</TableCell>
+                      <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                      <TableCell align="left">
+                        {row.customer ? (
+                          <Typography variant="subtitle2">
+                            {row.customer.name}
+                            <br />
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              {row.customer.phoneNumber}
                             </Typography>
-                          ) : (
-                            '-'
-                          )}
-                        </TableCell>
-                        <TableCell align="left">{rowBranch?.branchId || '-'}</TableCell>
-                        <TableCell align="left">{rowBranch?.branchName || '-'}</TableCell>
-                        <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
-                        <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
-                        <TableCell align="left">&#8377; {netAmount}</TableCell>
-                        <TableCell align="left" onClick={(e) => e.stopPropagation()}>
-                          <Status 
-                            status={status} 
-                            _id={_id} 
-                            assignee={row.assignee?._id || row.assignee}
-                            fetchData={fetchData}
-                            saleType={saleType}
-                            assigneeCompleted={row.assigneeCompleted}
-                          />
-                        </TableCell>
-                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                          <IconButton
-                            size="large"
-                            color="inherit"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              handleOpenMenu(e, _id);
-                            }}
-                          >
-                            <Iconify icon={'eva:more-vertical-fill'} />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {emptyRows > 0 && (
-                    <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={9} />
-                    </TableRow>
-                  )}
-                  {filteredData?.length === 0 && (
-                    <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
+                          </Typography>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell align="left">{rowBranch?.branchId || '-'}</TableCell>
+                      <TableCell align="left">{rowBranch?.branchName || '-'}</TableCell>
+                      <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
+                      <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
+                      <TableCell align="left">&#8377; {netAmount}</TableCell>
+                      <TableCell align="left" onClick={(e) => e.stopPropagation()}>
+                        <Status
+                          status={status}
+                          _id={_id}
+                          assignee={row.assignee?._id || row.assignee}
+                          fetchData={fetchData}
+                          saleType={saleType}
+                          assigneeCompleted={row.assigneeCompleted}
+                        />
+                      </TableCell>
+                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                        <IconButton
+                          size="large"
+                          color="inherit"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            handleOpenMenu(e, _id);
                           }}
                         >
-                          <Typography paragraph>No data in table</Typography>
-                        </Paper>
+                          <Iconify icon={'eva:more-vertical-fill'} />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-
-                {filteredData?.length > 0 && isNotFound && (
-                  <TableBody>
-                    <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
-                          }}
-                        >
-                          <Typography variant="h6" paragraph>
-                            Not found
-                          </Typography>
-
-                          <Typography variant="body2">
-                            No results found for &nbsp;
-                            <strong>&quot;{filterName}&quot;</strong>.
-                            <br /> Try checking for typos or using complete words.
-                          </Typography>
-                        </Paper>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
+                  );
+                })}
+                {emptyRows > 0 && (
+                  <TableRow style={{ height: 53 * emptyRows }}>
+                    <TableCell colSpan={9} />
+                  </TableRow>
                 )}
-              </Table>
-            </TableContainer>
+                {filteredData?.length === 0 && (
+                  <TableRow>
+                    <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <Paper
+                        sx={{
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Typography paragraph>No data in table</Typography>
+                      </Paper>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+
+              {filteredData?.length > 0 && isNotFound && (
+                <TableBody>
+                  <TableRow>
+                    <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <Paper
+                        sx={{
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Typography variant="h6" paragraph>
+                          Not found
+                        </Typography>
+
+                        <Typography variant="body2">
+                          No results found for &nbsp;
+                          <strong>&quot;{filterName}&quot;</strong>.
+                          <br /> Try checking for typos or using complete words.
+                        </Typography>
+                      </Paper>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              )}
+            </Table>
+          </TableContainer>
 
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
@@ -674,7 +699,7 @@ export default function AuditorSale() {
           <Iconify icon={'material-symbols:history'} sx={{ mr: 2 }} />
           Process Log & Timeline
         </MenuItem>
-        {/* global.canDelete(userType) && (
+        {global.canDelete(userType) && (
           <MenuItem
             sx={{ color: 'error.main' }}
             onClick={() => {
@@ -686,7 +711,7 @@ export default function AuditorSale() {
             <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
             Delete
           </MenuItem>
-        ) */}
+        )}
       </Popover>
 
       <Modal
@@ -799,27 +824,6 @@ export default function AuditorSale() {
                   </LocalizationProvider>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel id="status-select-label">Select Status</InputLabel>
-                  <Select
-                    labelId="status-select-label"
-                    id="status-select"
-                    label="Select Status"
-                    name="status"
-                    value={values.status}
-                    onChange={handleChange}
-                  >
-                    <MenuItem value="">All</MenuItem>
-                    <MenuItem value="completed">Completed</MenuItem>
-                    <MenuItem value="intransit">In Transit</MenuItem>
-                    <MenuItem value="finance pending">Finance Pending</MenuItem>
-                    <MenuItem value="bullion pending">Bullion Pending</MenuItem>
-                    <MenuItem value="melted">Melted</MenuItem>
-                    <MenuItem value="rejected">Rejected</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
             </Grid>
           </DialogContent>
           <DialogActions>
@@ -867,7 +871,7 @@ export default function AuditorSale() {
                     </span>
                   </Typography>
                   <TimelineView timeline={sale.timeline} />
-                  
+
                   {sale.actionLog && sale.actionLog.length > 0 && (
                     <Box sx={{ mt: 4 }}>
                       <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.secondary' }}>
@@ -1009,7 +1013,7 @@ function Status(props) {
     <>
       {content}
 
-      <VerificationModal 
+      <VerificationModal
         open={openVerifyModal}
         id={_id}
         type={verifyType}
@@ -1089,7 +1093,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
       }
 
       setLoading(true);
-      
+
       const payload = {};
       if (type === 'finance') {
         payload.financeAmount = values.amount;
@@ -1217,7 +1221,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         </DialogTitle>
         <DialogContent sx={{ mt: 2, p: 3 }}>
           {/* Render the full comprehensive SaleDetail component showing all customer, address, ornaments, release, and bank details! */}
-          <SaleDetail id={id} setNotify={() => {}} />
+          <SaleDetail id={id} setNotify={() => { }} />
 
           {/* Admin Review Action Notes */}
           <Box sx={{ mt: 3 }}>
@@ -1240,18 +1244,18 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           <Button onClick={handleClose} color="inherit" variant="outlined" size="large">
             Cancel
           </Button>
-          <LoadingButton 
-            variant="contained" 
-            color="error" 
+          <LoadingButton
+            variant="contained"
+            color="error"
             loading={loading}
             onClick={() => handleAdminAction('reject')}
             size="large"
           >
             Reject Stage
           </LoadingButton>
-          <LoadingButton 
-            variant="contained" 
-            color="success" 
+          <LoadingButton
+            variant="contained"
+            color="success"
             loading={loading}
             onClick={() => handleAdminAction('approve')}
             sx={{ color: '#fff' }}
@@ -1352,9 +1356,9 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                         />
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <Button 
-                          variant="contained" 
-                          fullWidth 
+                        <Button
+                          variant="contained"
+                          fullWidth
                           onClick={() => {
                             if (ornamentValues.ornamentType && ornamentValues.netWeight) {
                               setOrnaments([...ornaments, ornamentValues]);

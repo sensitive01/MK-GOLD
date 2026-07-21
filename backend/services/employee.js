@@ -1,5 +1,6 @@
 const Employee = require("../models/employee");
 const User = require("../models/user");
+const mongoose = require("mongoose");
 
 async function find(query = {}, user = null) {
   try {
@@ -77,6 +78,21 @@ async function find(query = {}, user = null) {
           createdAt: 1,
           userType: "$user.userType",
           branchName: "$branchDetails.name",
+          lastEditedBy: "$lastEditedBy",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "lastEditedBy",
+          foreignField: "_id",
+          as: "lastEditedBy",
+        },
+      },
+      {
+        $unwind: {
+          path: "$lastEditedBy",
+          preserveNullAndEmptyArrays: true,
         },
       },
       { $sort: { createdAt: -1 } },
@@ -88,7 +104,39 @@ async function find(query = {}, user = null) {
 
 async function findById(id) {
   try {
-    return await Employee.findById(id).exec();
+    const data = await Employee.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "lastEditedBy",
+          foreignField: "_id",
+          as: "lastEditedBy",
+        },
+      },
+      {
+        $unwind: {
+          path: "$lastEditedBy",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "employees",
+          localField: "lastEditedBy.employee",
+          foreignField: "_id",
+          as: "lastEditedBy.employeeDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$lastEditedBy.employeeDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      { $limit: 1 }
+    ]).exec();
+    return data[0] ?? {};
   } catch (err) {
     throw err;
   }

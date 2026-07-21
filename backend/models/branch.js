@@ -61,6 +61,10 @@ const Branch = mongoose.model(
         required: true,
         default: "active",
       },
+      lastEditedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+      },
     },
     { timestamps: true }
   )

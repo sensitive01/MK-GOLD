@@ -1,4 +1,4 @@
-import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid } from '@mui/material';
+import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid, Typography } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
@@ -12,6 +12,7 @@ import global from '../../../utils/global';
 
 function UpdateEmployee(props) {
   const [focusedField, setFocusedField] = useState(null);
+  const [lastEditedBy, setLastEditedBy] = useState(null);
   // Form validation
   const schema = Yup.object({
     name: Yup.string().required('Name is required'),
@@ -79,6 +80,9 @@ function UpdateEmployee(props) {
     if (props.id) {
       getEmployeeById(props.id).then((data) => {
         setValues(data.data ?? {});
+        const editor = data.data?.lastEditedBy;
+        const displayName = editor?.employeeDetails?.name || editor?.employeeDetails?.phoneNumber || editor?.username || null;
+        setLastEditedBy(displayName ? `${displayName} (${editor?.userType})` : null);
       });
     }
   }, [props.id]);
@@ -267,6 +271,11 @@ function UpdateEmployee(props) {
             </FormControl>
           </Grid>
           <Grid item xs={12}>
+            {lastEditedBy && (
+              <Typography variant="body2" color="textSecondary" sx={{ mb: 2, fontStyle: 'italic' }}>
+                Last Edited By: {lastEditedBy}
+              </Typography>
+            )}
             <LoadingButton size="large" type="submit" variant="contained">
               Save
             </LoadingButton>

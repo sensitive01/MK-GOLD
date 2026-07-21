@@ -572,7 +572,7 @@ export default function Expense() {
           Edit
         </MenuItem>
 
-        <MenuItem
+        {/* <MenuItem
           sx={{ color: 'error.main' }}
           onClick={() => {
             setOpen(null);
@@ -582,7 +582,7 @@ export default function Expense() {
         >
           <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
           Delete
-        </MenuItem>
+        </MenuItem> */}
       </Popover>
 
       <Modal

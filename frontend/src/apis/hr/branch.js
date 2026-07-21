@@ -11,7 +11,7 @@ async function getBranch(query = {}) {
 
 async function getBranchById(id) {
   try {
-    const response = await apiClient().get(`/api/v1.0/hr/branch/get/${id}`);
+    const response = await apiClient().get(`/api/v1.0/hr/branch/get/${id}?t=${new Date().getTime()}`);
     return response.data;
   } catch (err) {
     return err;

@@ -478,7 +478,7 @@ export default function Fund() {
           </MenuItem>
         )}
 
-        {global.canDelete(auth.user?.userType) && (
+        {/* global.canDelete(auth.user?.userType) && (
           <MenuItem
             sx={{ color: 'error.main' }}
             onClick={() => {
@@ -490,7 +490,7 @@ export default function Fund() {
             <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
             Delete
           </MenuItem>
-        )}
+        ) */}
       </Popover>
 
       <Modal

@@ -23,6 +23,8 @@ import {
   FormControl,
   TextField,
   IconButton,
+  Backdrop,
+  CircularProgress,
 } from '@mui/material';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
@@ -57,6 +59,7 @@ export default function QREnquiry() {
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [visiblePhoneId, setVisiblePhoneId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const form = useRef();
 
   // Form validation
@@ -110,10 +113,12 @@ export default function QREnquiry() {
   }, []);
 
   const fetchData = (query = {}) => {
+    setIsLoading(true);
     getQrEnquiries(query).then((res) => {
       if (res.status) {
         setData(res.data ?? []);
       }
+      setIsLoading(false);
     });
   };
 
@@ -131,6 +136,10 @@ export default function QREnquiry() {
       <Helmet>
         <title> QR Enquiries | MK Gold </title>
       </Helmet>
+
+      <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={isLoading}>
+        <CircularProgress color="inherit" />
+      </Backdrop>
 
       <Container maxWidth="xl">
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>

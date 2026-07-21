@@ -27,7 +27,7 @@ router.use(function (req, res, next) {
 
 router.post("/", createSchedule);
 router.get("/", getSchedules);
-router.delete("/:id", deleteSchedule);
+// router.delete("/:id", deleteSchedule);
 router.put("/:id", updateSchedule);
 
 module.exports = router;

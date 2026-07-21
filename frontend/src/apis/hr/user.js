@@ -11,7 +11,7 @@ async function getUser(query = {}) {
 
 async function getUserById(id) {
   try {
-    const response = await apiClient().get(`/api/v1.0/hr/user/get/${id}`);
+    const response = await apiClient().get(`/api/v1.0/hr/user/get/${id}?t=${new Date().getTime()}`);
     return response.data;
   } catch (err) {
     return err;

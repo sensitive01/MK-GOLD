@@ -577,7 +577,7 @@ export default function MarketingAttendance() {
                               handleOpenMenu(e);
                             }}
                           >
-                            <Iconify icon={'eva:more-vertical-fill'} />
+                            {/* <Iconify icon={'eva:more-vertical-fill'} /> */}
                           </IconButton>
                         </TableCell>
                       </TableRow>
@@ -663,7 +663,7 @@ export default function MarketingAttendance() {
           },
         }}
       >
-        {global.canDelete(userType) && (
+        {/* global.canDelete(userType) && (
           <MenuItem
             sx={{ color: 'error.main' }}
             onClick={() => {
@@ -675,12 +675,12 @@ export default function MarketingAttendance() {
             <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
             Delete
           </MenuItem>
-        )}
+        ) */}
       </Popover>
 
       <Modal open={openDeleteModal} onClose={handleCloseDeleteModal}>
         <Box sx={style}>
-          <Typography variant="h6">Delete Confirmation</Typography>
+          {/* <Typography variant="h6">Delete Confirmation</Typography> */}
           <Typography sx={{ mt: 3 }}>Do you want to delete this record?</Typography>
           <Stack direction="row" spacing={2} mt={3}>
             <Button

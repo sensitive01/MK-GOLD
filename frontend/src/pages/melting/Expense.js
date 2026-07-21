@@ -1,7 +1,7 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
 import { forwardRef, useEffect, useRef, useState, useCallback } from 'react';
-import { useSelector } from 'react-redux';
+import PropTypes from 'prop-types';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
@@ -28,7 +28,7 @@ import {
     TablePagination,
     TableRow,
     TextField,
-    Typography
+    Typography,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
@@ -38,26 +38,31 @@ import DialogTitle from '@mui/material/DialogTitle';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import * as FileSaver from 'file-saver';
 import { useFormik } from 'formik';
 import moment from 'moment';
+import * as XLSX from 'xlsx';
 import * as Yup from 'yup';
 // components
-import { CreateGoldRate, UpdateGoldRate } from '../../components/accounts/gold-rate';
+import { UpdateExpense, CreateExpense } from '../../components/admin/expense';
 import Iconify from '../../components/iconify';
+import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 // sections
-import { GoldRateListHead, GoldRateListToolbar } from '../../sections/@dashboard/gold-rate';
-import SuccessModal from '../../components/success-modal';
+import { ExpenseListHead, ExpenseListToolbar } from '../../sections/@dashboard/expense';
 // mock
-import { deleteGoldRateById, getGoldRate } from '../../apis/accounts/gold-rate';
+import { deleteExpenseById, getExpense, updateExpense } from '../../apis/admin/expense';
 
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
-  { id: 'rate', label: 'Rate', alignRight: false },
   { id: 'type', label: 'Type', alignRight: false },
-  { id: 'state', label: 'State', alignRight: false },
-  { id: 'date', label: 'Date', alignRight: false },
+  { id: 'amount', label: 'Amount', alignRight: false },
+  { id: 'branchId', label: 'Branch Id', alignRight: false },
+  { id: 'branchName', label: 'Branch Name', alignRight: false },
+  { id: 'note', label: 'Note', alignRight: false },
+  { id: 'status', label: 'Status', alignRight: false },
+  { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
 ];
 
@@ -87,12 +92,12 @@ function applySortFilter(array, comparator, query) {
     return a[1] - b[1];
   });
   if (query) {
-    return filter(array, (row) => row.state.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    return filter(array, (row) => row?.branch?.branchName?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
   return stabilizedThis?.map((el) => el[0]);
 }
 
-export default function GoldRate() {
+export default function Expense() {
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
@@ -104,8 +109,6 @@ export default function GoldRate() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
-  const auth = useSelector((state) => state.auth);
-  const userType = auth.user?.userType?.toLowerCase();
   const [data, setData] = useState([]);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
@@ -134,8 +137,8 @@ export default function GoldRate() {
     validationSchema: schema,
     onSubmit: (values) => {
       setOpenBackdrop(true);
-      getGoldRate({
-        date: {
+      getExpense({
+        createdAt: {
           $gte: values.fromDate?.format("YYYY-MM-DD"),
           $lte: values.toDate?.format("YYYY-MM-DD"),
         },
@@ -150,13 +153,13 @@ export default function GoldRate() {
   const fetchData = useCallback(
     (
       query = {
-        date: {
+        createdAt: {
           $gte: values.fromDate ?? moment()?.format("YYYY-MM-DD"),
           $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
         },
       }
     ) => {
-      getGoldRate(query).then((data) => {
+      getExpense(query).then((data) => {
         setData(data.data);
         setOpenBackdrop(false);
       });
@@ -225,21 +228,26 @@ export default function GoldRate() {
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
-    deleteGoldRateById(openId).then(() => {
+    deleteExpenseById(openId).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected(selected?.filter((e) => e !== openId));
+      setNotify({
+        open: true,
+        message: 'Expense Deleted Successfully!',
+        severity: 'success',
+      });
     });
   };
 
   const handleDeleteSelected = () => {
-    deleteGoldRateById(selected).then(() => {
+    deleteExpenseById(selected).then(() => {
       fetchData();
       handleCloseDeleteModal();
       setSelected([]);
       setNotify({
         open: true,
-        message: 'Gold rate deleted',
+        message: 'Expense Deleted Successfully!',
         severity: 'success',
       });
     });
@@ -251,6 +259,16 @@ export default function GoldRate() {
 
   const handleFilterClose = () => {
     setFilterOpen(false);
+  };
+
+  const handleExport = (fileData, fileName) => {
+    const ws = XLSX.utils.json_to_sheet(fileData);
+    const wb = { Sheets: { data: ws }, SheetNames: ['data'] };
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8',
+    });
+    FileSaver.saveAs(data, `${fileName}.xlsx`);
   };
 
   const style = {
@@ -271,66 +289,123 @@ export default function GoldRate() {
 
   const Alert = forwardRef(AlertComponent);
 
+  function Status(props) {
+    return (
+      <>
+        <Button
+          variant="contained"
+          onClick={() => {
+            updateExpense(props._id, { status: 'approved' }).then(() => {
+              getExpense().then((data) => {
+                setData(data.data);
+                setNotify({
+                  open: true,
+                  message: 'Expense Approved Successfully!',
+                  severity: 'success',
+                });
+              });
+            });
+          }}
+        >
+          Approve
+        </Button>
+        <Button
+          variant="contained"
+          color="error"
+          sx={{ ml: 2 }}
+          onClick={() => {
+            updateExpense(props._id, { status: 'rejected' }).then(() => {
+              getExpense().then((data) => {
+                setData(data.data);
+                setNotify({
+                  open: true,
+                  message: 'Expense Rejected Successfully!',
+                  severity: 'success',
+                });
+              });
+            });
+          }}
+        >
+          Reject
+        </Button>
+      </>
+    );
+  }
+
+  Status.propTypes = {
+    _id: PropTypes.string,
+  };
+
   return (
     <>
       <Helmet>
-        <title> Gold Rate | MK Gold </title>
+        <title> Expense | MK Gold </title>
       </Helmet>
 
-      {notify.severity === 'success' ? (
-        <SuccessModal
-          open={notify.open}
-          message={notify.message}
-          onClose={() => setNotify({ ...notify, open: false })}
-        />
-      ) : (
-        <Snackbar
-          anchorOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-          open={notify.open}
+      <Snackbar
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        open={notify.open}
+        onClose={() => {
+          setNotify({ ...notify, open: false });
+        }}
+        autoHideDuration={3000}
+      >
+        <Alert
           onClose={() => {
             setNotify({ ...notify, open: false });
           }}
-          autoHideDuration={3000}
+          severity={notify.severity}
+          sx={{ width: '100%', color: 'white' }}
         >
-          <Alert
-            onClose={() => {
-              setNotify({ ...notify, open: false });
-            }}
-            severity={notify.severity}
-            sx={{ width: '100%', color: 'white' }}
-          >
-            {notify.message}
-          </Alert>
-        </Snackbar>
-      )}
+          {notify.message}
+        </Alert>
+      </Snackbar>
 
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Gold Rate
+            Expense
           </Typography>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
-            {userType !== 'finance' && (
-              <Button
-                variant="contained"
-                startIcon={<Iconify icon="eva:plus-fill" />}
-                onClick={() => {
-                  setToggleContainer(!toggleContainer);
-                  setToggleContainerType('create');
-                }}
-              >
-                New Gold Rate
-              </Button>
-            )}
             <Button
               variant="contained"
               startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
               onClick={handleFilterOpen}
             >
               Filter
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setToggleContainerType('create');
+                setToggleContainer(true);
+              }}
+            >
+              New Expense
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="carbon:document-export" />}
+              onClick={() => {
+                handleExport(
+                  data?.map((e) => ({
+                    Type: e.type,
+                    Amount: e.amount,
+                    BranchId: e.branch?.branchId,
+                    BranchName: e.branch?.branchName,
+                    Note: e.note,
+                    Status: e.status,
+                    Date: moment(e.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                  })),
+                  'Expenses'
+                );
+              }}
+            >
+              Export
             </Button>
           </Stack>
         </Stack>
@@ -341,11 +416,10 @@ export default function GoldRate() {
         </p>
 
         <Card>
-          <GoldRateListToolbar
+          <ExpenseListToolbar
             numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
-            hideDelete={userType === 'finance'}
             handleDelete={() => {
               setDeleteType('selected');
               handleOpenDeleteModal();
@@ -355,7 +429,7 @@ export default function GoldRate() {
           <Scrollbar>
             <TableContainer>
               <Table sx={{ minWidth: 800 }}>
-                <GoldRateListHead
+                <ExpenseListHead
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
@@ -363,43 +437,48 @@ export default function GoldRate() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
-                  hideCheckbox={userType === 'finance'}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, rate, type, state, date } = row;
+                    const { _id, type, amount, branch, note, status, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
                       <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        {userType !== 'finance' && (
-                          <TableCell padding="checkbox">
-                            <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                          </TableCell>
-                        )}
-
-                        <TableCell align="left">{rate}</TableCell>
-
-                        <TableCell align="left">{sentenceCase(type)}</TableCell>
-
-                        <TableCell align="left">{sentenceCase(state)}</TableCell>
-
-                        <TableCell align="left">{moment(date).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-
-                        {userType !== 'finance' && (
-                          <TableCell align="right">
-                            <IconButton
-                              size="large"
-                              color="inherit"
-                              onClick={(e) => {
-                                setOpenId(_id);
-                                handleOpenMenu(e);
-                              }}
+                        <TableCell padding="checkbox">
+                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                        </TableCell>
+                        <TableCell align="left">{type}</TableCell>
+                        <TableCell align="left">{amount}</TableCell>
+                        <TableCell align="left">{branch?.branchId}</TableCell>
+                        <TableCell align="left">{branch?.branchName}</TableCell>
+                        <TableCell align="left">{note}</TableCell>
+                        <TableCell align="left">
+                          {status === 'pending' ? (
+                            <Status status={status} _id={_id} />
+                          ) : (
+                            <Label
+                              color={
+                                (status === 'approved' && 'success') || (status === 'rejected' && 'error') || 'warning'
+                              }
                             >
-                              <Iconify icon={'eva:more-vertical-fill'} />
-                            </IconButton>
-                          </TableCell>
-                        )}
+                              {sentenceCase(status)}
+                            </Label>
+                          )}
+                        </TableCell>
+                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                        <TableCell align="right">
+                          <IconButton
+                            size="large"
+                            color="inherit"
+                            onClick={(e) => {
+                              setOpenId(_id);
+                              handleOpenMenu(e);
+                            }}
+                          >
+                            <Iconify icon={'eva:more-vertical-fill'} />
+                          </IconButton>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -410,7 +489,7 @@ export default function GoldRate() {
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -426,7 +505,7 @@ export default function GoldRate() {
                 {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
-                      <TableCell align="center" colSpan={6} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -468,7 +547,7 @@ export default function GoldRate() {
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Create Gold Rate
+            
           </Typography>
           <Button
             variant="contained"
@@ -481,7 +560,7 @@ export default function GoldRate() {
           </Button>
         </Stack>
 
-        <CreateGoldRate setToggleContainer={setToggleContainer} setNotify={setNotify} />
+        <CreateExpense setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
       </Container>
 
       <Container
@@ -490,7 +569,7 @@ export default function GoldRate() {
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Update Gold Rate
+            Update Expense
           </Typography>
           <Button
             variant="contained"
@@ -503,7 +582,7 @@ export default function GoldRate() {
           </Button>
         </Stack>
 
-        <UpdateGoldRate setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
+        <UpdateExpense setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
       </Container>
 
       <Popover
@@ -535,17 +614,14 @@ export default function GoldRate() {
           Edit
         </MenuItem>
 
-        {/* <MenuItem
-          sx={{ color: 'error.main' }}
-          onClick={() => {
-            setOpen(null);
+        {/* <MenuItem sx={{ color: 'error.main' }} onClick={() => {
             setDeleteType('single');
             handleOpenDeleteModal();
-          }}
-        >
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-          Delete
-        </MenuItem> */}
+            handleCloseMenu();
+          }}>
+            <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
+            Delete
+          </MenuItem> */}
       </Popover>
 
       <Modal
@@ -559,7 +635,7 @@ export default function GoldRate() {
             Delete
           </Typography>
           <Typography id="modal-modal-description" sx={{ mt: 3 }}>
-            Do you want to delete?
+            Do you want branchId delete?
           </Typography>
           <Stack direction="row" alignItems="center" spacing={2} mt={3}>
             <Button

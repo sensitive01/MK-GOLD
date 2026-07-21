@@ -894,7 +894,7 @@ export default function Leads({ title = "Leads Management" }) {
             Edit
           </MenuItem>
         )}
-        <MenuItem
+        {/* <MenuItem
           sx={{ color: 'error.main' }}
           onClick={() => {
             setOpen(null);
@@ -904,15 +904,15 @@ export default function Leads({ title = "Leads Management" }) {
         >
           <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
           Delete
-        </MenuItem>
+        </MenuItem> */}
       </Popover>
 
       <Modal open={openDeleteModal} onClose={handleCloseDeleteModal}>
         <Box sx={style}>
-          <Typography variant="h6">Delete</Typography>
+          {/* <Typography variant="h6">Delete</Typography> */}
           <Typography sx={{ mt: 3 }}>Are you sure you want to delete?</Typography>
           <Stack direction="row" spacing={2} mt={3}>
-            <Button variant="contained" color="error" onClick={deleteType === 'single' ? handleDelete : handleDeleteSelected}>Delete</Button>
+            {/* <Button variant="contained" color="error" onClick={deleteType === 'single' ? handleDelete : handleDeleteSelected}>Delete</Button> */}
             <Button variant="contained" onClick={handleCloseDeleteModal}>Close</Button>
           </Stack>
         </Box>

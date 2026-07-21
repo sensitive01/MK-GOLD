@@ -603,7 +603,7 @@ export default function Sale() {
           <Iconify icon={'material-symbols:history'} sx={{ mr: 2 }} />
           Process Log & Timeline
         </MenuItem>
-        <MenuItem
+        {/* <MenuItem
           disabled={['completed', 'intransit', 'moved', 'melted'].includes(selectedSale?.status)}
           sx={{ color: ['completed', 'intransit', 'moved', 'melted'].includes(selectedSale?.status) ? 'text.disabled' : 'error.main' }}
           onClick={() => {
@@ -614,7 +614,7 @@ export default function Sale() {
         >
           <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
           Delete
-        </MenuItem>
+        </MenuItem> */}
       </Popover>
 
       <Modal
