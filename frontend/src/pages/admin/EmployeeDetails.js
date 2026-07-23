@@ -89,6 +89,7 @@ export default function Employee() {
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
+  const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const [page, setPage] = useState(0);
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType;
@@ -306,7 +307,17 @@ export default function Employee() {
                         <TableCell align="left">{email}</TableCell>
                         <TableCell align="left">{gender}</TableCell>
                         <TableCell align="left">{sentenceCase(designation)}</TableCell>
-                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
+                        <TableCell align="left">
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            {visiblePhoneId === _id ? phoneNumber : global.maskPhoneNumber(phoneNumber)}
+                            <IconButton size="small" onClick={(e) => {
+                              e.stopPropagation();
+                              setVisiblePhoneId(visiblePhoneId === _id ? null : _id);
+                            }} sx={{ ml: 1 }}>
+                              <Iconify icon={visiblePhoneId === _id ? 'eva:eye-off-fill' : 'eva:eye-fill'} />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
                         <TableCell align="left">
                           <Label color={(status !== 'active' && 'error') || 'success'}>{sentenceCase(status)}</Label>
                         </TableCell>

@@ -19,6 +19,7 @@ import {
   Button,
   Modal,
   Stack,
+  IconButton,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import { useState, useEffect } from 'react';
@@ -27,6 +28,7 @@ import { getLeadById, addDisposition } from '../../../apis/branch/lead';
 import { getBranch } from '../../../apis/branch/branch';
 import global from '../../../utils/global';
 import moment from 'moment';
+import Iconify from '../../iconify';
 
 const DISPOSITIONS = [
   'RNR',
@@ -67,6 +69,7 @@ function PreviewLead(props) {
   const [viewLogModal, setViewLogModal] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
   const [branches, setBranches] = useState([]);
+  const [visiblePhone, setVisiblePhone] = useState(false);
   const [logForm, setLogForm] = useState({
     status: '',
     remark: '',
@@ -158,7 +161,14 @@ function PreviewLead(props) {
         </Grid>
         <Grid item xs={12} sm={3}>
           <Typography variant="subtitle2" sx={{ color: 'purple' }}>Mobile</Typography>
-          <Typography variant="body1">{global.maskPhoneNumber(data.mobile)}</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography variant="body1">
+              {visiblePhone ? data.mobile : global.maskPhoneNumber(data.mobile)}
+            </Typography>
+            <IconButton size="small" onClick={() => setVisiblePhone(!visiblePhone)} sx={{ ml: 1 }}>
+              <Iconify icon={visiblePhone ? 'eva:eye-off-fill' : 'eva:eye-fill'} />
+            </IconButton>
+          </Box>
         </Grid>
         <Grid item xs={12} sm={3}>
           <Typography variant="subtitle2" sx={{ color: 'purple' }}>Source</Typography>

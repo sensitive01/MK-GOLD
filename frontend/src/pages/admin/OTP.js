@@ -82,6 +82,7 @@ export default function OTP() {
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
+  const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
   const [selected, setSelected] = useState([]);
@@ -286,7 +287,17 @@ export default function OTP() {
                         <TableCell padding="checkbox">
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
-                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
+                        <TableCell align="left">
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            {visiblePhoneId === _id ? phoneNumber : global.maskPhoneNumber(phoneNumber)}
+                            <IconButton size="small" onClick={(e) => {
+                              e.stopPropagation();
+                              setVisiblePhoneId(visiblePhoneId === _id ? null : _id);
+                            }} sx={{ ml: 1 }}>
+                              <Iconify icon={visiblePhoneId === _id ? 'eva:eye-off-fill' : 'eva:eye-fill'} />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
                         <TableCell align="left">{sentenceCase(type)}</TableCell>
                         <TableCell align="left">{otp}</TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>

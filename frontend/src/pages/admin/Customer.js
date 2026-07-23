@@ -100,6 +100,7 @@ export default function Customer({ title = "Customers" }) {
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
+  const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType;
   const [filterOpen, setFilterOpen] = useState(false);
@@ -375,7 +376,17 @@ export default function Customer({ title = "Customers" }) {
                         <TableCell align="left">{sentenceCase(branch?.branchName ?? '')}</TableCell>
                         <TableCell align="left">{sentenceCase(name ?? '')}</TableCell>
                         <TableCell align="left">{email}</TableCell>
-                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
+                        <TableCell align="left">
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            {visiblePhoneId === _id ? phoneNumber : global.maskPhoneNumber(phoneNumber)}
+                            <IconButton size="small" onClick={(e) => {
+                              e.stopPropagation();
+                              setVisiblePhoneId(visiblePhoneId === _id ? null : _id);
+                            }} sx={{ ml: 1 }}>
+                              <Iconify icon={visiblePhoneId === _id ? 'eva:eye-off-fill' : 'eva:eye-fill'} />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
                         <TableCell align="left">{sentenceCase(gender ?? '')}</TableCell>
                         <TableCell align="left">
                           <Label

@@ -84,17 +84,36 @@ function getComparator(order, orderBy) {
     : (a, b) => -descendingComparator(a, b, orderBy);
 }
 
-function applySortFilter(array, comparator, query) {
+function applySortFilter(array, comparator, query, filters) {
   const stabilizedThis = array?.map((el, index) => [el, index]) || [];
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) return order;
     return a[1] - b[1];
   });
+  
+  let filteredData = stabilizedThis?.map((el) => el[0]);
+  
   if (query) {
-    return filter(array, (row) => row?.transitId?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    filteredData = filter(filteredData, (row) => row?.transitId?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
-  return stabilizedThis?.map((el) => el[0]);
+  
+  if (filters) {
+    if (filters.status && filters.status !== 'all') {
+      filteredData = filteredData.filter(row => row.status?.toLowerCase() === filters.status.toLowerCase());
+    }
+    if (filters.branch && filters.branch !== 'all') {
+      filteredData = filteredData.filter(row => row.branch?.branchName === filters.branch);
+    }
+    if (filters.fromDate) {
+      filteredData = filteredData.filter(row => moment(row.createdAt).isSameOrAfter(moment(filters.fromDate), 'day'));
+    }
+    if (filters.toDate) {
+      filteredData = filteredData.filter(row => moment(row.createdAt).isSameOrBefore(moment(filters.toDate), 'day'));
+    }
+  }
+
+  return filteredData;
 }
 
 export default function Transit() {
@@ -117,6 +136,18 @@ export default function Transit() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
   const fileInputRef = useRef();
+
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    fromDate: '',
+    toDate: '',
+    status: 'all',
+    branch: 'all'
+  });
+  const handleFilterOpen = () => setFilterOpen(true);
+  const handleFilterClose = () => setFilterOpen(false);
+  const handleClearFilters = () => setFilters({ fromDate: '', toDate: '', status: 'all', branch: 'all' });
+  const isFilterApplied = filters.fromDate || filters.toDate || filters.status !== 'all' || filters.branch !== 'all';
 
   const userType = auth?.user?.userType?.toLowerCase();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -281,7 +312,7 @@ export default function Transit() {
   };
 
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
-  const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
+  const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName, filters);
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleUpdateStatus = () => {
@@ -356,11 +387,30 @@ export default function Transit() {
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Transit Management
           </Typography>
-          {['admin', 'melting'].includes(userType) && (
-            <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={() => navigate(`/${userType}/purchase?tab=0&selectForTransit=true`)}>
-              New Transit
+          <Stack direction="row" alignItems="center" spacing={2}>
+            {isFilterApplied && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="eva:trash-2-outline" />}
+                onClick={handleClearFilters}
+              >
+                Clear Filter
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+              onClick={handleFilterOpen}
+            >
+              Filter
             </Button>
-          )}
+            {['admin', 'melting'].includes(userType) && (
+              <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={() => navigate(`/${userType}/purchase?tab=0&selectForTransit=true`)}>
+                New Transit
+              </Button>
+            )}
+          </Stack>
         </Stack>
 
         <Card>
@@ -621,6 +671,68 @@ export default function Transit() {
           prefillData={prefillData}
         />
       )}
+      <Dialog open={filterOpen} onClose={handleFilterClose}>
+        <DialogTitle>Filter Transits</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={3} sx={{ p: 1, mt: 1 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="From Date"
+                InputLabelProps={{ shrink: true }}
+                value={filters.fromDate || ''}
+                onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="To Date"
+                InputLabelProps={{ shrink: true }}
+                value={filters.toDate || ''}
+                onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={filters.status}
+                  label="Status"
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                >
+                  <MenuItem value="all">All</MenuItem>
+                  <MenuItem value="intransit">In-Transit</MenuItem>
+                  <MenuItem value="moved">Moved</MenuItem>
+                  <MenuItem value="received">Received</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Branch</InputLabel>
+                <Select
+                  value={filters.branch}
+                  label="Branch"
+                  onChange={(e) => setFilters({ ...filters, branch: e.target.value })}
+                >
+                  <MenuItem value="all">All</MenuItem>
+                  {Array.from(new Set(data.map(item => item.branch?.branchName))).filter(Boolean).map(branch => (
+                    <MenuItem key={branch} value={branch}>{branch}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleFilterClose} variant="contained">Apply</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

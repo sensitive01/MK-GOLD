@@ -83,17 +83,33 @@ function getComparator(order, orderBy) {
     : (a, b) => -descendingComparator(a, b, orderBy);
 }
 
-function applySortFilter(array, comparator, query) {
+function applySortFilter(array, comparator, query, filters) {
   const stabilizedThis = array?.map((el, index) => [el, index]) || [];
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) return order;
     return a[1] - b[1];
   });
+  
+  let filteredData = stabilizedThis?.map((el) => el[0]);
+  
   if (query) {
-    return filter(array, (row) => row?.transitId?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    filteredData = filter(filteredData, (row) => row?.transitId?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
-  return stabilizedThis?.map((el) => el[0]);
+
+  if (filters) {
+    if (filters.status && filters.status !== 'all') {
+      filteredData = filteredData.filter(row => row.status?.toLowerCase() === filters.status.toLowerCase());
+    }
+    if (filters.fromDate) {
+      filteredData = filteredData.filter(row => moment(row.createdAt).isSameOrAfter(moment(filters.fromDate), 'day'));
+    }
+    if (filters.toDate) {
+      filteredData = filteredData.filter(row => moment(row.createdAt).isSameOrBefore(moment(filters.toDate), 'day'));
+    }
+  }
+
+  return filteredData;
 }
 
 export default function Transit() {
@@ -113,6 +129,17 @@ export default function Transit() {
   const [openCreateModal, setOpenCreateModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
+
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    fromDate: '',
+    toDate: '',
+    status: 'all'
+  });
+  const handleFilterOpen = () => setFilterOpen(true);
+  const handleFilterClose = () => setFilterOpen(false);
+  const handleClearFilters = () => setFilters({ fromDate: '', toDate: '', status: 'all' });
+  const isFilterApplied = filters.fromDate || filters.toDate || filters.status !== 'all';
   const userType = auth.user?.userType;
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -266,7 +293,7 @@ export default function Transit() {
   };
 
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
-  const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
+  const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName, filters);
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
@@ -333,9 +360,28 @@ export default function Transit() {
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Transit
           </Typography>
-          <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={() => navigate('/branch/sale?selectForTransit=true')}>
-            New Transit
-          </Button>
+          <Stack direction="row" alignItems="center" spacing={2}>
+            {isFilterApplied && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="eva:trash-2-outline" />}
+                onClick={handleClearFilters}
+              >
+                Clear Filter
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+              onClick={handleFilterOpen}
+            >
+              Filter
+            </Button>
+            <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={() => navigate('/branch/sale?selectForTransit=true')}>
+              New Transit
+            </Button>
+          </Stack>
         </Stack>
 
         <Card>

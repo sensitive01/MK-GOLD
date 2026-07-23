@@ -10,6 +10,7 @@ import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
+import global from '../../utils/global';
 import { findVendor, createVendor, updateVendor, deleteVendor } from '../../apis/admin/vendor';
 
 const style = {
@@ -40,6 +41,7 @@ export default function Vendor() {
   const [openForm, setOpenForm] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
+  const [visiblePhoneId, setVisiblePhoneId] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -177,7 +179,17 @@ export default function Vendor() {
                       <TableCell>{row.vendorId}</TableCell>
                       <TableCell>{row.name}</TableCell>
                       <TableCell>{row.contactPerson || 'N/A'}</TableCell>
-                      <TableCell>{row.phoneNumber}</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          {visiblePhoneId === row._id ? row.phoneNumber : global.maskPhoneNumber(row.phoneNumber)}
+                          <IconButton size="small" onClick={(e) => {
+                            e.stopPropagation();
+                            setVisiblePhoneId(visiblePhoneId === row._id ? null : row._id);
+                          }} sx={{ ml: 1 }}>
+                            <Iconify icon={visiblePhoneId === row._id ? 'eva:eye-off-fill' : 'eva:eye-fill'} />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
                       <TableCell>{row.city || 'N/A'}</TableCell>
                       <TableCell>{moment(row.createdAt).format('DD MMM YYYY')}</TableCell>
                       <TableCell align="right">
