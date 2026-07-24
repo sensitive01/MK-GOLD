@@ -135,8 +135,8 @@ export default function Sale() {
 
   // Form validation
   const schema = Yup.object({
-    fromDate: Yup.string().required('From date is required'),
-    toDate: Yup.string().required('To date is required'),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
   });
 
   const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
@@ -149,14 +149,16 @@ export default function Sale() {
     validationSchema: schema,
     onSubmit: (values) => {
       setOpenBackdrop(true);
-      findSales({
-        createdAt: {
-          $gte: values.fromDate?.format("YYYY-MM-DD"),
-          $lte: values.toDate?.format("YYYY-MM-DD"),
-        },
-        branch: values.branch,
-        phoneNumber: values.phoneNumber,
-      }).then((data) => {
+      const query = {};
+      if (values.fromDate || values.toDate) {
+        query.createdAt = {};
+        if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
+        if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
+      }
+      if (values.branch) query.branch = values.branch;
+      if (values.phoneNumber) query.phoneNumber = values.phoneNumber;
+
+      findSales(query).then((data) => {
         setData(data.data);
         setOpenBackdrop(false);
       });
@@ -335,6 +337,20 @@ export default function Sale() {
             Billing
           </Typography>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+            {(values.fromDate || values.toDate || values.branch || values.phoneNumber) && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="eva:trash-2-outline" />}
+                onClick={() => {
+                  resetForm();
+                  setOpenBackdrop(true);
+                  fetchData({});
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
@@ -368,11 +384,16 @@ export default function Sale() {
           </Stack>
         </Stack>
 
-        <p style={{ color: '#fff' }}>
-          From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
-          {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}, Branch:{' '}
-          {branches?.find((e) => e._id === values.branch)?.branchName}, Phone Number: {global.maskPhoneNumber(values.phoneNumber)}
-        </p>
+        {(values.fromDate || values.toDate || values.branch || values.phoneNumber) && (
+          <p style={{ color: '#fff', paddingBottom: '10px' }}>
+            {[
+              values.fromDate && `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}`,
+              values.toDate && `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}`,
+              values.branch && branches?.find((e) => e._id === values.branch) && `Branch: ${branches?.find((e) => e._id === values.branch)?.branchName}`,
+              values.phoneNumber && `Phone Number: ${global.maskPhoneNumber(values.phoneNumber)}`,
+            ].filter(Boolean).join(', ')}
+          </p>
+        )}
 
         <Card>
           <SaleListToolbar
@@ -768,12 +789,8 @@ export default function Sale() {
               onClick={() => {
                 setFilterOpen(false);
                 resetForm();
-                fetchData({
-                  createdAt: {
-                    $gte: moment()?.format("YYYY-MM-DD"),
-                    $lte: moment()?.format("YYYY-MM-DD"),
-                  },
-                });
+                setOpenBackdrop(true);
+                fetchData({});
               }}
             >
               Clear

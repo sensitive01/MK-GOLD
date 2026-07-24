@@ -18,6 +18,12 @@ import { SaleDetail } from '../../components/branch/sales';
 import { createFile } from '../../apis/branch/fileupload';
 import global from '../../utils/global';
 
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+
 const AlertComponent = forwardRef((props, ref) => <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />);
 
 export default function Melting() {
@@ -56,10 +62,46 @@ export default function Melting() {
   const [sellAmount, setSellAmount] = useState('');
   const [sellPaymentMode, setSellPaymentMode] = useState('');
 
-  const fetchMeltings = useCallback(async () => {
-    const res = await findMelting({});
+  const [filterOpen, setFilterOpen] = useState(false);
+  const handleFilterOpen = () => setFilterOpen(true);
+  const handleFilterClose = () => setFilterOpen(false);
+
+  const filterSchema = Yup.object({
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
+  });
+
+  const { handleSubmit, touched, errors, values, setFieldValue, resetForm } = useFormik({
+    initialValues: { fromDate: null, toDate: null, status: '', vendor: '' },
+    validationSchema: filterSchema,
+    onSubmit: (values) => {
+      const query = {};
+      if (values.status) query.status = values.status;
+      if (values.vendor) query.vendor = values.vendor;
+      
+      if (values.fromDate || values.toDate) {
+        query.createdAt = {};
+        if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
+        if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
+      }
+      findMelting(query).then((res) => {
+        if (res?.data) setData(res.data);
+      });
+      setFilterOpen(false);
+    },
+  });
+
+  const fetchMeltings = useCallback(async (
+    query = {
+      createdAt: {
+        $gte: values.fromDate ?? moment().format("YYYY-MM-DD"),
+        $lte: values.toDate ?? moment().format("YYYY-MM-DD"),
+      },
+    }
+  ) => {
+    const res = await findMelting(query);
     if (res?.data) setData(res.data);
-  }, []);
+  }, [values.fromDate, values.toDate]);
 
   const fetchTransits = useCallback(async () => {
     // only fetch 'received' transits
@@ -382,10 +424,48 @@ export default function Melting() {
               <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
                 Melting Management
               </Typography>
-              <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={handleOpenWizard}>
-                Add Melting
-              </Button>
+              <Stack direction="row" alignItems="center" gap={2}>
+                {(values.fromDate || values.toDate || values.status || values.vendor) && (
+                  <Button
+                    variant="contained"
+                    color="error"
+                    startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                    onClick={() => {
+                      resetForm();
+                      fetchMeltings({
+                        createdAt: {
+                          $gte: moment().format("YYYY-MM-DD"),
+                          $lte: moment().format("YYYY-MM-DD"),
+                        },
+                      });
+                    }}
+                  >
+                    Clear Filter
+                  </Button>
+                )}
+                <Button
+                  variant="contained"
+                  startIcon={<Iconify icon="material-symbols:filter-alt" />}
+                  onClick={handleFilterOpen}
+                >
+                  Filter
+                </Button>
+                <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={handleOpenWizard}>
+                  Add Melting
+                </Button>
+              </Stack>
             </Stack>
+
+            {(values.fromDate || values.toDate || values.status || values.vendor) && (
+              <p style={{ color: '#fff' }}>
+                {[
+                  values.fromDate ? `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}` : null,
+                  values.toDate ? `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}` : null,
+                  values.status ? `Status: ${sentenceCase(values.status)}` : null,
+                  values.vendor ? `Vendor: ${vendors?.find((v) => v._id === values.vendor)?.name || ''}` : null,
+                ].filter(Boolean).join(', ')}
+              </p>
+            )}
 
             <Card>
               <Scrollbar>
@@ -872,6 +952,93 @@ export default function Melting() {
         <DialogActions>
           <Button onClick={() => setSaleIdToView(null)}>Close</Button>
         </DialogActions>
+      </Dialog>
+      <Dialog open={filterOpen} onClose={handleFilterClose}>
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(e); }} autoComplete="off">
+          <DialogTitle>Filter</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={3} sx={{ p: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <FormControl sx={{ minWidth: 120 }} fullWidth>
+                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
+                    <DesktopDatePicker
+                      label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
+                      inputFormat="MM/DD/YYYY"
+                      name="fromDate"
+                      value={values.fromDate}
+                      onChange={(value) => setFieldValue('fromDate', value, true)}
+                      renderInput={(params) => <TextField {...params} fullWidth />}
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl sx={{ minWidth: 120 }} fullWidth>
+                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
+                    <DesktopDatePicker
+                      label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
+                      inputFormat="MM/DD/YYYY"
+                      name="toDate"
+                      value={values.toDate}
+                      onChange={(value) => setFieldValue('toDate', value, true)}
+                      renderInput={(params) => <TextField {...params} fullWidth />}
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={values.status}
+                    name="status"
+                    label="Status"
+                    onChange={(e) => setFieldValue('status', e.target.value)}
+                  >
+                    <MenuItem value="melted">Melted</MenuItem>
+                    <MenuItem value="melt_updated">Melt Updated</MenuItem>
+                    <MenuItem value="sold">Sold</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Vendor</InputLabel>
+                  <Select
+                    value={values.vendor}
+                    name="vendor"
+                    label="Vendor"
+                    onChange={(e) => setFieldValue('vendor', e.target.value)}
+                  >
+                    {vendors.map((v) => (
+                      <MenuItem key={v._id} value={v._id}>{v.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => {
+                setFilterOpen(false);
+                resetForm();
+                fetchMeltings({
+                  createdAt: {
+                    $gte: moment().format("YYYY-MM-DD"),
+                    $lte: moment().format("YYYY-MM-DD"),
+                  },
+                });
+              }}
+            >
+              Clear
+            </Button>
+            <Button variant="contained" onClick={handleFilterClose}>Close</Button>
+            <Button variant="contained" type="submit">Filter</Button>
+          </DialogActions>
+        </form>
       </Dialog>
     </>
   );

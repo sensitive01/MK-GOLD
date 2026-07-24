@@ -64,3 +64,42 @@ exports.findTransitData = async (req,res)=>{
         })
     }
 }
+
+exports.getTransitById = async (req, res) => {
+    try {
+        const data = await transitModel.findById(req.params.id)
+            .populate('branch')
+            .populate({ path: 'saleIds', populate: { path: 'customer' } });
+            
+        if (!data) {
+            return res.json({ status: false, message: "Transit not found", data: {} });
+        }
+
+        // We need employee data for createdBy. 
+        // createdBy is stored as String, but it is actually the user _id. 
+        const userModel = require('../../models/user');
+        const employeeModel = require('../../models/employee');
+        let employee = null;
+        if (data.createdBy) {
+             const user = await userModel.findById(data.createdBy);
+             if (user && user.employee) {
+                 employee = await employeeModel.findById(user.employee);
+             }
+        }
+
+        const responseData = data.toObject();
+        responseData.createdEmployee = employee;
+
+        res.json({
+            status: true,
+            message: "",
+            data: responseData
+        });
+    } catch (err) {
+        res.json({
+            status: false,
+            message: err.message,
+            data: {}
+        });
+    }
+}

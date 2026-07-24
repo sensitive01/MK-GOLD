@@ -143,8 +143,8 @@ export default function Sale() {
 
   // Form validation
   const schema = Yup.object({
-    fromDate: Yup.string().nullable(),
-    toDate: Yup.string().nullable(),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
   });
 
   const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
@@ -157,10 +157,9 @@ export default function Sale() {
     validationSchema: schema,
     onSubmit: (values) => {
       setOpenBackdrop(true);
-      const query = {
-        branch: values.branch,
-        phoneNumber: values.phoneNumber,
-      };
+      const query = {};
+      if (values.branch) query.branch = values.branch;
+      if (values.phoneNumber) query.phoneNumber = values.phoneNumber;
 
       if (values.fromDate || values.toDate) {
         query.createdAt = {};
@@ -374,9 +373,27 @@ export default function Sale() {
                 Next
               </Button>
             )}
+            {(values.fromDate || values.toDate || values.branch || values.phoneNumber) && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                onClick={() => {
+                  resetForm();
+                  fetchData({
+                    createdAt: {
+                      $gte: moment()?.format("YYYY-MM-DD"),
+                      $lte: moment()?.format("YYYY-MM-DD"),
+                    },
+                  });
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
             <Button
               variant="contained"
-              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+              startIcon={<Iconify icon="material-symbols:filter-alt" />}
               onClick={handleFilterOpen}
             >
               Filter

@@ -112,8 +112,8 @@ export default function Balancesheet() {
 
   // Form validation
   const schema = Yup.object({
-    fromDate: Yup.string().required('From date is required'),
-    toDate: Yup.string().required('To date is required'),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
   });
 
   const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
@@ -125,11 +125,12 @@ export default function Balancesheet() {
     validationSchema: schema,
     onSubmit: (values) => {
       setOpenBackdrop(true);
-      getBalancesheet({
-        fromDate: values.fromDate?.format("YYYY-MM-DD"),
-        toDate: values.toDate?.format("YYYY-MM-DD"),
-        branch: values.branch,
-      }).then((data) => {
+      const query = {};
+      if (values.fromDate) query.fromDate = values.fromDate.format("YYYY-MM-DD");
+      if (values.toDate) query.toDate = values.toDate.format("YYYY-MM-DD");
+      if (values.branch) query.branch = values.branch;
+
+      getBalancesheet(query).then((data) => {
         setData(data.data);
         setOpenBackdrop(false);
       });
@@ -231,6 +232,23 @@ export default function Balancesheet() {
             Balancesheet
           </Typography>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+            {(values.fromDate || values.toDate || values.branch) && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="eva:trash-2-outline" />}
+                onClick={() => {
+                  resetForm();
+                  setOpenBackdrop(true);
+                  fetchData({
+                    fromDate: moment()?.format("YYYY-MM-DD"),
+                    toDate: moment()?.format("YYYY-MM-DD"),
+                  });
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
@@ -241,11 +259,15 @@ export default function Balancesheet() {
           </Stack>
         </Stack>
 
-        <p style={{ color: '#fff' }}>
-          From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
-          {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}, Branch:{' '}
-          {branches?.find((e) => e._id === values.branch)?.branchName}
-        </p>
+        {(values.fromDate || values.toDate || values.branch) && (
+          <p style={{ color: '#fff', paddingBottom: '10px' }}>
+            {[
+              values.fromDate && `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}`,
+              values.toDate && `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}`,
+              values.branch && branches?.find((e) => e._id === values.branch) && `Branch: ${branches?.find((e) => e._id === values.branch)?.branchName}`,
+            ].filter(Boolean).join(', ')}
+          </p>
+        )}
 
         <Card>
           <ListToolbar filterName={filterName} onFilterName={handleFilterByName} />
@@ -415,6 +437,7 @@ export default function Balancesheet() {
               onClick={() => {
                 setFilterOpen(false);
                 resetForm();
+                setOpenBackdrop(true);
                 fetchData({
                   fromDate: moment()?.format("YYYY-MM-DD"),
                   toDate: moment()?.format("YYYY-MM-DD"),

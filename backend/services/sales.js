@@ -21,11 +21,7 @@ async function find(query = {}) {
             .replace(/T.*Z/, "T23:59:59Z")
         );
       }
-      delete query.createdAt;
-      query.$or = [
-        { createdAt: dateFilter },
-        { status: { $ne: "completed" } },
-      ];
+      query.createdAt = dateFilter;
     }
     if (query.branch) {
       if (mongoose.Types.ObjectId.isValid(String(query.branch))) { query.branch = new mongoose.Types.ObjectId(String(query.branch)); } else { delete query.branch; }

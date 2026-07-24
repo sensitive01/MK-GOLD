@@ -125,8 +125,8 @@ export default function AuditorExpense() {
 
   // Form validation
   const schema = Yup.object({
-    fromDate: Yup.string().required('From date is required'),
-    toDate: Yup.string().required('To date is required'),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
   });
 
   const { handleSubmit, touched, errors, values, setFieldValue, resetForm } = useFormik({
@@ -137,12 +137,14 @@ export default function AuditorExpense() {
     validationSchema: schema,
     onSubmit: (values) => {
       setOpenBackdrop(true);
-      getExpense({
-        createdAt: {
-          $gte: values.fromDate?.format("YYYY-MM-DD"),
-          $lte: values.toDate?.format("YYYY-MM-DD"),
-        },
-      }).then((data) => {
+      const query = {};
+      if (values.fromDate || values.toDate) {
+        query.createdAt = {};
+        if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
+        if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
+      }
+      
+      getExpense(query).then((data) => {
         setData(data.data);
         setOpenBackdrop(false);
       });
@@ -332,6 +334,25 @@ export default function AuditorExpense() {
             >
               Filter
             </Button>
+            {(values.fromDate || values.toDate) && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="eva:trash-2-outline" />}
+                onClick={() => {
+                  resetForm();
+                  setOpenBackdrop(true);
+                  fetchData({
+                    createdAt: {
+                      $gte: moment()?.format("YYYY-MM-DD"),
+                      $lte: moment()?.format("YYYY-MM-DD"),
+                    },
+                  });
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={<Iconify icon="carbon:document-export" />}
@@ -355,10 +376,14 @@ export default function AuditorExpense() {
           </Stack>
         </Stack>
 
-        <p style={{ color: '#fff' }}>
-          From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
-          {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
-        </p>
+        {(values.fromDate || values.toDate) && (
+          <p style={{ color: '#fff', paddingBottom: '10px' }}>
+            {[
+              values.fromDate && `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}`,
+              values.toDate && `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}`,
+            ].filter(Boolean).join(', ')}
+          </p>
+        )}
 
         <Card>
           <ExpenseListToolbar
@@ -623,6 +648,7 @@ export default function AuditorExpense() {
               onClick={() => {
                 setFilterOpen(false);
                 resetForm();
+                setOpenBackdrop(true);
                 fetchData({
                   createdAt: {
                     $gte: moment()?.format("YYYY-MM-DD"),

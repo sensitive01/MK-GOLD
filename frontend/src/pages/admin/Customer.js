@@ -14,6 +14,7 @@ import {
     Container,
     Grid,
     IconButton,
+    InputLabel,
     MenuItem,
     Modal,
     Paper,
@@ -35,6 +36,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import FormControl from '@mui/material/FormControl';
+import Select from '@mui/material/Select';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -50,6 +52,7 @@ import global from '../../utils/global';
 // sections
 import { CustomerListHead, CustomerListToolbar } from '../../sections/@dashboard/customer';
 // mock
+import { getBranch } from '../../apis/admin/branch';
 import { deleteCustomerById, findCustomer } from '../../apis/admin/customer';
 
 // ----------------------------------------------------------------------
@@ -97,6 +100,7 @@ function applySortFilter(array, comparator, query) {
 }
 
 export default function Customer({ title = "Customers" }) {
+  const [branches, setBranches] = useState([]);
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
@@ -121,8 +125,8 @@ export default function Customer({ title = "Customers" }) {
 
   // Form validation
   const schema = Yup.object({
-    fromDate: Yup.string().required('From date is required'),
-    toDate: Yup.string().required('To date is required'),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
   });
 
   const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
@@ -130,17 +134,26 @@ export default function Customer({ title = "Customers" }) {
       fromDate: null,
       toDate: null,
       phoneNumber: '',
+      branch: '',
+      status: '',
+      gender: '',
     },
     validationSchema: schema,
     onSubmit: (values) => {
       setOpenBackdrop(true);
-      findCustomer({
-        createdAt: {
-          $gte: values.fromDate?.format("YYYY-MM-DD"),
-          $lte: values.toDate?.format("YYYY-MM-DD"),
-        },
-        phoneNumber: values.phoneNumber,
-      }).then((data) => {
+      const query = {};
+      if (values.phoneNumber) query.phoneNumber = values.phoneNumber;
+      if (values.branch) query.branch = values.branch;
+      if (values.status) query.status = values.status;
+      if (values.gender) query.gender = values.gender;
+
+      if (values.fromDate || values.toDate) {
+        query.createdAt = {};
+        if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
+        if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
+      }
+
+      findCustomer(query).then((data) => {
         setData(data.data);
         setOpenBackdrop(false);
       });
@@ -155,6 +168,9 @@ export default function Customer({ title = "Customers" }) {
   });
 
   useEffect(() => {
+    getBranch().then((data) => {
+      setBranches(data.data);
+    });
     fetchData();
   }, [toggleContainer]);
 
@@ -314,9 +330,27 @@ export default function Customer({ title = "Customers" }) {
             {title}
           </Typography>
           <Stack direction="row" alignItems="center" gap={2}>
+            {(values.fromDate || values.toDate || values.phoneNumber || values.branch || values.status || values.gender) && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                onClick={() => {
+                  resetForm();
+                  fetchData({
+                    createdAt: {
+                      $gte: moment()?.format("YYYY-MM-DD"),
+                      $lte: moment()?.format("YYYY-MM-DD"),
+                    },
+                  });
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
             <Button
               variant="contained"
-              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+              startIcon={<Iconify icon="material-symbols:filter-alt" />}
               onClick={handleFilterOpen}
             >
               Filter
@@ -334,10 +368,18 @@ export default function Customer({ title = "Customers" }) {
           </Stack>
         </Stack>
 
-        <p style={{ color: '#fff' }}>
-          From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
-          {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
-        </p>
+        {(values.fromDate || values.toDate || values.phoneNumber || values.branch || values.status || values.gender) && (
+          <p style={{ color: '#fff' }}>
+            {[
+              values.fromDate ? `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}` : null,
+              values.toDate ? `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}` : null,
+              values.branch ? `Branch: ${branches?.find((e) => e._id === values.branch)?.branchName || ''}` : null,
+              values.phoneNumber ? `Phone Number: ${global.maskPhoneNumber(values.phoneNumber)}` : null,
+              values.status ? `Status: ${sentenceCase(values.status)}` : null,
+              values.gender ? `Gender: ${sentenceCase(values.gender)}` : null,
+            ].filter(Boolean).join(', ')}
+          </p>
+        )}
 
         <Card>
           <CustomerListToolbar
@@ -608,6 +650,26 @@ export default function Customer({ title = "Customers" }) {
           <DialogContent>
             <Grid container spacing={3} sx={{ p: 1 }}>
               <Grid item xs={12} sm={6}>
+                <FormControl fullWidth error={touched.branch && errors.branch && true}>
+                  <InputLabel id="select-branch-label">Select branch</InputLabel>
+                  <Select
+                    labelId="select-branch-label"
+                    id="select-branch"
+                    label={touched.branch && errors.branch ? errors.branch : 'Select branch'}
+                    name="branch"
+                    value={values.branch}
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                  >
+                    {branches?.map((e) => (
+                      <MenuItem key={e._id} value={e._id}>
+                        {e.branchId} {e.branchName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   name="phoneNumber"
                   type="number"
@@ -649,6 +711,41 @@ export default function Customer({ title = "Customers" }) {
                       renderInput={(params) => <TextField {...params} fullWidth />}
                     />
                   </LocalizationProvider>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth error={touched.gender && errors.gender && true}>
+                  <InputLabel id="select-gender-label">Select gender</InputLabel>
+                  <Select
+                    labelId="select-gender-label"
+                    id="select-gender"
+                    label={touched.gender && errors.gender ? errors.gender : 'Select gender'}
+                    name="gender"
+                    value={values.gender}
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value="male">Male</MenuItem>
+                    <MenuItem value="female">Female</MenuItem>
+                    <MenuItem value="other">Other</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth error={touched.status && errors.status && true}>
+                  <InputLabel id="select-status-label">Select status</InputLabel>
+                  <Select
+                    labelId="select-status-label"
+                    id="select-status"
+                    label={touched.status && errors.status ? errors.status : 'Select status'}
+                    name="status"
+                    value={values.status}
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value="active">Active</MenuItem>
+                    <MenuItem value="deactive">Deactive</MenuItem>
+                  </Select>
                 </FormControl>
               </Grid>
             </Grid>

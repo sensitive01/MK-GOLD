@@ -129,8 +129,8 @@ export default function Release() {
 
   // Form validation
   const schema = Yup.object({
-    fromDate: Yup.string().required('From date is required'),
-    toDate: Yup.string().required('To date is required'),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
   });
 
   const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
@@ -143,14 +143,17 @@ export default function Release() {
     validationSchema: schema,
     onSubmit: (values) => {
       setOpenBackdrop(true);
-      findRelease({
-        createdAt: {
-          $gte: values.fromDate?.format("YYYY-MM-DD"),
-          $lte: values.toDate?.format("YYYY-MM-DD"),
-        },
-        branch: values.branch,
-        phoneNumber: values.phoneNumber,
-      }).then((data) => {
+      const query = {};
+      if (values.branch) query.branch = values.branch;
+      if (values.phoneNumber) query.phoneNumber = values.phoneNumber;
+
+      if (values.fromDate || values.toDate) {
+        query.createdAt = {};
+        if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
+        if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
+      }
+
+      findRelease(query).then((data) => {
         setData(data.data);
         setOpenBackdrop(false);
       });
@@ -393,20 +396,45 @@ export default function Release() {
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Release
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
-            onClick={handleFilterOpen}
-          >
-            Filter
-          </Button>
+          <Stack direction="row" alignItems="center" gap={2}>
+            {(values.fromDate || values.toDate || values.branch || values.phoneNumber) && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                onClick={() => {
+                  resetForm();
+                  fetchData({
+                    createdAt: {
+                      $gte: moment()?.format("YYYY-MM-DD"),
+                      $lte: moment()?.format("YYYY-MM-DD"),
+                    },
+                  });
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="material-symbols:filter-alt" />}
+              onClick={handleFilterOpen}
+            >
+              Filter
+            </Button>
+          </Stack>
         </Stack>
 
-        <p style={{ color: '#fff' }}>
-          From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
-          {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}, Branch:{' '}
-          {branches?.find((e) => e._id === values.branch)?.branchName}, Phone Number: {global.maskPhoneNumber(values.phoneNumber)}
-        </p>
+        {(values.fromDate || values.toDate || values.branch || values.phoneNumber) && (
+          <p style={{ color: '#fff' }}>
+            {[
+              values.fromDate ? `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}` : null,
+              values.toDate ? `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}` : null,
+              values.branch ? `Branch: ${branches?.find((e) => e._id === values.branch)?.branchName || ''}` : null,
+              values.phoneNumber ? `Phone Number: ${global.maskPhoneNumber(values.phoneNumber)}` : null,
+            ].filter(Boolean).join(', ')}
+          </p>
+        )}
 
         <Card>
           <ReleaseListToolbar

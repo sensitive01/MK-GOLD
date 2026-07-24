@@ -143,8 +143,8 @@ export default function Sale() {
 
   // Form validation
   const schema = Yup.object({
-    fromDate: Yup.string().nullable(),
-    toDate: Yup.string().nullable(),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
   });
 
   const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({

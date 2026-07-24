@@ -621,6 +621,27 @@ export default function Leads({ title = "Leads Management" }) {
             {title}
           </Typography>
           <Stack direction="row" spacing={2}>
+            {(filters.startDate || filters.endDate || filters.status !== 'all' || filters.category !== 'all' || filters.type !== 'all' || filters.isExclusive !== 'all') && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                onClick={() => {
+                  setFilters({
+                    startDate: '', endDate: '', status: 'all', category: 'all', type: 'all', isExclusive: 'all'
+                  });
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="material-symbols:filter-alt" />}
+              onClick={() => setOpenFilter(true)}
+            >
+              Filter
+            </Button>
             {auth.user?.userType?.toLowerCase() === 'telecalling' && (
               <>
                 <Button
@@ -636,19 +657,6 @@ export default function Leads({ title = "Leads Management" }) {
                 >
                   Import Leads
                 </Button>
-                {/* <Button
-                  variant="outlined"
-                  color="inherit"
-                  startIcon={<Iconify icon="eva:cloud-upload-fill" />}
-                  onClick={() => {
-                    setImportFile(null);
-                    setImportPreview([]);
-                    setOpenImportModal(true);
-                  }}
-                  sx={{ color: '#fff', borderColor: '#fff', '&:hover': { borderColor: '#e1bee7', bgcolor: 'rgba(255,255,255,0.08)' } }}
-                >
-                  Import Dialer Leads
-                </Button> */}
               </>
             )}
             <Button
@@ -663,6 +671,19 @@ export default function Leads({ title = "Leads Management" }) {
             </Button>
           </Stack>
         </Stack>
+
+        {(filters.startDate || filters.endDate || filters.status !== 'all' || filters.category !== 'all' || filters.type !== 'all' || filters.isExclusive !== 'all') && (
+          <p style={{ color: '#fff', marginBottom: '20px' }}>
+            {[
+              filters.startDate ? `From Date: ${moment(filters.startDate).format('YYYY-MM-DD')}` : null,
+              filters.endDate ? `To Date: ${moment(filters.endDate).format('YYYY-MM-DD')}` : null,
+              filters.status !== 'all' ? `Status: ${filters.status.charAt(0).toUpperCase() + filters.status.slice(1)}` : null,
+              filters.category !== 'all' ? `Category: ${filters.category.charAt(0).toUpperCase() + filters.category.slice(1)}` : null,
+              filters.type !== 'all' ? `Type: ${filters.type.charAt(0).toUpperCase() + filters.type.slice(1)}` : null,
+              filters.isExclusive !== 'all' ? `Exclusive: Yes` : null,
+            ].filter(Boolean).join(', ')}
+          </p>
+        )}
 
         {showExclusiveTip && (
           <MuiAlert severity="info" sx={{ mb: 3 }} onClose={() => setShowExclusiveTip(false)}>

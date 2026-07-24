@@ -16,10 +16,12 @@ import {
     FormControl,
     Grid,
     IconButton,
+    InputLabel,
     MenuItem,
     Modal,
     Paper,
     Popover,
+    Select,
     Snackbar,
     Stack,
     Switch,
@@ -129,27 +131,35 @@ export default function User() {
     severity: 'success',
   });
 
-  // Form validation
-  const schema = Yup.object({
-    fromDate: Yup.string().required('From date is required'),
-    toDate: Yup.string().required('To date is required'),
-  });
-
-  const { handleSubmit, touched, errors, values, setFieldValue, resetForm } = useFormik({
+  const { handleSubmit, touched, errors, values, setFieldValue, resetForm, handleChange, handleBlur } = useFormik({
     initialValues: {
       fromDate: null,
       toDate: null,
+      userType: 'all',
+      status: 'all',
+      loginMethod: 'all',
     },
-    validationSchema: schema,
+    // validationSchema: schema,
     onSubmit: (values) => {
-      console.log(values.fromDate?.format('YYYY-MM-DD'));
       setOpenBackdrop(true);
-      getUser({
-        createdAt: {
+      const query = {};
+      if (values.fromDate && values.toDate) {
+        query.createdAt = {
           $gte: values.fromDate?.format('YYYY-MM-DD'),
           $lte: values.toDate?.format('YYYY-MM-DD'),
-        },
-      }).then((data) => {
+        };
+      }
+      if (values.userType !== 'all') {
+        query.userType = values.userType;
+      }
+      if (values.status !== 'all') {
+        query.status = values.status;
+      }
+      if (values.loginMethod !== 'all') {
+        query.loginMethod = values.loginMethod;
+      }
+      
+      getUser(query).then((data) => {
         setData(data.data);
         setOpenBackdrop(false);
       });
@@ -397,9 +407,22 @@ export default function User() {
             >
               Export
             </Button>
+            {(values.fromDate || values.toDate || values.userType !== 'all' || values.status !== 'all' || values.loginMethod !== 'all') && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                onClick={() => {
+                  resetForm();
+                  fetchData();
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
             <Button
               variant="contained"
-              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+              startIcon={<Iconify icon="material-symbols:filter-alt" />}
               onClick={handleFilterOpen}
             >
               Filter
@@ -408,8 +431,10 @@ export default function User() {
         </Stack>
 
         <p style={{ color: '#fff' }}>
-          From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
-          {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
+          {(values.fromDate || values.toDate) && `From Date: ${values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date: ${values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}`}
+          {values.userType !== 'all' && ` | User Type: ${sentenceCase(values.userType)}`}
+          {values.status !== 'all' && ` | Status: ${sentenceCase(values.status)}`}
+          {values.loginMethod !== 'all' && ` | Login Method: ${sentenceCase(values.loginMethod)}`}
         </p>
 
         <Card>
@@ -670,7 +695,7 @@ export default function User() {
           <DialogContent>
             <Grid container spacing={3} sx={{ p: 1 }}>
               <Grid item xs={12} sm={6}>
-                <FormControl sx={{ minWidth: 120 }}>
+                <FormControl sx={{ minWidth: 120 }} fullWidth>
                   <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
                     <DesktopDatePicker
                       label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
@@ -686,7 +711,7 @@ export default function User() {
                 </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <FormControl sx={{ minWidth: 120 }}>
+                <FormControl sx={{ minWidth: 120 }} fullWidth>
                   <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
                     <DesktopDatePicker
                       label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
@@ -699,6 +724,63 @@ export default function User() {
                       renderInput={(params) => <TextField {...params} fullWidth />}
                     />
                   </LocalizationProvider>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel id="userType-label">User Type</InputLabel>
+                  <Select
+                    labelId="userType-label"
+                    id="userType"
+                    name="userType"
+                    label="User Type"
+                    value={values.userType}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                  >
+                    <MenuItem value="all">All</MenuItem>
+                    {global.userTypes?.map((type) => (
+                      <MenuItem key={type.value} value={type.value}>
+                        {type.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel id="status-label">Status</InputLabel>
+                  <Select
+                    labelId="status-label"
+                    id="status"
+                    name="status"
+                    label="Status"
+                    value={values.status}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                  >
+                    <MenuItem value="all">All</MenuItem>
+                    <MenuItem value="active">Active</MenuItem>
+                    <MenuItem value="deactive">Deactive</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel id="loginMethod-label">Login Method</InputLabel>
+                  <Select
+                    labelId="loginMethod-label"
+                    id="loginMethod"
+                    name="loginMethod"
+                    label="Login Method"
+                    value={values.loginMethod}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                  >
+                    <MenuItem value="all">All</MenuItem>
+                    <MenuItem value="password">Password</MenuItem>
+                    <MenuItem value="otp">OTP</MenuItem>
+                  </Select>
                 </FormControl>
               </Grid>
             </Grid>

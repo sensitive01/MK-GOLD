@@ -1,12 +1,17 @@
-import { useState, useEffect, useCallback, forwardRef } from 'react';
+import { useState, useEffect, useCallback, forwardRef, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import {
   Container, Typography, Card, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   Stepper, Step, StepLabel, Checkbox, TextField, Box, Snackbar, MenuItem, Select, FormControl, InputLabel,
-  Stack, TablePagination, Grid, IconButton
+  Stack, TablePagination, Grid, IconButton, Backdrop, CircularProgress
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import moment from 'moment';
 import { findMelting, createMelting, updateMelting, deleteMelting } from '../../apis/admin/melting';
 import { findTransit } from '../../apis/admin/transit';
@@ -56,10 +61,49 @@ export default function AuditorMelting() {
   const [sellAmount, setSellAmount] = useState('');
   const [sellPaymentMode, setSellPaymentMode] = useState('');
 
-  const fetchMeltings = useCallback(async () => {
-    const res = await findMelting({});
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [openBackdrop, setOpenBackdrop] = useState(false);
+  const form = useRef();
+
+  const schema = Yup.object({
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
+  });
+
+  const { handleSubmit, touched, errors, values, setFieldValue, resetForm } = useFormik({
+    initialValues: {
+      fromDate: null,
+      toDate: null,
+    },
+    validationSchema: schema,
+    onSubmit: (values) => {
+      setOpenBackdrop(true);
+      const query = {};
+      if (values.fromDate || values.toDate) {
+        query.createdAt = {};
+        if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
+        if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
+      }
+      
+      findMelting(query).then((res) => {
+        if (res?.data) setData(res.data);
+        setOpenBackdrop(false);
+      });
+      setFilterOpen(false);
+    },
+  });
+
+  const fetchMeltings = useCallback(async (
+    query = {
+      createdAt: {
+        $gte: values.fromDate ?? moment()?.format("YYYY-MM-DD"),
+        $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
+      },
+    }
+  ) => {
+    const res = await findMelting(query);
     if (res?.data) setData(res.data);
-  }, []);
+  }, [values.fromDate, values.toDate]);
 
   const fetchTransits = useCallback(async () => {
     // only fetch 'received' transits
@@ -382,7 +426,44 @@ export default function AuditorMelting() {
               <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
                 Melting Management
               </Typography>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+                {(values.fromDate || values.toDate) && (
+                  <Button
+                    variant="contained"
+                    color="error"
+                    startIcon={<Iconify icon="eva:trash-2-outline" />}
+                    onClick={() => {
+                      resetForm();
+                      setOpenBackdrop(true);
+                      fetchMeltings({
+                        createdAt: {
+                          $gte: moment()?.format("YYYY-MM-DD"),
+                          $lte: moment()?.format("YYYY-MM-DD"),
+                        },
+                      }).finally(() => setOpenBackdrop(false));
+                    }}
+                  >
+                    Clear Filter
+                  </Button>
+                )}
+                <Button
+                  variant="contained"
+                  startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                  onClick={() => setFilterOpen(true)}
+                >
+                  Filter
+                </Button>
+              </Stack>
             </Stack>
+
+            {(values.fromDate || values.toDate) && (
+              <p style={{ color: '#fff', paddingBottom: '10px' }}>
+                {[
+                  values.fromDate && `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}`,
+                  values.toDate && `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}`,
+                ].filter(Boolean).join(', ')}
+              </p>
+            )}
 
             <Card>
               <Scrollbar>
@@ -831,6 +912,84 @@ export default function AuditorMelting() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Dialog open={filterOpen} onClose={() => setFilterOpen(false)}>
+        <form
+          ref={form}
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit(e);
+          }}
+          autoComplete="off"
+        >
+          <DialogTitle>Filter</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={3} sx={{ p: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <FormControl sx={{ minWidth: 120 }}>
+                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
+                    <DesktopDatePicker
+                      label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
+                      inputFormat="MM/DD/YYYY"
+                      name="fromDate"
+                      value={values.fromDate}
+                      onChange={(value) => {
+                        setFieldValue('fromDate', value, true);
+                      }}
+                      renderInput={(params) => <TextField {...params} fullWidth />}
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl sx={{ minWidth: 120 }}>
+                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
+                    <DesktopDatePicker
+                      label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
+                      inputFormat="MM/DD/YYYY"
+                      name="toDate"
+                      value={values.toDate}
+                      onChange={(value) => {
+                        setFieldValue('toDate', value, true);
+                      }}
+                      renderInput={(params) => <TextField {...params} fullWidth />}
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => {
+                setFilterOpen(false);
+                resetForm();
+                setOpenBackdrop(true);
+                fetchMeltings({
+                  createdAt: {
+                    $gte: moment()?.format("YYYY-MM-DD"),
+                    $lte: moment()?.format("YYYY-MM-DD"),
+                  },
+                }).finally(() => setOpenBackdrop(false));
+              }}
+            >
+              Clear
+            </Button>
+            <Button variant="contained" onClick={() => setFilterOpen(false)}>
+              Close
+            </Button>
+            <Button variant="contained" type="submit">
+              Filter
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
+        <CircularProgress color="inherit" />
+      </Backdrop>
 
       {/* Sale Summary Dialog */}
       <Dialog open={Boolean(saleIdToView)} onClose={() => setSaleIdToView(null)} maxWidth="lg" fullWidth>

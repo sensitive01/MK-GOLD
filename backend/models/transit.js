@@ -56,6 +56,10 @@ const transitSchema = new mongoose.Schema({
         type:String,
         required:true
     },
+    transitMovedThrough:{
+        type:String,
+        required:true
+    },
     notes:{
         type:String,
         default:""

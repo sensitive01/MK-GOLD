@@ -189,6 +189,17 @@ export default function LeadFilterSidebar({ openFilter, onOpenFilter, onCloseFil
           >
             Clear All
           </Button>
+                    <Button
+            fullWidth
+            size="large"
+            type="submit"
+            color="inherit"
+            variant="outlined"
+            startIcon={<Iconify icon="ic:round-clear-all" />}
+            onClick={onCloseFilter}
+          >
+           Apply Filter 
+          </Button>
         </DialogActions>
       </Dialog>
     </>

@@ -64,8 +64,8 @@ export default function QREnquiry() {
 
   // Form validation
   const schema = Yup.object({
-    fromDate: Yup.string().required('From date is required'),
-    toDate: Yup.string().required('To date is required'),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
   });
 
   const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
@@ -146,19 +146,37 @@ export default function QREnquiry() {
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             QR Enquiries (Branch Leads)
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
-            onClick={handleFilterOpen}
-          >
-            Filter
-          </Button>
+          <Stack direction="row" alignItems="center" gap={2}>
+            {(values.fromDate || values.toDate || values.phoneNumber) && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                onClick={() => {
+                  resetForm();
+                  fetchData({});
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="material-symbols:filter-alt" />}
+              onClick={handleFilterOpen}
+            >
+              Filter
+            </Button>
+          </Stack>
         </Stack>
 
-        {(values.fromDate || values.toDate) && (
+        {(values.fromDate || values.toDate || values.phoneNumber) && (
           <p style={{ color: '#fff', marginBottom: '20px' }}>
-            From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
-            {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
+            {[
+              values.fromDate ? `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}` : null,
+              values.toDate ? `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}` : null,
+              values.phoneNumber ? `Phone: ${values.phoneNumber}` : null,
+            ].filter(Boolean).join(', ')}
           </p>
         )}
 

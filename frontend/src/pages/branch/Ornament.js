@@ -118,8 +118,8 @@ export default function Ornament() {
 
   // Form validation
   const schema = Yup.object({
-    fromDate: Yup.string().required('From date is required'),
-    toDate: Yup.string().required('To date is required'),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
   });
 
   const { handleSubmit, touched, errors, values, setFieldValue, resetForm } = useFormik({
@@ -285,9 +285,29 @@ export default function Ornament() {
             Move Gold
           </Typography>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+            {(values.fromDate || values.toDate) && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                onClick={() => {
+                  setFilterOpen(false);
+                  resetForm();
+                  fetchData({
+                    createdAt: {
+                      $gte: moment()?.format('YYYY-MM-DD'),
+                      $lte: moment()?.format('YYYY-MM-DD'),
+                    },
+                    branch: auth.user?.branch?._id || auth.user?.branch,
+                  });
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
             <Button
               variant="contained"
-              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+              startIcon={<Iconify icon="material-symbols:filter-alt" />}
               onClick={handleFilterOpen}
             >
               Filter
@@ -304,10 +324,14 @@ export default function Ornament() {
           </Stack>
         </Stack>
 
-        <p style={{ color: '#fff' }}>
-          From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
-          {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
-        </p>
+        {(values.fromDate || values.toDate) && (
+          <p style={{ color: '#fff', marginBottom: '20px' }}>
+            {[
+              values.fromDate ? `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}` : null,
+              values.toDate ? `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}` : null,
+            ].filter(Boolean).join(', ')}
+          </p>
+        )}
 
         <Card>
           <ListToolbar
@@ -529,6 +553,7 @@ export default function Ornament() {
                     $gte: moment()?.format("YYYY-MM-DD"),
                     $lte: moment()?.format("YYYY-MM-DD"),
                   },
+                  branch: auth.user?.branch?._id || auth.user?.branch,
                 });
               }}
             >

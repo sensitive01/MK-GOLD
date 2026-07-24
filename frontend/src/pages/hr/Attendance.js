@@ -113,8 +113,8 @@ export default function Attendance() {
   });
 
   const schema = Yup.object({
-    fromDate: Yup.string().required('From date is required'),
-    toDate: Yup.string().required('To date is required'),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
   });
 
   const { handleSubmit, touched, errors, values, setFieldValue, resetForm } = useFormik({

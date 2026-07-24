@@ -12,6 +12,16 @@ import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
 import global from '../../utils/global';
 import { findVendor, createVendor, updateVendor, deleteVendor } from '../../apis/admin/vendor';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import { Grid, FormControl, InputLabel, Select } from '@mui/material';
 
 const style = {
   position: 'absolute',
@@ -58,13 +68,37 @@ export default function Vendor() {
 
   const [notify, setNotify] = useState({ open: false, message: '', severity: 'success' });
 
+  const [filterOpen, setFilterOpen] = useState(false);
+  const handleFilterOpen = () => setFilterOpen(true);
+  const handleFilterClose = () => setFilterOpen(false);
+
+  const filterSchema = Yup.object({
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
+  });
+
+  const { handleSubmit, touched, errors, values, setFieldValue, resetForm } = useFormik({
+    initialValues: { fromDate: null, toDate: null },
+    validationSchema: filterSchema,
+    onSubmit: (values) => {
+      const query = {};
+      if (values.fromDate || values.toDate) {
+        query.createdAt = {};
+        if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
+        if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
+      }
+      fetchData(query);
+      setFilterOpen(false);
+    },
+  });
+
   useEffect(() => {
     fetchData();
   }, []);
 
-  const fetchData = () => {
+  const fetchData = (query = {}) => {
     setOpenBackdrop(true);
-    findVendor().then((res) => {
+    findVendor(query).then((res) => {
       setData(res.data?.data || []);
       setOpenBackdrop(false);
     }).catch(() => setOpenBackdrop(false));
@@ -153,10 +187,41 @@ export default function Vendor() {
       <Container maxWidth="xl">
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" sx={{ color: '#fff' }}>Vendor Management</Typography>
-          <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={handleOpenCreate}>
-            New Vendor
-          </Button>
+          <Stack direction="row" alignItems="center" gap={2}>
+            {(values.fromDate || values.toDate) && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                onClick={() => {
+                  resetForm();
+                  fetchData({});
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="material-symbols:filter-alt" />}
+              onClick={handleFilterOpen}
+            >
+              Filter
+            </Button>
+            <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={handleOpenCreate}>
+              New Vendor
+            </Button>
+          </Stack>
         </Stack>
+
+        {(values.fromDate || values.toDate) && (
+          <p style={{ color: '#fff' }}>
+            {[
+              values.fromDate ? `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}` : null,
+              values.toDate ? `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}` : null,
+            ].filter(Boolean).join(', ')}
+          </p>
+        )}
 
         <Card>
           <Scrollbar>
@@ -282,6 +347,59 @@ export default function Vendor() {
           </Stack>
         </Box>
       </Modal>
+
+      <Dialog open={filterOpen} onClose={handleFilterClose}>
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(e); }} autoComplete="off">
+          <DialogTitle>Filter</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={3} sx={{ p: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <FormControl sx={{ minWidth: 120 }} fullWidth>
+                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
+                    <DesktopDatePicker
+                      label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
+                      inputFormat="MM/DD/YYYY"
+                      name="fromDate"
+                      value={values.fromDate}
+                      onChange={(value) => setFieldValue('fromDate', value, true)}
+                      renderInput={(params) => <TextField {...params} fullWidth />}
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl sx={{ minWidth: 120 }} fullWidth>
+                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
+                    <DesktopDatePicker
+                      label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
+                      inputFormat="MM/DD/YYYY"
+                      name="toDate"
+                      value={values.toDate}
+                      onChange={(value) => setFieldValue('toDate', value, true)}
+                      renderInput={(params) => <TextField {...params} fullWidth />}
+                    />
+                  </LocalizationProvider>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => {
+                setFilterOpen(false);
+                resetForm();
+                fetchData({});
+              }}
+            >
+              Clear
+            </Button>
+            <Button variant="contained" onClick={handleFilterClose}>Close</Button>
+            <Button variant="contained" type="submit">Filter</Button>
+          </DialogActions>
+        </form>
+      </Dialog>
 
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />

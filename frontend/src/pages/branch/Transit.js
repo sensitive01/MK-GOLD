@@ -34,6 +34,7 @@ import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 import { TransitListHead, TransitListToolbar } from '../../sections/@dashboard/transit';
 import { deleteTransitById, findTransit, createTransit, updateTransit } from '../../apis/branch/transit';
+import TransitPrint from '../../components/branch/transit/TransitPrint';
 import { createFile } from '../../apis/branch/fileupload';
 import global from '../../utils/global';
 import { useFormik } from 'formik';
@@ -151,6 +152,7 @@ export default function Transit() {
   const handleCloseEditModal = () => setOpenEditModal(false);
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
+  const [verifyTransitId, setVerifyTransitId] = useState(null);
 
   const [notify, setNotify] = useState({
     open: false,
@@ -365,7 +367,7 @@ export default function Transit() {
               <Button
                 variant="contained"
                 color="error"
-                startIcon={<Iconify icon="eva:trash-2-outline" />}
+                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
                 onClick={handleClearFilters}
               >
                 Clear Filter
@@ -373,7 +375,7 @@ export default function Transit() {
             )}
             <Button
               variant="contained"
-              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+              startIcon={<Iconify icon="material-symbols:filter-alt" />}
               onClick={handleFilterOpen}
             >
               Filter
@@ -383,6 +385,16 @@ export default function Transit() {
             </Button>
           </Stack>
         </Stack>
+
+        {isFilterApplied && (
+          <p style={{ color: '#fff', marginBottom: '20px' }}>
+            {[
+              filters.fromDate ? `From Date: ${filters.fromDate}` : null,
+              filters.toDate ? `To Date: ${filters.toDate}` : null,
+              filters.status !== 'all' ? `Status: ${sentenceCase(filters.status)}` : null,
+            ].filter(Boolean).join(', ')}
+          </p>
+        )}
 
         <Card>
           <TransitListToolbar
@@ -522,6 +534,15 @@ export default function Transit() {
           <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
           Edit
         </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
+            setVerifyTransitId(openId);
+          }}
+        >
+          <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
+          Print
+        </MenuItem>
         {/* global.canDelete(userType) && (
           <MenuItem
             disabled={['moved', 'melted'].includes(selectedTransitObj?.status)}
@@ -569,6 +590,7 @@ export default function Transit() {
         auth={auth} 
         setNotify={setNotify} 
         prefillData={prefillData}
+        onSuccessPrint={(id) => setVerifyTransitId(id)}
       />
       
       {openEditModal && (
@@ -584,11 +606,67 @@ export default function Transit() {
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
       </Backdrop>
+
+      {verifyTransitId && (
+        <TransitPrint 
+          id={verifyTransitId} 
+          open={Boolean(verifyTransitId)} 
+          onClose={() => setVerifyTransitId(null)} 
+        />
+      )}
+
+      <Dialog open={filterOpen} onClose={handleFilterClose}>
+        <DialogTitle>Filter Transits</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={3} sx={{ p: 1, mt: 1 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="From Date"
+                InputLabelProps={{ shrink: true }}
+                value={filters.fromDate || ''}
+                onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="To Date"
+                InputLabelProps={{ shrink: true }}
+                value={filters.toDate || ''}
+                onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={filters.status}
+                  label="Status"
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                >
+                  <MenuItem value="all">All</MenuItem>
+                  <MenuItem value="intransit">In-Transit</MenuItem>
+                  <MenuItem value="moved">Moved</MenuItem>
+                  <MenuItem value="received">Received</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleFilterClose} variant="contained">Apply</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
 
-function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, prefillData }) {
+function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, prefillData, onSuccessPrint }) {
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef();
 
@@ -601,11 +679,12 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
     numberOfOrnaments: Yup.number().required('Number of ornaments is required'),
     totalGrossWeight: Yup.number().required('Total gross weight is required'),
     totalNetWeight: Yup.number().required('Total net weight is required'),
-    fromDate: Yup.date().required('From date is required'),
-    toDate: Yup.date().required('To date is required'),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
     numberOfDays: Yup.number().required('Number of days is required'),
     packetWeight: Yup.number().required('Packet weight is required'),
     deliveryBy: Yup.string().required('Delivery by is required'),
+    transitMovedThrough: Yup.string().required('Transit moved through is required'),
     notes: Yup.string(),
     proof: Yup.string().required('Proof is required'),
   });
@@ -625,6 +704,7 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
       numberOfDays: '',
       packetWeight: '',
       deliveryBy: '',
+      transitMovedThrough: '',
       notes: '',
       proof: '',
     },
@@ -639,6 +719,7 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
           fetchData();
           resetForm();
           setNotify({ open: true, message: 'Transit created successfully', severity: 'success' });
+          if (onSuccessPrint) onSuccessPrint(data.data._id);
         } else {
           setNotify({ open: true, message: data.message || 'Error creating transit', severity: 'error' });
         }
@@ -735,6 +816,9 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
               <TextField name="deliveryBy" label="Delivery By" value={values.deliveryBy} onChange={handleChange} onBlur={handleBlur} error={touched.deliveryBy && !!errors.deliveryBy} helperText={touched.deliveryBy && errors.deliveryBy} fullWidth />
             </Grid>
             <Grid item xs={12} sm={6}>
+              <TextField name="transitMovedThrough" label="Transit Moved Through" value={values.transitMovedThrough} onChange={handleChange} onBlur={handleBlur} error={touched.transitMovedThrough && !!errors.transitMovedThrough} helperText={touched.transitMovedThrough && errors.transitMovedThrough} fullWidth />
+            </Grid>
+            <Grid item xs={12} sm={6}>
                <input type="file" style={{ display: 'none' }} ref={fileInputRef} accept="image/*,application/pdf" onChange={handleFileUpload} />
                <LoadingButton loading={loading} variant="outlined" onClick={() => fileInputRef.current?.click()} fullWidth color={touched.proof && !!errors.proof ? 'error' : 'primary'} sx={{ height: 56 }}>
                  {values.proof ? 'Proof Uploaded' : 'Upload Proof (Image/PDF)'}
@@ -767,11 +851,12 @@ function EditTransitModal({ open, id, handleClose, fetchData, setNotify }) {
     numberOfOrnaments: Yup.number().required('Number of ornaments is required'),
     totalGrossWeight: Yup.number().required('Total gross weight is required'),
     totalNetWeight: Yup.number().required('Total net weight is required'),
-    fromDate: Yup.date().required('From date is required'),
-    toDate: Yup.date().required('To date is required'),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
     numberOfDays: Yup.number().required('Number of days is required'),
     packetWeight: Yup.number().required('Packet weight is required'),
     deliveryBy: Yup.string().required('Delivery by is required'),
+    transitMovedThrough: Yup.string().required('Transit moved through is required'),
     notes: Yup.string(),
   });
 
@@ -789,6 +874,7 @@ function EditTransitModal({ open, id, handleClose, fetchData, setNotify }) {
       numberOfDays: '',
       packetWeight: '',
       deliveryBy: '',
+      transitMovedThrough: '',
       notes: '',
       proof: '',
     },
@@ -827,6 +913,7 @@ function EditTransitModal({ open, id, handleClose, fetchData, setNotify }) {
             numberOfDays: transit.numberOfDays,
             packetWeight: transit.packetWeight,
             deliveryBy: transit.deliveryBy,
+            transitMovedThrough: transit.transitMovedThrough || '',
             notes: transit.notes,
             proof: transit.proof,
           });
@@ -898,6 +985,9 @@ function EditTransitModal({ open, id, handleClose, fetchData, setNotify }) {
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField name="deliveryBy" label="Delivery By" value={values.deliveryBy} onChange={handleChange} onBlur={handleBlur} error={touched.deliveryBy && !!errors.deliveryBy} helperText={touched.deliveryBy && errors.deliveryBy} fullWidth />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField name="transitMovedThrough" label="Transit Moved Through" value={values.transitMovedThrough} onChange={handleChange} onBlur={handleBlur} error={touched.transitMovedThrough && !!errors.transitMovedThrough} helperText={touched.transitMovedThrough && errors.transitMovedThrough} fullWidth />
             </Grid>
             <Grid item xs={12} sm={6}>
                <input type="file" style={{ display: 'none' }} ref={fileInputRef} accept="image/*,application/pdf" onChange={handleFileUpload} />

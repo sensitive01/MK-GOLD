@@ -115,8 +115,8 @@ export default function Ornament() {
 
   // Form validation
   const schema = Yup.object({
-    fromDate: Yup.string().required('From date is required'),
-    toDate: Yup.string().required('To date is required'),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
   });
 
   const { handleBlur, handleChange, handleSubmit, touched, errors, values, setFieldValue, resetForm } = useFormik({

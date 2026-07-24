@@ -185,6 +185,43 @@ export default function Release() {
     severity: 'success',
   });
 
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  // Form validation
+  const schema = Yup.object({
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
+  });
+
+  const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
+    initialValues: {
+      fromDate: null,
+      toDate: null,
+    },
+    validationSchema: schema,
+    onSubmit: (values) => {
+      setOpenBackdrop(true);
+      const query = { branch: auth.user?.branch?._id || auth.user?.branch };
+      
+      if (values.fromDate || values.toDate) {
+        query.createdAt = {};
+        if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
+        if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
+      }
+      
+      fetchData(query);
+      setFilterOpen(false);
+    },
+  });
+
+  const handleFilterOpen = () => {
+    setFilterOpen(true);
+  };
+
+  const handleFilterClose = () => {
+    setFilterOpen(false);
+  };
+
   const fetchData = useCallback(
     (
       query = {
@@ -337,13 +374,59 @@ export default function Release() {
           {notify.message}
         </Alert>
       </Snackbar>
-
       <Container maxWidth="xl">
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Release
+            Purchase / Release
           </Typography>
+          <Stack direction="row" spacing={2}>
+            {(values.fromDate || values.toDate) && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                onClick={() => {
+                  setFilterOpen(false);
+                  resetForm();
+                  fetchData({
+                    createdAt: {
+                      $gte: moment()?.format("YYYY-MM-DD"),
+                      $lte: moment()?.format("YYYY-MM-DD"),
+                    },
+                    branch: auth.user?.branch?._id || auth.user?.branch,
+                  });
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="material-symbols:filter-alt" />}
+              onClick={handleFilterOpen}
+            >
+              Filter
+            </Button>
+            {userType !== 'TRANSACTION_EXECUTIVE' && (
+              <Button
+                variant="contained"
+                startIcon={<Iconify icon="eva:plus-fill" />}
+                onClick={() => setOpenEditModal(true)}
+              >
+                New Pledged Release
+              </Button>
+            )}
+          </Stack>
         </Stack>
+
+        {(values.fromDate || values.toDate) && (
+          <p style={{ color: '#fff', marginBottom: '20px' }}>
+            {[
+              values.fromDate ? `From Date: ${values.fromDate.format('YYYY-MM-DD')}` : null,
+              values.toDate ? `To Date: ${values.toDate.format('YYYY-MM-DD')}` : null,
+            ].filter(Boolean).join(', ')}
+          </p>
+        )}
 
         <Card>
           <ReleaseListToolbar
@@ -667,6 +750,75 @@ export default function Release() {
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
       </Backdrop>
+
+      <Dialog open={filterOpen} onClose={handleFilterClose}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit(e);
+          }}
+          autoComplete="off"
+        >
+          <DialogTitle>Filter</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={3} sx={{ p: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
+                  <DesktopDatePicker
+                    label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
+                    inputFormat="MM/DD/YYYY"
+                    name="fromDate"
+                    value={values.fromDate}
+                    onChange={(value) => {
+                      setFieldValue('fromDate', value, true);
+                    }}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                </LocalizationProvider>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
+                  <DesktopDatePicker
+                    label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
+                    inputFormat="MM/DD/YYYY"
+                    name="toDate"
+                    value={values.toDate}
+                    onChange={(value) => {
+                      setFieldValue('toDate', value, true);
+                    }}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                </LocalizationProvider>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => {
+                setFilterOpen(false);
+                resetForm();
+                fetchData({
+                  createdAt: {
+                    $gte: moment()?.format("YYYY-MM-DD"),
+                    $lte: moment()?.format("YYYY-MM-DD"),
+                  },
+                  branch: auth.user?.branch?._id || auth.user?.branch,
+                });
+              }}
+            >
+              Clear
+            </Button>
+            <Button variant="contained" onClick={handleFilterClose}>
+              Close
+            </Button>
+            <Button variant="contained" type="submit">
+              Filter
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
     </>
   );
 }
@@ -1076,7 +1228,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                            <MenuItem value="Pledge Receipt">Pledge Receipt</MenuItem>
                            <MenuItem value="Interest slip">Interest slip</MenuItem>
                            <MenuItem value="Release Copy">Release Copy</MenuItem>
-                           {/* <MenuItem value="others">others</MenuItem>
+                           {/* <MenuItem value="others">others</MenuItem> */}
                         </Select>
                       </FormControl>
                     </Grid>
@@ -1264,7 +1416,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                             onChange={(e) => setOrnamentValues({ ...ornamentValues, ornamentType: e.target.value })}
                             label="Ornament Type"
                           >
-                             <MenuItem value="22 Carat Bar (91.6)">22 Carat Bar (91.6)</MenuItem> */}
+                             <MenuItem value="22 Carat Bar (91.6)">22 Carat Bar (91.6)</MenuItem>
                              <MenuItem value="24 Carat Bar (99.9)">24 Carat Bar (99.9)</MenuItem>
                              <MenuItem value="22 Carat Coin (91.6)">22 Carat Coin (91.6)</MenuItem>
                              <MenuItem value="24 Carat Coin (99.9)">24 Carat Coin (99.9)</MenuItem>

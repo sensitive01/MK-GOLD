@@ -138,8 +138,8 @@ export default function AuditorSale() {
 
   // Form validation
   const schema = Yup.object({
-    fromDate: Yup.string().nullable(),
-    toDate: Yup.string().nullable(),
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
   });
 
   const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
@@ -153,10 +153,9 @@ export default function AuditorSale() {
     validationSchema: schema,
     onSubmit: (values) => {
       setOpenBackdrop(true);
-      const query = {
-        branch: values.branch,
-        phoneNumber: values.phoneNumber,
-      };
+      const query = {};
+      if (values.branch) query.branch = values.branch;
+      if (values.phoneNumber) query.phoneNumber = values.phoneNumber;
       if (values.status) query.status = values.status;
       
       if (values.fromDate || values.toDate) {
@@ -353,6 +352,20 @@ export default function AuditorSale() {
             Billing
           </Typography>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+            {(values.fromDate || values.toDate || values.branch || values.phoneNumber || values.status) && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="eva:trash-2-outline" />}
+                onClick={() => {
+                  resetForm();
+                  setOpenBackdrop(true);
+                  fetchData({});
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
@@ -386,7 +399,7 @@ export default function AuditorSale() {
           </Stack>
         </Stack>
 
-        {(values.fromDate || values.toDate || values.branch || values.phoneNumber) && (
+        {(values.fromDate || values.toDate || values.branch || values.phoneNumber || values.status) && (
           <p style={{ color: '#fff' }}>
             {[
               values.fromDate ? `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}` : null,
@@ -829,6 +842,7 @@ export default function AuditorSale() {
               onClick={() => {
                 setFilterOpen(false);
                 resetForm();
+                setOpenBackdrop(true);
                 fetchData({
                   createdAt: {
                     $gte: moment()?.format("YYYY-MM-DD"),

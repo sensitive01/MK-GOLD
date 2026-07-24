@@ -9,6 +9,11 @@ import {
   Container, Typography, TableContainer, TablePagination, TableHead, Grid,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Snackbar, Alert, Chip
 } from '@mui/material';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import Iconify from '../../../components/iconify';
 import Scrollbar from '../../../components/scrollbar';
 import { getCampaigns, addLoadAmount, deleteCampaign } from '../../../apis/marketing/campaign';
@@ -40,13 +45,51 @@ export default function CampaignList() {
   const [loadMode, setLoadMode] = useState('Net banking');
   const [loadType, setLoadType] = useState('');
   const [loadNotes, setLoadNotes] = useState('');
+  
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  // Form validation
+  const schema = Yup.object({
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
+  });
+
+  const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
+    initialValues: {
+      fromDate: null,
+      toDate: null,
+      campaignStatus: '',
+    },
+    validationSchema: schema,
+    onSubmit: (values) => {
+      const query = {
+        createdAt: {
+          $gte: values.fromDate?.format("YYYY-MM-DD"),
+          $lte: values.toDate?.format("YYYY-MM-DD"),
+        }
+      };
+      if (values.campaignStatus) {
+        query.campaignStatus = values.campaignStatus;
+      }
+      fetchData(query);
+      setFilterOpen(false);
+    },
+  });
+
+  const handleFilterOpen = () => {
+    setFilterOpen(true);
+  };
+
+  const handleFilterClose = () => {
+    setFilterOpen(false);
+  };
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  const fetchData = () => {
-    getCampaigns().then((res) => {
+  const fetchData = (query = {}) => {
+    getCampaigns(query).then((res) => {
       if (res?.status) {
         setData(res.data);
       }
@@ -127,6 +170,27 @@ export default function CampaignList() {
             Campaigns
           </Typography>
           <Stack direction="row" spacing={2}>
+            {(values.fromDate || values.toDate || values.campaignStatus) && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                onClick={() => {
+                  setFilterOpen(false);
+                  resetForm();
+                  fetchData({});
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="material-symbols:filter-alt" />}
+              onClick={handleFilterOpen}
+            >
+              Filter
+            </Button>
             <Button
               variant="contained"
               color="info"
@@ -152,6 +216,16 @@ export default function CampaignList() {
             </Button>
           </Stack>
         </Stack>
+
+        {(values.fromDate || values.toDate || values.campaignStatus) && (
+          <p style={{ color: '#fff', marginBottom: '20px' }}>
+            {[
+              values.fromDate ? `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}` : null,
+              values.toDate ? `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}` : null,
+              values.campaignStatus ? `Status: ${values.campaignStatus}` : null,
+            ].filter(Boolean).join(', ')}
+          </p>
+        )}
 
         <Grid container spacing={3} mb={5}>
           <Grid item xs={12} sm={6} md={3}>
@@ -374,6 +448,87 @@ export default function CampaignList() {
         <DialogActions>
           <Button onClick={() => setOpenViewFunds(false)}>Close</Button>
         </DialogActions>
+      </Dialog>
+
+      <Dialog open={filterOpen} onClose={handleFilterClose}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit(e);
+          }}
+          autoComplete="off"
+        >
+          <DialogTitle>Filter</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={3} sx={{ p: 1 }}>
+              <Grid item xs={12}>
+                <TextField
+                  name="campaignStatus"
+                  select
+                  value={values.campaignStatus}
+                  error={touched.campaignStatus && errors.campaignStatus && true}
+                  label={touched.campaignStatus && errors.campaignStatus ? errors.campaignStatus : 'Status'}
+                  fullWidth
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                >
+                  {['Active', 'Paused', 'Ended'].map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
+                  <DesktopDatePicker
+                    label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
+                    inputFormat="MM/DD/YYYY"
+                    name="fromDate"
+                    value={values.fromDate}
+                    onChange={(value) => {
+                      setFieldValue('fromDate', value, true);
+                    }}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                </LocalizationProvider>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
+                  <DesktopDatePicker
+                    label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
+                    inputFormat="MM/DD/YYYY"
+                    name="toDate"
+                    value={values.toDate}
+                    onChange={(value) => {
+                      setFieldValue('toDate', value, true);
+                    }}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                </LocalizationProvider>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => {
+                setFilterOpen(false);
+                resetForm();
+                fetchData({});
+              }}
+            >
+              Clear
+            </Button>
+            <Button variant="contained" onClick={handleFilterClose}>
+              Close
+            </Button>
+            <Button variant="contained" type="submit">
+              Filter
+            </Button>
+          </DialogActions>
+        </form>
       </Dialog>
     </>
   );

@@ -20,7 +20,7 @@ const createCampaign = async (req, res) => {
 // Get All Campaigns
 const getCampaigns = async (req, res) => {
   try {
-    const campaigns = await Campaign.find().sort({ createdAt: -1 });
+    const campaigns = await Campaign.find(req.query).sort({ createdAt: -1 });
     res.status(200).json({ status: true, data: campaigns });
   } catch (error) {
     res.status(500).json({ status: false, message: "Server Error", error: error.message });

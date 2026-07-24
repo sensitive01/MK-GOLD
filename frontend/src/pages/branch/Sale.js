@@ -36,6 +36,9 @@ import {
   InputLabel,
   Select,
 } from '@mui/material';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { LoadingButton } from '@mui/lab';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
@@ -130,6 +133,43 @@ export default function Sale() {
   const [openLogModal, setOpenLogModal] = useState(false);
   const handleOpenLogModal = () => setOpenLogModal(true);
   const handleCloseLogModal = () => setOpenLogModal(false);
+
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  // Form validation
+  const schema = Yup.object({
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
+  });
+
+  const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
+    initialValues: {
+      fromDate: null,
+      toDate: null,
+    },
+    validationSchema: schema,
+    onSubmit: (values) => {
+      setOpenBackdrop(true);
+      const query = { branch: auth.user?.branch?._id || auth.user?.branch };
+      
+      if (values.fromDate || values.toDate) {
+        query.createdAt = {};
+        if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
+        if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
+      }
+      
+      fetchData(query);
+      setFilterOpen(false);
+    },
+  });
+
+  const handleFilterOpen = () => {
+    setFilterOpen(true);
+  };
+
+  const handleFilterClose = () => {
+    setFilterOpen(false);
+  };
 
   const [notify, setNotify] = useState({
     open: false,
@@ -294,29 +334,56 @@ export default function Sale() {
       </Snackbar>
 
       {toggleContainer === false && (
-        <Container maxWidth="xl">
+        <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Billing
+            Sale
           </Typography>
           <Stack direction="row" spacing={2}>
-            {isSelectForTransit ? (
-              <Button
-                variant="contained"
-                disabled={selected.length === 0}
-                onClick={() => {
-                  navigate(`/branch/transit?createTransit=true&saleIds=${selected.join(',')}`);
-                }}
-              >
-                Next
-              </Button>
-            ) : (
+            {isSelectForTransit && (
               <Button
                 variant="contained"
                 startIcon={<Iconify icon="eva:plus-fill" />}
                 onClick={() => {
-                  setSaleIdToEdit(null);
-                  setToggleContainer(true);
+                  if (selected.length === 0) {
+                    setNotify({ open: true, message: 'Please select at least one completed sale', severity: 'warning' });
+                    return;
+                  }
+                  navigate(`/branch/transit?createTransit=true&saleIds=${selected.join(',')}`);
+                }}
+              >
+                Create Transit for Selected
+              </Button>
+            )}
+            {(values.fromDate || values.toDate) && (
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                onClick={() => {
+                  setFilterOpen(false);
+                  resetForm();
+                  fetchData({
+                    branch: auth.user?.branch?._id || auth.user?.branch,
+                  });
+                }}
+              >
+                Clear Filter
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="material-symbols:filter-alt" />}
+              onClick={handleFilterOpen}
+            >
+              Filter
+            </Button>
+            {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && (
+              <Button
+                variant="contained"
+                startIcon={<Iconify icon="eva:plus-fill" />}
+                onClick={() => {
+                  setToggleContainer(!toggleContainer);
                   setToggleContainerType('create');
                 }}
               >
@@ -325,6 +392,15 @@ export default function Sale() {
             )}
           </Stack>
         </Stack>
+
+        {(values.fromDate || values.toDate) && (
+          <p style={{ color: '#fff', marginBottom: '20px' }}>
+            {[
+              values.fromDate ? `From Date: ${values.fromDate.format('YYYY-MM-DD')}` : null,
+              values.toDate ? `To Date: ${values.toDate.format('YYYY-MM-DD')}` : null,
+            ].filter(Boolean).join(', ')}
+          </p>
+        )}
 
         <Card>
           <SaleListToolbar
@@ -654,6 +730,71 @@ export default function Sale() {
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
       </Backdrop>
+
+      <Dialog open={filterOpen} onClose={handleFilterClose}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit(e);
+          }}
+          autoComplete="off"
+        >
+          <DialogTitle>Filter</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={3} sx={{ p: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
+                  <DesktopDatePicker
+                    label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
+                    inputFormat="MM/DD/YYYY"
+                    name="fromDate"
+                    value={values.fromDate}
+                    onChange={(value) => {
+                      setFieldValue('fromDate', value, true);
+                    }}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                </LocalizationProvider>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
+                  <DesktopDatePicker
+                    label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
+                    inputFormat="MM/DD/YYYY"
+                    name="toDate"
+                    value={values.toDate}
+                    onChange={(value) => {
+                      setFieldValue('toDate', value, true);
+                    }}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                </LocalizationProvider>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => {
+                setFilterOpen(false);
+                resetForm();
+                fetchData({
+                  branch: auth.user?.branch?._id || auth.user?.branch,
+                });
+              }}
+            >
+              Clear
+            </Button>
+            <Button variant="contained" onClick={handleFilterClose}>
+              Close
+            </Button>
+            <Button variant="contained" type="submit">
+              Filter
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
 
       <Dialog open={openLogModal} onClose={handleCloseLogModal} maxWidth="lg" fullWidth>
         <DialogTitle>Process Log & Timeline</DialogTitle>

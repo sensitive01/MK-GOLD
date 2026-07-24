@@ -1,8 +1,8 @@
 import apiClient from '../http';
 
-export const getCampaigns = async () => {
+export const getCampaigns = async (query = {}) => {
   try {
-    const response = await apiClient().get(`/api/v1.0/campaign`);
+    const response = await apiClient().get(`/api/v1.0/campaign`, { params: query });
     return response.data;
   } catch (error) {
     return error.response?.data || error;
