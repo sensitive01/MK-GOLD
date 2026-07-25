@@ -1,6 +1,7 @@
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import DescriptionIcon from '@mui/icons-material/Description';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -18,6 +19,11 @@ const navConfig = [
     title: 'Dashboard',
     path: '/transaction-executive/dashboard',
     icon: icon('ic_analytics'),
+  },
+  {
+    title: 'Sales',
+    path: '/transaction-executive/sale',
+    icon: <PointOfSaleIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Funds',
