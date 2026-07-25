@@ -367,6 +367,11 @@ export default function Attendance() {
 
   const Alert = forwardRef(AlertComponent);
 
+  const hasMarkedAttendanceToday = data?.some(record => {
+    const recordDate = moment(record.attendanceDate || record.createdAt);
+    return recordDate.isSame(moment(), 'day');
+  });
+
   return (
     <>
       <Snackbar
@@ -433,7 +438,7 @@ export default function Attendance() {
               }} sx={{ float: 'right' }}>
                 Export
               </Button>
-              {(currentTab === 'my_attendance' || currentTab === 'all_attendance') && (
+              {(currentTab === 'my_attendance' && !hasMarkedAttendanceToday || currentTab === 'all_attendance') && (
                 <Button
                   variant="contained"
                   startIcon={<Iconify icon="eva:plus-fill" />}

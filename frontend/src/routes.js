@@ -55,6 +55,7 @@ import OperationsDashboardLayout from './layouts/dashboard/operations';
 import OperationsDashboard from './pages/operations/Dashboard';
 import FinanceDashboardLayout from './layouts/dashboard/finance';
 import FinanceDashboard from './pages/finance/Dashboard';
+import FinanceRelease from './pages/finance/Release';
 import TelecallingDashboardLayout from './layouts/dashboard/telecalling';
 import TelecallingDashboard from './pages/telecalling/Dashboard';
 import Profile from './pages/Profile';
@@ -92,6 +93,7 @@ import BranchLeads from './pages/branch/Leads';
 import BranchSale from './pages/branch/Sale';
 import BranchCustomer from './pages/branch/Customer';
 import BranchRelease from './pages/branch/Release';
+import BranchGoldRate from './pages/branch/GoldRate';
 import BranchReport from './pages/branch/Report';
 import BranchBalancesheet from './pages/branch/Balancesheet';
 import BranchOrnament from './pages/branch/Ornament';
@@ -273,6 +275,8 @@ export default function Router() {
         { path: 'sale', element: <BranchSale /> },
         { path: 'leave', element: <BranchLeave /> },
         { path: 'attendance', element: <BranchAttendance /> },
+        { path: 'release', element: <BranchRelease /> },
+        { path: 'gold-rate', element: <BranchGoldRate /> },
       ],
     },
     {
@@ -363,6 +367,7 @@ export default function Router() {
         { path: 'balancesheet', element: <AccountsBalancesheet /> },
         { path: 'leave', element: <AccountsLeave /> },
         { path: 'attendance', element: <BranchAttendance /> },
+        { path: 'release', element: <FinanceRelease /> },
       ],
     },
     {

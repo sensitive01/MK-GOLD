@@ -41,11 +41,6 @@ const navConfig = [
     icon: <PointOfSaleIcon sx={{ width: 1, height: 1 }} />,
   },
   {
-    title: 'Employee',
-    path: '/melting/employee',
-    icon: icon('ic_user'),
-  },
-  {
     title: 'Expenses',
     path: '/melting/expense',
     icon: <PaymentsIcon sx={{ width: 1, height: 1 }} />,

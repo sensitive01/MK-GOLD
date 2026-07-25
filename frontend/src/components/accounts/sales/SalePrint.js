@@ -391,7 +391,7 @@ export default function SalePrint({ id }) {
               <td style={{ width: '40%', textAlign: 'center', fontSize: '11px', color: '#555', verticalAlign: 'bottom', paddingBottom: '4px' }}>
                 Thanks For your billing
                 <br />
-                <a href="https://www.mk-gold.com" target="_blank" rel="noopener noreferrer" style={{ color: '#000', textDecoration: 'none', fontWeight: 'bold' }}>www.mk-gold.com</a>
+                <a href="https://mgold.in" target="_blank" rel="noopener noreferrer" style={{ color: '#000', textDecoration: 'none', fontWeight: 'bold' }}>mgold.in</a>
               </td>
               <td style={{ width: '30%', textAlign: 'center', verticalAlign: 'bottom' }}>
                 <div style={{ height: '50px', marginBottom: '4px' }}>

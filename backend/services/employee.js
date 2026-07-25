@@ -46,7 +46,7 @@ async function find(query = {}, user = null) {
         },
       },
       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
-      {
+      ...(query.branch ? [{
         $match: {
           $or: [
             { branch: query.branch },
@@ -55,7 +55,7 @@ async function find(query = {}, user = null) {
             { "user.branch": query.branch?.toString() }
           ]
         }
-      },
+      }] : (isBranchRole ? [{ $match: { _id: null } }] : [])),
       {
         $lookup: {
           from: "branches",

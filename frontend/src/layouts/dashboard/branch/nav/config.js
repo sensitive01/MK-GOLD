@@ -14,16 +14,52 @@ import SvgColor from '../../../../components/svg-color';
 const icon = (name) => <SvgColor src={`/assets/icons/navbar/${name}.svg`} sx={{ width: 1, height: 1 }} />;
 
 const navConfig = [
-// ... (keep all indices)
   {
     title: 'Dashboard',
     path: '/branch/dashboard',
     icon: icon('ic_analytics'),
   },
   {
+    title: 'Billing',
+    icon: <SellIcon sx={{ width: 1, height: 1 }} />,
+    children: [
+      {
+        title: 'Billing',
+        path: '/branch/sale',
+        icon: <SellIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'Release',
+        path: '/branch/release',
+        icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'Transit',
+        path: '/branch/transit',
+        icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'Reports',
+        path: '/branch/report',
+        icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
+      },
+    ]
+  },
+  {
     title: 'Funds',
-    path: '/branch/fund',
     icon: <AttachMoneyIcon sx={{ width: 1, height: 1 }} />,
+    children: [
+      {
+        title: 'Funds',
+        path: '/branch/fund',
+        icon: <AttachMoneyIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'Balance',
+        path: '/branch/balancesheet',
+        icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
+      }
+    ]
   },
   {
     title: 'Expenses',
@@ -31,22 +67,17 @@ const navConfig = [
     icon: <RequestQuoteIcon sx={{ width: 1, height: 1 }} />,
   },
   {
-    title: 'Leave',
-    path: '/branch/leave',
-    icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
     title: 'Attendance',
     path: '/branch/attendance',
     icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
   },
   {
-    title: 'Leads',
-    path: '/branch/leads',
-    icon: icon('ic_user'),
+    title: 'Leaves',
+    path: '/branch/leave',
+    icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
   },
   {
-    title: 'QR Enquiries',
+    title: 'QR Enquires',
     path: '/branch/qr-enquiry',
     icon: <QrCodeIcon sx={{ width: 1, height: 1 }} />,
   },
@@ -56,35 +87,10 @@ const navConfig = [
     icon: icon('ic_user'),
   },
   {
-    title: 'Release',
-    path: '/branch/release',
-    icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
+    title: 'Leads',
+    path: '/branch/leads',
+    icon: icon('ic_user'),
   },
-  {
-    title: 'Transit',
-    path: '/branch/transit',
-    icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Billing',
-    path: '/branch/sale',
-    icon: <SellIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Report',
-    path: '/branch/report',
-    icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Balancesheet',
-    path: '/branch/balancesheet',
-    icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
-  },
-  /* {
-    title: 'Move Gold',
-    path: '/branch/ornament',
-    icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
-  }, */
 ];
 
 export default navConfig;

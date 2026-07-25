@@ -1,7 +1,7 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
 import { forwardRef, useEffect, useRef, useState, useCallback } from 'react';
-import PropTypes from 'prop-types';
+import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
@@ -9,16 +9,11 @@ import {
     Box,
     Button,
     Card,
-    Checkbox,
     CircularProgress,
     Container,
     FormControl,
     Grid,
-    IconButton,
-    MenuItem,
-    Modal,
     Paper,
-    Popover,
     Snackbar,
     Stack,
     Table,
@@ -28,7 +23,7 @@ import {
     TablePagination,
     TableRow,
     TextField,
-    Typography,
+    Typography
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
@@ -38,32 +33,25 @@ import DialogTitle from '@mui/material/DialogTitle';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import * as FileSaver from 'file-saver';
 import { useFormik } from 'formik';
 import moment from 'moment';
-import * as XLSX from 'xlsx';
 import * as Yup from 'yup';
 // components
-import { UpdateFund } from '../../components/admin/fund';
 import Iconify from '../../components/iconify';
-import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 // sections
-import { FundListHead, FundListToolbar } from '../../sections/@dashboard/fund';
+import { GoldRateListHead, GoldRateListToolbar } from '../../sections/@dashboard/gold-rate';
+import SuccessModal from '../../components/success-modal';
 // mock
-import { deleteFundById, getFund, updateFund } from '../../apis/admin/fund';
+import { getGoldRate } from '../../apis/branch/gold-rate';
 
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
+  { id: 'rate', label: 'Rate', alignRight: false },
   { id: 'type', label: 'Type', alignRight: false },
-  { id: 'amount', label: 'Amount', alignRight: false },
-  { id: 'from', label: 'From', alignRight: false },
-  { id: 'to', label: 'To', alignRight: false },
-  { id: 'note', label: 'Note', alignRight: false },
-  { id: 'status', label: 'Status', alignRight: false },
-  { id: 'createdAt', label: 'Date', alignRight: false },
-  { id: '' },
+  { id: 'state', label: 'State', alignRight: false },
+  { id: 'date', label: 'Date', alignRight: false },
 ];
 
 // ----------------------------------------------------------------------
@@ -92,28 +80,19 @@ function applySortFilter(array, comparator, query) {
     return a[1] - b[1];
   });
   if (query) {
-    return filter(array, (row) => row.type.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    return filter(array, (row) => row.state.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   }
   return stabilizedThis?.map((el) => el[0]);
 }
 
-export default function AuditorFund() {
-  const [open, setOpen] = useState(null);
+export default function GoldRate() {
   const [openBackdrop, setOpenBackdrop] = useState(true);
-  const [openId, setOpenId] = useState(null);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
-  const [selected, setSelected] = useState([]);
   const [orderBy, setOrderBy] = useState(null);
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [toggleContainer, setToggleContainer] = useState(false);
-  const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
-  const [openDeleteModal, setOpenDeleteModal] = useState(false);
-  const [deleteType, setDeleteType] = useState('single');
-  const handleOpenDeleteModal = () => setOpenDeleteModal(true);
-  const handleCloseDeleteModal = () => setOpenDeleteModal(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const form = useRef();
 
@@ -137,13 +116,12 @@ export default function AuditorFund() {
     validationSchema: schema,
     onSubmit: (values) => {
       setOpenBackdrop(true);
-      const query = {};
-      if (values.fromDate || values.toDate) {
-        query.createdAt = {};
-        if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
-        if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
-      }
-      getFund(query).then((data) => {
+      getGoldRate({
+        date: {
+          $gte: values.fromDate?.format("YYYY-MM-DD"),
+          $lte: values.toDate?.format("YYYY-MM-DD"),
+        },
+      }).then((data) => {
         setData(data.data);
         setOpenBackdrop(false);
       });
@@ -154,13 +132,13 @@ export default function AuditorFund() {
   const fetchData = useCallback(
     (
       query = {
-        createdAt: {
+        date: {
           $gte: values.fromDate ?? moment()?.format("YYYY-MM-DD"),
           $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
         },
       }
     ) => {
-      getFund(query).then((data) => {
+      getGoldRate(query).then((data) => {
         setData(data.data);
         setOpenBackdrop(false);
       });
@@ -170,44 +148,12 @@ export default function AuditorFund() {
 
   useEffect(() => {
     fetchData();
-  }, [toggleContainer, fetchData]);
-
-  const handleOpenMenu = (event) => {
-    setOpen(event.currentTarget);
-  };
-
-  const handleCloseMenu = () => {
-    setOpen(null);
-  };
+  }, [fetchData]);
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
-  };
-
-  const handleSelectAllClick = (event) => {
-    if (event.target.checked) {
-      const newSelecteds = data?.map((n) => n._id);
-      setSelected(newSelecteds);
-      return;
-    }
-    setSelected([]);
-  };
-
-  const handleClick = (event, _id) => {
-    const selectedIndex = selected.indexOf(_id);
-    let newSelected = [];
-    if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selected, _id);
-    } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected?.slice(1));
-    } else if (selectedIndex === selected?.length - 1) {
-      newSelected = newSelected.concat(selected?.slice(0, -1));
-    } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(selected?.slice(0, selectedIndex), selected?.slice(selectedIndex + 1));
-    }
-    setSelected(newSelected);
   };
 
   const handleChangePage = (event, newPage) => {
@@ -228,39 +174,6 @@ export default function AuditorFund() {
   const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
   const isNotFound = !filteredData?.length && !!filterName;
 
-  const handleDelete = () => {
-    deleteFundById(openId).then(() => {
-      fetchData();
-      handleCloseDeleteModal();
-      setSelected(selected?.filter((e) => e !== openId));
-    });
-  };
-
-  const handleDeleteSelected = () => {
-    deleteFundById(selected).then(() => {
-      fetchData();
-      handleCloseDeleteModal();
-      setSelected([]);
-      setNotify({
-        open: true,
-        message: 'Fund deleted',
-        severity: 'success',
-      });
-    });
-  };
-
-  const style = {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 400,
-    bgcolor: 'background.paper',
-    borderRadius: 3,
-    boxShadow: 24,
-    p: 4,
-  };
-
   const handleFilterOpen = () => {
     setFilterOpen(true);
   };
@@ -269,101 +182,60 @@ export default function AuditorFund() {
     setFilterOpen(false);
   };
 
-  const handleExport = (fileData, fileName) => {
-    const ws = XLSX.utils.json_to_sheet(fileData);
-    const wb = { Sheets: { data: ws }, SheetNames: ['data'] };
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const data = new Blob([excelBuffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8',
-    });
-    FileSaver.saveAs(data, `${fileName}.xlsx`);
-  };
-
   function AlertComponent(props, ref) {
     return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
   }
 
   const Alert = forwardRef(AlertComponent);
 
-
-
   return (
     <>
       <Helmet>
-        <title> Fund | MK Gold </title>
+        <title> Gold Rate | MK Gold </title>
       </Helmet>
 
-      <Snackbar
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-        open={notify.open}
-        onClose={() => {
-          setNotify({ ...notify, open: false });
-        }}
-        autoHideDuration={3000}
-      >
-        <Alert
+      {notify.severity === 'success' ? (
+        <SuccessModal
+          open={notify.open}
+          message={notify.message}
+          onClose={() => setNotify({ ...notify, open: false })}
+        />
+      ) : (
+        <Snackbar
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          open={notify.open}
           onClose={() => {
             setNotify({ ...notify, open: false });
           }}
-          severity={notify.severity}
-          sx={{ width: '100%', color: 'white' }}
+          autoHideDuration={3000}
         >
-          {notify.message}
-        </Alert>
-      </Snackbar>
+          <Alert
+            onClose={() => {
+              setNotify({ ...notify, open: false });
+            }}
+            severity={notify.severity}
+            sx={{ width: '100%', color: 'white' }}
+          >
+            {notify.message}
+          </Alert>
+        </Snackbar>
+      )}
 
-      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
+      <Container maxWidth="xl">
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Fund
+            Gold Rate
           </Typography>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
-            {(values.fromDate || values.toDate) && (
-              <Button
-                variant="contained"
-                color="error"
-                onClick={() => {
-                  resetForm();
-                  fetchData({
-                    createdAt: {
-                      $gte: moment()?.format("YYYY-MM-DD"),
-                      $lte: moment()?.format("YYYY-MM-DD"),
-                    },
-                  });
-                }}
-              >
-                Clear Filter
-              </Button>
-            )}
             <Button
               variant="contained"
               startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
               onClick={handleFilterOpen}
             >
               Filter
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="carbon:document-export" />}
-              onClick={() => {
-                handleExport(
-                  data?.map((e) => ({
-                    Type: e.type,
-                    Amount: e.amount,
-                    From: e.from?.branchName,
-                    To: e.to?.branchName,
-                    Note: e.note,
-                    Status: e.status,
-                    Date: moment(e.createdAt).format('YYYY-MM-DD HH:mm:ss'),
-                  })),
-                  'Funds'
-                );
-              }}
-            >
-              Export
             </Button>
           </Stack>
         </Stack>
@@ -374,66 +246,46 @@ export default function AuditorFund() {
         </p>
 
         <Card>
-          <FundListToolbar
-            numSelected={selected?.length}
+          <GoldRateListToolbar
+            numSelected={0}
             filterName={filterName}
             onFilterName={handleFilterByName}
-            handleDelete={() => {
-              setDeleteType('selected');
-              handleOpenDeleteModal();
-            }}
+            hideDelete={true}
           />
 
           <Scrollbar>
             <TableContainer>
               <Table sx={{ minWidth: 800 }}>
-                <FundListHead
+                <GoldRateListHead
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
                   rowCount={data?.length || 0}
-                  numSelected={selected?.length}
+                  numSelected={0}
                   onRequestSort={handleRequestSort}
-                  onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={true}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, type, amount, from, to, note, status, createdAt } = row;
-                    const selectedData = selected.indexOf(_id) !== -1;
+                    const { _id, rate, type, state, date } = row;
 
                     return (
-                      <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                        </TableCell>
-                        <TableCell align="left">{type}</TableCell>
-                        <TableCell align="left">{amount}</TableCell>
-                        <TableCell align="left">{from?.branchName}</TableCell>
-                        <TableCell align="left">{to?.branchName}</TableCell>
-                        <TableCell align="left">{note}</TableCell>
-                        <TableCell align="left">
-                          <Label
-                            color={
-                              (status === 'approved' && 'success') || (status === 'rejected' && 'error') || 'warning'
-                            }
-                          >
-                            {sentenceCase(status)}
-                          </Label>
-                        </TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                        <TableCell align="right">
-                        </TableCell>
+                      <TableRow hover key={_id} tabIndex={-1}>
+                        <TableCell align="left">{rate}</TableCell>
+                        <TableCell align="left">{sentenceCase(type)}</TableCell>
+                        <TableCell align="left">{sentenceCase(state)}</TableCell>
+                        <TableCell align="left">{moment(date).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                       </TableRow>
                     );
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={9} />
+                      <TableCell colSpan={4} />
                     </TableRow>
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={4} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -449,7 +301,7 @@ export default function AuditorFund() {
                 {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={4} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -484,104 +336,6 @@ export default function AuditorFund() {
           />
         </Card>
       </Container>
-
-      <Container
-        maxWidth="xl"
-        sx={{ display: toggleContainer === true && toggleContainerType === 'update' ? 'block' : 'none' }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Update Fund
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="mdi:arrow-left" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-            }}
-          >
-            Back
-          </Button>
-        </Stack>
-
-        <UpdateFund setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
-      </Container>
-
-      <Popover
-        open={Boolean(open)}
-        anchorEl={open}
-        onClose={handleCloseMenu}
-        anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        PaperProps={{
-          sx: {
-            p: 1,
-            width: 140,
-            '& .MuiMenuItem-root': {
-              px: 1,
-              typography: 'body2',
-              borderRadius: 0.75,
-            },
-          },
-        }}
-      >
-        <MenuItem
-          onClick={() => {
-            setOpen(null);
-            setToggleContainerType('update');
-            setToggleContainer(!toggleContainer);
-          }}
-        >
-          <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
-          Edit
-        </MenuItem>
-
-        {/* <MenuItem
-          sx={{ color: 'error.main' }}
-          onClick={() => {
-            setOpen(null);
-            setDeleteType('single');
-            handleOpenDeleteModal();
-          }}
-        >
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-          Delete
-        </MenuItem> */}
-      </Popover>
-
-      <Modal
-        open={openDeleteModal}
-        onClose={handleCloseDeleteModal}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <Box sx={style}>
-          <Typography id="modal-modal-title" variant="h6" component="h2">
-            Delete
-          </Typography>
-          <Typography id="modal-modal-description" sx={{ mt: 3 }}>
-            Do you want to delete?
-          </Typography>
-          <Stack direction="row" alignItems="center" spacing={2} mt={3}>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => {
-                if (deleteType === 'single') {
-                  handleDelete();
-                } else {
-                  handleDeleteSelected();
-                }
-              }}
-            >
-              Delete
-            </Button>
-            <Button variant="contained" onClick={handleCloseDeleteModal}>
-              Close
-            </Button>
-          </Stack>
-        </Box>
-      </Modal>
 
       <Dialog open={filterOpen} onClose={handleFilterClose}>
         <form
@@ -662,9 +416,3 @@ export default function AuditorFund() {
     </>
   );
 }
-
-
-
-
-
-

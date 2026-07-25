@@ -20,6 +20,11 @@ const navConfig = [
     icon: icon('ic_analytics'),
   },
   {
+    title: 'Gold Rate',
+    path: '/bullion-desk/gold-rate',
+    icon: <RequestQuoteIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
     title: 'Billing',
     path: '/bullion-desk/sale',
     icon: <SellIcon sx={{ width: 1, height: 1 }} />,
@@ -33,6 +38,11 @@ const navConfig = [
     title: 'Attendance',
     path: '/bullion-desk/attendance',
     icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Releases',
+    path: '/bullion-desk/release',
+    icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
   },
 ];
 

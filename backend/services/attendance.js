@@ -144,6 +144,21 @@ async function count(query = {}) {
 
 async function create(payload) {
   try {
+    const attendanceDate = payload.attendanceDate ? new Date(payload.attendanceDate) : new Date();
+    const startOfDay = new Date(attendanceDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(attendanceDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existing = await Attendance.findOne({
+      employee: payload.employee,
+      attendanceDate: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    if (existing) {
+      throw new Error("Attendance already marked for this date");
+    }
+
     let goldRate = new Attendance(payload);
     return await goldRate.save();
   } catch (err) {

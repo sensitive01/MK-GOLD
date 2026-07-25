@@ -359,6 +359,11 @@ export default function MarketingAttendance() {
 
   const Alert = forwardRef(AlertComponent);
 
+  const hasMarkedAttendanceToday = data?.some(record => {
+    const recordDate = moment(record.attendanceDate || record.createdAt);
+    return recordDate.isSame(moment(), 'day');
+  });
+
   return (
     <>
       <Helmet>
@@ -392,7 +397,7 @@ export default function MarketingAttendance() {
           <Typography variant="h4" sx={{ color: '#fff' }}>
             Attendance
           </Typography>
-          {currentTab === 'my_attendance' && (
+          {currentTab === 'my_attendance' && !hasMarkedAttendanceToday && (
             <Button
               variant="contained"
               startIcon={<Iconify icon="eva:plus-fill" />}
@@ -701,7 +706,7 @@ export default function MarketingAttendance() {
       <Modal open={openLogoutModal} onClose={() => setOpenLogoutModal(false)}>
         <Box sx={style}>
           <Typography variant="h6">Logout Confirmation</Typography>
-          <Typography sx={{ mt: 3 }}>Are you sure you want to mark logout?</Typography>
+          <Typography sx={{ mt: 3 }}>Are you sure you want to logout?</Typography>
           <Stack direction="row" spacing={2} mt={3}>
             <Button variant="contained" color="error" onClick={confirmLogout}>Logout</Button>
             <Button variant="contained" onClick={() => setOpenLogoutModal(false)}>Cancel</Button>

@@ -330,6 +330,11 @@ export default function AuditorAttendance() {
 
   const Alert = forwardRef(AlertComponent);
 
+  const hasMarkedAttendanceToday = data?.some(record => {
+    const recordDate = moment(record.attendanceDate || record.createdAt);
+    return recordDate.isSame(moment(), 'day');
+  });
+
   return (
     <>
       <Helmet>
@@ -352,7 +357,7 @@ export default function AuditorAttendance() {
           <Typography variant="h4" sx={{ color: '#fff' }}>
             Attendance
           </Typography>
-          {currentTab === 'my_attendance' && (
+          {currentTab === 'my_attendance' && !hasMarkedAttendanceToday && (
             <Button
               variant="contained"
               startIcon={<Iconify icon="eva:plus-fill" />}

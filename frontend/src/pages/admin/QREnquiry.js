@@ -187,7 +187,7 @@ export default function QREnquiry() {
                 <ListHead
                   headLabel={TABLE_HEAD}
                   rowCount={data?.length ?? 0}
-                  onRequestSort={() => {}}
+                  onRequestSort={() => { }}
                 />
                 <TableBody>
                   {data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {

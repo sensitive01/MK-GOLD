@@ -1,6 +1,6 @@
 import { filter } from 'lodash';
 import { forwardRef, useEffect, useRef, useState, useCallback } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 import {
     Backdrop,
@@ -42,6 +42,7 @@ import { useFormik } from 'formik';
 import moment from 'moment';
 import * as Yup from 'yup';
 // components
+import { logout } from '../../features/authSlice';
 import { CreateAttendance } from '../../components/branch/attendance';
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
@@ -84,6 +85,7 @@ function applySortFilter(array, comparator, query) {
 
 export default function Attendance() {
   const auth = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
@@ -99,7 +101,9 @@ export default function Attendance() {
   const [stats, setStats] = useState({ total: 0, present: 0, absent: 0 });
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [openLogoutModal, setOpenLogoutModal] = useState(false);
-  const [logoutId, setLogoutId] = useState(null);
+  const [logoutRecord, setLogoutRecord] = useState(null);
+  const [logoutTimer, setLogoutTimer] = useState(null);
+  const timerIntervalRef = useRef(null);
   const [deleteType, setDeleteType] = useState('single');
   const userType = auth.user.userType?.toLowerCase();
   const isManager = ['branch', 'assistant_branch_manager'].includes(userType);
@@ -107,21 +111,94 @@ export default function Attendance() {
   
   const [currentTab, setCurrentTab] = useState((isManager || isHRAdmin) ? 'all_attendance' : 'my_attendance');
 
-  const handleLogout = (id) => {
-    setLogoutId(id);
+  const handleLogout = (record) => {
+    setLogoutRecord(record);
+    setLogoutTimer(null);
     setOpenLogoutModal(true);
   };
 
   const confirmLogout = () => {
-    updateAttendance(logoutId, { logoutTime: new Date() }).then(() => {
+    updateAttendance(logoutRecord._id, { logoutTime: new Date() }).then(() => {
       fetchData();
-      setOpenLogoutModal(false);
+      let secondsLeft = 5;
+      setLogoutTimer(secondsLeft);
+      const intervalId = setInterval(() => {
+        secondsLeft -= 1;
+        setLogoutTimer(secondsLeft);
+        if (secondsLeft <= 0) {
+          clearInterval(intervalId);
+          setOpenLogoutModal(false);
+          dispatch(logout());
+        }
+      }, 1000);
+      timerIntervalRef.current = intervalId;
+
       setNotify({
         open: true,
         message: 'Logout marked successfully!',
         severity: 'success',
       });
     });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const getPunctuality = (loginTime, shiftStartTime) => {
+    if (!loginTime || !shiftStartTime) return 'Unknown';
+    const login = moment(loginTime);
+    
+    let shift = moment(shiftStartTime);
+    if (!shift.isValid() || (typeof shiftStartTime === 'string' && !shiftStartTime.includes('T') && !shiftStartTime.includes('-'))) {
+        shift = moment(shiftStartTime, ["h:mm A", "HH:mm", "hh:mm a", "h:mm a"]);
+    }
+    
+    let shiftHours = 0;
+    let shiftMins = 0;
+    
+    if (shift.isValid()) {
+        shiftHours = shift.hours();
+        shiftMins = shift.minutes();
+    } else {
+        const shiftTimeParts = String(shiftStartTime).split(/[: ]/);
+        shiftHours = parseInt(shiftTimeParts[0] || 0, 10);
+        shiftMins = parseInt(shiftTimeParts[1] || 0, 10);
+        if (String(shiftStartTime).toLowerCase().includes('pm') && shiftHours !== 12) {
+           shiftHours += 12;
+        } else if (String(shiftStartTime).toLowerCase().includes('am') && shiftHours === 12) {
+           shiftHours = 0;
+        }
+    }
+    
+    const loginMinutes = login.hours() * 60 + login.minutes();
+    const shiftMinutes = shiftHours * 60 + shiftMins;
+    
+    const diff = loginMinutes - shiftMinutes;
+    if (diff <= 5) {
+      return 'On-time';
+    } else {
+      const hours = Math.floor(diff / 60);
+      const mins = diff % 60;
+      if (hours > 0) {
+        return `Late by ${hours}h ${mins}m`;
+      }
+      return `Late by ${diff} minutes`;
+    }
+  };
+
+  const getWorkedDuration = (loginTime) => {
+    if (!loginTime) return 'Unknown';
+    const start = moment(loginTime);
+    const end = moment(); 
+    const duration = moment.duration(end.diff(start));
+    const hours = Math.floor(duration.asHours());
+    const minutes = duration.minutes();
+    return `${hours}h ${minutes}m`;
   };
 
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
@@ -359,6 +436,11 @@ export default function Attendance() {
 
   const Alert = forwardRef(AlertComponent);
 
+  const hasMarkedAttendanceToday = data?.some(record => {
+    const recordDate = moment(record.attendanceDate || record.createdAt);
+    return recordDate.isSame(moment(), 'day');
+  });
+
   return (
     <>
       <Helmet>
@@ -392,7 +474,7 @@ export default function Attendance() {
           <Typography variant="h4" sx={{ color: '#fff' }}>
             Attendance
           </Typography>
-          {currentTab === 'my_attendance' && (
+          {currentTab === 'my_attendance' && !hasMarkedAttendanceToday && (
             <Button
               variant="contained"
               startIcon={<Iconify icon="eva:plus-fill" />}
@@ -551,7 +633,7 @@ export default function Attendance() {
                               <Button
                                 variant="outlined"
                                 size="small"
-                                onClick={() => handleLogout(_id)}
+                                onClick={() => handleLogout(row)}
                                 sx={{
                                   color: 'error.main',
                                   borderColor: 'error.main',
@@ -698,14 +780,28 @@ export default function Attendance() {
         </Box>
       </Modal>
 
-      <Modal open={openLogoutModal} onClose={() => setOpenLogoutModal(false)}>
+      <Modal open={openLogoutModal} onClose={() => { if (logoutTimer === null) setOpenLogoutModal(false); }}>
         <Box sx={style}>
-          <Typography variant="h6">Logout Confirmation</Typography>
-          <Typography sx={{ mt: 3 }}>Are you sure you want to mark logout?</Typography>
-          <Stack direction="row" spacing={2} mt={3}>
-            <Button variant="contained" color="error" onClick={confirmLogout}>Logout</Button>
-            <Button variant="contained" onClick={() => setOpenLogoutModal(false)}>Cancel</Button>
-          </Stack>
+          <Typography variant="h6" sx={{ borderBottom: '1px solid #eee', pb: 1, mb: 2 }}>Logout Confirmation</Typography>
+          
+          {logoutTimer !== null ? (
+            <Box sx={{ textAlign: 'center', py: 3 }}>
+              <Typography variant="h6">Application will be logged out automatically in {logoutTimer} seconds</Typography>
+            </Box>
+          ) : (
+            <>
+              <Box sx={{ my: 3 }}>
+                <Typography sx={{ mb: 1 }}><strong>Logged in at :</strong> {logoutRecord ? moment(logoutRecord.loginTime || logoutRecord.createdAt).format('hh:mm A') : ''}</Typography>
+                <Typography sx={{ mb: 1 }}><strong>Punctual :</strong> {logoutRecord ? getPunctuality(logoutRecord.loginTime || logoutRecord.createdAt, logoutRecord.employee?.shiftStartTime) : ''}</Typography>
+                <Typography><strong>Total Duration Worked Today:</strong> {logoutRecord ? getWorkedDuration(logoutRecord.loginTime || logoutRecord.createdAt) : ''}</Typography>
+              </Box>
+              <Typography sx={{ mt: 3, mb: 2, borderTop: '1px solid #eee', pt: 2 }}>Are you sure you want to logout?</Typography>
+              <Stack direction="row" spacing={2}>
+                <Button variant="contained" color="error" onClick={confirmLogout}>Logout</Button>
+                <Button variant="contained" onClick={() => setOpenLogoutModal(false)}>Cancel</Button>
+              </Stack>
+            </>
+          )}
         </Box>
       </Modal>
 

@@ -59,6 +59,11 @@ const navConfig = [
     path: '/finance/attendance',
     icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
   },
+  {
+    title: 'Releases',
+    path: '/finance/release',
+    icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
+  },
 ];
 
 export default navConfig;

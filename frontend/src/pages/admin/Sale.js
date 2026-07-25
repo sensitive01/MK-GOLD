@@ -623,15 +623,33 @@ export default function Sale() {
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Sale Details
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="mdi:arrow-left" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-            }}
-          >
-            Back
-          </Button>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="contained"
+              sx={{
+                bgcolor: '#FFD700',
+                color: 'primary.main',
+                '&:hover': {
+                  bgcolor: '#FFD700',
+                },
+              }}
+              startIcon={<Iconify icon="material-symbols:print" />}
+              onClick={() => {
+                setToggleContainerType('print');
+              }}
+            >
+              Print
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="mdi:arrow-left" />}
+              onClick={() => {
+                setToggleContainer(!toggleContainer);
+              }}
+            >
+              Back
+            </Button>
+          </Stack>
         </Stack>
 
         <SaleDetail id={saleIdToEdit} setNotify={setNotify} />

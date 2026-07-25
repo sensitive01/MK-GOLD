@@ -1,4 +1,4 @@
-import { FormControl, InputLabel, Select, MenuItem, Card, Grid } from '@mui/material';
+  import { FormControl, InputLabel, Select, MenuItem, Card, Grid, Stack } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -37,21 +37,23 @@ function CreateAttendance(props) {
     employee: Yup.string().required('Employee is required'),
   });
 
-  const { handleSubmit, handleChange, handleBlur, values, touched, errors, setValues, resetForm } = useFormik({
+  const { handleSubmit, handleChange, handleBlur, values, touched, errors, setValues, resetForm, isSubmitting } = useFormik({
     initialValues: {
       employee: auth.user?.employee?._id || auth.user?.employee || localStorage.getItem('empId') || (auth.user?.userType !== 'admin' ? auth.user?._id : ''),
     },
     validationSchema: schema,
-    onSubmit: (values) => {
+    onSubmit: async (values, { setSubmitting }) => {
       if (!img) {
         props.setNotify({
           open: true,
           message: 'Please capture photo',
           severity: 'info',
         });
+        setSubmitting(false);
         return;
       }
-      createAttendance(values).then(async (data) => {
+      try {
+        const data = await createAttendance(values);
         if (data.status === false) {
           props.setNotify({
             open: true,
@@ -83,7 +85,15 @@ function CreateAttendance(props) {
             severity: 'success',
           });
         }
-      });
+      } catch (error) {
+        props.setNotify({
+          open: true,
+          message: 'Error creating attendance',
+          severity: 'error',
+        });
+      } finally {
+        setSubmitting(false);
+      }
     },
   });
 
@@ -161,16 +171,16 @@ function CreateAttendance(props) {
             ) : (
               <>
                 <img src={img} alt="screenshot" style={{ borderRadius: '10px', marginBottom: '20px', width: '400px', height: '400px', border: '2px solid #33c2ff' }} />
-                <LoadingButton size="large" type="button" variant="contained" onClick={() => setImg(null)} sx={{ bgcolor: '#FFD700', color: '#000', '&:hover': { bgcolor: '#FFC800' } }}>
-                  Retake Photo
-                </LoadingButton>
+                <Stack direction="row" spacing={3} sx={{ mt: 1 }}>
+                  <LoadingButton size="large" type="button" variant="contained" onClick={() => setImg(null)} sx={{ bgcolor: '#FFD700', color: '#000', '&:hover': { bgcolor: '#FFC800' } }}>
+                    Retake Photo
+                  </LoadingButton>
+                  <LoadingButton size="large" type="submit" variant="contained" sx={{ px: 5 }} disabled={!values.employee} loading={isSubmitting}>
+                    Save Attendance
+                  </LoadingButton>
+                </Stack>
               </>
             )}
-          </Grid>
-          <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-            <LoadingButton size="large" type="submit" variant="contained" sx={{ px: 8 }} disabled={!values.employee}>
-              Save Attendance
-            </LoadingButton>
           </Grid>
         </Grid>
       </form>

@@ -110,7 +110,7 @@ export default {
     { label: 'Assistant Branch Manager', value: 'assistant_branch_manager' }, // Added for 7.2
     // { label: 'Branch Executive', value: 'branch_executive' }, // Added for 7.3
     { label: 'Tele-Calling', value: 'telecalling' },
-    // { label: 'Transaction Executive', value: 'transaction_executive' },
+    { label: 'Transaction Executive', value: 'transaction_executive' },
     { label: 'Bullion Desk', value: 'bullion_desk' },
     { label: 'Marketing Team', value: 'marketing' },
     { label: 'Admin Desk', value: 'admin_desk' },
@@ -133,8 +133,7 @@ export default {
   ],
   canDelete: (userType) => {
     const role = userType?.toLowerCase();
-    //return role !== 'subadmin' && role !== 'transaction_executive';
-    return role === 'admin';
+    return role !== 'subadmin' && role !== 'transaction_executive';
   },
   maskPhoneNumber: (phone) => {
     if (!phone || phone.length < 4) return phone;
