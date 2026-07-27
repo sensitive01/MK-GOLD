@@ -47,6 +47,50 @@ export default function DashboardPage() {
               textColor="#000"
             />
           </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Gold Rate"
+              total={stats?.goldRate}
+              icon={'mdi:gold'}
+              bgColor="#FFF8E7"
+              iconColor="#D4AF37"
+              textColor="#000"
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Silver Rate"
+              total={stats?.silverRate}
+              icon={'mdi:silverware-variant'}
+              bgColor="#F5F5F5"
+              iconColor="#C0C0C0"
+              textColor="#000"
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Today's Followups"
+              total={stats?.todaysFollowups}
+              icon={'mdi:phone-outgoing'}
+              bgColor="#E3F2FD"
+              iconColor="#1565C0"
+              textColor="#000"
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Business Converted (This Month)"
+              total={stats?.businessConverted}
+              icon={'mdi:briefcase-check'}
+              bgColor="#E8F5E9"
+              iconColor="#2E7D32"
+              textColor="#000"
+            />
+          </Grid>
         </Grid>
       </Container>
 

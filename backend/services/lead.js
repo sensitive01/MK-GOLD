@@ -1,6 +1,9 @@
 const Lead = require("../models/lead");
 const FileUpload = require("../models/fileupload");
 const mongoose = require("mongoose");
+const Customer = require("../models/customer");
+const Sales = require("../models/sales");
+const GoldRate = require("../models/goldrate");
 
 async function find(query = {}, user = null) {
   try {
@@ -168,10 +171,54 @@ async function getLeadStats(user = null) {
     const totalLeads = await Lead.countDocuments(query);
     const pendingLeads = await Lead.countDocuments({ ...query, status: "pending" });
 
-    console.log('Lead Stats Query:', query);
-    console.log('Stats Result:', { totalLeads, pendingLeads });
+    // Gold Rate & Silver Rate
+    const goldRateDoc = await GoldRate.findOne({ type: "gold" }).sort({ createdAt: -1 });
+    const silverRateDoc = await GoldRate.findOne({ type: "silver" }).sort({ createdAt: -1 });
+    const goldRate = goldRateDoc?.rate || 0;
+    const silverRate = silverRateDoc?.rate || 0;
 
-    return { totalLeads, pendingLeads };
+    // Today's Followups
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todaysFollowups = await Lead.countDocuments({
+      ...query,
+      "dispositions.callbackDate": todayStr
+    });
+
+    // Business Converted this month
+    let businessConverted = 0;
+    if (user && user.userType?.toLowerCase() === "telecalling") {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      const endOfMonth = new Date();
+      endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+      endOfMonth.setDate(0);
+      endOfMonth.setHours(23, 59, 59, 999);
+
+      // Get phone numbers of all leads matching this telecaller
+      const leads = await Lead.find(query).select('mobile').lean();
+      const mobiles = leads.map(l => l.mobile).filter(m => m);
+
+      if (mobiles.length > 0) {
+        // Find matching customer records by phone number
+        const customers = await Customer.find({ phoneNumber: { $in: mobiles } }).select('_id').lean();
+        const customerIds = customers.map(c => c._id);
+
+        if (customerIds.length > 0) {
+          // Count sales created this month for those customers
+          businessConverted = await Sales.countDocuments({
+            customer: { $in: customerIds },
+            createdAt: { $gte: startOfMonth, $lte: endOfMonth }
+          });
+        }
+      }
+    }
+
+    console.log('Lead Stats Query:', query);
+    console.log('Stats Result:', { totalLeads, pendingLeads, goldRate, silverRate, todaysFollowups, businessConverted });
+
+    return { totalLeads, pendingLeads, goldRate, silverRate, todaysFollowups, businessConverted };
   } catch (err) {
     throw err;
   }

@@ -54,6 +54,7 @@ import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashb
 import { deleteAttendanceById, getAttendance, getConsolidatedAttendance, updateAttendance } from '../../apis/hr/attendance';
 import { getBranchAttendanceStats } from '../../apis/branch/attendance';
 import CreateAttendance from '../../components/branch/attendance/CreateAttendance';
+import Payprocess from './Payprocess';
 import global from '../../utils/global';
 
 // ----------------------------------------------------------------------
@@ -461,16 +462,21 @@ export default function Attendance() {
                 <Tab value="all_attendance" label="All Attendance" />
                 <Tab value="my_attendance" label="My Attendance" />
                 <Tab value="consolidated_attendance" label="Consolidated Attendance" />
+                <Tab value="adjustments" label="Adjustments" />
               </Tabs>
             </Box>
             
             <Box sx={{ p: 3 }}>
-              <Button variant="contained" startIcon={<Iconify icon="material-symbols:filter-alt-off" />} onClick={() => setFilterOpen(true)} sx={{ float: 'right', mx: '10px' }}>Filter</Button>
-              <Button variant="contained" startIcon={<Iconify icon="carbon:document-export" />} onClick={() => handleExport(data?.map(e => ({ EmployeeId: e?.employee?.employeeId, EmployeeName: e?.employee?.name, Date: e.createdAt })), 'Attendance')} sx={{ float: 'right' }}>Export</Button>
+              {currentTab === 'adjustments' ? (
+                <Payprocess />
+              ) : (
+                <>
+                  <Button variant="contained" startIcon={<Iconify icon="material-symbols:filter-alt-off" />} onClick={() => setFilterOpen(true)} sx={{ float: 'right', mx: '10px' }}>Filter</Button>
+                  <Button variant="contained" startIcon={<Iconify icon="carbon:document-export" />} onClick={() => handleExport(data?.map(e => ({ EmployeeId: e?.employee?.employeeId, EmployeeName: e?.employee?.name, Date: e.createdAt })), 'Attendance')} sx={{ float: 'right' }}>Export</Button>
 
-              <p style={{ color: '#fff' }}>From Date: {values.fromDate ? values.fromDate.format('YYYY-MM-DD') : ''}, To Date: {values.toDate ? values.toDate.format('YYYY-MM-DD') : ''}</p>
+                  <p style={{ color: '#fff' }}>From Date: {values.fromDate ? values.fromDate.format('YYYY-MM-DD') : ''}, To Date: {values.toDate ? values.toDate.format('YYYY-MM-DD') : ''}</p>
 
-              <AttendanceListToolbar numSelected={selected?.length} filterName={filterName} onFilterName={handleFilterByName} handleDelete={() => { setDeleteType('selected'); handleOpenDeleteModal(); }} />
+                  <AttendanceListToolbar numSelected={selected?.length} filterName={filterName} onFilterName={handleFilterByName} handleDelete={() => { setDeleteType('selected'); handleOpenDeleteModal(); }} />
 
               <Scrollbar>
                 <TableContainer>
@@ -565,6 +571,8 @@ export default function Attendance() {
                 </TableContainer>
               </Scrollbar>
               <TablePagination rowsPerPageOptions={[5, 10, 25]} component="div" count={data?.length || 0} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} />
+                </>
+              )}
             </Box>
           </Box>
         </Card>

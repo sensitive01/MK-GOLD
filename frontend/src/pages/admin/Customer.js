@@ -171,7 +171,24 @@ export default function Customer({ title = "Customers" }) {
     getBranch().then((data) => {
       setBranches(data.data);
     });
-    fetchData();
+    
+    const query = {};
+    if (values.phoneNumber) query.phoneNumber = values.phoneNumber;
+    if (values.branch) query.branch = values.branch;
+    if (values.status) query.status = values.status;
+    if (values.gender) query.gender = values.gender;
+
+    if (values.fromDate || values.toDate) {
+      query.createdAt = {};
+      if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
+      if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
+    }
+
+    if (Object.keys(query).length > 0) {
+      fetchData(query);
+    } else {
+      fetchData();
+    }
   }, [toggleContainer]);
 
   const fetchData = (

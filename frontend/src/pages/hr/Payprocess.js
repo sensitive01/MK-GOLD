@@ -245,8 +245,9 @@ export default function Payprocess() {
         </Alert>
       </Snackbar>
 
-      {toggleContainer === false && (
-        <Container maxWidth="xl">
+      <Box
+        sx={{ display: toggleContainer === false ? 'block' : 'none' }}
+      >
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
             <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
               Payprocess
@@ -263,7 +264,7 @@ export default function Payprocess() {
             </Button>
           </Stack>
 
-          <Card>
+          <Box>
             <PayprocessListToolbar
               numSelected={selected?.length}
               filterName={filterName}
@@ -298,8 +299,8 @@ export default function Payprocess() {
                           </TableCell>
                           <TableCell align="left">{employee?.employeeId}</TableCell>
                           <TableCell align="left">{sentenceCase(employee?.name ?? '')}</TableCell>
-                          <TableCell align="left">{type}</TableCell>
                           <TableCell align="left">{amount}</TableCell>
+                          <TableCell align="left">{sentenceCase(type ?? '')}</TableCell>
                           <TableCell align="left">{note}</TableCell>
                           <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                           <TableCell align="right">
@@ -373,12 +374,11 @@ export default function Payprocess() {
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
             />
-          </Card>
-        </Container>
-      )}
+          </Box>
+      </Box>
 
       {toggleContainer === true && toggleContainerType === 'create' && (
-        <Container maxWidth="xl">
+        <Box>
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
             <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
               Create Payprocess
@@ -395,7 +395,7 @@ export default function Payprocess() {
           </Stack>
 
           <CreatePayprocess setToggleContainer={setToggleContainer} setNotify={setNotify} />
-        </Container>
+        </Box>
       )}
 
       {toggleContainer === true && toggleContainerType === 'update' && (

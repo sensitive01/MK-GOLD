@@ -58,6 +58,8 @@ import Grid from '@mui/material/Grid';
 const TABLE_HEAD = [
   { id: 'branch', label: 'Branch', alignRight: false },
   { id: 'transitId', label: 'Transit ID', alignRight: false },
+  { id: 'type', label: 'Type', alignRight: false },
+  { id: 'jewels', label: 'Jewels', alignRight: false },
   { id: 'numberOfPackets', label: 'Packets', alignRight: false },
   { id: 'physical', label: 'Physical', alignRight: false },
   { id: 'released', label: 'Released', alignRight: false },
@@ -455,6 +457,8 @@ export default function Transit() {
                         </TableCell>
                         <TableCell align="left">{branch?.branchName || 'N/A'}</TableCell>
                         <TableCell align="left">{transitId}</TableCell>
+                        <TableCell align="left">{sentenceCase(row.saleIds?.[0]?.purchaseType || 'Unknown')}</TableCell>
+                        <TableCell align="left">{row.numberOfOrnaments}</TableCell>
                         <TableCell align="left">{numberOfPackets}</TableCell>
                         <TableCell align="left">{physical}</TableCell>
                         <TableCell align="left">{released}</TableCell>
@@ -463,7 +467,10 @@ export default function Transit() {
                         <TableCell align="left">
                           <Label color={status === 'received' ? 'success' : 'warning'}>{sentenceCase(status || '')}</Label>
                         </TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD')}</TableCell>
+                        <TableCell align="left">
+                          <Typography variant="body2">{moment(createdAt).format('YYYY-MM-DD')}</Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>{moment(createdAt).format('hh:mm A')}</Typography>
+                        </TableCell>
                         <TableCell align="right">
                           <IconButton
                             size="large"
@@ -536,16 +543,28 @@ export default function Transit() {
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         PaperProps={{
-          sx: { p: 1, width: 140, '& .MuiMenuItem-root': { px: 1, typography: 'body2', borderRadius: 0.75 } },
+          sx: { p: 1, width: 180, '& .MuiMenuItem-root': { px: 1, typography: 'body2', borderRadius: 0.75 } },
         }}
       >
+        {selectedTransitObj?.status?.toLowerCase() !== 'moved' && (
+          <MenuItem
+            onClick={() => {
+              handleCloseMenu();
+              setDeviation(selectedTransitObj?.deviations || 'no');
+              setAdminNotes(selectedTransitObj?.receivedNotes || '');
+              setAdminProof(selectedTransitObj?.receivedProof || '');
+              setViewModalOpen(true);
+            }}
+          >
+            <Iconify icon={'eva:checkmark-circle-2-fill'} sx={{ mr: 2 }} />
+            Receive Transit
+          </MenuItem>
+        )}
+
         <MenuItem
           onClick={() => {
             handleCloseMenu();
-            setDeviation(selectedTransitObj?.deviations || 'no');
-            setAdminNotes(selectedTransitObj?.receivedNotes || '');
-            setAdminProof(selectedTransitObj?.receivedProof || '');
-            setViewModalOpen(true);
+            navigate(`/${userType}/transit-sales/${openId}`);
           }}
         >
           <Iconify icon={'carbon:view-filled'} sx={{ mr: 2 }} />
@@ -559,7 +578,7 @@ export default function Transit() {
       </Popover>
 
       <Dialog open={viewModalOpen} onClose={() => setViewModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>View Transit Details</DialogTitle>
+        <DialogTitle>Receive Transit</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle1" gutterBottom>

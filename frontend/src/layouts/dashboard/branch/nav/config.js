@@ -77,9 +77,14 @@ const navConfig = [
     icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
   },
   {
-    title: 'QR Enquires',
+    title: 'Walkins',
     path: '/branch/qr-enquiry',
     icon: <QrCodeIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Customers',
+    path: '/branch/customer',
+    icon: icon('ic_user'),
   },
   {
     title: 'Employee',

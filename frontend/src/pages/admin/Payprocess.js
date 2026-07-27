@@ -43,6 +43,7 @@ const TABLE_HEAD = [
   { id: 'employeeId', label: 'Employee Id', alignRight: false },
   { id: 'name', label: 'Employee Name', alignRight: false },
   { id: 'amount', label: 'Amount', alignRight: false },
+  { id: 'type', label: 'Type', alignRight: false },
   { id: 'note', label: 'Note', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
@@ -249,8 +250,7 @@ export default function Payprocess() {
         </Alert>
       </Snackbar>
 
-      <Container
-        maxWidth="xl"
+      <Box
         sx={{ display: toggleContainer === false ? 'block' : 'none' }}
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
@@ -269,7 +269,7 @@ export default function Payprocess() {
           </Button>
         </Stack>
 
-        <Card>
+        <Box>
           <PayprocessListToolbar
             numSelected={selected?.length}
             filterName={filterName}
@@ -294,7 +294,7 @@ export default function Payprocess() {
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, employee, amount, note, createdAt } = row;
+                    const { _id, employee, type, amount, note, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
@@ -305,6 +305,7 @@ export default function Payprocess() {
                         <TableCell align="left">{employee?.employeeId}</TableCell>
                         <TableCell align="left">{sentenceCase(employee?.name ?? '')}</TableCell>
                         <TableCell align="left">{amount}</TableCell>
+                        <TableCell align="left">{sentenceCase(type ?? '')}</TableCell>
                         <TableCell align="left">{note}</TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">
@@ -378,11 +379,11 @@ export default function Payprocess() {
             onPageChange={handleChangePage}
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
-        </Card>
-      </Container>
+        </Box>
+      </Box>
 
       {toggleContainer === true && toggleContainerType === 'create' && (
-        <Container maxWidth="xl">
+        <Box>
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
             <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
               New Payprocess
@@ -399,7 +400,7 @@ export default function Payprocess() {
           </Stack>
 
           <CreatePayprocess setToggleContainer={setToggleContainer} setNotify={setNotify} />
-        </Container>
+        </Box>
       )}
 
       {/* Delete Modal */}<Popover

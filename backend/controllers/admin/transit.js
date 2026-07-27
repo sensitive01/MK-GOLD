@@ -86,3 +86,33 @@ exports.deleteTransitData = async (req, res) => {
         });
     }
 };
+
+exports.getTransitSales = async (req, res) => {
+    try {
+        const transit = await transitModel.findById(req.params.id)
+            .populate({
+                path: 'saleIds',
+                populate: [
+                    { path: 'customer' },
+                    { path: 'branch' },
+                    { path: 'assignee' }
+                ]
+            });
+            
+        if (!transit) {
+            return res.json({ status: false, message: "Transit not found", data: [] });
+        }
+
+        res.json({
+            status: true,
+            message: "Sales fetched successfully",
+            data: transit.saleIds || []
+        });
+    } catch (err) {
+        res.json({
+            status: false,
+            message: err.message,
+            data: []
+        });
+    }
+};

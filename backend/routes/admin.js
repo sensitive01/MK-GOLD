@@ -175,6 +175,7 @@ adminRouter.get("/transit/get", transit.findTransitData);
 adminRouter.post("/transit/get", transit.findTransitData);
 adminRouter.post("/transit/update-status/:id", transit.updateTransitStatus);
 adminRouter.post("/transit/delete/:id", canDelete, transit.deleteTransitData);
+adminRouter.get("/transit-sales/:id", transit.getTransitSales);
 
 adminRouter.get("/vendor/get", vendor.find);
 adminRouter.post("/vendor/get", vendor.find);

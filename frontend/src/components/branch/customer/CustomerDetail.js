@@ -108,7 +108,7 @@ export default function CustomerDetail({ id }) {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={data?.bank?.length}
+          count={data?.bank?.length || 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -182,7 +182,7 @@ export default function CustomerDetail({ id }) {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={data?.address?.length}
+          count={data?.address?.length || 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -195,7 +195,7 @@ export default function CustomerDetail({ id }) {
   return (
     <>
       {openBackdrop ? (
-        <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+        <Backdrop open={openBackdrop} sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}>
           <CircularProgress color="inherit" />
         </Backdrop>
       ) : (

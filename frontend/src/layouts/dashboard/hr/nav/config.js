@@ -23,8 +23,24 @@ const navConfig = [
 
   {
     title: 'Employee',
-    path: '/hr/employee',
     icon: icon('ic_user'),
+    children: [
+      {
+        title: 'Employees',
+        path: '/hr/employee',
+        icon: icon('ic_user'),
+      },
+      {
+        title: 'Attendance',
+        path: '/hr/attendance',
+        icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'Leaves',
+        path: '/hr/leave',
+        icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
+      }
+    ]
   },
   {
     title: 'Leads',

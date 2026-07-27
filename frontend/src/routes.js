@@ -32,6 +32,7 @@ import AdminDesignation from './pages/admin/Designation';
 import AdminAnnouncement from './pages/admin/Announcements';
 import AdminQREnquiry from './pages/admin/QREnquiry';
 import AdminTransit from './pages/admin/Transit';
+import AdminTransitSales from './pages/admin/TransitSales';
 import AdminMarketingTabs from './pages/admin/MarketingTabs';
 import AdminMelting from './pages/admin/Melting';
 import AdminVendor from './pages/admin/Vendor';
@@ -181,6 +182,7 @@ export default function Router() {
         { path: 'announcement', element: <AdminAnnouncement /> },
         { path: 'qr-enquiry', element: <AdminQREnquiry /> },
         { path: 'transit', element: <AdminTransit /> },
+        { path: 'transit-sales/:id', element: <AdminTransitSales /> },
         { path: 'melting', element: <AdminMelting /> },
         { path: 'vendor', element: <AdminVendor /> },
         { path: 'sell-gold', element: <AdminSellGold /> },

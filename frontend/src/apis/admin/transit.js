@@ -27,8 +27,18 @@ async function deleteTransitById(id) {
   }
 }
 
+async function getTransitSales(id) {
+  try {
+    const response = await apiClient().get(`/api/v1.0/admin/transit-sales/${id}`);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
 export {
   findTransit,
   updateTransitStatus,
   deleteTransitById,
+  getTransitSales,
 };

@@ -114,14 +114,7 @@ function UpdateFund(props) {
                 name="type"
                 value={values.type}
                 onBlur={handleBlur}
-                onChange={(e) => {
-                  if (e.target.value === 'fund_request') {
-                    setFieldValue('from', headOffice?._id || '');
-                  } else {
-                    setFieldValue('from', '');
-                  }
-                  handleChange(e);
-                }}
+                onChange={handleChange}
               >
                 <MenuItem value="fund_request">Fund Request</MenuItem>
                 <MenuItem value="fund_transfer">Fund Transfer</MenuItem>
@@ -139,7 +132,6 @@ function UpdateFund(props) {
                 value={values.from}
                 onBlur={handleBlur}
                 onChange={handleChange}
-                disabled
               >
                 {branches?.map((e) => (
                   <MenuItem key={e._id} value={e._id}>
@@ -160,7 +152,6 @@ function UpdateFund(props) {
                 value={values.to}
                 onBlur={handleBlur}
                 onChange={handleChange}
-                disabled={isReadOnly}
               >
                 {branches?.map((e) => (
                   <MenuItem key={e._id} value={e._id}>

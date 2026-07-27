@@ -216,7 +216,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={data?.ornaments?.length}
+          count={data?.ornaments?.length || 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -292,7 +292,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={data?.release?.length}
+          count={data?.release?.length || 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -385,7 +385,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={data?.proof?.length}
+          count={data?.proof?.length || 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -459,7 +459,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={data?.customer?.address?.length}
+          count={data?.customer?.address?.length || 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -472,7 +472,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
   return (
     <>
       {openBackdrop ? (
-        <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+        <Backdrop open={openBackdrop} sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}>
           <CircularProgress color="inherit" />
         </Backdrop>
       ) : (

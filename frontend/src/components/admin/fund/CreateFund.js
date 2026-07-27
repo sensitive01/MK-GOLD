@@ -97,24 +97,7 @@ function CreateFund(props) {
                 name="type"
                 value={values.type}
                 onBlur={handleBlur}
-                onChange={(e) => {
-                  if (e.target.value === 'fund_request') {
-                    if (!headOffice) {
-                      props.setNotify({
-                        open: true,
-                        message: 'Head Office not found. Please contact admin to create a Head Office.',
-                        severity: 'error',
-                      });
-                      return;
-                    }
-                    setFieldValue('from', headOffice?._id || '');
-                    setFieldValue('to', branch?._id || '');
-                  } else {
-                    setFieldValue('from', branch?._id || '');
-                    setFieldValue('to', '');
-                  }
-                  handleChange(e);
-                }}
+                onChange={handleChange}
               >
                 <MenuItem value="fund_request">Fund Request</MenuItem>
                 <MenuItem value="fund_transfer">Fund Transfer</MenuItem>
@@ -132,7 +115,6 @@ function CreateFund(props) {
                 value={values.from}
                 onBlur={handleBlur}
                 onChange={handleChange}
-                disabled
               >
                 {branches?.map((e) => (
                   <MenuItem key={e._id} value={e._id}>
@@ -153,7 +135,6 @@ function CreateFund(props) {
                 value={values.to}
                 onBlur={handleBlur}
                 onChange={handleChange}
-                disabled={isReadOnly}
               >
                 {branches?.map((e) => (
                   <MenuItem key={e._id} value={e._id}>

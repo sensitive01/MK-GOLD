@@ -27,7 +27,6 @@ import {
   Backdrop,
   CircularProgress,
 } from '@mui/material';
-import Customer from './Customer';
 import Iconify from '../../components/iconify';
 import moment from 'moment';
 import Scrollbar from '../../components/scrollbar';
@@ -55,7 +54,6 @@ export default function QREnquiry() {
   const [selected, setSelected] = useState([]);
   const [openLogModal, setOpenLogModal] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
-  const [tabValue, setTabValue] = useState(0);
   const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -125,7 +123,7 @@ export default function QREnquiry() {
   return (
     <>
       <Helmet>
-        <title> QR Enquiries & Walk-ins | MK Gold </title>
+        <title> Walkins | MK Gold </title>
       </Helmet>
 
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={isLoading}>
@@ -135,22 +133,10 @@ export default function QREnquiry() {
       <Container maxWidth="xl">
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            QR Enquiries & Walk-ins
+            Walkins
           </Typography>
         </Stack>
 
-        <Tabs
-          value={tabValue}
-          onChange={(e, newValue) => setTabValue(newValue)}
-          sx={{ mb: 3, borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { color: 'rgba(255,255,255,0.7)' }, '& .Mui-selected': { color: '#fff !important' } }}
-          textColor="primary"
-          indicatorColor="primary"
-        >
-          <Tab label="QR Enquiries" />
-          <Tab label="Walk-ins (Registered Customers)" />
-        </Tabs>
-
-        {tabValue === 0 && (
           <Card>
             <Scrollbar>
               <TableContainer>
@@ -240,11 +226,6 @@ export default function QREnquiry() {
               onRowsPerPageChange={handleChangeRowsPerPage}
             />
           </Card>
-        )}
-
-        {tabValue === 1 && (
-          <Customer isTab />
-        )}
       </Container>
 
       <Dialog open={openLogModal} onClose={handleCloseLogModal} maxWidth="lg" fullWidth>

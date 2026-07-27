@@ -91,6 +91,8 @@ export default function SalePrint({ id }) {
   const totalStoneWeight = tableRows.reduce((sum, row) => sum + row.stoneWeight, 0);
   const totalNetWeight = tableRows.reduce((sum, row) => sum + row.netWeight, 0);
   const totalValue = tableRows.reduce((sum, row) => sum + row.value, 0);
+  const totalFineWeight = tableRows.reduce((sum, row) => sum + ((Number(row.netWeight) || 0) * (Number(row.purity) || 0) / 100), 0);
+  const averagePurity = totalNetWeight > 0 ? (totalFineWeight / totalNetWeight) * 100 : 0;
 
   // Valuation summary logic
   const netAmount = data?.netAmount || 0;
@@ -258,7 +260,7 @@ export default function SalePrint({ id }) {
               <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{totalGrossWeight.toFixed(2)}</td>
               <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{totalStoneWeight.toFixed(2)}</td>
               <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{totalNetWeight.toFixed(2)}</td>
-              <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>-</td>
+              <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{averagePurity > 0 ? `${averagePurity.toFixed(2)}%` : '-'}</td>
               <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right' }}>{Math.round(totalValue).toLocaleString('en-IN')}</td>
             </tr>
           </tbody>
@@ -391,7 +393,7 @@ export default function SalePrint({ id }) {
               <td style={{ width: '40%', textAlign: 'center', fontSize: '11px', color: '#555', verticalAlign: 'bottom', paddingBottom: '4px' }}>
                 Thanks For your billing
                 <br />
-                <a href="https://mgold.in" target="_blank" rel="noopener noreferrer" style={{ color: '#000', textDecoration: 'none', fontWeight: 'bold' }}>mgold.in</a>
+                <a href="https://mkgold.tech" target="_blank" rel="noopener noreferrer" style={{ color: '#000', textDecoration: 'none', fontWeight: 'bold' }}>mkgold.tech</a>
               </td>
               <td style={{ width: '30%', textAlign: 'center', verticalAlign: 'bottom' }}>
                 <div style={{ height: '50px', marginBottom: '4px' }}>

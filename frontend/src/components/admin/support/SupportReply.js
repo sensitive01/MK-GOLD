@@ -161,7 +161,7 @@ export default function SupportReply({ id, setNotify }) {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={data?.length}
+          count={data?.length || 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
