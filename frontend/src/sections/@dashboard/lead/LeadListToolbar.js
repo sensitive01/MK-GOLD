@@ -76,11 +76,7 @@ export default function LeadListToolbar({ handleDelete, handleMarkExclusive, isA
                 </span>
               </Tooltip>
             )}
-            <Tooltip title="Delete">
-              <IconButton onClick={handleDelete} sx={{ ml: 1 }}>
-                <Iconify icon="eva:trash-2-fill" />
-              </IconButton>
-            </Tooltip>
+
           </>
         ) : null}
       </div>
