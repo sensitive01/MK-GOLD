@@ -1,6 +1,6 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
-import { forwardRef, useEffect, useState } from 'react';
+import { forwardRef, useEffect, useRef, useState, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
@@ -8,7 +8,6 @@ import {
     Box,
     Button,
     Card,
-    Checkbox,
     CircularProgress,
     Container,
     IconButton,
@@ -25,30 +24,39 @@ import {
     TablePagination,
     TableRow,
     Typography,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    TextField,
+    Grid,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import * as FileSaver from 'file-saver';
+import { useFormik } from 'formik';
+import * as XLSX from 'xlsx';
+import * as Yup from 'yup';
 import moment from 'moment';
 // components
-import { CreateEmployee, UpdateEmployee } from '../../components/branch/employee';
+import { CreatePayprocess } from '../../components/admin/payprocess';
 import Iconify from '../../components/iconify';
-import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
-import global from '../../utils/global';
 // sections
-import { EmployeeListHead, EmployeeListToolbar } from '../../sections/@dashboard/employee';
+import { PayprocessListHead, PayprocessListToolbar } from '../../sections/@dashboard/payprocess';
 // mock
-import { deleteEmployeeById, getEmployee } from '../../apis/branch/employee';
+import { getPayprocess } from '../../apis/accounts/payprocess';
 
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
   { id: 'employeeId', label: 'Employee Id', alignRight: false },
-  { id: 'name', label: 'Name', alignRight: false },
-  { id: 'email', label: 'Email', alignRight: false },
-  { id: 'gender', label: 'Gender', alignRight: false },
-  { id: 'designation', label: 'Designation', alignRight: false },
-  { id: 'phoneNumber', label: 'Phone Number', alignRight: false },
-  { id: 'status', label: 'Status', alignRight: false },
+  { id: 'name', label: 'Employee Name', alignRight: false },
+  { id: 'amount', label: 'Amount', alignRight: false },
+  { id: 'type', label: 'Type', alignRight: false },
+  { id: 'note', label: 'Note', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
 ];
@@ -79,12 +87,15 @@ function applySortFilter(array, comparator, query) {
     return a[1] - b[1];
   });
   if (query) {
-    return filter(array, (row) => row.name.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    return filter(array, (row) => 
+      row.employee?.name?.toLowerCase().indexOf(query.toLowerCase()) !== -1 ||
+      row.employee?.employeeId?.toLowerCase().indexOf(query.toLowerCase()) !== -1
+    );
   }
   return stabilizedThis?.map((el) => el[0]);
 }
 
-export default function BranchEmployee() {
+export default function FinanceAdjustments() {
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
@@ -96,11 +107,58 @@ export default function BranchEmployee() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
+
   const [data, setData] = useState([]);
-  const [openDeleteModal, setOpenDeleteModal] = useState(false);
-  const [deleteType, setDeleteType] = useState('single');
-  const handleOpenDeleteModal = () => setOpenDeleteModal(true);
-  const handleCloseDeleteModal = () => setOpenDeleteModal(false);
+  const [editData, setEditData] = useState(null);
+
+  const [filterOpen, setFilterOpen] = useState(false);
+  const form = useRef();
+
+  // Form validation
+  const schema = Yup.object({
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
+  });
+
+  const { handleSubmit, touched, errors, values, setFieldValue, resetForm } = useFormik({
+    initialValues: {
+      fromDate: null,
+      toDate: null,
+    },
+    validationSchema: schema,
+    onSubmit: (values) => {
+      const query = {
+        createdAt: {
+          $gte: values.fromDate?.format("YYYY-MM-DD") || moment().startOf('month').format("YYYY-MM-DD"),
+          $lte: values.toDate?.format("YYYY-MM-DD") || moment().endOf('month').format("YYYY-MM-DD"),
+        }
+      };
+      fetchData(query);
+      setFilterOpen(false);
+    },
+  });
+
+  const handleClear = () => {
+    resetForm();
+    fetchData();
+    setFilterOpen(false);
+  };
+
+  const handleExport = (fileData, fileName) => {
+    const exportData = fileData.map(row => ({
+      'Employee ID': row.employee?.employeeId,
+      'Employee Name': row.employee?.name,
+      'Amount': row.amount,
+      'Type': row.type,
+      'Note': row.note,
+      'Date': moment(row.createdAt).format('DD-MM-YYYY')
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = { Sheets: { data: ws }, SheetNames: ['data'] };
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+    FileSaver.saveAs(blob, `${fileName}.xlsx`);
+  };
 
   const [notify, setNotify] = useState({
     open: false,
@@ -108,16 +166,27 @@ export default function BranchEmployee() {
     severity: 'success',
   });
 
+  const fetchData = useCallback(
+    (
+      query = {
+        createdAt: {
+          $gte: moment()?.format("YYYY-MM-DD"),
+          $lte: moment()?.format("YYYY-MM-DD"),
+        },
+      }
+    ) => {
+      getPayprocess(query).then((data) => {
+        setData(data.data);
+        setOpenBackdrop(false);
+      });
+    },
+    []
+  );
+
   useEffect(() => {
     fetchData();
-  }, [toggleContainer]);
+  }, [fetchData]);
 
-  const fetchData = (query = {}) => {
-    getEmployee(query).then((data) => {
-      setData(Array.isArray(data?.data) ? data.data : []);
-      setOpenBackdrop(false);
-    });
-  };
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -175,25 +244,12 @@ export default function BranchEmployee() {
   const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName);
   const isNotFound = !filteredData?.length && !!filterName;
 
-  const handleDelete = () => {
-    deleteEmployeeById(openId).then(() => {
-      fetchData();
-      handleCloseDeleteModal();
-      setSelected(selected?.filter((e) => e !== openId));
-    });
-  };
-
-  const handleDeleteSelected = () => {
-    deleteEmployeeById(selected).then(() => {
-      fetchData();
-      handleCloseDeleteModal();
-      setSelected([]);
-      setNotify({
-        open: true,
-        message: 'Employee deleted',
-        severity: 'success',
-      });
-    });
+  const handleEdit = () => {
+    const dataToEdit = data.find((e) => e._id === openId);
+    setEditData(dataToEdit);
+    setToggleContainerType('edit');
+    setToggleContainer(true);
+    handleCloseMenu();
   };
 
   const style = {
@@ -216,10 +272,6 @@ export default function BranchEmployee() {
 
   return (
     <>
-      <Helmet>
-        <title> Employee | MK Gold </title>
-      </Helmet>
-
       <Snackbar
         anchorOrigin={{
           vertical: 'top',
@@ -242,69 +294,72 @@ export default function BranchEmployee() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
+      <Box
+        sx={{ display: toggleContainer === false ? 'block' : 'none' }}
+      >
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Employee
+            Payprocess
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-              setToggleContainerType('create');
-            }}
-          >
-            New Employee
-          </Button>
+          <Box>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="carbon:document-export" />}
+              onClick={() => handleExport(data, 'Adjustments')}
+              sx={{ mr: 1 }}
+            >
+              Export
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+              onClick={() => setFilterOpen(true)}
+              sx={{ mr: 1 }}
+            >
+              Filter
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setEditData(null);
+                setToggleContainerType('create');
+                setToggleContainer(true);
+              }}
+            >
+              New Payprocess
+            </Button>
+          </Box>
         </Stack>
 
         <Card>
-          <EmployeeListToolbar
-            numSelected={selected?.length}
+          <PayprocessListToolbar
             filterName={filterName}
             onFilterName={handleFilterByName}
-            handleDelete={() => {
-              setDeleteType('selected');
-              handleOpenDeleteModal();
-            }}
           />
 
           <Scrollbar>
             <TableContainer>
               <Table sx={{ minWidth: 800 }}>
-                <EmployeeListHead
+                <PayprocessListHead
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
                   rowCount={data?.length || 0}
-                  numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
-                  onSelectAllClick={handleSelectAllClick}
                   hideCheckbox={true}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, employeeId, name, email, gender, designation, phoneNumber, status, createdAt } = row;
-                    const selectedData = selected.indexOf(_id) !== -1;
-
+                    const { _id, employee, type, amount, note, createdAt } = row;
                     return (
-                      <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        {false && (
-                          <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                        </TableCell>
-                        )}
-                        <TableCell align="left">{employeeId}</TableCell>
-                        <TableCell align="left">{name}</TableCell>
-                        <TableCell align="left">{email}</TableCell>
-                        <TableCell align="left">{gender}</TableCell>
-                        <TableCell align="left">{sentenceCase(designation || '')}</TableCell>
-                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
-                        <TableCell align="left">
-                          <Label color={(status !== 'active' && 'error') || 'success'}>{sentenceCase(status || '')}</Label>
-                        </TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                      <TableRow hover key={_id} tabIndex={-1}>
+                        <TableCell align="left">{employee?.employeeId}</TableCell>
+                        <TableCell align="left">{employee?.name}</TableCell>
+                        <TableCell align="left">₹{amount}</TableCell>
+                        <TableCell align="left">{type}</TableCell>
+                        <TableCell align="left">{note}</TableCell>
+                        <TableCell align="left">{moment(createdAt).format('DD-MM-YYYY')}</TableCell>
                         <TableCell align="right">
                           <IconButton
                             size="large"
@@ -322,12 +377,12 @@ export default function BranchEmployee() {
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={8} />
+                      <TableCell colSpan={11} />
                     </TableRow>
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -343,7 +398,7 @@ export default function BranchEmployee() {
                 {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
-                      <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -377,51 +432,35 @@ export default function BranchEmployee() {
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
         </Card>
-      </Container>
+      </Box>
 
-      <Container
-        maxWidth="xl"
-        sx={{ display: toggleContainer === true && toggleContainerType === 'create' ? 'block' : 'none' }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Create Employee
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="mdi:arrow-left" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-            }}
-          >
-            Back
-          </Button>
-        </Stack>
+      {toggleContainer === true && toggleContainerType === 'create' && (
+        <Box>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+              New Payprocess
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="mdi:arrow-left" />}
+              onClick={() => {
+                setToggleContainer(false);
+                setEditData(null);
+              }}
+            >
+              Back
+            </Button>
+          </Stack>
 
-        <CreateEmployee setToggleContainer={setToggleContainer} setNotify={setNotify} />
-      </Container>
-
-      <Container
-        maxWidth="xl"
-        sx={{ display: toggleContainer === true && toggleContainerType === 'update' ? 'block' : 'none' }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Update Employee
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="mdi:arrow-left" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-            }}
-          >
-            Back
-          </Button>
-        </Stack>
-
-        <UpdateEmployee setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
-      </Container>
+          <CreatePayprocess
+            setNotify={setNotify}
+            setToggleContainer={setToggleContainer}
+            setToggleContainerType={setToggleContainerType}
+            editData={editData}
+            fetchData={fetchData}
+          />
+        </Box>
+      )}
 
       <Popover
         open={Boolean(open)}
@@ -441,63 +480,52 @@ export default function BranchEmployee() {
           },
         }}
       >
-        <MenuItem
-          onClick={() => {
-            setOpen(null);
-            setToggleContainerType('update');
-            setToggleContainer(!toggleContainer);
-          }}
-        >
+        <MenuItem onClick={handleEdit}>
           <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
           Edit
         </MenuItem>
-
-        {/* <MenuItem
-          sx={{ color: 'error.main' }}
-          onClick={() => {
-            setOpen(null);
-            setDeleteType('single');
-            handleOpenDeleteModal();
-          }}
-        >
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-          Delete
-        </MenuItem> */}
       </Popover>
 
-      <Modal
-        open={openDeleteModal}
-        onClose={handleCloseDeleteModal}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
-        <Box sx={style}>
-          <Typography id="modal-modal-title" variant="h6" component="h2">
-            Delete
-          </Typography>
-          <Typography id="modal-modal-description" sx={{ mt: 3 }}>
-            Do you want to delete?
-          </Typography>
-          <Stack direction="row" alignItems="center" spacing={2} mt={3}>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => {
-                if (deleteType === 'single') {
-                  handleDelete();
-                } else {
-                  handleDeleteSelected();
-                }
-              }}
-            >
-              Delete
-            </Button>
-            <Button variant="contained" onClick={handleCloseDeleteModal}>
-              Close
-            </Button>
-          </Stack>
-        </Box>
-      </Modal>
+      {/* Filter Modal */}
+      <Dialog open={filterOpen} onClose={() => setFilterOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Filter Adjustments</DialogTitle>
+        <DialogContent>
+          <form ref={form} onSubmit={handleSubmit}>
+            <Grid container spacing={3} sx={{ mt: 1 }}>
+              <Grid item xs={12} md={6}>
+                <LocalizationProvider dateAdapter={AdapterMoment}>
+                  <DesktopDatePicker
+                    label="From Date"
+                    inputFormat="YYYY-MM-DD"
+                    value={values.fromDate}
+                    onChange={(newValue) => setFieldValue('fromDate', newValue)}
+                    renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+                  />
+                </LocalizationProvider>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <LocalizationProvider dateAdapter={AdapterMoment}>
+                  <DesktopDatePicker
+                    label="To Date"
+                    inputFormat="YYYY-MM-DD"
+                    value={values.toDate}
+                    onChange={(newValue) => setFieldValue('toDate', newValue)}
+                    renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+                  />
+                </LocalizationProvider>
+              </Grid>
+            </Grid>
+            <DialogActions sx={{ mt: 3 }}>
+              <Button onClick={handleClear} color="error">
+                Clear
+              </Button>
+              <Button type="submit" variant="contained">
+                Apply
+              </Button>
+            </DialogActions>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
@@ -505,8 +533,3 @@ export default function BranchEmployee() {
     </>
   );
 }
-
-
-
-
-

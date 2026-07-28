@@ -416,6 +416,7 @@ export default function Sale() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={true}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
@@ -436,13 +437,15 @@ export default function Sale() {
                         }}
                         style={{ cursor: 'pointer' }}
                       >
-                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedData}
-                            onChange={(event) => handleClick(event, _id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </TableCell>
+                        {false && (
+                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedData}
+                              onChange={(event) => handleClick(event, _id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </TableCell>
+                        )}
                         <TableCell align="left">{billId}</TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="left">

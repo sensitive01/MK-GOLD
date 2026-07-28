@@ -114,8 +114,8 @@ function UpdateGoldRate(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                {data?.map((e) => (
-                  <MenuItem value={e}>{e}</MenuItem>
+                {data?.map((e, index) => (
+                  <MenuItem key={index} value={e}>{e}</MenuItem>
                 ))}
               </Select>
             </FormControl>

@@ -423,6 +423,7 @@ export default function Sale() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={auth.user?.userType?.toLowerCase().includes('bullion') || !isSelectForTransit}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
@@ -447,14 +448,16 @@ export default function Sale() {
                         }}
                         style={{ cursor: 'pointer' }}
                       >
-                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedData}
-                            onChange={(event) => handleClick(event, _id)}
-                            onClick={(e) => e.stopPropagation()}
-                            disabled={isSelectForTransit && status !== 'completed'}
-                          />
-                        </TableCell>
+                        {!(auth.user?.userType?.toLowerCase().includes('bullion') || !isSelectForTransit) && (
+                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedData}
+                              onChange={(event) => handleClick(event, _id)}
+                              onClick={(e) => e.stopPropagation()}
+                              disabled={isSelectForTransit && status !== 'completed'}
+                            />
+                          </TableCell>
+                        )}
                         <TableCell align="left">{billId}</TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="left">

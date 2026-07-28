@@ -370,13 +370,15 @@ export default function Ornament() {
 
                     return (
                       <TableRow hover key={_id} tabIndex={-1}>
-                        <TableCell padding="checkbox">
+                        {false && (
+                          <TableCell padding="checkbox">
                           <Checkbox
                             checked={selectedData}
                             onChange={(event) => handleClick(event, _id)}
                             disabled={status?.toLowerCase() === 'moved'}
                           />
                         </TableCell>
+                        )}
                         <TableCell align="left">{branchName}</TableCell>
                         <TableCell align="left">{ornamentType}</TableCell>
                         <TableCell align="left">{quantity}</TableCell>

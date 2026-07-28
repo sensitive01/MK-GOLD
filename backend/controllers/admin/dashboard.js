@@ -40,6 +40,19 @@ async function get(req, res) {
     },
     { $group: { _id: null, total: { $sum: "$ornaments.grossWeight" } } },
   ]);
+  const totalSilverGrossWeight = await salesService.aggregate([
+    { $unwind: "$ornaments" },
+    {
+      $match: {
+        createdAt: {
+          $gte: todayStart,
+          $lte: todayEnd,
+        },
+        purchaseType: "silver",
+      },
+    },
+    { $group: { _id: null, total: { $sum: "$ornaments.grossWeight" } } },
+  ]);
   const totalNetAmount = await salesService.aggregate([
     { $unwind: "$ornaments" },
     {
@@ -158,6 +171,10 @@ async function get(req, res) {
       todayBills: await salesService.count({
         createdAt: date,
       }),
+      todaySilverBills: await salesService.count({
+        createdAt: date,
+        purchaseType: "silver",
+      }),
       todayPhysicalBills: await salesService.count({
         createdAt: date,
         saleType: "physical",
@@ -167,6 +184,7 @@ async function get(req, res) {
         saleType: "pledged",
       }),
       totalGrossWeight: totalGrossWeight[0]?.total || 0,
+      totalSilverGrossWeight: totalSilverGrossWeight[0]?.total || 0,
       totalNetAmount: totalNetAmount[0]?.total || 0,
       totalExpenses: totalExpenses[0]?.total || 0,
       pendingRelease: pendingRelease || 0,

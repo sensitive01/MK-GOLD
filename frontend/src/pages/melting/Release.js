@@ -407,6 +407,15 @@ export default function Release() {
             >
               Filter
             </Button>
+            {userType !== 'TRANSACTION_EXECUTIVE' && (
+              <Button
+                variant="contained"
+                startIcon={<Iconify icon="eva:plus-fill" />}
+                onClick={() => setOpenEditModal(true)}
+              >
+                New Pledged Release
+              </Button>
+            )}
           </Stack>
         </Stack>
 
@@ -441,7 +450,6 @@ export default function Release() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
-                  hideCheckbox={true}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
@@ -472,15 +480,13 @@ export default function Release() {
                         }}
                         style={{ cursor: 'pointer' }}
                       >
-                        {false && (
-                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selectedData}
-                              onChange={(event) => handleClick(event, _id)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </TableCell>
-                        )}
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedData}
+                            onChange={(event) => handleClick(event, _id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </TableCell>
                         <TableCell align="left">{pledgeId}</TableCell>
                         <TableCell align="left">{sentenceCase(pledgedIn)}</TableCell>
                         <TableCell align="left">{weight}</TableCell>

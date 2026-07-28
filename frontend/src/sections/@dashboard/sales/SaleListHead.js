@@ -34,6 +34,7 @@ export default function SaleListHead({
   numSelected,
   onRequestSort,
   onSelectAllClick,
+  hideCheckbox = false,
 }) {
   const createSortHandler = (property) => (event) => {
     onRequestSort(event, property);
@@ -42,13 +43,15 @@ export default function SaleListHead({
   return (
     <TableHead>
       <TableRow>
-        <TableCell padding="checkbox">
-          <Checkbox
-            indeterminate={numSelected > 0 && numSelected < rowCount}
-            checked={rowCount > 0 && numSelected === rowCount}
-            onChange={onSelectAllClick}
-          />
-        </TableCell>
+        {!hideCheckbox && (
+          <TableCell padding="checkbox">
+            <Checkbox
+              indeterminate={numSelected > 0 && numSelected < rowCount}
+              checked={rowCount > 0 && numSelected === rowCount}
+              onChange={onSelectAllClick}
+            />
+          </TableCell>
+        )}
         {headLabel?.map((headCell) => (
           <TableCell
             key={headCell.id}

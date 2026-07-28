@@ -390,6 +390,7 @@ export default function Customer({ isTab = false }) {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={true}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
@@ -410,13 +411,15 @@ export default function Customer({ isTab = false }) {
                         }}
                         style={{ cursor: 'pointer' }}
                       >
-                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                        {false && (
+                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedData}
                             onChange={(event) => handleClick(event, _id)}
                             onClick={(e) => e.stopPropagation()}
                           />
                         </TableCell>
+                        )}
                         <TableCell align="left">{sentenceCase(name ?? '')}</TableCell>
                         <TableCell align="left">{email}</TableCell>
                         <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>

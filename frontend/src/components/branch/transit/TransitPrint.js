@@ -53,6 +53,11 @@ export default function TransitPrint({ id, open, onClose }) {
     });
   }
 
+  const totalOrnaments = tableRows.reduce((acc, row) => acc + row.numberOfOrnaments, 0);
+  const totalGrossWeight = tableRows.reduce((acc, row) => acc + row.grossWeight, 0);
+  const totalNetWeight = tableRows.reduce((acc, row) => acc + row.netWeight, 0);
+  const totalNetAmount = tableRows.reduce((acc, row) => acc + row.netAmount, 0);
+
   const handlePrint = () => {
     const content = document.getElementById('transit-print-pdf');
     const pri = document.getElementById('transit-iframe').contentWindow;
@@ -145,6 +150,14 @@ export default function TransitPrint({ id, open, onClose }) {
                     <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px' }}>{row.billDate}</td>
                   </tr>
                 ))}
+                <tr style={{ fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>
+                  <td colSpan={5} style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontSize: '11px' }}>Total</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px' }}>{totalOrnaments}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px' }}>{totalGrossWeight.toFixed(3)}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px' }}>{totalNetWeight.toFixed(3)}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px' }}>{Math.round(totalNetAmount).toLocaleString('en-IN')}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px' }}></td>
+                </tr>
               </tbody>
             </table>
 

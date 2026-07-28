@@ -4,16 +4,24 @@ import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { createPayprocess } from '../../../apis/admin/payprocess';
-import { getEmployee } from '../../../apis/admin/employee';
+import { createPayprocess as createAdminPayprocess, updatePayprocess as updateAdminPayprocess } from '../../../apis/admin/payprocess';
+import { getEmployee as getAdminEmployee } from '../../../apis/admin/employee';
+import { createPayprocess as createAccountsPayprocess, updatePayprocess as updateAccountsPayprocess } from '../../../apis/accounts/payprocess';
+import { getEmployee as getAccountsEmployee } from '../../../apis/accounts/employee';
 
 function CreatePayprocess(props) {
   const auth = useSelector((state) => state.auth);
   const [employees, setEmloyees] = useState([]);
   const form = useRef();
 
+  const userType = auth?.user?.userType;
+  const isFinance = userType === 'finance' || userType === 'accounts';
+  const apiGetEmployee = isFinance ? getAccountsEmployee : getAdminEmployee;
+  const apiCreatePayprocess = isFinance ? createAccountsPayprocess : createAdminPayprocess;
+  const apiUpdatePayprocess = isFinance ? updateAccountsPayprocess : updateAdminPayprocess;
+
   useEffect(() => {
-    getEmployee().then((data) => {
+    apiGetEmployee().then((data) => {
       if (data?.data) {
         setEmloyees(data.data);
       }
@@ -29,10 +37,10 @@ function CreatePayprocess(props) {
 
   const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue, resetForm } = useFormik({
     initialValues: {
-      employee: '',
-      type: '',
-      amount: '',
-      note: '',
+      employee: props.editData?.employee?._id || props.editData?.employee || '',
+      type: props.editData?.type || '',
+      amount: props.editData?.amount || '',
+      note: props.editData?.note || '',
       loggedUsername: auth?.user?.employee?.name || auth?.user?.name || auth?.user?.username || '',
     },
     validationSchema: schema,
@@ -41,20 +49,29 @@ function CreatePayprocess(props) {
         ...values,
         loggedUsername: values.loggedUsername || auth?.user?.employee?.name || auth?.user?.name || auth?.user?.username || '',
       };
-      createPayprocess(payload).then((data) => {
+      const submitApi = props.editData ? apiUpdatePayprocess : apiCreatePayprocess;
+      const apiArgs = props.editData ? [props.editData._id, payload] : [payload];
+
+      submitApi(...apiArgs).then((data) => {
         if (data.status === false) {
           props.setNotify({
             open: true,
-            message: 'Payprocess not created',
+            message: `Payprocess not ${props.editData ? 'updated' : 'created'}`,
             severity: 'error',
           });
         } else {
           props.setToggleContainer(false);
+          if (props.setToggleContainerType) {
+            props.setToggleContainerType('');
+          }
+          if (props.fetchData) {
+            props.fetchData();
+          }
           form.current.reset();
           resetForm();
           props.setNotify({
             open: true,
-            message: 'Payprocess created',
+            message: `Payprocess ${props.editData ? 'updated' : 'created'}`,
             severity: 'success',
           });
         }
@@ -148,9 +165,9 @@ function CreatePayprocess(props) {
             />
           </Grid>
           <Grid item xs={12}>
-            <LoadingButton size="large" type="submit" variant="contained">
-              Save
-            </LoadingButton>
+                <LoadingButton size="large" type="submit" variant="contained" loading={props.loading}>
+                  {props.editData ? 'Update' : 'Create'}
+                </LoadingButton>
           </Grid>
         </Grid>
       </form>

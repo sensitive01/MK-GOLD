@@ -724,6 +724,7 @@ export default function Leads({ title = "Leads Management" }) {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={true}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
@@ -745,13 +746,15 @@ export default function Leads({ title = "Leads Management" }) {
                         }}
                         style={{ cursor: 'pointer' }}
                       >
-                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                        {false && (
+                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedData}
                             onChange={(event) => handleClick(event, _id)}
                             onClick={(e) => e.stopPropagation()}
                           />
                         </TableCell>
+                        )}
                         <TableCell align="left">
                           {row.isExclusive && (
                             <Iconify icon="eva:star-fill" sx={{ color: 'warning.main', mr: 1, verticalAlign: 'text-bottom' }} />

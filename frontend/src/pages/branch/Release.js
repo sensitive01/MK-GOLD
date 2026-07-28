@@ -4,30 +4,30 @@ import { forwardRef, useEffect, useState, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
-    Backdrop,
-    Box,
-    Button,
-    Card,
-    Checkbox,
-    CircularProgress,
-    Container,
-    IconButton,
-    MenuItem,
-    Modal,
-    Paper,
-    Popover,
-    Snackbar,
-    Stack,
-    Table,
-    TableHead,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TablePagination,
-    TableRow,
-    Typography,
-    Divider,
-    Link,
+  Backdrop,
+  Box,
+  Button,
+  Card,
+  Checkbox,
+  CircularProgress,
+  Container,
+  IconButton,
+  MenuItem,
+  Modal,
+  Paper,
+  Popover,
+  Snackbar,
+  Stack,
+  Table,
+  TableHead,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TablePagination,
+  TableRow,
+  Typography,
+  Divider,
+  Link,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
@@ -202,13 +202,13 @@ export default function Release() {
     onSubmit: (values) => {
       setOpenBackdrop(true);
       const query = { branch: auth.user?.branch?._id || auth.user?.branch };
-      
+
       if (values.fromDate || values.toDate) {
         query.createdAt = {};
         if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
         if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
       }
-      
+
       fetchData(query);
       setFilterOpen(false);
     },
@@ -407,7 +407,7 @@ export default function Release() {
             >
               Filter
             </Button>
-            {userType !== 'TRANSACTION_EXECUTIVE' && (
+            {userType !== 'TRANSACTION_EXECUTIVE' && !userType?.toLowerCase().includes('bullion') && (
               <Button
                 variant="contained"
                 startIcon={<Iconify icon="eva:plus-fill" />}
@@ -450,6 +450,7 @@ export default function Release() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={true}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
@@ -480,13 +481,15 @@ export default function Release() {
                         }}
                         style={{ cursor: 'pointer' }}
                       >
-                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                        {false && (
+                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedData}
                             onChange={(event) => handleClick(event, _id)}
                             onClick={(e) => e.stopPropagation()}
                           />
                         </TableCell>
+                        )}
                         <TableCell align="left">{pledgeId}</TableCell>
                         <TableCell align="left">{sentenceCase(pledgedIn)}</TableCell>
                         <TableCell align="left">{weight}</TableCell>
@@ -495,9 +498,9 @@ export default function Release() {
                         <TableCell align="left">{payableAmount}</TableCell>
                         <TableCell align="left">{sentenceCase(paymentType)}</TableCell>
                         <TableCell align="left" onClick={(e) => e.stopPropagation()}>
-                          <Status 
-                            status={status} 
-                            _id={_id} 
+                          <Status
+                            status={status}
+                            _id={_id}
                             assignee={row.assignee?._id || row.assignee}
                             financeCompleted={row.financeCompleted}
                             assigneeCompleted={row.assigneeCompleted}
@@ -691,14 +694,14 @@ export default function Release() {
               const release = data.find((s) => s._id === openId);
               return (
                 <Box sx={{ minWidth: 400, py: 1 }}>
-                   <Typography variant="subtitle2" gutterBottom>
+                  <Typography variant="subtitle2" gutterBottom>
                     Current Release Status: <span style={{ color: release.status === 'completed' ? 'green' : 'orange' }}>
                       {sentenceCase(release.status || 'pending')}
                     </span>
                   </Typography>
 
                   <TimelineView timeline={release.timeline} />
-                  
+
                   {release.actionLog && release.actionLog.length > 0 && (
                     <Box sx={{ mt: 4 }}>
                       <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.secondary' }}>
@@ -1119,7 +1122,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
     validationSchema: schema,
     onSubmit: async (values) => {
       setLoading(true);
-      
+
       const payload = {};
       // Assignee marks the release as complete
       if (type === 'release_complete') {
@@ -1208,10 +1211,10 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
               <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
                 <Typography variant="h6" color="primary">Proof Documents</Typography>
                 <Button variant="contained" size="small" startIcon={<Iconify icon="eva:plus-fill" />} onClick={() => setShowProofForm(!showProofForm)}>
-                   {showProofForm ? 'Hide' : 'Add'}
+                  {showProofForm ? 'Hide' : 'Add'}
                 </Button>
               </Stack>
-              
+
               {showProofForm && (
                 <Box sx={{ p: 2, border: '1px dashed #ccc', borderRadius: 1, mb: 2, bgcolor: '#f9f9f9' }}>
                   <Grid container spacing={2}>
@@ -1223,12 +1226,12 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                           onChange={(e) => setProofValues({ ...proofValues, documentType: e.target.value })}
                           label="Document Type"
                         >
-                           <MenuItem value="Ornaments Photo">Ornaments Photo</MenuItem>
-                           <MenuItem value="Purchase bill">Purchase bill</MenuItem>
-                           <MenuItem value="Pledge Receipt">Pledge Receipt</MenuItem>
-                           <MenuItem value="Interest slip">Interest slip</MenuItem>
-                           <MenuItem value="Release Copy">Release Copy</MenuItem>
-                           {/* <MenuItem value="others">others</MenuItem> */}
+                          <MenuItem value="Ornaments Photo">Ornaments Photo</MenuItem>
+                          <MenuItem value="Purchase bill">Purchase bill</MenuItem>
+                          <MenuItem value="Pledge Receipt">Pledge Receipt</MenuItem>
+                          <MenuItem value="Interest slip">Interest slip</MenuItem>
+                          <MenuItem value="Release Copy">Release Copy</MenuItem>
+                          {/* <MenuItem value="others">others</MenuItem> */}
                         </Select>
                       </FormControl>
                     </Grid>
@@ -1356,39 +1359,39 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
               )}
 
               <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300 }}>
-                  <Table size="small" stickyHeader>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Document Type</TableCell>
-                        <TableCell>Document No</TableCell>
-                        <TableCell>File</TableCell>
-                        <TableCell>Action</TableCell>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Document Type</TableCell>
+                      <TableCell>Document No</TableCell>
+                      <TableCell>File</TableCell>
+                      <TableCell>Action</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {proofDocuments.map((doc, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>{doc.documentType}</TableCell>
+                        <TableCell>{doc.documentNo}</TableCell>
+                        <TableCell>
+                          {doc.documentFile && doc.documentFile !== 'undefined' ? (
+                            <Link href={doc.documentFile} target="_blank" variant="caption">View</Link>
+                          ) : (
+                            <Typography variant="caption" color="text.disabled">No File</Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <IconButton color="error" size="small" onClick={() => setProofDocuments(proofDocuments.filter((_, i) => i !== idx))}>
+                            <Iconify icon="eva:trash-2-outline" />
+                          </IconButton>
+                        </TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {proofDocuments.map((doc, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell>{doc.documentType}</TableCell>
-                          <TableCell>{doc.documentNo}</TableCell>
-                          <TableCell>
-                             {doc.documentFile && doc.documentFile !== 'undefined' ? (
-                               <Link href={doc.documentFile} target="_blank" variant="caption">View</Link>
-                             ) : (
-                               <Typography variant="caption" color="text.disabled">No File</Typography>
-                             )}
-                          </TableCell>
-                          <TableCell>
-                            <IconButton color="error" size="small" onClick={() => setProofDocuments(proofDocuments.filter((_, i) => i !== idx))}>
-                              <Iconify icon="eva:trash-2-outline" />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {proofDocuments.length === 0 && (
-                        <TableRow><TableCell colSpan={4} align="center">No documents</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                    ))}
+                    {proofDocuments.length === 0 && (
+                      <TableRow><TableCell colSpan={4} align="center">No documents</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </TableContainer>
             </Grid>
 
@@ -1416,29 +1419,29 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                             onChange={(e) => setOrnamentValues({ ...ornamentValues, ornamentType: e.target.value })}
                             label="Ornament Type"
                           >
-                             <MenuItem value="22 Carat Bar (91.6)">22 Carat Bar (91.6)</MenuItem>
-                             <MenuItem value="24 Carat Bar (99.9)">24 Carat Bar (99.9)</MenuItem>
-                             <MenuItem value="22 Carat Coin (91.6)">22 Carat Coin (91.6)</MenuItem>
-                             <MenuItem value="24 Carat Coin (99.9)">24 Carat Coin (99.9)</MenuItem>
-                             <MenuItem value="Anklets">Anklets</MenuItem>
-                             <MenuItem value="Baby Bangles">Baby Bangles</MenuItem>
-                             <MenuItem value="Bangles">Bangles</MenuItem>
-                             <MenuItem value="Bracelet">Bracelet</MenuItem>
-                             <MenuItem value="Broad Bangles">Broad Bangles</MenuItem>
-                             <MenuItem value="Chain">Chain</MenuItem>
-                             <MenuItem value="Chain with Locket">Chain with Locket</MenuItem>
-                             <MenuItem value="Drops">Drops</MenuItem>
-                             <MenuItem value="Ear Rings">Ear Rings</MenuItem>
-                             <MenuItem value="Melted Bar">Melted Bar</MenuItem>
-                             <MenuItem value="Locket">Locket</MenuItem>
-                             <MenuItem value="Matti">Matti</MenuItem>
-                             <MenuItem value="Necklace">Necklace</MenuItem>
-                             <MenuItem value="Ring">Ring</MenuItem>
-                             <MenuItem value="Studs">Studs</MenuItem>
-                             <MenuItem value="Studs with drops">Studs with drops</MenuItem>
-                             <MenuItem value="Thali Chain">Thali Chain</MenuItem>
-                             <MenuItem value="Toe Ring">Toe Ring</MenuItem>
-                             <MenuItem value="Waist Belt/Chain">Waist Belt/Chain</MenuItem>
+                            <MenuItem value="22 Carat Bar (91.6)">22 Carat Bar (91.6)</MenuItem>
+                            <MenuItem value="24 Carat Bar (99.9)">24 Carat Bar (99.9)</MenuItem>
+                            <MenuItem value="22 Carat Coin (91.6)">22 Carat Coin (91.6)</MenuItem>
+                            <MenuItem value="24 Carat Coin (99.9)">24 Carat Coin (99.9)</MenuItem>
+                            <MenuItem value="Anklets">Anklets</MenuItem>
+                            <MenuItem value="Baby Bangles">Baby Bangles</MenuItem>
+                            <MenuItem value="Bangles">Bangles</MenuItem>
+                            <MenuItem value="Bracelet">Bracelet</MenuItem>
+                            <MenuItem value="Broad Bangles">Broad Bangles</MenuItem>
+                            <MenuItem value="Chain">Chain</MenuItem>
+                            <MenuItem value="Chain with Locket">Chain with Locket</MenuItem>
+                            <MenuItem value="Drops">Drops</MenuItem>
+                            <MenuItem value="Ear Rings">Ear Rings</MenuItem>
+                            <MenuItem value="Melted Bar">Melted Bar</MenuItem>
+                            <MenuItem value="Locket">Locket</MenuItem>
+                            <MenuItem value="Matti">Matti</MenuItem>
+                            <MenuItem value="Necklace">Necklace</MenuItem>
+                            <MenuItem value="Ring">Ring</MenuItem>
+                            <MenuItem value="Studs">Studs</MenuItem>
+                            <MenuItem value="Studs with drops">Studs with drops</MenuItem>
+                            <MenuItem value="Thali Chain">Thali Chain</MenuItem>
+                            <MenuItem value="Toe Ring">Toe Ring</MenuItem>
+                            <MenuItem value="Waist Belt/Chain">Waist Belt/Chain</MenuItem>
                           </Select>
                         </FormControl>
                       </Grid>

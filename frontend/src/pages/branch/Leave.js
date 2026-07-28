@@ -346,6 +346,7 @@ export default function Leave() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={true}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
@@ -354,9 +355,11 @@ export default function Leave() {
 
                     return (
                       <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                        </TableCell>
+                        {false && (
+                          <TableCell padding="checkbox">
+                            <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                          </TableCell>
+                        )}
                         {currentTab === 'requests' && <TableCell align="left">{branch?.branchId}</TableCell>}
                         {currentTab === 'requests' && <TableCell align="left">{branch?.branchName}</TableCell>}
                         {currentTab === 'requests' && <TableCell align="left">{employee?.employeeId}</TableCell>}

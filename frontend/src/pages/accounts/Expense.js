@@ -44,13 +44,12 @@ import moment from 'moment';
 import * as XLSX from 'xlsx';
 import * as Yup from 'yup';
 // components
-import { UpdateExpense } from '../../components/accounts/expense';
+import { CreateExpense, UpdateExpense } from '../../components/accounts/expense';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 // sections
 import { ExpenseListHead, ExpenseListToolbar } from '../../sections/@dashboard/expense';
-import SuccessModal from '../../components/success-modal';
 // mock
 import { deleteExpenseById, getExpense, updateExpense } from '../../apis/accounts/expense';
 
@@ -324,14 +323,7 @@ export default function Expense() {
         <title> Expense | MK Gold </title>
       </Helmet>
 
-      {notify.severity === 'success' ? (
-        <SuccessModal
-          open={notify.open}
-          message={notify.message}
-          onClose={() => setNotify({ ...notify, open: false })}
-        />
-      ) : (
-        <Snackbar
+      <Snackbar
           anchorOrigin={{
             vertical: 'top',
             horizontal: 'right',
@@ -352,7 +344,6 @@ export default function Expense() {
             {notify.message}
           </Alert>
         </Snackbar>
-      )}
 
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
@@ -366,6 +357,16 @@ export default function Expense() {
               onClick={handleFilterOpen}
             >
               Filter
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setToggleContainerType('create');
+                setToggleContainer(true);
+              }}
+            >
+              New Expense
             </Button>
             <Button
               variant="contained"
@@ -417,6 +418,7 @@ export default function Expense() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={true}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
@@ -425,9 +427,11 @@ export default function Expense() {
 
                     return (
                       <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                        </TableCell>
+                        {false && (
+                          <TableCell padding="checkbox">
+                            <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                          </TableCell>
+                        )}
                         <TableCell align="left">{type}</TableCell>
                         <TableCell align="left">{amount}</TableCell>
                         <TableCell align="left">{branch?.branchId}</TableCell>
@@ -519,6 +523,28 @@ export default function Expense() {
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
         </Card>
+      </Container>
+
+      <Container
+        maxWidth="xl"
+        sx={{ display: toggleContainer === true && toggleContainerType === 'create' ? 'block' : 'none' }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+            
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mdi:arrow-left" />}
+            onClick={() => {
+              setToggleContainer(!toggleContainer);
+            }}
+          >
+            Back
+          </Button>
+        </Stack>
+
+        <CreateExpense setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
       </Container>
 
       <Container

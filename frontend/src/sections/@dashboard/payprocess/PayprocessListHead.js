@@ -24,6 +24,7 @@ PayprocessListHead.propTypes = {
   numSelected: PropTypes.number,
   onRequestSort: PropTypes.func,
   onSelectAllClick: PropTypes.func,
+  hideCheckbox: PropTypes.bool,
 };
 
 export default function PayprocessListHead({
@@ -34,6 +35,7 @@ export default function PayprocessListHead({
   numSelected,
   onRequestSort,
   onSelectAllClick,
+  hideCheckbox = false,
 }) {
   const createSortHandler = (property) => (event) => {
     onRequestSort(event, property);
@@ -42,13 +44,15 @@ export default function PayprocessListHead({
   return (
     <TableHead>
       <TableRow>
-        <TableCell padding="checkbox">
-          <Checkbox
-            indeterminate={numSelected > 0 && numSelected < rowCount}
-            checked={rowCount > 0 && numSelected === rowCount}
-            onChange={onSelectAllClick}
-          />
-        </TableCell>
+        {!hideCheckbox && (
+          <TableCell padding="checkbox">
+            <Checkbox
+              indeterminate={numSelected > 0 && numSelected < rowCount}
+              checked={rowCount > 0 && numSelected === rowCount}
+              onChange={onSelectAllClick}
+            />
+          </TableCell>
+        )}
         {headLabel?.map((headCell) => (
           <TableCell
             key={headCell.id}

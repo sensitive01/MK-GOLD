@@ -46,16 +46,14 @@ import moment from 'moment';
 import * as XLSX from 'xlsx';
 import * as Yup from 'yup';
 // components
+import Adjustments from './Adjustments';
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
 // sections
 import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashboard/attendance';
-// mock
-import { deleteAttendanceById, getAttendance, getConsolidatedAttendance } from '../../apis/admin/attendance';
-import { getBranchAttendanceStats } from '../../apis/branch/attendance';
+import { getAttendance, getConsolidatedAttendance, getBranchAttendanceStats, updateAttendance } from '../../apis/accounts/attendance';
 import CreateAttendance from '../../components/branch/attendance/CreateAttendance';
 import global from '../../utils/global';
-import Payprocess from './Payprocess';
 
 // ----------------------------------------------------------------------
 
@@ -88,7 +86,7 @@ function applySortFilter(array, comparator, query) {
   return stabilizedThis?.map((el) => el[0]);
 }
 
-export default function Attendance() {
+export default function FinanceAttendance() {
   const auth = useSelector((state) => state.auth);
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
@@ -112,6 +110,50 @@ export default function Attendance() {
   const [attendanceDetails, setAttendanceDetails] = useState([]);
   const [modalLoading, setModalLoading] = useState(false);
   const [attendanceSummary, setAttendanceSummary] = useState({ present: 0, absent: 0, remainingDays: 0 });
+
+  const [openLogoutModal, setOpenLogoutModal] = useState(false);
+  const [logoutRecord, setLogoutRecord] = useState(null);
+  const [logoutTimer, setLogoutTimer] = useState(null);
+  const timerIntervalRef = useRef(null);
+
+  const handleLogout = (record) => {
+    setLogoutRecord(record);
+    setLogoutTimer(null);
+    setOpenLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    updateAttendance(logoutRecord._id, { logoutTime: new Date() }).then(() => {
+      fetchData();
+      let secondsLeft = 5;
+      setLogoutTimer(secondsLeft);
+      const intervalId = setInterval(() => {
+        secondsLeft -= 1;
+        setLogoutTimer(secondsLeft);
+        if (secondsLeft <= 0) {
+          clearInterval(intervalId);
+          setOpenLogoutModal(false);
+          // if we wanted to also log the user out of the app we would dispatch(logout()) here
+          // but usually this is just punching out of attendance
+        }
+      }, 1000);
+      timerIntervalRef.current = intervalId;
+
+      setNotify({
+        open: true,
+        message: 'Logout marked successfully!',
+        severity: 'success',
+      });
+    });
+  };
+
+  const handleCloseLogoutModal = () => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+    setOpenLogoutModal(false);
+    setLogoutTimer(null);
+  };
 
   const fetchAttendanceDetails = async (employee) => {
     setModalLoading(true);
@@ -392,7 +434,6 @@ export default function Attendance() {
     { id: 'attendance', label: 'Photo', alignRight: false },
     { id: 'loginTime', label: 'Login Time', alignRight: false },
     { id: 'logoutTime', label: 'Logout Time', alignRight: false },
-    { id: '' },
   ];
 
   const style = {
@@ -464,16 +505,16 @@ export default function Attendance() {
           <Box sx={{ width: '100%' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
               <Tabs value={currentTab} onChange={(e, v) => setCurrentTab(v)} aria-label="attendance tabs" variant="scrollable" scrollButtons="auto">
-                <Tab value="all_attendance" label="All" />
-                <Tab value="my_attendance" label="My Attendances" />
+                <Tab value="all_attendance" label="All Attendance" />
+                <Tab value="my_attendance" label="My Attendance" />
                 <Tab value="consolidated_attendance" label="Consolidated" />
-                <Tab value="payprocess" label="Payprocess" />
+                <Tab value="adjustments" label="Adjustments" />
               </Tabs>
             </Box>
             
             <Box sx={{ p: 3 }}>
-              {currentTab === 'payprocess' ? (
-                <Payprocess />
+              {currentTab === 'adjustments' ? (
+                <Adjustments />
               ) : (
                 <>
                   <Button variant="contained" startIcon={<Iconify icon="material-symbols:filter-alt-off" />} onClick={() => setFilterOpen(true)} sx={{ float: 'right', mx: '10px' }}>
@@ -506,7 +547,6 @@ export default function Attendance() {
                 numSelected={selected?.length}
                 filterName={filterName}
                 onFilterName={handleFilterByName}
-                handleDelete={() => { setDeleteType('selected'); handleOpenDeleteModal(); }}
               />
 
               <Scrollbar>
@@ -520,7 +560,7 @@ export default function Attendance() {
                       numSelected={selected?.length}
                       onRequestSort={handleRequestSort}
                       onSelectAllClick={handleSelectAllClick}
-                      hideCheckbox={currentTab === 'consolidated_attendance'}
+                      hideCheckbox={true}
                     />
                     <TableBody>
                       {currentTab === 'consolidated_attendance' && filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row, index) => {
@@ -547,9 +587,11 @@ export default function Attendance() {
                         const selectedData = selected.indexOf(_id) !== -1;
                         return (
                           <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                            <TableCell padding="checkbox">
-                              <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                            </TableCell>
+                            {false && (
+                              <TableCell padding="checkbox">
+                                <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                              </TableCell>
+                            )}
                             {currentTab === 'all_attendance' && (
                               <>
                                 <TableCell align="left">{employee?.employeeId}</TableCell>
@@ -562,11 +604,31 @@ export default function Attendance() {
                               ) : 'No Image'}
                             </TableCell>
                             <TableCell align="left">{moment(row?.loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}</TableCell>
-                            <TableCell align="left">{row.logoutTime ? moment(row.logoutTime).format('DD-MM-YYYY HH:mm:ss') : 'N/A'}</TableCell>
-                            <TableCell align="right">
-                              <IconButton size="large" color="inherit" onClick={(e) => { setOpenId(_id); handleOpenMenu(e); }}>
-                                <Iconify icon={'eva:more-vertical-fill'} />
-                              </IconButton>
+                            <TableCell align="left">
+                              {row.logoutTime ? (
+                                moment(row.logoutTime).format('DD-MM-YYYY HH:mm:ss')
+                              ) : (
+                                currentTab === 'my_attendance' && employee && auth.user.employee &&
+                                (employee?._id?.toString() || employee?.toString()) === (auth.user.employee?._id?.toString() || auth.user.employee?.toString()) ? (
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => handleLogout(row)}
+                                    sx={{
+                                      color: 'error.main',
+                                      borderColor: 'error.main',
+                                      '&:hover': {
+                                        bgcolor: 'rgba(255, 0, 0, 0.08)',
+                                        borderColor: 'error.dark',
+                                      },
+                                    }}
+                                  >
+                                    Logout
+                                  </Button>
+                                ) : (
+                                  'Not Logged Out'
+                                )
+                              )}
                             </TableCell>
                           </TableRow>
                         );
@@ -608,27 +670,96 @@ export default function Attendance() {
         </Card>
       </Box>
 
-      <Popover
-        open={Boolean(open)}
-        anchorEl={open}
-        onClose={handleCloseMenu}
-        anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        PaperProps={{ sx: { p: 1, width: 140, '& .MuiMenuItem-root': { px: 1, typography: 'body2', borderRadius: 0.75 } } }}
-      >
-        <MenuItem sx={{ color: 'error.main' }} onClick={() => { setOpen(null); setDeleteType('single'); handleOpenDeleteModal(); }}>
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} /> Delete
-        </MenuItem>
-      </Popover>
+      <Modal open={openLogoutModal} onClose={handleCloseLogoutModal}>
+        <Box sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 400,
+          bgcolor: '#fff',
+          boxShadow: 24,
+          p: 4,
+          borderRadius: 3,
+        }}>
+          <Typography variant="h6" sx={{ color: '#1E293B', fontWeight: 'bold', mb: 2 }}>
+            Logout Confirmation
+          </Typography>
+          <Box sx={{ borderBottom: '1px solid #E2E8F0', mb: 2 }} />
 
-      <Modal open={openDeleteModal} onClose={handleCloseDeleteModal}>
-        <Box sx={style}>
-          <Typography variant="h6">Delete Confirmation</Typography>
-          <Typography sx={{ mt: 3 }}>Do you want to delete this record?</Typography>
-          <Stack direction="row" spacing={2} mt={3}>
-            <Button variant="contained" color="error" onClick={() => { if (deleteType === 'single') handleDelete(); else handleDeleteSelected(); }}>Delete</Button>
-            <Button variant="contained" onClick={handleCloseDeleteModal}>Close</Button>
-          </Stack>
+          {logoutRecord && (() => {
+            const loginMoment = moment(logoutRecord.loginTime || logoutRecord.createdAt);
+            const expectedMoment = moment(loginMoment).set({ hour: 10, minute: 0, second: 0, millisecond: 0 });
+            
+            let punctualText = 'On time';
+            if (loginMoment.isAfter(expectedMoment)) {
+              const diff = moment.duration(loginMoment.diff(expectedMoment));
+              punctualText = `Late by ${diff.hours()}h ${diff.minutes()}m`;
+            }
+
+            const currentMoment = moment();
+            const totalWorked = moment.duration(currentMoment.diff(loginMoment));
+            const totalWorkedText = `${Math.floor(totalWorked.asHours())}h ${totalWorked.minutes()}m`;
+
+            return (
+              <Stack spacing={1.5} sx={{ mb: 3 }}>
+                <Typography variant="body2" sx={{ color: '#475569' }}>
+                  <strong style={{ color: '#1E293B' }}>Logged in at :</strong> {loginMoment.format('hh:mm A')}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#475569' }}>
+                  <strong style={{ color: '#1E293B' }}>Punctual :</strong> {punctualText}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#475569' }}>
+                  <strong style={{ color: '#1E293B' }}>Total Duration Worked Today:</strong> {totalWorkedText}
+                </Typography>
+              </Stack>
+            );
+          })()}
+
+          <Box sx={{ borderBottom: '1px solid #E2E8F0', mb: 3 }} />
+
+          {logoutTimer !== null ? (
+            <Box sx={{ mt: 3, textAlign: 'center' }}>
+              <CircularProgress variant="determinate" value={(logoutTimer / 5) * 100} sx={{ color: 'success.main', mb: 1 }} />
+              <Typography variant="body2" sx={{ color: 'success.main' }}>
+                Logout successful. Closing in {logoutTimer}s...
+              </Typography>
+            </Box>
+          ) : (
+            <>
+              <Typography sx={{ color: '#475569', mb: 3 }}>
+                Are you sure you want to logout?
+              </Typography>
+              <Stack direction="row" spacing={2}>
+                <Button 
+                  variant="contained" 
+                  onClick={confirmLogout}
+                  sx={{ 
+                    bgcolor: '#FF4842', 
+                    color: '#fff', 
+                    '&:hover': { bgcolor: '#B72136' },
+                    textTransform: 'none',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Logout
+                </Button>
+                <Button 
+                  variant="contained" 
+                  onClick={handleCloseLogoutModal} 
+                  sx={{ 
+                    bgcolor: '#FFC107', 
+                    color: '#1E293B', 
+                    '&:hover': { bgcolor: '#B78103' },
+                    textTransform: 'none',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Cancel
+                </Button>
+              </Stack>
+            </>
+          )}
         </Box>
       </Modal>
 

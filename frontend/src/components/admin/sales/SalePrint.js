@@ -121,6 +121,34 @@ export default function SalePrint({ id }) {
 
   return (
     <>
+      {(data?.status?.toLowerCase() === 'approved' || data?.status?.toLowerCase() === 'completed') && (
+        <div style={{ width: '750px', margin: '0 auto', paddingBottom: '10px', textAlign: 'right' }}>
+          <Button
+            variant="contained"
+            sx={{
+              bgcolor: '#FFD700',
+              color: 'primary.main',
+              '&:hover': {
+                bgcolor: '#FFD700',
+              },
+            }}
+            startIcon={<Iconify icon={'material-symbols:print'} sx={{ mr: 2, color: 'primary.main' }} />}
+            onClick={() => {
+              const content = document.getElementById('pdf');
+              const pri = document.getElementById('iframe').contentWindow;
+              pri.document.open();
+              pri.document.write('<html><head><meta charset="utf-8"><title>Print Bill</title></head><body style="margin:0;">' + content.outerHTML + '</body></html>');
+              pri.document.close();
+              pri.onload = () => {
+                pri.focus();
+                pri.print();
+              };
+            }}
+          >
+            Print
+          </Button>
+        </div>
+      )}
       <iframe id="iframe" style={{ display: 'none', height: '0px', width: '0px', position: 'absolute' }} title="pdf" />
       <div id="pdf" style={{ color: '#000', backgroundColor: '#fff', padding: '30px', fontFamily: 'Arial, sans-serif', fontSize: '13px', width: '750px', margin: '0 auto', boxSizing: 'border-box' }}>
         
@@ -393,7 +421,7 @@ export default function SalePrint({ id }) {
               <td style={{ width: '40%', textAlign: 'center', fontSize: '11px', color: '#555', verticalAlign: 'bottom', paddingBottom: '4px' }}>
                 Thanks For your billing
                 <br />
-                <a href="https://mkgold.tech" target="_blank" rel="noopener noreferrer" style={{ color: '#000', textDecoration: 'none', fontWeight: 'bold' }}>mkgold.tech</a>
+                <a href="https://mkgold.in" target="_blank" rel="noopener noreferrer" style={{ color: '#000', textDecoration: 'none', fontWeight: 'bold' }}>mkgold.in</a>
               </td>
               <td style={{ width: '30%', textAlign: 'center', verticalAlign: 'bottom' }}>
                 <div style={{ height: '50px', marginBottom: '4px' }}>
@@ -415,33 +443,6 @@ export default function SalePrint({ id }) {
         </table>
       </div>
 
-      {(data?.status?.toLowerCase() === 'approved' || data?.status?.toLowerCase() === 'completed') && (
-        <Button
-          variant="contained"
-          sx={{
-            bgcolor: '#FFD700',
-            color: 'primary.main',
-            '&:hover': {
-              bgcolor: '#FFD700',
-            },
-            mt: 2,
-          }}
-          startIcon={<Iconify icon={'material-symbols:print'} sx={{ mr: 2, color: 'primary.main' }} />}
-          onClick={() => {
-            const content = document.getElementById('pdf');
-            const pri = document.getElementById('iframe').contentWindow;
-            pri.document.open();
-            pri.document.write('<html><head><meta charset="utf-8"><title>Print Bill</title></head><body style="margin:0;">' + content.outerHTML + '</body></html>');
-            pri.document.close();
-            pri.onload = () => {
-              pri.focus();
-              pri.print();
-            };
-          }}
-        >
-          Print
-        </Button>
-      )}
     </>
   );
 }

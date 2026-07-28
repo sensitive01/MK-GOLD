@@ -46,7 +46,7 @@ import moment from 'moment';
 import * as XLSX from 'xlsx';
 import * as Yup from 'yup';
 // components
-import { UpdateFund } from '../../components/accounts/fund';
+import { UpdateFund, CreateFund } from '../../components/accounts/fund';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
@@ -403,6 +403,16 @@ export default function Fund() {
             </Button>
             <Button
               variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setToggleContainerType('create');
+                setToggleContainer(true);
+              }}
+            >
+              New Fund
+            </Button>
+            <Button
+              variant="contained"
               startIcon={<Iconify icon="carbon:document-export" />}
               onClick={() => handleExport(null, 'Funds')}
             >
@@ -452,6 +462,7 @@ export default function Fund() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={true}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
@@ -469,9 +480,11 @@ export default function Fund() {
 
                     return (
                       <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                        </TableCell>
+                        {false && (
+                          <TableCell padding="checkbox">
+                            <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                          </TableCell>
+                        )}
                         <TableCell align="left">{type}</TableCell>
                         <TableCell align="left">{amount}</TableCell>
                         <TableCell align="left">{fromName}</TableCell>
@@ -563,6 +576,28 @@ export default function Fund() {
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
         </Card>
+      </Container>
+
+      <Container
+        maxWidth="xl"
+        sx={{ display: toggleContainer === true && toggleContainerType === 'create' ? 'block' : 'none' }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+            New Fund
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mdi:arrow-left" />}
+            onClick={() => {
+              setToggleContainer(!toggleContainer);
+            }}
+          >
+            Back
+          </Button>
+        </Stack>
+
+        <CreateFund setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
       </Container>
 
       <Container

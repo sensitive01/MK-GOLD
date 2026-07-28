@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import confetti from 'canvas-confetti';
 import { getExpenseById, updateExpense } from '../../../apis/accounts/expense';
 
 const initialValues = {
@@ -19,7 +18,7 @@ function UpdateExpense(props) {
   // Form validation
   const schema = Yup.object({
     type: Yup.string().required('Type is required'),
-    amount: Yup.string().required('Amount is required'),
+    amount: Yup.number().typeError('Amount must be a number').required('Amount is required'),
     note: Yup.string().required('Note is required'),
     status: Yup.string().required('Status is required'),
   });
@@ -41,12 +40,6 @@ function UpdateExpense(props) {
             open: true,
             message: 'Expense updated',
             severity: 'success',
-          });
-          confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ['#8A1B9F', '#FFD700', '#ffffff']
           });
         }
       });
@@ -87,6 +80,7 @@ function UpdateExpense(props) {
           <Grid item xs={12} sm={4}>
             <TextField
               name="amount"
+              type="number"
               value={values.amount}
               error={touched.amount && errors.amount && true}
               label={touched.amount && errors.amount ? errors.amount : 'Amount'}

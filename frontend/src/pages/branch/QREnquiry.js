@@ -149,7 +149,8 @@ export default function QREnquiry() {
                     orderBy=""
                     onRequestSort={() => {}}
                     onSelectAllClick={handleSelectAllClick}
-                  />
+                    hideCheckbox={true}
+                />
                   <TableBody>
                     {data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
                       const { _id, enqID, name, phoneNumber, email, type, grossWeight, pincode, createdAt } = row;
@@ -164,9 +165,11 @@ export default function QREnquiry() {
                           onClick={() => handleOpenLogModal(row)}
                           sx={{ cursor: 'pointer' }}
                         >
+                          {false && (
                           <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                             <Checkbox checked={isItemSelected} onChange={(event) => handleClick(event, _id)} />
                           </TableCell>
+                        )}
                           <TableCell align="left" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                             {enqID}
                           </TableCell>

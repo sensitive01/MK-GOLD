@@ -1,6 +1,7 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
 import { forwardRef, useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
@@ -26,6 +27,8 @@ import {
     TableHead,
     TablePagination,
     TableRow,
+    Tabs,
+    Tab,
     Typography,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
@@ -35,29 +38,19 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import moment from 'moment';
 // components
-import { CreateLeave, UpdateLeave } from '../../components/accounts/leave';
+import { CreateLeave, UpdateLeave } from '../../components/branch/leave';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 // sections
 import { LeaveListHead, LeaveListToolbar } from '../../sections/@dashboard/leave';
 // mock
-import { deleteLeaveById, getLeave } from '../../apis/accounts/leave';
+import { deleteLeaveById, getLeave, updateLeave } from '../../apis/branch/leave';
+import global from '../../utils/global';
 
 // ----------------------------------------------------------------------
 
-const TABLE_HEAD = [
-  { id: 'branchId', label: 'Branch Id', alignRight: false },
-  { id: 'branchName', label: 'Branch Name', alignRight: false },
-  { id: 'employeeId', label: 'Employee Id', alignRight: false },
-  { id: 'employeeName', label: 'Employee Name', alignRight: false },
-  { id: 'leaveType', label: 'Leave Type', alignRight: false },
-  { id: 'dates', label: 'Dates', alignRight: false },
-  { id: 'note', label: 'Note', alignRight: false },
-  { id: 'status', label: 'Status', alignRight: false },
-  { id: 'createdAt', label: 'Date', alignRight: false },
-  { id: '' },
-];
+
 
 // ----------------------------------------------------------------------
 
@@ -108,6 +101,25 @@ export default function Leave() {
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
   const [logModal, setLogModal] = useState({ open: false, logs: [] });
+  const auth = useSelector((state) => state.auth);
+  const userType = auth.user.userType?.toLowerCase();
+  const isManager = userType === 'branch';
+  const [currentTab, setCurrentTab] = useState(isManager ? 'requests' : 'my_leaves');
+
+  const TABLE_HEAD = [
+    ...(currentTab === 'requests' ? [
+      { id: 'branchId', label: 'Branch Id', alignRight: false },
+      { id: 'branchName', label: 'Branch Name', alignRight: false },
+      { id: 'employeeId', label: 'Employee Id', alignRight: false },
+      { id: 'employeeName', label: 'Employee Name', alignRight: false },
+    ] : []),
+    { id: 'leaveType', label: 'Leave Type', alignRight: false },
+    { id: 'dates', label: 'Dates', alignRight: false },
+    { id: 'note', label: 'Note', alignRight: false },
+    { id: 'status', label: 'Status', alignRight: false },
+    { id: 'createdAt', label: 'Date', alignRight: false },
+    { id: '' },
+  ];
 
   const [notify, setNotify] = useState({
     open: false,
@@ -115,23 +127,25 @@ export default function Leave() {
     severity: 'success',
   });
 
-  useEffect(() => {
-    fetchData();
-  }, [toggleContainer]);
-
-  const fetchData = (
-    query = {
-      createdAt: {
-        $gte: moment()?.format("YYYY-MM-DD"),
-        $lte: moment()?.format("YYYY-MM-DD"),
-      },
+  const fetchData = (query = {}) => {
+    if (currentTab === 'my_leaves') {
+      query.employee = auth.user.employee?._id || auth.user.employee;
     }
-  ) => {
     getLeave(query).then((data) => {
-      setData(data.data);
+      let filtered = data.data;
+      if (currentTab === 'requests' && isManager) {
+          // Exclude own leaves from requests list
+          const myIdStr = String(auth.user.employee?._id || auth.user.employee);
+          filtered = data.data.filter(item => String(item.employee?._id || item.employee) !== myIdStr);
+      }
+      setData(filtered);
       setOpenBackdrop(false);
     });
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [toggleContainer, currentTab]); // Re-fetch on tab change
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -197,6 +211,26 @@ export default function Leave() {
     });
   };
 
+  const handleApprove = () => {
+    updateLeave(openId, { bmStatus: 'approved' }).then((res) => {
+      if (res.status) {
+        fetchData();
+        setNotify({ open: true, message: 'Leave approved by BM. Moving to HR!', severity: 'success' });
+      }
+      setOpen(null);
+    });
+  };
+
+  const handleReject = () => {
+    updateLeave(openId, { bmStatus: 'rejected', status: 'rejected' }).then((res) => {
+      if (res.status) {
+        fetchData();
+        setNotify({ open: true, message: 'Leave rejected by BM', severity: 'error' });
+      }
+      setOpen(null);
+    });
+  };
+
   const handleDeleteSelected = () => {
     deleteLeaveById(selected).then(() => {
       fetchData();
@@ -257,21 +291,38 @@ export default function Leave() {
       </Snackbar>
 
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
+          <Typography variant="h4" sx={{ color: '#fff' }}>
             Leave
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setToggleContainer(!toggleContainer);
-              setToggleContainerType('create');
+          {currentTab === 'my_leaves' && (
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => {
+                setToggleContainer(!toggleContainer);
+                setToggleContainerType('create');
+              }}
+            >
+              New Leave
+            </Button>
+          )}
+        </Stack>
+
+        <Box sx={{ mb: 3 }}>
+          <Tabs
+            value={currentTab}
+            onChange={(event, newValue) => setCurrentTab(newValue)}
+            sx={{
+              '& .MuiTab-root': { color: 'white', opacity: 0.7 },
+              '& .Mui-selected': { color: 'white !important', opacity: 1 },
+              '& .MuiTabs-indicator': { backgroundColor: 'white' },
             }}
           >
-            New Leave
-          </Button>
-        </Stack>
+            {isManager && <Tab value="requests" label="Leave Requests" />}
+            <Tab value="my_leaves" label="My Leaves" />
+          </Tabs>
+        </Box>
 
         <Card>
           <LeaveListToolbar
@@ -295,24 +346,21 @@ export default function Leave() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
-                  hideCheckbox={true}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, branch, employee, leaveType, leaveCategory, startTime, endTime, dates, note, status, createdAt } = row;
+                    const { _id, branch, employee, leaveType, leaveCategory, startTime, endTime, dates, note, status, bmStatus, hrStatus, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
                       <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        {false && (
-                          <TableCell padding="checkbox">
-                            <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                          </TableCell>
-                        )}
-                        <TableCell align="left">{branch?.branchId}</TableCell>
-                        <TableCell align="left">{branch?.branchName}</TableCell>
-                        <TableCell align="left">{employee?.employeeId}</TableCell>
-                        <TableCell align="left">{employee?.name}</TableCell>
+                        <TableCell padding="checkbox">
+                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                        </TableCell>
+                        {currentTab === 'requests' && <TableCell align="left">{branch?.branchId}</TableCell>}
+                        {currentTab === 'requests' && <TableCell align="left">{branch?.branchName}</TableCell>}
+                        {currentTab === 'requests' && <TableCell align="left">{employee?.employeeId}</TableCell>}
+                        {currentTab === 'requests' && <TableCell align="left">{employee?.name}</TableCell>}
                         <TableCell align="left">{leaveType}</TableCell>
                         <TableCell align="left">
                           {leaveCategory === 'Permission' ? (
@@ -323,26 +371,29 @@ export default function Leave() {
                         </TableCell>
                         <TableCell align="left">{note}</TableCell>
                         <TableCell align="left">
-                          <Label
-                            color={
-                              (status === 'approved' && 'success') || (status === 'rejected' && 'error') || 'warning'
-                            }
-                          >
-                            {sentenceCase(status)}
-                          </Label>
+                          <Stack spacing={0.5}>
+                            {bmStatus !== 'not_required' && (
+                              <Label color={(bmStatus === 'approved' && 'success') || (bmStatus === 'rejected' && 'error') || 'warning'}>
+                                BM: {sentenceCase(bmStatus || 'pending')}
+                              </Label>
+                            )}
+                            <Label color={(hrStatus === 'approved' && 'success') || (hrStatus === 'rejected' && 'error') || 'warning'}>
+                              HR: {sentenceCase(hrStatus || 'pending')}
+                            </Label>
+                          </Stack>
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">
                           <IconButton
-                              size="large"
-                              color="inherit"
-                              onClick={(e) => {
-                                setOpenId(_id);
-                                handleOpenMenu(e);
-                              }}
-                            >
-                              <Iconify icon={'eva:more-vertical-fill'} />
-                            </IconButton>
+                            size="large"
+                            color="inherit"
+                            onClick={(e) => {
+                              setOpenId(_id);
+                              handleOpenMenu(e);
+                            }}
+                          >
+                            <Iconify icon={'eva:more-vertical-fill'} />
+                          </IconButton>
                         </TableCell>
                       </TableRow>
                     );
@@ -459,7 +510,7 @@ export default function Leave() {
         PaperProps={{
           sx: {
             p: 1,
-            width: 140,
+            width: 180,
             '& .MuiMenuItem-root': {
               px: 1,
               typography: 'body2',
@@ -468,6 +519,20 @@ export default function Leave() {
           },
         }}
       >
+        {isManager && data?.find((d) => d._id === openId)?.bmStatus !== 'not_required' && (
+          <>
+            <MenuItem onClick={handleApprove} sx={{ color: 'success.main' }}>
+              <Iconify icon={'eva:checkmark-circle-2-fill'} sx={{ mr: 2 }} />
+              Approve (BM)
+            </MenuItem>
+
+            <MenuItem onClick={handleReject} sx={{ color: 'error.main' }}>
+              <Iconify icon={'eva:close-circle-fill'} sx={{ mr: 2 }} />
+              Reject (BM)
+            </MenuItem>
+          </>
+        )}
+
         <MenuItem
           onClick={() => {
             setOpen(null);
@@ -490,17 +555,19 @@ export default function Leave() {
           Edit
         </MenuItem>
 
-        {/* <MenuItem
-          sx={{ color: 'error.main' }}
-          onClick={() => {
-            setOpen(null);
-            setDeleteType('single');
-            handleOpenDeleteModal();
-          }}
-        >
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-          Delete
-        </MenuItem> */}
+        {/* global.canDelete(userType) && (
+          <MenuItem
+            sx={{ color: 'error.main' }}
+            onClick={() => {
+              setOpen(null);
+              setDeleteType('single');
+              handleOpenDeleteModal();
+            }}
+          >
+            <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
+            Delete
+          </MenuItem>
+        ) */}
       </Popover>
 
       <Modal
@@ -541,7 +608,7 @@ export default function Leave() {
       <Dialog
         open={logModal.open}
         onClose={() => setLogModal({ open: false, logs: [] })}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
       >
         <DialogTitle sx={{ fontWeight: 'bold' }}>Leave Action Log</DialogTitle>

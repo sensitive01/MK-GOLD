@@ -5,9 +5,13 @@ import * as Yup from 'yup';
 import Webcam from 'react-webcam';
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { createAttendance } from '../../../apis/branch/attendance';
-import { getEmployee } from '../../../apis/branch/employee';
-import { createFile } from '../../../apis/branch/fileupload';
+import { createAttendance as createBranchAttendance } from '../../../apis/branch/attendance';
+import { getEmployee as getBranchEmployee } from '../../../apis/branch/employee';
+import { createFile as createBranchFile } from '../../../apis/branch/fileupload';
+
+import { createAttendance as createAccountsAttendance } from '../../../apis/accounts/attendance';
+import { getEmployee as getAccountsEmployee } from '../../../apis/accounts/employee';
+import { createFile as createAccountsFile } from '../../../apis/accounts/fileupload';
 
 function CreateAttendance(props) {
   const auth = useSelector((state) => state.auth);
@@ -15,8 +19,14 @@ function CreateAttendance(props) {
   const webcamRef = useRef(null);
   const [employees, setEmloyees] = useState([]);
 
+  const userType = auth?.user?.userType?.toLowerCase();
+  
+  const getEmployeeApi = (userType === 'finance' || userType === 'accounts' || userType === 'operations') ? getAccountsEmployee : getBranchEmployee;
+  const createFileApi = (userType === 'finance' || userType === 'accounts' || userType === 'operations') ? createAccountsFile : createBranchFile;
+  const createAttendanceApi = (userType === 'finance' || userType === 'accounts' || userType === 'operations') ? createAccountsAttendance : createBranchAttendance;
+
   useEffect(() => {
-    getEmployee().then((data) => {
+    getEmployeeApi().then((data) => {
       setEmloyees(data.data);
     });
   }, []);
@@ -53,7 +63,7 @@ function CreateAttendance(props) {
         return;
       }
       try {
-        const data = await createAttendance(values);
+        const data = await createAttendanceApi(values);
         if (data.status === false) {
           props.setNotify({
             open: true,
@@ -71,7 +81,7 @@ function CreateAttendance(props) {
               formData.append('uploadName', data.data.fileUpload.uploadName);
               formData.append('uploadType', 'attendance');
               formData.append('uploadedFile', file);
-              await createFile(formData);
+              await createFileApi(formData);
             } catch (error) {
               console.error('File upload failed:', error);
             }

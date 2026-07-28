@@ -3,14 +3,25 @@ import { LoadingButton } from '@mui/lab';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import PropTypes from 'prop-types';
-import confetti from 'canvas-confetti';
+import { useEffect, useState } from 'react';
 import { createExpense } from '../../../apis/accounts/expense';
+import { getBranch } from '../../../apis/accounts/branch';
 
 function CreateExpense(props) {
+  const [branches, setBranches] = useState([]);
+
+  useEffect(() => {
+    getBranch().then((res) => {
+      if (res?.data) {
+        setBranches(res.data);
+      }
+    });
+  }, []);
+
   // Form validation
   const schema = Yup.object({
     type: Yup.string().required('Type is required'),
-    amount: Yup.string().required('Amount is required'),
+    amount: Yup.number().typeError('Amount must be a number').required('Amount is required'),
     branchId: Yup.string().required('Branch id is required'),
     note: Yup.string().required('Note is required'),
     status: Yup.string().required('Status is required'),
@@ -26,8 +37,10 @@ function CreateExpense(props) {
       status: '',
     },
     validationSchema: schema,
-    onSubmit: (values) => {
-      createExpense(values).then((data) => {
+    onSubmit: (formValues) => {
+      const payload = { ...formValues, branch: formValues.branchId };
+      delete payload.branchId;
+      createExpense(payload).then((data) => {
         if (data.status === false) {
           props.setNotify({
             open: true,
@@ -40,12 +53,6 @@ function CreateExpense(props) {
             open: true,
             message: 'Expense created',
             severity: 'success',
-          });
-          confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ['#8A1B9F', '#FFD700', '#ffffff']
           });
         }
       });
@@ -76,6 +83,7 @@ function CreateExpense(props) {
           <Grid item xs={12} sm={4}>
             <TextField
               name="amount"
+              type="number"
               value={values.amount}
               error={touched.amount && errors.amount && true}
               label={touched.amount && errors.amount ? errors.amount : 'Amount'}
@@ -85,15 +93,24 @@ function CreateExpense(props) {
             />
           </Grid>
           <Grid item xs={12} sm={4}>
-            <TextField
-              name="branchId"
-              value={values.branchId}
-              error={touched.branchId && errors.branchId && true}
-              label={touched.branchId && errors.branchId ? errors.branchId : 'Branch id'}
-              fullWidth
-              onBlur={handleBlur}
-              onChange={handleChange}
-            />
+            <FormControl fullWidth error={touched.branchId && errors.branchId && true}>
+              <InputLabel id="branchId-label">{touched.branchId && errors.branchId ? errors.branchId : 'Choose branch'}</InputLabel>
+              <Select
+                labelId="branchId-label"
+                id="branchId-select"
+                label={touched.branchId && errors.branchId ? errors.branchId : 'Choose branch'}
+                name="branchId"
+                value={values.branchId}
+                onBlur={handleBlur}
+                onChange={handleChange}
+              >
+                {branches.map((branch) => (
+                  <MenuItem key={branch._id} value={branch._id}>
+                    {branch.branchName} - {branch.branchId}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid item xs={12} sm={4}>
             <TextField

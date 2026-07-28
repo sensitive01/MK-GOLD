@@ -14,6 +14,9 @@ const profile = require("../controllers/accounts/profile");
 const balancesheet = require("../controllers/accounts/balancesheet");
 const leave = require("../controllers/accounts/leave");
 const fileUpload = require("../controllers/accounts/fileupload");
+const adminAttendance = require("../controllers/admin/attendance");
+const branchAttendance = require("../controllers/branch/attendance");
+const adminPayprocess = require("../controllers/admin/payprocess");
 const { isAccounts, notFinance } = require("../middlewares/authorization");
 const multer = require("../config/multer");
 
@@ -42,6 +45,7 @@ accountsRouter.get("/employee/get/:id", employee.findById);
 accountsRouter.get("/fund/get", fund.find);
 accountsRouter.post("/fund/get", fund.find);
 accountsRouter.get("/fund/get/:id", fund.findById);
+accountsRouter.post("/fund/create", fund.create);
 accountsRouter.post("/fund/update/:id", fund.update);
 accountsRouter.post("/fund/delete/:id", fund.remove);
 
@@ -89,6 +93,20 @@ accountsRouter.post("/file-upload/delete/:id", fileUpload.remove);
 
 accountsRouter.get("/profile", profile.get);
 accountsRouter.post("/profile/change-password", profile.changePassword);
+
+accountsRouter.get("/attendance/get", adminAttendance.find);
+accountsRouter.post("/attendance/get", adminAttendance.find);
+accountsRouter.post("/attendance/consolidated", adminAttendance.consolidated);
+accountsRouter.get("/attendance/get-stats", branchAttendance.getStats);
+accountsRouter.get("/attendance/get/:id", adminAttendance.findById);
+accountsRouter.post("/attendance/create", branchAttendance.create);
+accountsRouter.post("/attendance/update/:id", branchAttendance.update);
+
+accountsRouter.get("/payprocess/get", adminPayprocess.find);
+accountsRouter.post("/payprocess/get", adminPayprocess.find);
+accountsRouter.post("/payprocess/create", adminPayprocess.create);
+accountsRouter.post("/payprocess/update/:id", adminPayprocess.update);
+accountsRouter.post("/payprocess/delete/:id", adminPayprocess.remove);
 
 router.use(
   function (req, res, next) {

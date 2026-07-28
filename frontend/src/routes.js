@@ -57,6 +57,7 @@ import OperationsDashboard from './pages/operations/Dashboard';
 import FinanceDashboardLayout from './layouts/dashboard/finance';
 import FinanceDashboard from './pages/finance/Dashboard';
 import FinanceRelease from './pages/finance/Release';
+import FinanceAttendance from './pages/finance/Attendance';
 import TelecallingDashboardLayout from './layouts/dashboard/telecalling';
 import TelecallingDashboard from './pages/telecalling/Dashboard';
 import Profile from './pages/Profile';
@@ -128,6 +129,10 @@ import MeltingVendor from './pages/melting/Vendor';
 import MeltingSale from './pages/melting/Sale';
 import MeltingEmployee from './pages/melting/Employee';
 import MeltingExpense from './pages/melting/Expense';
+import MeltingGoldRate from './pages/melting/GoldRate';
+import MeltingRelease from './pages/melting/Release';
+import MeltingAttendance from './pages/melting/Attendance';
+import MeltingLeave from './pages/melting/Leave';
 // ----------------------------------------------------------------------
 
 function Protected({ children }) {
@@ -348,6 +353,10 @@ export default function Router() {
         { path: 'sale', element: <MeltingSale /> },
         { path: 'employee', element: <MeltingEmployee /> },
         { path: 'expense', element: <MeltingExpense /> },
+        { path: 'gold-rate', element: <MeltingGoldRate /> },
+        { path: 'release', element: <MeltingRelease /> },
+        { path: 'attendance', element: <MeltingAttendance /> },
+        { path: 'leave', element: <MeltingLeave /> },
       ],
     },
     {
@@ -368,7 +377,7 @@ export default function Router() {
         { path: 'sale', element: <AccountsSale /> },
         { path: 'balancesheet', element: <AccountsBalancesheet /> },
         { path: 'leave', element: <AccountsLeave /> },
-        { path: 'attendance', element: <BranchAttendance /> },
+        { path: 'attendance', element: <FinanceAttendance /> },
         { path: 'release', element: <FinanceRelease /> },
       ],
     },

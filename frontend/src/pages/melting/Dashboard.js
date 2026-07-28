@@ -74,6 +74,39 @@ export default function DashboardPage() {
               textColor="#000"
             />
           </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Today's Silver Rate"
+              total={count?.todaySilverRate}
+              icon={'mdi:gold'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Today's Silver Bills"
+              total={count?.todaySilverBills}
+              icon={'mdi:file-document-outline'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Today's Silver Gross Weight"
+              total={count?.totalSilverGrossWeight ? count.totalSilverGrossWeight.toFixed(2) + ' g' : '0 g'}
+              icon={'mdi:weight-gram'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+            />
+          </Grid>
         </Grid>
       </Container>
     </>

@@ -24,6 +24,22 @@ async function findById(req, res) {
   }
 }
 
+async function create(req, res) {
+  try {
+    res.json({
+      status: true,
+      message: "",
+      data: await fundService.create(req.body),
+    });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: err.errors ?? err.message,
+      data: {},
+    });
+  }
+}
+
 async function update(req, res) {
   try {
     res.json({
@@ -56,4 +72,4 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { find, findById, update, remove };
+module.exports = { find, findById, create, update, remove };

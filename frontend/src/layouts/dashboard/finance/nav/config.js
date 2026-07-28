@@ -31,8 +31,19 @@ const navConfig = [
   },
   {
     title: 'funds',
-    path: '/finance/fund',
     icon: <AttachMoneyIcon sx={{ width: 1, height: 1 }} />,
+    children: [
+      {
+        title: 'Funds',
+        path: '/finance/fund',
+        icon: <AttachMoneyIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
+        title: 'Balances',
+        path: '/finance/balancesheet',
+        icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
+      }
+    ]
   },
   {
     title: 'expenses',
@@ -44,11 +55,7 @@ const navConfig = [
     path: '/finance/sale',
     icon: <SellIcon sx={{ width: 1, height: 1 }} />,
   },
-  {
-    title: 'Balancesheet',
-    path: '/finance/balancesheet',
-    icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
-  },
+
   {
     title: 'leaves',
     path: '/finance/leave',

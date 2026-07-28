@@ -418,6 +418,7 @@ export default function Transit() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={true}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
@@ -436,9 +437,11 @@ export default function Transit() {
 
                     return (
                       <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
+                        {false && (
+                          <TableCell padding="checkbox">
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
+                        )}
                         <TableCell align="left">{transitId}</TableCell>
                         <TableCell align="left">{numberOfPackets}</TableCell>
                         <TableCell align="left">{physical}</TableCell>
