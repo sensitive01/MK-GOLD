@@ -426,7 +426,7 @@ export default function AuditorAttendance() {
                       numSelected={selected?.length}
                       onRequestSort={handleRequestSort}
                       onSelectAllClick={handleSelectAllClick}
-                      checkboxSelection={currentTab !== 'consolidated_attendance'}
+                      hideCheckbox={true}
                     />
                     <TableBody>
                       {currentTab === 'consolidated_attendance' && filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row, index) => {
@@ -453,9 +453,11 @@ export default function AuditorAttendance() {
                         const selectedData = selected.indexOf(_id) !== -1;
                         return (
                           <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                            <TableCell padding="checkbox">
-                              <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                            </TableCell>
+                            {false && (
+                              <TableCell padding="checkbox">
+                                <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                              </TableCell>
+                            )}
                             <TableCell align="left">{employee?.employeeId}</TableCell>
                             <TableCell align="left">{employee?.name}</TableCell>
                             <TableCell align="left">

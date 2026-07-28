@@ -497,13 +497,14 @@ export default function MarketingAttendance() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={true}
                 />
                 <TableBody>
                   {currentTab === 'consolidated_attendance' && filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row, index) => {
                     const { employee, present, absent, workingDays, lateDays, salary, payable, allowances, deductions, advance } = row;
                     return (
                       <TableRow hover key={index} tabIndex={-1}>
-                        <TableCell padding="checkbox"></TableCell>
+                        {false && <TableCell padding="checkbox"></TableCell>}
                         <TableCell align="left">{employee?.employeeId}</TableCell>
                         <TableCell align="left">{employee?.name}</TableCell>
                         <TableCell align="left">{employee?.branchName || ''}</TableCell>
@@ -525,9 +526,11 @@ export default function MarketingAttendance() {
 
                     return (
                       <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                        </TableCell>
+                        {false && (
+                          <TableCell padding="checkbox">
+                            <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
+                          </TableCell>
+                        )}
                         {currentTab === 'all_attendance' && (
                           <>
                             <TableCell align="left">{employee?.employeeId}</TableCell>

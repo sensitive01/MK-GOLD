@@ -179,21 +179,32 @@ export default function AuditorSale() {
   });
 
   const fetchData = useCallback(
-    (
-      query = {
-        createdAt: {
-          $gte: values.fromDate ?? moment()?.format("YYYY-MM-DD"),
-          $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
-        },
-        ...(values.status ? { status: values.status } : {}),
-      }
-    ) => {
-      findSales(query).then((data) => {
+    (query) => {
+      const activeQuery = query || (() => {
+        const q = {};
+        if (values.branch) q.branch = values.branch;
+        if (values.phoneNumber) q.phoneNumber = values.phoneNumber;
+        if (values.status) q.status = values.status;
+        
+        if (values.fromDate || values.toDate) {
+          q.createdAt = {};
+          if (values.fromDate) q.createdAt.$gte = typeof values.fromDate.format === 'function' ? values.fromDate.format("YYYY-MM-DD") : values.fromDate;
+          if (values.toDate) q.createdAt.$lte = typeof values.toDate.format === 'function' ? values.toDate.format("YYYY-MM-DD") : values.toDate;
+        } else {
+          q.createdAt = {
+            $gte: moment().format("YYYY-MM-DD"),
+            $lte: moment().format("YYYY-MM-DD"),
+          };
+        }
+        return q;
+      })();
+
+      findSales(activeQuery).then((data) => {
         setData(data.data);
         setOpenBackdrop(false);
       });
     },
-    [values.fromDate, values.toDate]
+    [values]
   );
 
   useEffect(() => {
@@ -433,6 +444,7 @@ export default function AuditorSale() {
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
                   onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={true}
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
@@ -453,13 +465,15 @@ export default function AuditorSale() {
                         }}
                         style={{ cursor: 'pointer' }}
                       >
-                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedData}
-                            onChange={(event) => handleClick(event, _id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </TableCell>
+                        {false && (
+                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedData}
+                              onChange={(event) => handleClick(event, _id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </TableCell>
+                        )}
                         <TableCell align="left">{billId}</TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="left">
