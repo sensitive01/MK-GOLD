@@ -148,8 +148,8 @@ export default function GoldRate() {
     (
       query = {
         date: {
-          $gte: values.fromDate ?? moment()?.format("YYYY-MM-DD"),
-          $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
+          $gte: values.fromDate ? (moment.isMoment(values.fromDate) ? values.fromDate.format("YYYY-MM-DD") : moment().format("YYYY-MM-DD")) : moment().format("YYYY-MM-DD"),
+          $lte: values.toDate ? (moment.isMoment(values.toDate) ? values.toDate.format("YYYY-MM-DD") : moment().format("YYYY-MM-DD")) : moment().format("YYYY-MM-DD"),
         },
       }
     ) => {
