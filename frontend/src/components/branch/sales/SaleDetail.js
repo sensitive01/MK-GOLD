@@ -657,7 +657,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                   fullWidth
                   multiline
                   rows={2}
-                  label="Bullion Desk Comments"
+                  label="Comments"
                   value={bullionComment}
                   onChange={(e) => setBullionComment(e.target.value)}
                   placeholder="Type any comments before approving/rejecting (Optional for approval)"

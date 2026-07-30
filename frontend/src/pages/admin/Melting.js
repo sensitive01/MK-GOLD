@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, forwardRef } from 'react';
+import { sentenceCase } from 'change-case';
 import { Helmet } from 'react-helmet-async';
 import {
   Container, Typography, Card, Table, TableBody, TableCell, TableContainer,
@@ -76,7 +77,11 @@ export default function Melting() {
     validationSchema: filterSchema,
     onSubmit: (values) => {
       const query = {};
-      if (values.status) query.status = values.status;
+      if (values.status) {
+        query.status = values.status;
+      } else {
+        query.status = { $ne: 'sold' };
+      }
       if (values.vendor) query.vendor = values.vendor;
       
       if (values.fromDate || values.toDate) {
@@ -93,9 +98,10 @@ export default function Melting() {
 
   const fetchMeltings = useCallback(async (
     query = {
+      status: { $ne: 'sold' },
       createdAt: {
-        $gte: values.fromDate ?? moment().format("YYYY-MM-DD"),
-        $lte: values.toDate ?? moment().format("YYYY-MM-DD"),
+        $gte: values.fromDate ? values.fromDate.format("YYYY-MM-DD") : moment().subtract(1, 'months').format("YYYY-MM-DD"),
+        $lte: values.toDate ? values.toDate.format("YYYY-MM-DD") : moment().add(1, 'days').format("YYYY-MM-DD"),
       },
     }
   ) => {

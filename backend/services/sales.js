@@ -752,7 +752,8 @@ async function create(payload) {
           event: "Bank added",
           performedBy: latestBank.createdBy || customer.createdBy || payload.employee,
           performedAt: latestBank.createdAt || customer.createdAt,
-          details: `New bank added: ${latestBank.bankName} (${latestBank.accountNumber})`,
+          //details: `New bank added: ${latestBank.bankName} (${latestBank.accountNumber})`,
+          details: `New bank added: ${latestBank.bankName} (${latestBank.accountNo})`,
         });
       }
     }

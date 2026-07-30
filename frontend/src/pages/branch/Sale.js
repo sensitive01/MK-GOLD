@@ -651,7 +651,8 @@ export default function Sale() {
         PaperProps={{
           sx: {
             p: 1,
-            width: 140,
+            width: 'auto',
+            minWidth: 140,
             '& .MuiMenuItem-root': {
               px: 1,
               typography: 'body2',

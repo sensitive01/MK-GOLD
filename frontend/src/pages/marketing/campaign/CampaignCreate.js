@@ -25,6 +25,13 @@ export default function CampaignCreate() {
   const basePath = userType === 'admin' ? '/admin/marketing' : '/marketing/campaigns';
   const [notify, setNotify] = useState({ open: false, message: '', severity: 'success' });
   const [activeStep, setActiveStep] = useState(0);
+  const [mailError, setMailError] = useState('');
+
+  const validateEmail = (email) => {
+    if (!email) return true;
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
   const [formData, setFormData] = useState({
     campaignName: '', campaignId: '', campaignType: '',
     objective: '', description: '', mailId: '', teamMembers: '',
@@ -74,6 +81,14 @@ export default function CampaignCreate() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    if (name === 'mailId') {
+      if (value && !validateEmail(value)) {
+        setMailError('Please enter a valid email address');
+      } else {
+        setMailError('');
+      }
+    }
   };
 
   const handleMultiSelectChange = (event, name) => {
@@ -132,6 +147,14 @@ export default function CampaignCreate() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (activeStep === 1) {
+      if (formData.mailId && !validateEmail(formData.mailId)) {
+        setMailError('Please enter a valid email address');
+        return;
+      }
+    }
+
     if (activeStep !== steps.length - 1) {
        setActiveStep((prev) => prev + 1);
        return;
@@ -244,7 +267,15 @@ export default function CampaignCreate() {
             {activeStep === 1 && (
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
-                  <TextField fullWidth label="Account Mail id" name="mailId" value={formData.mailId} onChange={handleChange} />
+                  <TextField 
+                    fullWidth 
+                    label="Account Mail id" 
+                    name="mailId" 
+                    value={formData.mailId} 
+                    onChange={handleChange} 
+                    error={!!mailError}
+                    helperText={mailError}
+                  />
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField fullWidth label="Team Members" name="teamMembers" placeholder="Comma separated" value={formData.teamMembers} onChange={handleChange} />

@@ -143,7 +143,7 @@ function PreviewLead(props) {
             Created: {moment(data.createdAt).format('LLLL')}
           </Typography>
         </Stack>
-        {auth?.user?.userType !== 'marketing' && (
+        {!['marketing', 'branch'].includes(auth?.user?.userType) && (
           <Button
             variant="contained"
             onClick={() => setOpenModal(true)}

@@ -32,6 +32,17 @@ import moment from 'moment';
 import { CreatePayprocess, UpdatePayprocess } from '../../components/hr/payprocess';
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import TextField from '@mui/material/TextField';
+import Grid from '@mui/material/Grid';
+import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
+import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 // sections
 import { PayprocessListHead, PayprocessListToolbar } from '../../sections/@dashboard/payprocess';
 // mock
@@ -104,23 +115,52 @@ export default function Payprocess() {
     severity: 'success',
   });
 
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  const schema = Yup.object({
+    fromDate: Yup.mixed().nullable(),
+    toDate: Yup.mixed().nullable(),
+  });
+
+  const { handleSubmit, touched, errors, values, setFieldValue, resetForm } = useFormik({
+    initialValues: {
+      fromDate: null,
+      toDate: null,
+    },
+    validationSchema: schema,
+    onSubmit: (values) => {
+      setOpenBackdrop(true);
+      const query = {};
+      if (values.fromDate || values.toDate) {
+        query.createdAt = {};
+        if (values.fromDate) query.createdAt.$gte = values.fromDate.format('YYYY-MM-DD');
+        if (values.toDate) query.createdAt.$lte = values.toDate.format('YYYY-MM-DD');
+      }
+      fetchData(query);
+      setFilterOpen(false);
+    },
+  });
+
+  const fetchData = useCallback(
+    (
+      query = {
+        createdAt: {
+          $gte: values.fromDate ? values.fromDate.format("YYYY-MM-DD") : moment().format("YYYY-MM-DD"),
+          $lte: values.toDate ? values.toDate.format("YYYY-MM-DD") : moment().format("YYYY-MM-DD"),
+        },
+      }
+    ) => {
+      getPayprocess(query).then((data) => {
+        setData(data.data);
+        setOpenBackdrop(false);
+      });
+    },
+    [values.fromDate, values.toDate]
+  );
+
   useEffect(() => {
     fetchData();
-  }, [toggleContainer]);
-
-  const fetchData = (
-    query = {
-      createdAt: {
-        $gte: moment()?.format("YYYY-MM-DD"),
-        $lte: moment()?.format("YYYY-MM-DD"),
-      },
-    }
-  ) => {
-    getPayprocess(query).then((data) => {
-      setData(data.data);
-      setOpenBackdrop(false);
-    });
-  };
+  }, [toggleContainer, fetchData]);
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -252,16 +292,43 @@ export default function Payprocess() {
             <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
               Payprocess
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="eva:plus-fill" />}
-              onClick={() => {
-                setToggleContainer(!toggleContainer);
-                setToggleContainerType('create');
-              }}
-            >
-              New Payprocess
-            </Button>
+            <Stack direction="row" spacing={2}>
+              {(values.fromDate || values.toDate) && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<Iconify icon="ic:baseline-clear" />}
+                  onClick={() => {
+                    resetForm();
+                    fetchData({
+                      createdAt: {
+                        $gte: moment().format("YYYY-MM-DD"),
+                        $lte: moment().format("YYYY-MM-DD"),
+                      },
+                    });
+                  }}
+                >
+                  Clear Filter
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                onClick={() => setFilterOpen(true)}
+              >
+                Filter
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Iconify icon="eva:plus-fill" />}
+                onClick={() => {
+                  setToggleContainer(!toggleContainer);
+                  setToggleContainerType('create');
+                }}
+              >
+                New Payprocess
+              </Button>
+            </Stack>
           </Stack>
 
           <Box>
@@ -497,6 +564,39 @@ export default function Payprocess() {
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
       </Backdrop>
+      <Dialog open={filterOpen} onClose={() => setFilterOpen(false)}>
+        <DialogTitle>Filter</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <LocalizationProvider dateAdapter={AdapterMoment}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6}>
+                  <DesktopDatePicker
+                    label="From Date"
+                    inputFormat="DD/MM/YYYY"
+                    value={values.fromDate}
+                    onChange={(newValue) => setFieldValue('fromDate', newValue)}
+                    renderInput={(params) => <TextField {...params} fullWidth error={Boolean(touched.fromDate && errors.fromDate)} helperText={touched.fromDate && errors.fromDate} />}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <DesktopDatePicker
+                    label="To Date"
+                    inputFormat="DD/MM/YYYY"
+                    value={values.toDate}
+                    onChange={(newValue) => setFieldValue('toDate', newValue)}
+                    renderInput={(params) => <TextField {...params} fullWidth error={Boolean(touched.toDate && errors.toDate)} helperText={touched.toDate && errors.toDate} />}
+                  />
+                </Grid>
+              </Grid>
+            </LocalizationProvider>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFilterOpen(false)}>Cancel</Button>
+          <Button onClick={handleSubmit} variant="contained">Apply</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

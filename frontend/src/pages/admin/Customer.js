@@ -199,6 +199,7 @@ export default function Customer({ title = "Customers" }) {
       },
     }
   ) => {
+    //query.all = true;
     findCustomer(query).then((data) => {
       setData(data.data);
       setOpenBackdrop(false);

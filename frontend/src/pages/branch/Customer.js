@@ -4,31 +4,31 @@ import { forwardRef, useEffect, useState, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
-    Backdrop,
-    Box,
-    Button,
-    Card,
-    Checkbox,
-    CircularProgress,
-    Container,
-    IconButton,
-    MenuItem,
-    Modal,
-    Paper,
-    Popover,
-    Snackbar,
-    Stack,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TablePagination,
-    TableRow,
-    Typography,
-    Grid,
-    FormControl,
-    InputLabel,
-    Select,
+  Backdrop,
+  Box,
+  Button,
+  Card,
+  Checkbox,
+  CircularProgress,
+  Container,
+  IconButton,
+  MenuItem,
+  Modal,
+  Paper,
+  Popover,
+  Snackbar,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TablePagination,
+  TableRow,
+  Typography,
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
 } from '@mui/material';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
@@ -141,13 +141,13 @@ export default function Customer({ isTab = false }) {
     onSubmit: (values) => {
       setOpenBackdrop(true);
       const query = { branch: auth.user?.branch?._id || auth.user?.branch };
-      
+
       if (values.fromDate || values.toDate) {
         query.createdAt = {};
         if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
         if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
       }
-      
+
       fetchData(query);
       setFilterOpen(false);
     },
@@ -171,6 +171,7 @@ export default function Customer({ isTab = false }) {
       }
     ) => {
       if (!query.branch) query.branch = branch?._id || branch;
+      //query.all = true;
       findCustomer(query).then((data) => {
         setData(Array.isArray(data?.data) ? data.data : []);
         setOpenBackdrop(false);
@@ -413,12 +414,12 @@ export default function Customer({ isTab = false }) {
                       >
                         {false && (
                           <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedData}
-                            onChange={(event) => handleClick(event, _id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </TableCell>
+                            <Checkbox
+                              checked={selectedData}
+                              onChange={(event) => handleClick(event, _id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </TableCell>
                         )}
                         <TableCell align="left">{sentenceCase(name ?? '')}</TableCell>
                         <TableCell align="left">{email}</TableCell>

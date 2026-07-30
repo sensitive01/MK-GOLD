@@ -140,15 +140,42 @@ export default function Transit() {
   const fileInputRef = useRef();
 
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    fromDate: '',
-    toDate: '',
-    status: 'all',
-    branch: 'all'
+  const [filters, setFilters] = useState(() => {
+    const saved = sessionStorage.getItem('transit_filters');
+    return saved ? JSON.parse(saved) : {
+      fromDate: '',
+      toDate: '',
+      status: 'all',
+      branch: 'all'
+    };
   });
+
+  useEffect(() => {
+    sessionStorage.setItem('transit_filters', JSON.stringify(filters));
+  }, [filters]);
   const handleFilterOpen = () => setFilterOpen(true);
   const handleFilterClose = () => setFilterOpen(false);
-  const handleClearFilters = () => setFilters({ fromDate: '', toDate: '', status: 'all', branch: 'all' });
+  const handleClearFilters = () => {
+    setFilters({ fromDate: '', toDate: '', status: 'all', branch: 'all' });
+    setOpenBackdrop(true);
+    fetchData();
+  };
+  const handleApplyFilter = () => {
+    setFilterOpen(false);
+    setOpenBackdrop(true);
+    let query = {};
+    if (filters.fromDate || filters.toDate) {
+      query.createdAt = {};
+      if (filters.fromDate) query.createdAt.$gte = moment(filters.fromDate).format("YYYY-MM-DD");
+      if (filters.toDate) query.createdAt.$lte = moment(filters.toDate).format("YYYY-MM-DD");
+    }
+    
+    if (Object.keys(query).length === 0) {
+      fetchData();
+    } else {
+      fetchData(query);
+    }
+  };
   const isFilterApplied = filters.fromDate || filters.toDate || filters.status !== 'all' || filters.branch !== 'all';
 
   const userType = auth?.user?.userType?.toLowerCase();
@@ -205,7 +232,22 @@ export default function Transit() {
   );
 
   useEffect(() => {
-    fetchData();
+    let query = {};
+    const saved = sessionStorage.getItem('transit_filters');
+    if (saved) {
+      const parsedFilters = JSON.parse(saved);
+      if (parsedFilters.fromDate || parsedFilters.toDate) {
+        query.createdAt = {};
+        if (parsedFilters.fromDate) query.createdAt.$gte = moment(parsedFilters.fromDate).format("YYYY-MM-DD");
+        if (parsedFilters.toDate) query.createdAt.$lte = moment(parsedFilters.toDate).format("YYYY-MM-DD");
+      }
+    }
+    
+    if (Object.keys(query).length > 0) {
+      fetchData(query);
+    } else {
+      fetchData();
+    }
   }, [fetchData]);
 
   useEffect(() => {
@@ -749,7 +791,7 @@ export default function Transit() {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleFilterClose} variant="contained">Apply</Button>
+          <Button onClick={handleApplyFilter} variant="contained">Apply</Button>
         </DialogActions>
       </Dialog>
     </>

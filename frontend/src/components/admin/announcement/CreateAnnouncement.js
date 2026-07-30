@@ -135,7 +135,7 @@ function CreateAnnouncement(props) {
                   ?.filter((u) => formik.values.targetUserType.includes('all') || formik.values.targetUserType.includes(u.userType))
                   ?.map((u) => (
                     <MenuItem key={u._id} value={u._id}>
-                      {u.username} ({u.userType})
+                      {u.username} {u.employee?.name ? `- ${u.employee.name}` : ''} ({u.userType})
                     </MenuItem>
                   ))}
               </Select>

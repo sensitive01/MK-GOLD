@@ -78,7 +78,7 @@ export default function AuditorMelting() {
     validationSchema: schema,
     onSubmit: (values) => {
       setOpenBackdrop(true);
-      const query = {};
+      const query = { status: { $ne: 'sold' } };
       if (values.fromDate || values.toDate) {
         query.createdAt = {};
         if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
@@ -95,9 +95,10 @@ export default function AuditorMelting() {
 
   const fetchMeltings = useCallback(async (
     query = {
+      status: { $ne: 'sold' },
       createdAt: {
-        $gte: values.fromDate ?? moment()?.format("YYYY-MM-DD"),
-        $lte: values.toDate ?? moment()?.format("YYYY-MM-DD"),
+        $gte: values.fromDate ? values.fromDate.format("YYYY-MM-DD") : moment().subtract(1, 'months').format("YYYY-MM-DD"),
+        $lte: values.toDate ? values.toDate.format("YYYY-MM-DD") : moment().add(1, 'days').format("YYYY-MM-DD"),
       },
     }
   ) => {

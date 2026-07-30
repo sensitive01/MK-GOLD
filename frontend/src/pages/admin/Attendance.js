@@ -562,7 +562,7 @@ export default function Attendance() {
                               ) : 'No Image'}
                             </TableCell>
                             <TableCell align="left">{moment(row?.loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}</TableCell>
-                            <TableCell align="left">{row.logoutTime ? moment(row.logoutTime).format('DD-MM-YYYY HH:mm:ss') : 'N/A'}</TableCell>
+                            <TableCell align="left">{row.logoutTime ? moment(row.logoutTime).format('DD-MM-YYYY HH:mm:ss') : 'Not Logged out'}</TableCell>
                             <TableCell align="right">
                               <IconButton size="large" color="inherit" onClick={(e) => { setOpenId(_id); handleOpenMenu(e); }}>
                                 <Iconify icon={'eva:more-vertical-fill'} />
@@ -748,7 +748,7 @@ export default function Attendance() {
                         <TableCell>{moment(record.attendanceDate || record.createdAt).format('DD/MM/YYYY')}</TableCell>
                         <TableCell>{moment(record.attendanceDate || record.createdAt).format('dddd')}</TableCell>
                         <TableCell>{loginTime ? moment(loginTime).format('hh:mm A') : "N/A"}</TableCell>
-                        <TableCell>{record.logoutTime ? moment(record.logoutTime).format('hh:mm A') : "N/A"}</TableCell>
+                        <TableCell>{record.logoutTime ? moment(record.logoutTime).format('hh:mm A') : "Not Logged out"}</TableCell>
                         <TableCell>{workingHours}</TableCell>
                       </TableRow>
                     );

@@ -29,6 +29,7 @@ import {
   Tab,
   Tabs,
   IconButton,
+  CircularProgress,
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -77,6 +78,7 @@ function Customer(props) {
   const [otpStatus, setOtpStatus] = useState(null);
   const [altOtpStatus, setAltOtpStatus] = useState(null);
   const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [openId, setOpenId] = useState(null);
   const [customerModal, setCustomerModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
@@ -187,8 +189,11 @@ function Customer(props) {
         all: true,
       }
     ) => {
+      setLoading(true);
       findCustomer(query).then((data) => {
         setData(data.data);
+      }).finally(() => {
+        setLoading(false);
       });
     },
     []
@@ -629,6 +634,14 @@ function Customer(props) {
                 </TableRow>
               </TableHead>
               <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell align="center" colSpan={7} sx={{ py: 3 }}>
+                      <CircularProgress />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  <>
                 {displayData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e) => (
                   <TableRow hover key={e._id} tabIndex={-1}>
                     <TableCell padding="checkbox">
@@ -747,6 +760,8 @@ function Customer(props) {
                       </Paper>
                     </TableCell>
                   </TableRow>
+                )}
+                  </>
                 )}
               </TableBody>
             </Table>

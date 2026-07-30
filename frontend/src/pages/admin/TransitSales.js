@@ -364,6 +364,13 @@ export default function TransitSales() {
             Purchases
           </Typography>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="mdi:arrow-left" />}
+              onClick={() => navigate(-1)}
+            >
+              Back
+            </Button>
             {isSelectForTransit && (
               <Button
                 variant="contained"
@@ -688,7 +695,7 @@ export default function TransitSales() {
         PaperProps={{
           sx: {
             p: 1,
-            width: 140,
+            width: 220,
             '& .MuiMenuItem-root': {
               px: 1,
               typography: 'body2',

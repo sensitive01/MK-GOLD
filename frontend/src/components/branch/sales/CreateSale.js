@@ -414,24 +414,30 @@ function CreateSale(props) {
 
             <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
               <Grid item xs={12} sm={8}>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="select-address-label">Billing Address</InputLabel>
-                  <Select
-                    labelId="select-address-label"
-                    value={selectedAddress?._id || ''}
-                    label="Billing Address"
-                    onChange={(e) => {
-                      const addr = addresses.find((a) => a._id === e.target.value);
-                      setSelectedAddress(addr);
-                    }}
-                  >
-                    {addresses.map((addr) => (
-                      <MenuItem key={addr._id} value={addr._id}>
-                        {`${addr.address}, ${addr.landmark}, ${addr.pincode} (${addr.label})`}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                {addresses && addresses.length > 0 ? (
+                  <FormControl fullWidth size="small">
+                    <InputLabel id="select-address-label">Billing Address</InputLabel>
+                    <Select
+                      labelId="select-address-label"
+                      value={selectedAddress?._id || ''}
+                      label="Billing Address"
+                      onChange={(e) => {
+                        const addr = addresses.find((a) => a._id === e.target.value);
+                        setSelectedAddress(addr);
+                      }}
+                    >
+                      {addresses.map((addr) => (
+                        <MenuItem key={addr._id} value={addr._id}>
+                          {`${addr.address}, ${addr.landmark}, ${addr.pincode} (${addr.label})`}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                ) : (
+                  <Typography variant="body1" color="text.secondary" sx={{ fontStyle: 'italic', pl: 1 }}>
+                    No address added
+                  </Typography>
+                )}
               </Grid>
               <Grid item xs={12} sm={4}>
                 <Button

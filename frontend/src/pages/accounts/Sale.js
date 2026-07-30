@@ -749,7 +749,7 @@ export default function Sale() {
                     onBlur={handleBlur}
                     onChange={handleChange}
                   >
-                    {branches?.map((e) => (
+                    {branches?.filter(e => e.isHeadOffice !== 'yes' && !e.branchName?.toLowerCase().includes('head office'))?.map((e) => (
                       <MenuItem key={e._id} value={e._id}>
                         {e.branchId} {e.branchName}
                       </MenuItem>

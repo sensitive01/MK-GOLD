@@ -47,7 +47,7 @@ export default function TransitPrint({ id, open, onClose }) {
         numberOfOrnaments: numberOfOrnaments,
         grossWeight: grossWeight,
         netWeight: sale.netWeight || 0,
-        netAmount: sale.payableAmount || 0,
+        netAmount: sale.netAmount || 0,
         billDate: sale.createdAt ? moment(sale.createdAt).format('DD/MM/YYYY') : ''
       });
     });

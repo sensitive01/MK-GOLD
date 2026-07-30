@@ -57,7 +57,7 @@ export default function Melting() {
   const [sellPaymentMode, setSellPaymentMode] = useState('');
 
   const fetchMeltings = useCallback(async () => {
-    const res = await findMelting({});
+    const res = await findMelting({ status: { $ne: 'sold' } });
     if (res?.data) setData(res.data);
   }, []);
 
