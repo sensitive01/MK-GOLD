@@ -34,7 +34,7 @@ async function find(query = {}, user = null) {
       );
     }
 
-    return await Lead.aggregate([
+    const docs = await Lead.aggregate([
       { $match: query },
       {
         $lookup: {
@@ -51,6 +51,13 @@ async function find(query = {}, user = null) {
       },
       { $sort: { createdAt: -1 } },
     ]).exec();
+    
+    const User = require("../models/user");
+    const Employee = require("../models/employee");
+    await User.populate(docs, { path: "updatedBy", select: "username employee" });
+    await Employee.populate(docs, { path: "updatedBy.employee", select: "name" });
+    
+    return docs;
   } catch (err) {
     throw err;
   }
@@ -96,8 +103,11 @@ async function create(data) {
 async function update(id, data, user = null) {
   try {
     const lead = await Lead.findById(id);
-    if (user && user.userType?.toLowerCase() === 'telecalling' && !lead.assignedTo) {
-      data.assignedTo = user._id;
+    if (user) {
+      if (user.userType?.toLowerCase() === 'telecalling' && !lead.assignedTo) {
+        data.assignedTo = user._id;
+      }
+      data.updatedBy = user._id;
     }
     return await Lead.findByIdAndUpdate(id, data, { new: true });
   } catch (err) {
@@ -123,11 +133,14 @@ async function addDisposition(id, payload, user = null) {
       update.$set = { branch: payload.branch };
     }
 
-    if (user && user.userType?.toLowerCase() === 'telecalling') {
-      const lead = await Lead.findById(id);
-      if (!lead.assignedTo) {
-        if (!update.$set) update.$set = {};
-        update.$set.assignedTo = user._id;
+    if (user) {
+      if (!update.$set) update.$set = {};
+      update.$set.updatedBy = user._id;
+      if (user.userType?.toLowerCase() === 'telecalling') {
+        const lead = await Lead.findById(id);
+        if (!lead.assignedTo) {
+          update.$set.assignedTo = user._id;
+        }
       }
     }
 

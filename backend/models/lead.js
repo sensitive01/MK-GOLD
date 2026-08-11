@@ -4,7 +4,6 @@ const leadSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
       trim: true,
     },
     mobile: {
@@ -119,6 +118,10 @@ const leadSchema = new mongoose.Schema(
       default: false,
     },
     assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users",
+    },
+    updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "users",
     },

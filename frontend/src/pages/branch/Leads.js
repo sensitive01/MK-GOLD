@@ -57,6 +57,9 @@ const TABLE_HEAD = [
   { id: 'weight', label: 'Weight', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'date', label: 'Date', alignRight: false },
+  { id: 'editedBy', label: 'Edited By', alignRight: false },
+  { id: 'remarks', label: 'Remarks', alignRight: false },
+  { id: 'disposition', label: 'Disposition', alignRight: false },
   { id: '' },
 ];
 
@@ -268,7 +271,8 @@ export default function Leads({ title = "Leads Management" }) {
 
   const handleDownloadTemplate = () => {
     const headers = ['Name', 'Phone', 'Email', 'Weight', 'Comments', 'Pincode'];
-    const csvContent = 'data:text/csv;charset=utf-8,' + headers.join(',');
+    const sampleRow = ['John Doe', '9876543210', 'john@example.com', '10.5', 'Interested in physical gold', '400001'];
+    const csvContent = 'data:text/csv;charset=utf-8,' + headers.join(',') + '\n' + sampleRow.join(',');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -371,9 +375,9 @@ export default function Leads({ title = "Leads Management" }) {
             const type = getVal(['type']) || 'physical';
             const unit = getVal(['unit']) || 'gm';
             
-            if (!name || !mobile || !date || !source) {
+            if (!mobile || !date || !source) {
               hasError = true;
-              errorMsg = `Row ${index + 1} is missing mandatory fields (Name, Phone Number, Date, or Source).`;
+              errorMsg = `Row ${index + 1} is missing mandatory fields (Phone Number, Date, or Source).`;
             }
 
             let parsedDate = moment().format('YYYY-MM-DD');
@@ -429,7 +433,8 @@ export default function Leads({ title = "Leads Management" }) {
 
   const handleDownloadBulkTemplate = () => {
     const headers = ['Name', 'Phone Number', 'Date', 'Source', 'Place', 'Approximate Weight', 'Remarks', 'Status', 'Address', 'City', 'State', 'Pincode', 'Category', 'Type', 'Unit'];
-    const csvContent = 'data:text/csv;charset=utf-8,' + headers.join(',');
+    const sampleRow = ['John Doe', '9876543210', '2023-12-31', 'Facebook', 'Mumbai', '10.5', 'Interested', 'Pending', '123 Main St', 'Mumbai', 'Maharashtra', '400001', 'Gold', 'Physical', 'gm'];
+    const csvContent = 'data:text/csv;charset=utf-8,' + headers.join(',') + '\n' + sampleRow.join(',');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -727,8 +732,9 @@ export default function Leads({ title = "Leads Management" }) {
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, name, mobile, category, type, status, date, lead } = row;
+                    const { _id, name, mobile, category, type, status, date, lead, updatedBy, remarks, dispositions } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
+                    const displayRemark = (dispositions?.length > 0 && dispositions[dispositions.length - 1].remark) ? dispositions[dispositions.length - 1].remark : remarks;
 
                     return (
                       <TableRow
@@ -778,6 +784,9 @@ export default function Leads({ title = "Leads Management" }) {
                            </Box>
                         </TableCell>
                         <TableCell align="left">{date ? moment(date).format('YYYY-MM-DD') : 'N/A'}</TableCell>
+                        <TableCell align="left">{updatedBy?.employee?.name || updatedBy?.username || '-'}</TableCell>
+                        <TableCell align="left" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={displayRemark || ''}>{displayRemark || '-'}</TableCell>
+                        <TableCell align="left" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={dispositions?.length > 0 ? dispositions[dispositions.length - 1].status : ''}>{dispositions?.length > 0 ? dispositions[dispositions.length - 1].status : '-'}</TableCell>
                         <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton
                             size="large"
@@ -798,12 +807,12 @@ export default function Leads({ title = "Leads Management" }) {
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={7} />
+                      <TableCell colSpan={10} />
                     </TableRow>
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={7} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
                         <Paper sx={{ textAlign: 'center' }}>
                           <Typography paragraph>No leads found</Typography>
                         </Paper>
@@ -982,6 +991,9 @@ export default function Leads({ title = "Leads Management" }) {
             <Typography variant="body2" color="textSecondary">
               All fields are optional.
             </Typography>
+            <Typography variant="body2" sx={{ color: 'warning.main', fontWeight: 'bold', mt: 1 }}>
+              Note: The downloaded template contains sample data. Please delete the sample data row before uploading.
+            </Typography>
           </Box>
 
           <Box
@@ -1105,7 +1117,10 @@ export default function Leads({ title = "Leads Management" }) {
               Select a CSV or Excel file containing columns for <strong>Name, Phone Number, Date, Source, Place, Approximate Weight, Remarks, Status, Address, City, State, Pincode, Category, Type, Unit</strong>.
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              <span style={{ color: 'red' }}>*</span> Name, Phone Number, Date, and Source are mandatory.
+              <span style={{ color: 'red' }}>*</span> Phone Number, Date, and Source are mandatory.
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'warning.main', fontWeight: 'bold', mt: 1 }}>
+              Note: The downloaded template contains sample data. Please delete the sample data row before uploading.
             </Typography>
           </Box>
 
