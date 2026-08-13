@@ -32,7 +32,7 @@ const DISPOSITIONS = [
   'Call Busy',
   'Switched Off',
   'Not Reachable',
-  'Wrong Number',
+  'Wrong Enquiry',
   'Interested',
   'Not Interested',
   'Follow Up',
