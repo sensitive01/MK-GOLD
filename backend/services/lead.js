@@ -54,8 +54,10 @@ async function find(query = {}, user = null) {
     
     const User = require("../models/user");
     const Employee = require("../models/employee");
+    const Branch = require("../models/branch");
     await User.populate(docs, { path: "updatedBy", select: "username employee" });
     await Employee.populate(docs, { path: "updatedBy.employee", select: "name" });
+    await Branch.populate(docs, { path: "branch", select: "branchName" });
     
     return docs;
   } catch (err) {
@@ -129,7 +131,7 @@ async function remove(id) {
 async function addDisposition(id, payload, user = null) {
   try {
     const update = { $push: { dispositions: payload } };
-    if ((payload.status === "Branch Visit Confirmed" || payload.status === "Planning to Visit") && payload.branch) {
+    if ((payload.status === "Visited Branch" || payload.status === "Planning to Visit") && payload.branch) {
       update.$set = { branch: payload.branch };
     }
 

@@ -56,6 +56,10 @@ const leadSchema = new mongoose.Schema(
       enum: ["gold", "silver"],
       default: "gold",
     },
+    preferredLanguage: {
+      type: String,
+      trim: true,
+    },
     weight: {
       type: Number,
       required: true,

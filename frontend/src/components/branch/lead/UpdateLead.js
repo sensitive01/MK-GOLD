@@ -14,6 +14,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useState, useEffect } from 'react';
 import { getLeadById, updateLead } from '../../../apis/branch/lead';
+import { getBranch } from '../../../apis/branch/branch';
 import { createFile } from '../../../apis/branch/fileupload';
 import global from '../../../utils/global';
 import moment from 'moment';
@@ -22,15 +23,23 @@ function UpdateLead(props) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentImage, setCurrentImage] = useState('');
+  const [branches, setBranches] = useState([]);
 
   const schema = Yup.object({
     name: Yup.string().required('Name is required'),
     mobile: Yup.string().required('Mobile is required').matches(/^[0-9]{10}$/, 'Must be 10 digits'),
-    category: Yup.string().required('Category is required'),
-    weight: Yup.number().required('Weight is required').min(0),
+    city: Yup.string().max(255).required('City is required'),
+    state: Yup.string().max(255).required('State is required'),
+    category: Yup.string().max(255).required('Category is required'),
+    weight: Yup.number().required('Weight is required').min(0, 'Weight must be greater than or equal to 0'),
     unit: Yup.string().required('Unit is required'),
     type: Yup.string().required('Type is required'),
-    status: Yup.string().required('Status is required'),
+    status: Yup.string().max(255).required('Status is required'),
+    branch: Yup.string().when('status', {
+      is: 'converted',
+      then: Yup.string().required('Branch is required when status is converted'),
+      otherwise: Yup.string().nullable(),
+    }),
   });
 
   const formik = useFormik({
@@ -53,6 +62,7 @@ function UpdateLead(props) {
       remarks: '',
       source: '',
       leadSource: 'admin',
+      branch: '',
     },
     validationSchema: schema,
     onSubmit: (values) => {
@@ -109,7 +119,9 @@ function UpdateLead(props) {
             place: data.data.place || '',
             remarks: data.data.remarks || '',
             source: data.data.source || '',
+            preferredLanguage: data.data.preferredLanguage || '',
             leadSource: data.data.leadSource || 'admin',
+            branch: data.data.branch?._id || data.data.branch || '',
           });
           if (data.data.lead?.uploadedFile) {
             setCurrentImage(
@@ -122,6 +134,11 @@ function UpdateLead(props) {
         setLoading(false);
       });
     }
+    getBranch().then((res) => {
+      if (res?.status) {
+        setBranches(res.data || []);
+      }
+    });
   }, [props.id]);
 
   if (loading) return <div>Loading...</div>;
@@ -188,12 +205,45 @@ function UpdateLead(props) {
               </Select>
             </FormControl>
           </Grid>
+          {formik.values.status === 'converted' && (
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth error={formik.touched.branch && Boolean(formik.errors.branch)}>
+                <InputLabel>Branch</InputLabel>
+                <Select label="Branch" name="branch" value={formik.values.branch} onChange={formik.handleChange}>
+                  {branches.map((b) => (
+                    <MenuItem key={b._id} value={b._id}>{b.branchName}</MenuItem>
+                  ))}
+                </Select>
+                {formik.touched.branch && formik.errors.branch && (
+                  <Typography variant="caption" color="error" sx={{ mt: 1, ml: 2 }}>{formik.errors.branch}</Typography>
+                )}
+              </FormControl>
+            </Grid>
+          )}
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth>
               <InputLabel>Category</InputLabel>
               <Select label="Category" name="category" value={formik.values.category} onChange={formik.handleChange}>
                 <MenuItem value="gold">Gold</MenuItem>
                 <MenuItem value="silver">Silver</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth>
+              <InputLabel>Preferred Language</InputLabel>
+              <Select
+                label="Preferred Language"
+                name="preferredLanguage"
+                value={formik.values.preferredLanguage}
+                onChange={formik.handleChange}
+              >
+                {global.languages?.map((lang) => (
+                  <MenuItem key={lang} value={lang}>
+                    {lang}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Grid>

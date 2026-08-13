@@ -52,6 +52,7 @@ function CreateLead(props) {
       pledgedAmount: 0,
       date: moment().format('YYYY-MM-DD'),
       place: '',
+      preferredLanguage: '',
       remarks: '',
       status: 'pending',
       source: '',
@@ -274,6 +275,25 @@ function CreateLead(props) {
               </Select>
             </FormControl>
           </Grid>
+
+          <Grid item xs={12} sm={4}>
+            <FormControl fullWidth>
+              <InputLabel>Preferred Language</InputLabel>
+              <Select
+                label="Preferred Language"
+                name="preferredLanguage"
+                value={values.preferredLanguage}
+                onChange={handleChange}
+              >
+                {global.languages?.map((lang) => (
+                  <MenuItem key={lang} value={lang}>
+                    {lang}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          
           {values.type === 'pledged' && (
             <>
               <Grid item xs={12} sm={4}>

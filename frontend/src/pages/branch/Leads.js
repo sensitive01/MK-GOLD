@@ -66,10 +66,21 @@ const TABLE_HEAD = [
 // ----------------------------------------------------------------------
 
 function descendingComparator(a, b, orderBy) {
-  if (b[orderBy] < a[orderBy]) {
+  let aValue = a[orderBy];
+  let bValue = b[orderBy];
+
+  if (orderBy === 'editedBy') {
+    aValue = (a.updatedBy?.employee?.name || a.updatedBy?.username || '').toLowerCase();
+    bValue = (b.updatedBy?.employee?.name || b.updatedBy?.username || '').toLowerCase();
+  } else if (orderBy === 'disposition') {
+    aValue = (a.dispositions?.length > 0 ? a.dispositions[a.dispositions.length - 1].status : '').toLowerCase();
+    bValue = (b.dispositions?.length > 0 ? b.dispositions[b.dispositions.length - 1].status : '').toLowerCase();
+  }
+
+  if (bValue < aValue) {
     return -1;
   }
-  if (b[orderBy] > a[orderBy]) {
+  if (bValue > aValue) {
     return 1;
   }
   return 0;
@@ -81,7 +92,7 @@ function getComparator(order, orderBy) {
     : (a, b) => -descendingComparator(a, b, orderBy);
 }
 
-function applySortFilter(array, comparator, query, filters) {
+function applySortFilter(array, comparator, query, filters, user) {
   const stabilizedThis = array?.map((el, index) => [el, index]) || [];
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
@@ -111,18 +122,87 @@ function applySortFilter(array, comparator, query, filters) {
     if (filters.type && filters.type !== 'all') {
       filteredArray = filteredArray.filter((row) => row.type?.toLowerCase() === filters.type.toLowerCase());
     }
-    if (filters.startDate) {
-      const start = new Date(filters.startDate).getTime();
-      filteredArray = filteredArray.filter((row) => row.date && new Date(row.date).getTime() >= start);
-    }
-    if (filters.endDate) {
-      const end = new Date(filters.endDate).getTime();
-      filteredArray = filteredArray.filter((row) => row.date && new Date(row.date).getTime() <= end);
+    if (filters.startDate || filters.endDate) {
+      const start = filters.startDate ? new Date(filters.startDate).setHours(0,0,0,0) : null;
+      const end = filters.endDate ? new Date(filters.endDate).setHours(23,59,59,999) : null;
+
+      filteredArray = filteredArray.filter((row) => {
+        const dispositions = row.dispositions || [];
+        if (dispositions.length === 0) {
+          if (row.date) {
+              const createdTime = new Date(row.date).getTime();
+              if ((!start || createdTime >= start) && (!end || createdTime <= end)) {
+                  return true;
+              }
+              return false;
+          }
+          return true;
+        }
+
+        const latestDisposition = dispositions[dispositions.length - 1];
+        const status = latestDisposition.status;
+        
+        let matches = false;
+        
+        if (row.date) {
+            const createdTime = new Date(row.date).getTime();
+            if ((!start || createdTime >= start) && (!end || createdTime <= end)) {
+                matches = true;
+            }
+        }
+        
+        if (!matches && (status === 'Callback' || status === 'Follow Up' || status === 'Planning to Visit' || status === 'Visited Branch') && latestDisposition.callbackDate) {
+            const callbackTime = new Date(latestDisposition.callbackDate).getTime();
+            if ((!start || callbackTime >= start) && (!end || callbackTime <= end)) {
+                matches = true;
+            }
+        }
+
+        return matches;
+      });
+    } else {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+      
+      filteredArray = filteredArray.filter(row => {
+        const dispositions = row.dispositions || [];
+        if (dispositions.length === 0) return true;
+        
+        const latestDisposition = dispositions[dispositions.length - 1];
+        if (latestDisposition.status === 'Callback' || latestDisposition.status === 'Follow Up' || latestDisposition.status === 'Planning to Visit' || latestDisposition.status === 'Visited Branch') {
+           
+           if (row.date) {
+               const createdTime = new Date(row.date).getTime();
+               if (createdTime >= todayStart.getTime() && createdTime <= todayEnd.getTime()) {
+                   return true;
+               }
+           }
+
+           if (latestDisposition.callbackDate) {
+               const callbackTime = new Date(latestDisposition.callbackDate).getTime();
+               if (callbackTime > todayEnd.getTime()) return false; 
+           }
+        }
+        return true;
+      });
     }
     if (filters.isExclusive && filters.isExclusive !== 'all') {
       const exclusiveVal = filters.isExclusive === 'exclusive';
       filteredArray = filteredArray.filter((row) => !!row.isExclusive === exclusiveVal);
     }
+  }
+
+  if (user?.userType?.toLowerCase() === 'telecalling') {
+    filteredArray = filteredArray.filter(row => {
+      const dispositions = row.dispositions || [];
+      if (dispositions.length === 0) return true;
+      return dispositions.some(d => {
+        const creatorId = d.createdBy?._id || d.createdBy;
+        return creatorId === user._id;
+      });
+    });
   }
 
   return filteredArray;
@@ -380,6 +460,7 @@ export default function Leads({ title = "Leads Management" }) {
             const category = getVal(['category']) || 'gold';
             const type = getVal(['type']) || 'physical';
             const unit = getVal(['unit']) || 'gm';
+            const preferredLanguage = getVal(['preferred language', 'language']);
             
             if (!mobile || !date || !source) {
               hasError = true;
@@ -413,6 +494,7 @@ export default function Leads({ title = "Leads Management" }) {
               category: category.toLowerCase(),
               type: type.toLowerCase(),
               unit: unit.toLowerCase(),
+              preferredLanguage,
               leadSource: 'telecalling',
             };
           });
@@ -438,8 +520,8 @@ export default function Leads({ title = "Leads Management" }) {
   };
 
   const handleDownloadBulkTemplate = () => {
-    const headers = ['Name', 'Phone Number', 'Date', 'Source', 'Place', 'Approximate Weight', 'Remarks', 'Status', 'Address', 'City', 'State', 'Pincode', 'Category', 'Type', 'Unit'];
-    const sampleRow = ['John Doe', '9876543210', '2023-12-31', 'Facebook', 'Mumbai', '10.5', 'Interested', 'Pending', '123 Main St', 'Mumbai', 'Maharashtra', '400001', 'Gold', 'Physical', 'gm'];
+    const headers = ['Name', 'Phone Number', 'Date', 'Source', 'Place', 'Approximate Weight', 'Remarks', 'Status', 'Address', 'City', 'State', 'Pincode', 'Category', 'Type', 'Unit', 'Preferred Language'];
+    const sampleRow = ['John Doe', '9876543210', '2023-12-31', 'Facebook', 'Mumbai', '10.5', 'Interested', 'Pending', '123 Main St', 'Mumbai', 'Maharashtra', '400001', 'Gold', 'Physical', 'gm', 'English'];
     const csvContent = 'data:text/csv;charset=utf-8,' + headers.join(',') + '\n' + sampleRow.join(',');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -525,7 +607,7 @@ export default function Leads({ title = "Leads Management" }) {
   };
 
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
-  const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName, filters);
+  const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName, filters, auth.user);
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
@@ -757,7 +839,31 @@ export default function Leads({ title = "Leads Management" }) {
                           setToggleContainerType('preview');
                         }}
                         style={{ cursor: 'pointer' }}
-                        sx={(!row.dispositions || row.dispositions.length === 0) ? { '& .MuiTableCell-root': { color: 'error.main' } } : {}}
+                        sx={(theme) => {
+                          const lowerStatus = status?.toLowerCase();
+                          if (lowerStatus === 'rejected') {
+                            return { 
+                              '& .MuiTableCell-root': { 
+                                color: 'info.main', 
+                                backgroundImage: `linear-gradient(to right, ${theme.palette.info.main}, ${theme.palette.info.main})`,
+                                backgroundSize: '100% 1px',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'center'
+                              } 
+                            };
+                          }
+                          if (lowerStatus === 'converted') {
+                            return { '& .MuiTableCell-root': { color: 'primary.main' } };
+                          }
+                          if (!row.dispositions || row.dispositions.length === 0) {
+                            return { '& .MuiTableCell-root': { color: 'error.main' } };
+                          }
+                          const lastDisp = row.dispositions[row.dispositions.length - 1].status;
+                          if (lastDisp === 'Callback' || lastDisp === 'Follow Up' || lastDisp === 'Planning to Visit' || lastDisp === 'Visited Branch') {
+                            return { '& .MuiTableCell-root': { color: 'success.main' } };
+                          }
+                          return {};
+                        }}
                       >
                         <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
@@ -787,8 +893,8 @@ export default function Leads({ title = "Leads Management" }) {
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{type}</TableCell>
                         <TableCell align="left">{row.weight ? `${row.weight} ${row.unit || 'gm'}` : 'N/A'}</TableCell>
                         <TableCell align="left">
-                           <Box sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: status === 'pending' ? 'warning.main' : status === 'converted' ? 'success.main' : 'error.main', color: '#fff', width: 'fit-content', textTransform: 'capitalize' }}>
-                             {status}
+                           <Box sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: status?.toLowerCase() === 'pending' ? 'warning.main' : status?.toLowerCase() === 'converted' ? 'primary.main' : status?.toLowerCase() === 'rejected' ? 'info.main' : 'error.main', color: '#fff', width: 'fit-content', textTransform: 'capitalize' }}>
+                             {status?.toLowerCase() === 'converted' && row.branch ? `${status} (${row.branch.branchName})` : status}
                            </Box>
                         </TableCell>
                         <TableCell align="left">{date ? moment(date).format('YYYY-MM-DD') : 'N/A'}</TableCell>
@@ -810,24 +916,7 @@ export default function Leads({ title = "Leads Management" }) {
                             >
                               <Iconify icon={'eva:more-vertical-fill'} />
                             </IconButton>
-                          ) : (
-                            !row.isImported && (
-                              <IconButton
-                                size="large"
-                                color="inherit"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  setOpenId(_id);
-                                  setIsImportedLead(!!row.isImported);
-                                  setToggleContainer(true);
-                                  setToggleContainerType('update');
-                                }}
-                              >
-                                <Iconify icon={'eva:edit-outline'} />
-                              </IconButton>
-                            )
-                          )}
+                          ) : null}
                         </TableCell>
                       </TableRow>
                     );
@@ -852,7 +941,7 @@ export default function Leads({ title = "Leads Management" }) {
           </Scrollbar>
 
           <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
+            rowsPerPageOptions={[5, 10, 25, 50, 100]}
             component="div"
             count={data?.length || 0}
             rowsPerPage={rowsPerPage}
@@ -861,6 +950,47 @@ export default function Leads({ title = "Leads Management" }) {
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
         </Card>
+
+        {auth?.user?.userType === 'telecalling' && (
+          <Box sx={{ display: 'flex', gap: 3, mt: 3, flexWrap: 'wrap' }}>
+             {/* Pending Leads */}
+             <Card sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#ffe7d9', color: '#7a0c2e' }}>
+               <Typography variant="h3">{data?.filter(row => row.status !== 'rejected' && row.status !== 'converted' && (!row.dispositions || row.dispositions.length === 0)).length || 0}</Typography>
+               <Typography variant="subtitle2">Pending Leads</Typography>
+             </Card>
+             {/* My Leads */}
+             <Card sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#d0f2ff', color: '#04297a' }}>
+               <Typography variant="h3">{data?.filter(row => {
+                 const currentUserId = auth?.user?._id || auth?.user?.id;
+                 return (row.createdBy && row.createdBy === currentUserId) || 
+                        (row.updatedBy && row.updatedBy._id === currentUserId) || 
+                        (row.updatedBy?.employee?._id === currentUserId) || 
+                        (row.updatedBy?.employee === currentUserId);
+               }).length || 0}</Typography>
+               <Typography variant="subtitle2">My Leads</Typography>
+             </Card>
+             {/* Follow Ups */}
+             <Card sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#e4f8dd', color: '#135222' }}>
+               <Typography variant="h3">{data?.filter(row => {
+                 if (row.status === 'rejected' || row.status === 'converted') return false;
+                 if (!row.dispositions || row.dispositions.length === 0) return false;
+                 const lastDisp = row.dispositions[row.dispositions.length - 1].status;
+                 return ['Callback', 'Follow Up', 'Planning to Visit', 'Visited Branch'].includes(lastDisp);
+               }).length || 0}</Typography>
+               <Typography variant="subtitle2">Follow Ups</Typography>
+             </Card>
+             {/* Rejected */}
+             <Card sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#e6e6e6', color: '#4a4a4a' }}>
+               <Typography variant="h3">{data?.filter(row => row.status === 'rejected').length || 0}</Typography>
+               <Typography variant="subtitle2">Rejected</Typography>
+             </Card>
+             {/* Converted */}
+             <Card sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#fff3d6', color: '#7a4f01' }}>
+               <Typography variant="h3">{data?.filter(row => row.status === 'converted').length || 0}</Typography>
+               <Typography variant="subtitle2">Converted</Typography>
+             </Card>
+          </Box>
+        )}
       </Container>
 
       {toggleContainer === true && toggleContainerType === 'preview' && (
@@ -880,7 +1010,7 @@ export default function Leads({ title = "Leads Management" }) {
           {isImportedLead ? (
             <PreviewImportedLead data={data.find(item => item._id === openId)} />
           ) : (
-            <PreviewLead setToggleContainer={setToggleContainer} id={openId} />
+            <PreviewLead setToggleContainer={setToggleContainer} setToggleContainerType={setToggleContainerType} id={openId} />
           )}
         </Container>
       )}
@@ -1141,7 +1271,7 @@ export default function Leads({ title = "Leads Management" }) {
         >
           <Box sx={{ mb: 3 }}>
             <Typography variant="body2" color="textSecondary" gutterBottom>
-              Select a CSV or Excel file containing columns for <strong>Name, Phone Number, Date, Source, Place, Approximate Weight, Remarks, Status, Address, City, State, Pincode, Category, Type, Unit</strong>.
+              Select a CSV or Excel file containing columns for <strong>Name, Phone Number, Date, Source, Place, Approximate Weight, Remarks, Status, Address, City, State, Pincode, Category, Type, Unit, Preferred Language</strong>.
             </Typography>
             <Typography variant="body2" color="textSecondary">
               <span style={{ color: 'red' }}>*</span> Phone Number, Date, and Source are mandatory.

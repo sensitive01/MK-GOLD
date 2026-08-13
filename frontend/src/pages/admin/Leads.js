@@ -217,6 +217,11 @@ export default function Leads({ title = "Leads Management" }) {
               return matchedKey ? String(row[matchedKey]).trim() : '';
             };
             
+            const category = getVal(['category']) || 'gold';
+            const type = getVal(['type']) || 'physical';
+            const unit = getVal(['unit']) || 'gm';
+            const preferredLanguage = getVal(['preferred language', 'language']);
+            
             return {
               name: getVal(['name', 'full name', 'lead name']),
               phone: getVal(['phone', 'phone number', 'mobile', 'mobile number']),
@@ -224,6 +229,11 @@ export default function Leads({ title = "Leads Management" }) {
               weight: parseFloat(getVal(['weight', 'qty', 'quantity'])) || 0,
               pincode: getVal(['pincode', 'pin', 'postal code']),
               comments: getVal(['comments', 'comment', 'remarks', 'remark', 'desc']),
+              category: category.toLowerCase(),
+              type: type.toLowerCase(),
+              unit: unit.toLowerCase(),
+              preferredLanguage,
+              leadSource: 'admin',
             };
           });
 
@@ -245,9 +255,10 @@ export default function Leads({ title = "Leads Management" }) {
     }
   };
 
-  const handleDownloadTemplate = () => {
-    const headers = ['Name', 'Phone', 'Email', 'Weight', 'Comments', 'Pincode'];
-    const csvContent = 'data:text/csv;charset=utf-8,' + headers.join(',');
+  const handleDownloadBulkTemplate = () => {
+    const headers = ['Name', 'Phone Number', 'Date', 'Source', 'Place', 'Approximate Weight', 'Remarks', 'Status', 'Address', 'City', 'State', 'Pincode', 'Category', 'Type', 'Unit', 'Preferred Language'];
+    const sampleRow = ['John Doe', '9876543210', '2023-12-31', 'Facebook', 'Mumbai', '10.5', 'Interested', 'Pending', '123 Main St', 'Mumbai', 'Maharashtra', '400001', 'Gold', 'Physical', 'gm', 'English'];
+    const csvContent = 'data:text/csv;charset=utf-8,' + headers.join(',') + '\n' + sampleRow.join(',');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -363,13 +374,82 @@ export default function Leads({ title = "Leads Management" }) {
   if (filters.type && filters.type !== 'all') {
     filteredData = filteredData.filter((row) => row.type === filters.type);
   }
-  if (filters.startDate) {
-    const start = new Date(filters.startDate).getTime();
-    filteredData = filteredData.filter((row) => row.date && new Date(row.date).getTime() >= start);
+  if (filters.startDate || filters.endDate) {
+    const start = filters.startDate ? new Date(filters.startDate).setHours(0,0,0,0) : null;
+    const end = filters.endDate ? new Date(filters.endDate).setHours(23,59,59,999) : null;
+
+    filteredData = filteredData.filter((row) => {
+      const dispositions = row.dispositions || [];
+      if (dispositions.length === 0) {
+        if (row.date) {
+            const createdTime = new Date(row.date).getTime();
+            if ((!start || createdTime >= start) && (!end || createdTime <= end)) {
+                return true;
+            }
+            return false;
+        }
+        return true;
+      }
+
+      const latestDisposition = dispositions[dispositions.length - 1];
+      const status = latestDisposition.status;
+      
+      let matches = false;
+      
+      if (row.date) {
+          const createdTime = new Date(row.date).getTime();
+          if ((!start || createdTime >= start) && (!end || createdTime <= end)) {
+              matches = true;
+          }
+      }
+      
+      if (!matches && (status === 'Callback' || status === 'Follow Up' || status === 'Planning to Visit' || status === 'Visited Branch') && latestDisposition.callbackDate) {
+          const callbackTime = new Date(latestDisposition.callbackDate).getTime();
+          if ((!start || callbackTime >= start) && (!end || callbackTime <= end)) {
+              matches = true;
+          }
+      }
+
+      return matches;
+    });
+  } else {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    
+    filteredData = filteredData.filter(row => {
+      const dispositions = row.dispositions || [];
+      if (dispositions.length === 0) return true;
+      
+      const latestDisposition = dispositions[dispositions.length - 1];
+      if (latestDisposition.status === 'Callback' || latestDisposition.status === 'Follow Up' || latestDisposition.status === 'Planning to Visit' || latestDisposition.status === 'Visited Branch') {
+         
+         if (row.date) {
+             const createdTime = new Date(row.date).getTime();
+             if (createdTime >= todayStart.getTime() && createdTime <= todayEnd.getTime()) {
+                 return true;
+             }
+         }
+
+         if (latestDisposition.callbackDate) {
+             const callbackTime = new Date(latestDisposition.callbackDate).getTime();
+             if (callbackTime > todayEnd.getTime()) return false; 
+         }
+      }
+      return true;
+    });
   }
-  if (filters.endDate) {
-    const end = new Date(filters.endDate).getTime();
-    filteredData = filteredData.filter((row) => row.date && new Date(row.date).getTime() <= end);
+
+  if (auth.user?.userType?.toLowerCase() === 'telecalling') {
+    filteredData = filteredData.filter(row => {
+      const dispositions = row.dispositions || [];
+      if (dispositions.length === 0) return true;
+      return dispositions.some(d => {
+        const creatorId = d.createdBy?._id || d.createdBy;
+        return creatorId === auth.user._id;
+      });
+    });
   }
   
   filteredData = applyExclusiveFilter(filteredData, filters.isExclusive);
@@ -594,7 +674,31 @@ export default function Leads({ title = "Leads Management" }) {
                         tabIndex={-1}
                         role="checkbox"
                         selected={selectedData}
-                        sx={(!row.dispositions || row.dispositions.length === 0) ? { '& .MuiTableCell-root': { color: 'error.main' } } : {}}
+                        sx={(theme) => {
+                          const lowerStatus = status?.toLowerCase();
+                          if (lowerStatus === 'rejected') {
+                            return { 
+                              '& .MuiTableCell-root': { 
+                                color: 'info.main', 
+                                backgroundImage: `linear-gradient(to right, ${theme.palette.info.main}, ${theme.palette.info.main})`,
+                                backgroundSize: '100% 1px',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'center'
+                              } 
+                            };
+                          }
+                          if (lowerStatus === 'converted') {
+                            return { '& .MuiTableCell-root': { color: 'primary.main' } };
+                          }
+                          if (!row.dispositions || row.dispositions.length === 0) {
+                            return { '& .MuiTableCell-root': { color: 'error.main' } };
+                          }
+                          const lastDisp = row.dispositions[row.dispositions.length - 1].status;
+                          if (lastDisp === 'Callback' || lastDisp === 'Follow Up' || lastDisp === 'Planning to Visit' || lastDisp === 'Visited Branch') {
+                            return { '& .MuiTableCell-root': { color: 'success.main' } };
+                          }
+                          return {};
+                        }}
                       >
                         <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
@@ -634,8 +738,8 @@ export default function Leads({ title = "Leads Management" }) {
                           )}
                         </TableCell>
                         <TableCell align="left">
-                           <Box sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: status === 'pending' ? 'warning.main' : status === 'converted' ? 'success.main' : 'error.main', color: '#fff', width: 'fit-content', textTransform: 'capitalize' }}>
-                             {status}
+                           <Box sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: status?.toLowerCase() === 'pending' ? 'warning.main' : status?.toLowerCase() === 'converted' ? 'primary.main' : status?.toLowerCase() === 'rejected' ? 'info.main' : 'error.main', color: '#fff', width: 'fit-content', textTransform: 'capitalize' }}>
+                             {status?.toLowerCase() === 'converted' && row.branch ? `${status} (${row.branch.branchName})` : status}
                            </Box>
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
@@ -677,7 +781,7 @@ export default function Leads({ title = "Leads Management" }) {
           </Scrollbar>
 
           <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
+            rowsPerPageOptions={[5, 10, 25, 50, 100]}
             component="div"
             count={data?.length || 0}
             rowsPerPage={rowsPerPage}
@@ -705,7 +809,7 @@ export default function Leads({ title = "Leads Management" }) {
           {isImportedLead ? (
             <PreviewImportedLead data={data.find(item => item._id === openId)} />
           ) : (
-            <PreviewLead setToggleContainer={setToggleContainer} id={openId} />
+            <PreviewLead setToggleContainer={setToggleContainer} setToggleContainerType={setToggleContainerType} id={openId} />
           )}
         </Container>
       )}
@@ -812,7 +916,7 @@ export default function Leads({ title = "Leads Management" }) {
           <Button
             variant="outlined"
             startIcon={<Iconify icon="eva:download-outline" />}
-            onClick={handleDownloadTemplate}
+            onClick={handleDownloadBulkTemplate}
             size="small"
             sx={{
               color: '#8A1B9F',
@@ -838,7 +942,7 @@ export default function Leads({ title = "Leads Management" }) {
         >
           <Box sx={{ mb: 3 }}>
             <Typography variant="body2" color="textSecondary" gutterBottom>
-              Select a CSV or Excel file containing columns for <strong>Name, Phone, Email, Weight, Comments, Pincode</strong>.
+              Select a CSV or Excel file containing columns for <strong>Name, Phone Number, Date, Source, Place, Approximate Weight, Remarks, Status, Address, City, State, Pincode, Category, Type, Unit, Preferred Language</strong>.
             </Typography>
             <Typography variant="body2" color="textSecondary">
               All fields are optional.

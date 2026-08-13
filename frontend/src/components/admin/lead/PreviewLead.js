@@ -26,6 +26,7 @@ import { getLeadById, addDisposition } from '../../../apis/branch/lead';
 import { getBranch } from '../../../apis/admin/branch';
 import global from '../../../utils/global';
 import moment from 'moment';
+import Iconify from '../../iconify';
 
 const DISPOSITIONS = [
   'RNR',
@@ -33,10 +34,9 @@ const DISPOSITIONS = [
   'Switched Off',
   'Not Reachable',
   'Wrong Enquiry',
-  'Interested',
   'Not Interested',
   'Follow Up',
-  'Branch Visit Confirmed',
+  'Visited Branch',
   'Callback',
   'Planning to Visit',
   'Sold outside',
@@ -125,6 +125,8 @@ function PreviewLead(props) {
       : `${global.baseURL}/${data.lead.uploadedFile}`
     : '';
 
+  const branchNameDisplay = data.status === 'converted' && data.branch ? branches.find(b => b._id === (data.branch?._id || data.branch))?.branchName : null;
+
   return (
     <Card sx={{ p: 4, my: 4 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
@@ -136,13 +138,26 @@ function PreviewLead(props) {
             Created: {moment(data.createdAt).format('LLLL')}
           </Typography>
         </Stack>
-        <Button
-          variant="contained"
-          onClick={() => setOpenModal(true)}
-          sx={{ bgcolor: '#FFD700', color: '#000', '&:hover': { bgcolor: '#FFC800' } }}
-        >
-          Add Call Log
-        </Button>
+        <Stack direction="row" spacing={2}>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              if (props.setToggleContainerType) {
+                 props.setToggleContainerType('update');
+              }
+            }}
+            startIcon={<Iconify icon="eva:edit-fill" />}
+          >
+            Edit Lead
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => setOpenModal(true)}
+            sx={{ bgcolor: '#FFD700', color: '#000', '&:hover': { bgcolor: '#FFC800' } }}
+          >
+            Add Call Log
+          </Button>
+        </Stack>
       </Stack>
 
       <Grid container spacing={3}>
@@ -187,9 +202,13 @@ function PreviewLead(props) {
           <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>{data.type}</Typography>
         </Grid>
         <Grid item xs={12} sm={3}>
+          <Typography variant="subtitle2" sx={{ color: 'purple' }}>Preferred Language</Typography>
+          <Typography variant="body1">{data.preferredLanguage || 'N/A'}</Typography>
+        </Grid>
+        <Grid item xs={12} sm={3}>
           <Typography variant="subtitle2" sx={{ color: 'purple' }}>Status</Typography>
-          <Box sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: data.status === 'pending' ? 'warning.main' : data.status === 'converted' ? 'success.main' : 'error.main', color: '#fff', width: 'fit-content', textTransform: 'capitalize', mt: 1 }}>
-            {data.status}
+          <Box sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: data.status === 'pending' ? 'warning.main' : data.status === 'converted' ? 'primary.main' : data.status === 'rejected' ? 'info.main' : 'error.main', color: '#fff', width: 'fit-content', textTransform: 'capitalize', mt: 1 }}>
+            {branchNameDisplay ? `${data.status} (${branchNameDisplay})` : data.status}
           </Box>
         </Grid>
 
@@ -250,7 +269,7 @@ function PreviewLead(props) {
                       <TableCell sx={{ fontWeight: 'bold' }}>{log.status}</TableCell>
                       <TableCell>
                         {log.remark || '-'}
-                        {(log.status === 'Callback' || log.status === 'Planning to Visit') && (log.callbackDate || log.callbackTime) && (
+                        {(log.status === 'Callback' || log.status === 'Planning to Visit' || log.status === 'Follow Up') && (log.callbackDate || log.callbackTime) && (
                           <div style={{ fontSize: '0.85em', color: 'gray', marginTop: '4px' }}>
                             Date: {log.callbackDate || '-'} | Time: {log.callbackTime || '-'}
                           </div>
@@ -297,7 +316,7 @@ function PreviewLead(props) {
                   </Select>
                </FormControl>
             </Grid>
-            {(logForm.status === 'Branch Visit Confirmed' || logForm.status === 'Planning to Visit') && (
+            {(logForm.status === 'Visited Branch' || logForm.status === 'Planning to Visit') && (
               <Grid item xs={12}>
                 <FormControl fullWidth>
                   <InputLabel>Select Branch</InputLabel>
