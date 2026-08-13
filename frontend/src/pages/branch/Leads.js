@@ -698,6 +698,7 @@ export default function Leads({ title = "Leads Management" }) {
 
         <Card>
           <LeadListToolbar
+            isAdmin={auth.user?.userType?.toLowerCase() === 'admin'}
             numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
@@ -788,19 +789,38 @@ export default function Leads({ title = "Leads Management" }) {
                         <TableCell align="left" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={displayRemark || ''}>{displayRemark || '-'}</TableCell>
                         <TableCell align="left" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={dispositions?.length > 0 ? dispositions[dispositions.length - 1].status : ''}>{dispositions?.length > 0 ? dispositions[dispositions.length - 1].status : '-'}</TableCell>
                         <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                          <IconButton
-                            size="large"
-                            color="inherit"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              setOpenId(_id);
-                              setIsImportedLead(!!row.isImported);
-                              handleOpenMenu(e);
-                            }}
-                          >
-                            <Iconify icon={'eva:more-vertical-fill'} />
-                          </IconButton>
+                          {auth.user?.userType?.toLowerCase() === 'admin' ? (
+                            <IconButton
+                              size="large"
+                              color="inherit"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                setOpenId(_id);
+                                setIsImportedLead(!!row.isImported);
+                                handleOpenMenu(e);
+                              }}
+                            >
+                              <Iconify icon={'eva:more-vertical-fill'} />
+                            </IconButton>
+                          ) : (
+                            !row.isImported && (
+                              <IconButton
+                                size="large"
+                                color="inherit"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  setOpenId(_id);
+                                  setIsImportedLead(!!row.isImported);
+                                  setToggleContainer(true);
+                                  setToggleContainerType('update');
+                                }}
+                              >
+                                <Iconify icon={'eva:edit-outline'} />
+                              </IconButton>
+                            )
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -924,7 +944,7 @@ export default function Leads({ title = "Leads Management" }) {
             Edit
           </MenuItem>
         )}
-        {/* <MenuItem
+        <MenuItem
           sx={{ color: 'error.main' }}
           onClick={() => {
             setOpen(null);
@@ -934,15 +954,15 @@ export default function Leads({ title = "Leads Management" }) {
         >
           <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
           Delete
-        </MenuItem> */}
+        </MenuItem>
       </Popover>
 
       <Modal open={openDeleteModal} onClose={handleCloseDeleteModal}>
         <Box sx={style}>
-          {/* <Typography variant="h6">Delete</Typography> */}
+          <Typography variant="h6">Delete</Typography>
           <Typography sx={{ mt: 3 }}>Are you sure you want to delete?</Typography>
           <Stack direction="row" spacing={2} mt={3}>
-            {/* <Button variant="contained" color="error" onClick={deleteType === 'single' ? handleDelete : handleDeleteSelected}>Delete</Button> */}
+            <Button variant="contained" color="error" onClick={deleteType === 'single' ? handleDelete : handleDeleteSelected}>Delete</Button>
             <Button variant="contained" onClick={handleCloseDeleteModal}>Close</Button>
           </Stack>
         </Box>

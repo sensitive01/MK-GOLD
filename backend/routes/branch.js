@@ -106,12 +106,12 @@ branchRouter.post("/lead/create", lead.create);
 branchRouter.post("/lead/bulk-create", lead.bulkCreate);
 branchRouter.post("/lead/update/:id", lead.update);
 branchRouter.post("/lead/mark-exclusive", lead.markExclusive);
-// branchRouter.post("/lead/delete/:id", lead.remove);
+branchRouter.post("/lead/delete/:id", lead.remove);
 branchRouter.post("/lead/disposition/:id", multer.single("uploadedFile"), lead.addDisposition);
 
 branchRouter.post("/imported-lead/import", importedLead.importLeads);
 branchRouter.get("/imported-lead/get", importedLead.find);
-// branchRouter.post("/imported-lead/delete/:id", importedLead.remove);
+branchRouter.post("/imported-lead/delete/:id", importedLead.remove);
 
 branchRouter.get("/employee/get", employee.find);
 branchRouter.post("/employee/get", employee.find);

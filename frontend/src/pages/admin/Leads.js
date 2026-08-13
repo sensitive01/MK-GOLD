@@ -543,6 +543,7 @@ export default function Leads({ title = "Leads Management" }) {
 
         <Card>
           <LeadListToolbar
+            isAdmin={true}
             numSelected={selected?.length}
             filterName={filterName}
             onFilterName={handleFilterByName}
@@ -587,13 +588,6 @@ export default function Leads({ title = "Leads Management" }) {
                         tabIndex={-1}
                         role="checkbox"
                         selected={selectedData}
-                        onClick={() => {
-                          setOpenId(_id);
-                          setIsImportedLead(!!row.isImported);
-                          setToggleContainer(true);
-                          setToggleContainerType('preview');
-                        }}
-                        style={{ cursor: 'pointer' }}
                       >
                         <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                           <Checkbox

@@ -27,6 +27,7 @@ const StyledSearch = styled(OutlinedInput)(({ theme }) => ({
 }));
 
 LeadListToolbar.propTypes = {
+  isAdmin: PropTypes.bool,
   handleDelete: PropTypes.func,
   handleMarkExclusive: PropTypes.func,
   isAllExclusive: PropTypes.bool,
@@ -36,7 +37,7 @@ LeadListToolbar.propTypes = {
   filterComponent: PropTypes.node,
 };
 
-export default function LeadListToolbar({ handleDelete, handleMarkExclusive, isAllExclusive, numSelected, filterName, onFilterName, filterComponent }) {
+export default function LeadListToolbar({ isAdmin, handleDelete, handleMarkExclusive, isAllExclusive, numSelected, filterName, onFilterName, filterComponent }) {
   return (
     <StyledRoot
       sx={{
@@ -77,6 +78,13 @@ export default function LeadListToolbar({ handleDelete, handleMarkExclusive, isA
               </Tooltip>
             )}
 
+            {isAdmin && handleDelete && (
+              <Tooltip title="Delete">
+                <IconButton onClick={handleDelete} sx={{ ml: 1, color: 'error.main' }}>
+                  <Iconify icon="eva:trash-2-outline" />
+                </IconButton>
+              </Tooltip>
+            )}
           </>
         ) : null}
       </div>
