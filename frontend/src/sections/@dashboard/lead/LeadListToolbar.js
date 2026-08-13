@@ -11,7 +11,7 @@ const StyledRoot = styled(Toolbar)(({ theme }) => ({
 }));
 
 const StyledSearch = styled(OutlinedInput)(({ theme }) => ({
-  width: 240,
+  width: 240, 
   transition: theme.transitions.create(['box-shadow', 'width'], {
     easing: theme.transitions.easing.easeInOut,
     duration: theme.transitions.duration.shorter,
@@ -60,6 +60,19 @@ export default function LeadListToolbar({ isAdmin, handleDelete, handleMarkExclu
             <InputAdornment position="start">
               <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled', width: 20, height: 20 }} />
             </InputAdornment>
+          }
+          endAdornment={
+            filterName ? (
+              <InputAdornment position="end">
+                <IconButton 
+                  onClick={() => onFilterName({ target: { value: '' } })} 
+                  onMouseDown={(e) => e.preventDefault()}
+                  edge="end"
+                >
+                  <Iconify icon="eva:close-fill" sx={{ width: 20, height: 20 }} />
+                </IconButton>
+              </InputAdornment>
+            ) : null
           }
         />
       )}
