@@ -87,7 +87,13 @@ function applySortFilter(array, comparator, query) {
     return a[1] - b[1];
   });
   if (query) {
-    return filter(array, (row) => row?.name?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    const lowerQuery = query.toLowerCase();
+    return filter(array, (row) => {
+      const nameMatch = String(row?.name || '').toLowerCase().includes(lowerQuery);
+      const mobileMatch = String(row?.mobile || '').toLowerCase().includes(lowerQuery);
+      const phoneMatch = String(row?.phone || '').toLowerCase().includes(lowerQuery);
+      return nameMatch || mobileMatch || phoneMatch;
+    });
   }
   return stabilizedThis?.map((el) => el[0]);
 }
@@ -588,6 +594,7 @@ export default function Leads({ title = "Leads Management" }) {
                         tabIndex={-1}
                         role="checkbox"
                         selected={selectedData}
+                        sx={(!row.dispositions || row.dispositions.length === 0) ? { '& .MuiTableCell-root': { color: 'error.main' } } : {}}
                       >
                         <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                           <Checkbox

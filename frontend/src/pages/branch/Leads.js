@@ -57,7 +57,7 @@ const TABLE_HEAD = [
   { id: 'weight', label: 'Weight', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'date', label: 'Date', alignRight: false },
-  { id: 'editedBy', label: 'Edited By', alignRight: false },
+  { id: 'editedBy', label: 'Agent', alignRight: false },
   { id: 'remarks', label: 'Remarks', alignRight: false },
   { id: 'disposition', label: 'Disposition', alignRight: false },
   { id: '' },
@@ -92,7 +92,13 @@ function applySortFilter(array, comparator, query, filters) {
   let filteredArray = stabilizedThis?.map((el) => el[0]) || [];
 
   if (query) {
-    filteredArray = filter(filteredArray, (row) => row?.name?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    const lowerQuery = query.toLowerCase();
+    filteredArray = filter(filteredArray, (row) => {
+      const nameMatch = String(row?.name || '').toLowerCase().includes(lowerQuery);
+      const mobileMatch = String(row?.mobile || '').toLowerCase().includes(lowerQuery);
+      const phoneMatch = String(row?.phone || '').toLowerCase().includes(lowerQuery);
+      return nameMatch || mobileMatch || phoneMatch;
+    });
   }
 
   if (filters) {
@@ -751,6 +757,7 @@ export default function Leads({ title = "Leads Management" }) {
                           setToggleContainerType('preview');
                         }}
                         style={{ cursor: 'pointer' }}
+                        sx={(!row.dispositions || row.dispositions.length === 0) ? { '& .MuiTableCell-root': { color: 'error.main' } } : {}}
                       >
                         <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
