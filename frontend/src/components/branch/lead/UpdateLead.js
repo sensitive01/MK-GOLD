@@ -26,12 +26,14 @@ function UpdateLead(props) {
   const [branches, setBranches] = useState([]);
 
   const schema = Yup.object({
-    name: Yup.string().required('Name is required'),
+    name: Yup.string(),
     mobile: Yup.string().required('Mobile is required').matches(/^[0-9]{10}$/, 'Must be 10 digits'),
-    city: Yup.string().max(255).required('City is required'),
-    state: Yup.string().max(255).required('State is required'),
+    date: Yup.date().required('Date is required'),
+    source: Yup.string().required('Source is required'),
+    city: Yup.string().max(255),
+    state: Yup.string().max(255),
     category: Yup.string().max(255).required('Category is required'),
-    weight: Yup.number().required('Weight is required').min(0, 'Weight must be greater than or equal to 0'),
+    weight: Yup.number().min(0, 'Weight must be greater than or equal to 0'),
     unit: Yup.string().required('Unit is required'),
     type: Yup.string().required('Type is required'),
     status: Yup.string().max(255).required('Status is required'),
@@ -66,7 +68,11 @@ function UpdateLead(props) {
     },
     validationSchema: schema,
     onSubmit: (values) => {
-      updateLead(props.id, values).then(async (data) => {
+      const payload = { ...values };
+      if (payload.branch === '') {
+        delete payload.branch;
+      }
+      updateLead(props.id, payload).then(async (data) => {
         if (data.status === false) {
           props.setNotify({
             open: true,
@@ -157,7 +163,6 @@ function UpdateLead(props) {
               onChange={formik.handleChange}
               error={formik.touched.name && Boolean(formik.errors.name)}
               helperText={formik.touched.name && formik.errors.name}
-              required
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -183,6 +188,9 @@ function UpdateLead(props) {
               onBlur={formik.handleBlur}
               onChange={formik.handleChange}
               InputLabelProps={{ shrink: true }}
+              error={formik.touched.date && Boolean(formik.errors.date)}
+              helperText={formik.touched.date && formik.errors.date}
+              required
             />
           </Grid>
           <Grid item xs={12} sm={4}>
@@ -193,6 +201,9 @@ function UpdateLead(props) {
               value={formik.values.source}
               onBlur={formik.handleBlur}
               onChange={formik.handleChange}
+              error={formik.touched.source && Boolean(formik.errors.source)}
+              helperText={formik.touched.source && formik.errors.source}
+              required
             />
           </Grid>
           <Grid item xs={12} sm={4}>
@@ -329,7 +340,6 @@ function UpdateLead(props) {
               onChange={formik.handleChange}
               error={formik.touched.weight && Boolean(formik.errors.weight)}
               helperText={formik.touched.weight && formik.errors.weight}
-              required
             />
           </Grid>
           <Grid item xs={12} sm={4}>

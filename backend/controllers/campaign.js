@@ -158,6 +158,20 @@ const getAllLoadAmounts = async (req, res) => {
   }
 };
 
+// Delete Campaign
+const deleteCampaign = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const campaign = await Campaign.findByIdAndDelete(id);
+    if (!campaign) {
+      return res.status(404).json({ status: false, message: "Campaign not found" });
+    }
+    res.status(200).json({ status: true, message: "Campaign deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ status: false, message: "Server Error", error: error.message });
+  }
+};
+
 module.exports = {
   createCampaign,
   getCampaigns,
@@ -166,5 +180,6 @@ module.exports = {
   addDailyStatus,
   addLoadAmount,
   updateLoadAmountStatus,
-  getAllLoadAmounts
+  getAllLoadAmounts,
+  deleteCampaign
 };

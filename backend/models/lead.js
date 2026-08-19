@@ -62,7 +62,6 @@ const leadSchema = new mongoose.Schema(
     },
     weight: {
       type: Number,
-      required: true,
     },
     unit: {
       type: String,

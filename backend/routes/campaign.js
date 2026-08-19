@@ -9,7 +9,8 @@ const {
   addDailyStatus,
   addLoadAmount,
   updateLoadAmountStatus,
-  getAllLoadAmounts
+  getAllLoadAmounts,
+  deleteCampaign
 } = require("../controllers/campaign");
 
 router.post("/", createCampaign);
@@ -20,5 +21,6 @@ router.put("/:id", updateCampaign);
 router.post("/:id/daily-status", addDailyStatus);
 router.post("/:id/load-amount", addLoadAmount);
 router.put("/:campaignId/load-amount/:loadAmountId", updateLoadAmountStatus);
+router.delete("/:id", deleteCampaign);
 
 module.exports = router;

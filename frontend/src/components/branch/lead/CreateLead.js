@@ -22,14 +22,16 @@ function CreateLead(props) {
   const [focusedField, setFocusedField] = useState(null);
 
   const schema = Yup.object({
-    name: Yup.string().required('Name is required'),
+    name: Yup.string(),
     mobile: Yup.string().required('Mobile is required').matches(/^[6-9][0-9]{9}$/, 'Invalid Indian mobile number'),
+    date: Yup.date().required('Date is required'),
+    source: Yup.string().required('Source is required'),
     address: Yup.string(),
     pincode: Yup.string(),
     city: Yup.string(),
     state: Yup.string(),
     category: Yup.string().required('Category is required'),
-    weight: Yup.number().required('Weight is required').min(0, 'Weight must be positive'),
+    weight: Yup.number().min(0, 'Weight must be positive'),
     unit: Yup.string().required('Unit is required'),
     type: Yup.string().required('Type is required'),
     releaseAmount: Yup.number().min(0),
@@ -110,7 +112,6 @@ function CreateLead(props) {
               onChange={handleChange}
               error={touched.name && Boolean(errors.name)}
               helperText={touched.name && errors.name}
-              required
             />
           </Grid>
           <Grid item xs={12} sm={4}>
@@ -123,6 +124,9 @@ function CreateLead(props) {
               onBlur={handleBlur}
               onChange={handleChange}
               InputLabelProps={{ shrink: true }}
+              error={touched.date && Boolean(errors.date)}
+              helperText={touched.date && errors.date}
+              required
             />
           </Grid>
           <Grid item xs={12} sm={4}>
@@ -133,6 +137,9 @@ function CreateLead(props) {
               value={values.source}
               onBlur={handleBlur}
               onChange={handleChange}
+              error={touched.source && Boolean(errors.source)}
+              helperText={touched.source && errors.source}
+              required
             />
           </Grid>
           <Grid item xs={12} sm={4}>
@@ -253,7 +260,6 @@ function CreateLead(props) {
               onChange={handleChange}
               error={touched.weight && Boolean(errors.weight)}
               helperText={touched.weight && errors.weight}
-              required
             />
           </Grid>
           <Grid item xs={12} sm={4}>

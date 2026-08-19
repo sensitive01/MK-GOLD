@@ -308,14 +308,16 @@ export default function CampaignList() {
                             >
                               Edit
                             </Button>
-                            {/* <Button 
-                              variant="outlined" 
-                              color="error"
-                              size="small"
-                              onClick={() => handleDelete(_id)}
-                            >
-                              Delete
-                            </Button> */}
+                            {userType === 'admin' && (
+                              <Button 
+                                variant="outlined" 
+                                color="error"
+                                size="small"
+                                onClick={() => handleDelete(_id)}
+                              >
+                                Delete
+                              </Button>
+                            )}
                           </Stack>
                         </TableCell>
                       </TableRow>
