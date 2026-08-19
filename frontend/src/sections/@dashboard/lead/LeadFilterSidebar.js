@@ -29,9 +29,10 @@ LeadFilterSidebar.propTypes = {
   onCloseFilter: PropTypes.func,
   filters: PropTypes.object,
   setFilters: PropTypes.func,
+  userType: PropTypes.string,
 };
 
-export default function LeadFilterSidebar({ openFilter, onOpenFilter, onCloseFilter, filters, setFilters }) {
+export default function LeadFilterSidebar({ openFilter, onOpenFilter, onCloseFilter, filters, setFilters, userType }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
@@ -95,24 +96,26 @@ export default function LeadFilterSidebar({ openFilter, onOpenFilter, onCloseFil
               />
             </div>
 
-            <div>
-              <Typography variant="subtitle1" gutterBottom>
-                Status
-              </Typography>
-              <FormControl fullWidth size="small">
-                <Select
-                  name="status"
-                  value={filters.status}
-                  onChange={handleChange}
-                >
-                  {STATUS_OPTIONS.map((status) => (
-                    <MenuItem key={status} value={status}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </div>
+            {userType?.toLowerCase() !== 'telecalling' && (
+              <div>
+                <Typography variant="subtitle1" gutterBottom>
+                  Status
+                </Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    name="status"
+                    value={filters.status}
+                    onChange={handleChange}
+                  >
+                    {STATUS_OPTIONS.map((status) => (
+                      <MenuItem key={status} value={status}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </div>
+            )}
 
             <div>
               <Typography variant="subtitle1" gutterBottom>

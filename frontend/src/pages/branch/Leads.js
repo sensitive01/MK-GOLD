@@ -30,6 +30,8 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    Tabs,
+    Tab,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
@@ -223,6 +225,7 @@ export default function Leads({ title = "Leads Management" }) {
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
+  const [currentTab, setCurrentTab] = useState('pending');
   
   const [openFilter, setOpenFilter] = useState(false);
   const [filters, setFilters] = useState({
@@ -606,8 +609,42 @@ export default function Leads({ title = "Leads Management" }) {
     setFilterName(event.target.value);
   };
 
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
-  const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName, filters, auth.user);
+  const handleTabChange = (event, newValue) => {
+    setPage(0);
+    setCurrentTab(newValue);
+  };
+
+  let tabFilteredData = data;
+  if (auth?.user?.userType?.toLowerCase() === 'telecalling' && currentTab) {
+    const currentUserId = auth?.user?._id || auth?.user?.id;
+    tabFilteredData = data?.filter(row => {
+      if (currentTab === 'pending') {
+        return row.status !== 'rejected' && row.status !== 'converted' && (!row.dispositions || row.dispositions.length === 0);
+      }
+      if (currentTab === 'my_leads') {
+        return (row.createdBy && row.createdBy === currentUserId) || 
+               (row.updatedBy && row.updatedBy._id === currentUserId) || 
+               (row.updatedBy?.employee?._id === currentUserId) || 
+               (row.updatedBy?.employee === currentUserId);
+      }
+      if (currentTab === 'follow_ups') {
+        if (row.status === 'rejected' || row.status === 'converted') return false;
+        if (!row.dispositions || row.dispositions.length === 0) return false;
+        const lastDisp = row.dispositions[row.dispositions.length - 1].status;
+        return ['Callback', 'Follow Up', 'Planning to Visit', 'Visited Branch'].includes(lastDisp);
+      }
+      if (currentTab === 'rejected') {
+        return row.status === 'rejected';
+      }
+      if (currentTab === 'converted') {
+        return row.status === 'converted';
+      }
+      return true;
+    });
+  }
+
+  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (tabFilteredData?.length || 0)) : 0;
+  const filteredData = applySortFilter(tabFilteredData, getComparator(order, orderBy), filterName, filters, auth.user);
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
@@ -785,6 +822,27 @@ export default function Leads({ title = "Leads Management" }) {
         )}
 
         <Card>
+          {auth?.user?.userType === 'telecalling' && (
+            <Tabs
+              value={currentTab}
+              onChange={handleTabChange}
+              textColor="primary"
+              indicatorColor="primary"
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                px: 2,
+                bgcolor: 'background.paper',
+                borderBottom: (theme) => `solid 1px ${theme.palette.divider}`,
+              }}
+            >
+              <Tab value="pending" label="Pending" />
+              <Tab value="my_leads" label="My Leads" />
+              <Tab value="follow_ups" label="Follow Ups" />
+              <Tab value="rejected" label="Rejected" />
+              <Tab value="converted" label="Converted" />
+            </Tabs>
+          )}
           <LeadListToolbar
             isAdmin={auth.user?.userType?.toLowerCase() === 'admin'}
             numSelected={selected?.length}
@@ -803,6 +861,7 @@ export default function Leads({ title = "Leads Management" }) {
                 onCloseFilter={() => setOpenFilter(false)}
                 filters={filters}
                 setFilters={setFilters}
+                userType={auth.user?.userType}
               />
             }
           />
@@ -954,12 +1013,18 @@ export default function Leads({ title = "Leads Management" }) {
         {auth?.user?.userType === 'telecalling' && (
           <Box sx={{ display: 'flex', gap: 3, mt: 3, flexWrap: 'wrap' }}>
              {/* Pending Leads */}
-             <Card sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#ffe7d9', color: '#7a0c2e' }}>
+             <Card 
+               onClick={() => { setPage(0); setCurrentTab('pending'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+               sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#ffe7d9', color: '#7a0c2e', cursor: 'pointer', outline: currentTab === 'pending' ? '3px solid #7a0c2e' : 'none', transform: currentTab === 'pending' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
+             >
                <Typography variant="h3">{data?.filter(row => row.status !== 'rejected' && row.status !== 'converted' && (!row.dispositions || row.dispositions.length === 0)).length || 0}</Typography>
                <Typography variant="subtitle2">Pending Leads</Typography>
              </Card>
              {/* My Leads */}
-             <Card sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#d0f2ff', color: '#04297a' }}>
+             <Card 
+               onClick={() => { setPage(0); setCurrentTab('my_leads'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+               sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#d0f2ff', color: '#04297a', cursor: 'pointer', outline: currentTab === 'my_leads' ? '3px solid #04297a' : 'none', transform: currentTab === 'my_leads' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
+             >
                <Typography variant="h3">{data?.filter(row => {
                  const currentUserId = auth?.user?._id || auth?.user?.id;
                  return (row.createdBy && row.createdBy === currentUserId) || 
@@ -970,7 +1035,10 @@ export default function Leads({ title = "Leads Management" }) {
                <Typography variant="subtitle2">My Leads</Typography>
              </Card>
              {/* Follow Ups */}
-             <Card sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#e4f8dd', color: '#135222' }}>
+             <Card 
+               onClick={() => { setPage(0); setCurrentTab('follow_ups'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+               sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#e4f8dd', color: '#135222', cursor: 'pointer', outline: currentTab === 'follow_ups' ? '3px solid #135222' : 'none', transform: currentTab === 'follow_ups' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
+             >
                <Typography variant="h3">{data?.filter(row => {
                  if (row.status === 'rejected' || row.status === 'converted') return false;
                  if (!row.dispositions || row.dispositions.length === 0) return false;
@@ -980,12 +1048,18 @@ export default function Leads({ title = "Leads Management" }) {
                <Typography variant="subtitle2">Follow Ups</Typography>
              </Card>
              {/* Rejected */}
-             <Card sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#e6e6e6', color: '#4a4a4a' }}>
+             <Card 
+               onClick={() => { setPage(0); setCurrentTab('rejected'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+               sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#e6e6e6', color: '#4a4a4a', cursor: 'pointer', outline: currentTab === 'rejected' ? '3px solid #4a4a4a' : 'none', transform: currentTab === 'rejected' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
+             >
                <Typography variant="h3">{data?.filter(row => row.status === 'rejected').length || 0}</Typography>
                <Typography variant="subtitle2">Rejected</Typography>
              </Card>
              {/* Converted */}
-             <Card sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#fff3d6', color: '#7a4f01' }}>
+             <Card 
+               onClick={() => { setPage(0); setCurrentTab('converted'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+               sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#fff3d6', color: '#7a4f01', cursor: 'pointer', outline: currentTab === 'converted' ? '3px solid #7a4f01' : 'none', transform: currentTab === 'converted' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
+             >
                <Typography variant="h3">{data?.filter(row => row.status === 'converted').length || 0}</Typography>
                <Typography variant="subtitle2">Converted</Typography>
              </Card>
