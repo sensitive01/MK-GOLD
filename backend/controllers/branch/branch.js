@@ -40,4 +40,20 @@ async function findOne(req, res) {
   }
 }
 
-module.exports = { find, findById, findOne };
+async function getState(req, res) {
+  try {
+    res.json({
+      status: true,
+      message: "",
+      data: await branchService.getState(req.body ?? {}),
+    });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: err.errors ?? err.message,
+      data: {},
+    });
+  }
+}
+
+module.exports = { find, findById, findOne, getState };

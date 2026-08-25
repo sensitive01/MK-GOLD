@@ -27,4 +27,22 @@ async function getGoldRateByState(query) {
   }
 }
 
-export { getGoldRate, getGoldRateById, getGoldRateByState };
+async function createGoldRate(payload) {
+  try {
+    const response = await apiClient().post('/api/v1.0/branch/goldrate/create', payload);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+async function updateGoldRate(id, payload) {
+  try {
+    const response = await apiClient().post(`/api/v1.0/branch/goldrate/update/${id}`, payload);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+export { getGoldRate, getGoldRateById, getGoldRateByState, createGoldRate, updateGoldRate };

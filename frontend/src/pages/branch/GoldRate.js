@@ -13,6 +13,9 @@ import {
     Container,
     FormControl,
     Grid,
+    IconButton,
+    MenuItem,
+    Popover,
     Paper,
     Snackbar,
     Stack,
@@ -39,20 +42,13 @@ import * as Yup from 'yup';
 // components
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
+import CreateGoldRate from '../../components/bullion_desk/gold-rate/CreateGoldRate';
+import UpdateGoldRate from '../../components/bullion_desk/gold-rate/UpdateGoldRate';
 // sections
 import { GoldRateListHead, GoldRateListToolbar } from '../../sections/@dashboard/gold-rate';
 import SuccessModal from '../../components/success-modal';
 // mock
 import { getGoldRate } from '../../apis/branch/gold-rate';
-
-// ----------------------------------------------------------------------
-
-const TABLE_HEAD = [
-  { id: 'rate', label: 'Rate', alignRight: false },
-  { id: 'type', label: 'Type', alignRight: false },
-  { id: 'state', label: 'State', alignRight: false },
-  { id: 'date', label: 'Date', alignRight: false },
-];
 
 // ----------------------------------------------------------------------
 
@@ -86,6 +82,17 @@ function applySortFilter(array, comparator, query) {
 }
 
 export default function GoldRate() {
+  const auth = useSelector((state) => state.auth);
+  const isBullionDesk = auth.user?.userType === 'bullion_desk';
+  
+  const tableHead = [
+    { id: 'rate', label: 'Rate', alignRight: false },
+    { id: 'type', label: 'Type', alignRight: false },
+    { id: 'state', label: 'State', alignRight: false },
+    { id: 'date', label: 'Date', alignRight: false },
+    ...(isBullionDesk ? [{ id: '' }] : []),
+  ];
+
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
@@ -94,6 +101,10 @@ export default function GoldRate() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [data, setData] = useState([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [open, setOpen] = useState(null);
+  const [openId, setOpenId] = useState(null);
+  const [toggleContainer, setToggleContainer] = useState(false);
+  const [toggleContainerType, setToggleContainerType] = useState('');
   const form = useRef();
 
   const [notify, setNotify] = useState({
@@ -148,7 +159,15 @@ export default function GoldRate() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [toggleContainer, fetchData]);
+
+  const handleOpenMenu = (event) => {
+    setOpen(event.currentTarget);
+  };
+
+  const handleCloseMenu = () => {
+    setOpen(null);
+  };
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -224,12 +243,24 @@ export default function GoldRate() {
         </Snackbar>
       )}
 
-      <Container maxWidth="xl">
+      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Gold Rate
           </Typography>
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+            {isBullionDesk && (
+              <Button
+                variant="contained"
+                startIcon={<Iconify icon="eva:plus-fill" />}
+                onClick={() => {
+                  setToggleContainer(!toggleContainer);
+                  setToggleContainerType('create');
+                }}
+              >
+                New Gold Rate
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
@@ -259,7 +290,7 @@ export default function GoldRate() {
                 <GoldRateListHead
                   order={order}
                   orderBy={orderBy}
-                  headLabel={TABLE_HEAD}
+                  headLabel={tableHead}
                   rowCount={data?.length || 0}
                   numSelected={0}
                   onRequestSort={handleRequestSort}
@@ -275,17 +306,31 @@ export default function GoldRate() {
                         <TableCell align="left">{sentenceCase(type)}</TableCell>
                         <TableCell align="left">{sentenceCase(state)}</TableCell>
                         <TableCell align="left">{moment(date).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                        {isBullionDesk && (
+                          <TableCell align="right">
+                            <IconButton
+                              size="large"
+                              color="inherit"
+                              onClick={(e) => {
+                                setOpenId(_id);
+                                handleOpenMenu(e);
+                              }}
+                            >
+                              <Iconify icon={'eva:more-vertical-fill'} />
+                            </IconButton>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={4} />
+                      <TableCell colSpan={isBullionDesk ? 5 : 4} />
                     </TableRow>
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={4} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={isBullionDesk ? 5 : 4} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -301,7 +346,7 @@ export default function GoldRate() {
                 {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
-                      <TableCell align="center" colSpan={4} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={isBullionDesk ? 5 : 4} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -336,6 +381,84 @@ export default function GoldRate() {
           />
         </Card>
       </Container>
+
+      <Container
+        maxWidth="xl"
+        sx={{ display: toggleContainer === true && toggleContainerType === 'create' ? 'block' : 'none' }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+            Create Gold Rate
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mdi:arrow-left" />}
+            onClick={() => {
+              setToggleContainer(!toggleContainer);
+            }}
+          >
+            Back
+          </Button>
+        </Stack>
+
+        {toggleContainer === true && toggleContainerType === 'create' && (
+          <CreateGoldRate setToggleContainer={setToggleContainer} setNotify={setNotify} />
+        )}
+      </Container>
+
+      <Container
+        maxWidth="xl"
+        sx={{ display: toggleContainer === true && toggleContainerType === 'update' ? 'block' : 'none' }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+            Update Gold Rate
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mdi:arrow-left" />}
+            onClick={() => {
+              setToggleContainer(!toggleContainer);
+            }}
+          >
+            Back
+          </Button>
+        </Stack>
+
+        {toggleContainer === true && toggleContainerType === 'update' && (
+          <UpdateGoldRate setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
+        )}
+      </Container>
+
+      <Popover
+        open={Boolean(open)}
+        anchorEl={open}
+        onClose={handleCloseMenu}
+        anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        PaperProps={{
+          sx: {
+            p: 1,
+            width: 140,
+            '& .MuiMenuItem-root': {
+              px: 1,
+              typography: 'body2',
+              borderRadius: 0.75,
+            },
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
+            setToggleContainerType('update');
+            setToggleContainer(!toggleContainer);
+          }}
+        >
+          <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
+          Edit
+        </MenuItem>
+      </Popover>
 
       <Dialog open={filterOpen} onClose={handleFilterClose}>
         <form

@@ -34,11 +34,14 @@ branchRouter.get("/goldrate/get", goldRate.find);
 branchRouter.post("/goldrate/get", goldRate.find);
 branchRouter.get("/goldrate/get/:id", goldRate.findById);
 branchRouter.post("/goldrate/find", goldRate.findOne);
+branchRouter.post("/goldrate/create", enforceAuditorReadOnly, goldRate.create);
+branchRouter.post("/goldrate/update/:id", enforceAuditorReadOnly, goldRate.update);
 
 branchRouter.get("/branch/get", branch.find);
 branchRouter.post("/branch/get", branch.find);
 branchRouter.get("/branch/get/:id", branch.findById);
 branchRouter.post("/branch/find", branch.findOne);
+branchRouter.post("/branch/state", branch.getState);
 
 branchRouter.get("/expense/get", expense.find);
 branchRouter.post("/expense/get", expense.find);
