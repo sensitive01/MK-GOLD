@@ -15,9 +15,8 @@ const MENU_OPTIONS = [
     label: 'Profile',
     icon: 'eva:person-fill',
     path: 'profile',
-    linkTo: '/telecalling/profile',
+    linkTo: '/marketing/profile',
   },
-  
 ];
 
 // ----------------------------------------------------------------------
@@ -115,4 +114,3 @@ export default function AccountPopover() {
     </>
   );
 }
-

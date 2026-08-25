@@ -45,14 +45,8 @@ const deleteSchedule = async (req, res) => {
 
 const updateSchedule = async (req, res) => {
   try {
-    if (req.body.date) {
-      const scheduleDate = new Date(req.body.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // start of day
-      if (scheduleDate < today) {
-        return res.status(400).json({ status: false, message: "Cannot schedule for past dates" });
-      }
-    }
+    // Removed past date check on update so users can edit details of past schedules
+    // without getting a "Cannot schedule for past dates" error.
 
     if (req.body.status && req.user?.userType !== 'admin') {
       return res.status(403).json({ status: false, message: "Only admin can approve or reject schedule" });

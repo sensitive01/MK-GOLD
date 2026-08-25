@@ -115,6 +115,7 @@ export default function MarketingCalendar() {
       fetchEvents(); // refresh
     } catch (err) {
       console.error("Failed to save schedule", err);
+      alert(err.response?.data?.message || "Failed to save schedule");
     } finally {
       setIsSubmitting(false);
     }
@@ -328,6 +329,20 @@ export default function MarketingCalendar() {
     );
   };
 
+  const filteredEvents = events.filter(schedule => {
+    const scheduleDate = new Date(schedule.date);
+    if (activeTab === 'Day') {
+      return isSameDay(scheduleDate, currentDate);
+    } else if (activeTab === 'Week') {
+      return scheduleDate >= startOfWeek(currentDate) && scheduleDate <= endOfWeek(currentDate);
+    } else if (activeTab === 'Month') {
+      return isSameMonth(scheduleDate, currentDate);
+    } else if (activeTab === 'Year') {
+      return scheduleDate.getFullYear() === currentDate.getFullYear();
+    }
+    return true;
+  });
+
   return (
     <Box sx={{ pb: 3, pt: 1 }}>
       {/* Header */}
@@ -380,12 +395,15 @@ export default function MarketingCalendar() {
             <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>Schedules</Typography>
             
             <List disablePadding>
-              {events.length > 0 ? events.map((schedule, i) => (
+              {filteredEvents.length > 0 ? filteredEvents.map((schedule, i) => (
                 <Box key={i} sx={{ mb: 2.5 }}>
-                  <ListItem disablePadding sx={{ alignItems: 'center' }}>
+                  <ListItem disablePadding sx={{ alignItems: 'center', cursor: 'pointer', '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }, borderRadius: 1, p: 0.5 }} onClick={() => setSelectedEvent(schedule)}>
                     <ListItemAvatar sx={{ minWidth: 50 }}>
-                      <Avatar sx={{ width: 40, height: 40, bgcolor: ['#b388ff', '#d500f9', '#ab47bc', '#7e57c2', '#9c27b0'][i % 5] }}>
-                        {schedule.title[0]?.toUpperCase()}
+                      <Avatar 
+                        src={schedule.mediaUrl ? (schedule.mediaUrl.startsWith('http') ? schedule.mediaUrl : `${import.meta.env.VITE_API_URL}/${schedule.mediaUrl}`) : undefined}
+                        sx={{ width: 40, height: 40, bgcolor: ['#b388ff', '#d500f9', '#ab47bc', '#7e57c2', '#9c27b0'][i % 5] }}
+                      >
+                        {!schedule.mediaUrl && schedule.title[0]?.toUpperCase()}
                       </Avatar>
                     </ListItemAvatar>
                     <ListItemText
@@ -393,10 +411,10 @@ export default function MarketingCalendar() {
                       secondary={<Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>{format(new Date(schedule.date), 'MMM d, yyyy')} • {schedule.status || 'pending'}</Typography>}
                     />
                     <Box>
-                      <IconButton size="small" onClick={() => handleEditClick(schedule)}>
+                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleEditClick(schedule); }}>
                         <Edit fontSize="small" color="action" />
                       </IconButton>
-                      <IconButton size="small" onClick={() => handleDelete(schedule._id)}>
+                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDelete(schedule._id); }}>
                         <Delete fontSize="small" color="error" />
                       </IconButton>
                     </Box>
