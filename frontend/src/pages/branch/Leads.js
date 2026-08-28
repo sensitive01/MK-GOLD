@@ -1,5 +1,6 @@
 import { filter } from 'lodash';
 import { forwardRef, useEffect, useState, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -225,7 +226,8 @@ export default function Leads({ title = "Leads Management" }) {
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
-  const [currentTab, setCurrentTab] = useState('pending');
+  const location = useLocation();
+  const [currentTab, setCurrentTab] = useState(location.state?.tab || 'pending');
 
   const [openFilter, setOpenFilter] = useState(false);
   const [filters, setFilters] = useState({
@@ -1008,7 +1010,7 @@ export default function Leads({ title = "Leads Management" }) {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25, 50, 100]}
             component="div"
-            count={data?.length || 0}
+            count={filteredData?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}

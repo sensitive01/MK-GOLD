@@ -32,6 +32,30 @@ export default function DashboardAppPage() {
 
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Today's gold rate"
+              total={count?.todayGoldRate}
+              icon={'mdi:gold'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              disableShorten={true}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Today's silver rate"
+              total={count?.todaySilverRate}
+              icon={'mdi:podium-silver'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              disableShorten={true}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
             <AppWidgetSummary 
               title="Total employees" 
               total={count?.totalEmployee} 

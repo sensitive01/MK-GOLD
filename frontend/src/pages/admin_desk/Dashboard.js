@@ -18,38 +18,34 @@ export default function AdminDeskDashboard() {
   const [loadingRates, setLoadingRates] = useState(true);
 
   useEffect(() => {
-    const branch = auth.user?.branch;
-    if (branch && branch.address?.state) {
-      setLoadingRates(true);
-      const today = moment().format('YYYY-MM-DD');
+    const state = auth.user?.branch?.address?.state || 'Karnataka';
+    setLoadingRates(true);
+    const today = moment().format('YYYY-MM-DD');
       
-      // Fetch gold rate
-      getGoldRateByState({
-        state: branch.address.state,
-        type: 'gold',
-        date: today,
-      }).then((res) => {
-        if (res?.status && res?.data) {
-          setGoldRate(res.data.rate);
-        }
-      });
+    // Fetch gold rate
+    getGoldRateByState({
+      state: state,
+      type: 'gold',
+      date: today,
+    }).then((res) => {
+      if (res?.status && res?.data) {
+        setGoldRate(res.data.rate);
+      }
+    });
 
-      // Fetch silver rate
-      getGoldRateByState({
-        state: branch.address.state,
-        type: 'silver',
-        date: today,
-      }).then((res) => {
-        if (res?.status && res?.data) {
-          setSilverRate(res.data.rate);
-        }
-        setLoadingRates(false);
-      }).catch(() => {
-        setLoadingRates(false);
-      });
-    } else {
+    // Fetch silver rate
+    getGoldRateByState({
+      state: state,
+      type: 'silver',
+      date: today,
+    }).then((res) => {
+      if (res?.status && res?.data) {
+        setSilverRate(res.data.rate);
+      }
       setLoadingRates(false);
-    }
+    }).catch(() => {
+      setLoadingRates(false);
+    });
   }, [auth.user?.branch]);
 
   return (
@@ -63,38 +59,118 @@ export default function AdminDeskDashboard() {
           Hi, Welcome back
         </Typography>
 
-        {auth.user?.branch?.address?.state && (
-          <Box sx={{ mb: 5 }}>
-            <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
-              Today's Rates ({auth.user.branch.address.state})
-            </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} md={3}>
-                <AppWidgetSummary
-                  title="Gold Rate (per Gram)"
-                  total={loadingRates ? 'Loading...' : (goldRate ? `₹ ${goldRate}` : 'Not Set')}
-                  icon={'mdi:gold'}
-                  bgColor="#FFD700"
-                  iconColor="#8A1B9F"
-                  textColor="#000"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <AppWidgetSummary
-                  title="Silver Rate (per Gram)"
-                  total={loadingRates ? 'Loading...' : (silverRate ? `₹ ${silverRate}` : 'Not Set')}
-                  icon={'mdi:silverware-spoon'}
-                  bgColor="#fff"
-                  iconColor="#8A1B9F"
-                  textColor="#000"
-                />
-              </Grid>
+        <Box sx={{ mb: 5 }}>
+          <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
+            Today's Rates ({auth.user?.branch?.address?.state || 'Karnataka'})
+          </Typography>
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={3}>
+              <AppWidgetSummary
+                title="Gold Rate (per Gram)"
+                total={loadingRates ? 'Loading...' : (goldRate ? `₹ ${goldRate}` : 'Not Set')}
+                icon={'mdi:gold'}
+                bgColor="#FFD700"
+                iconColor="#8A1B9F"
+                textColor="#000"
+              />
             </Grid>
-          </Box>
-        )}
+            <Grid item xs={12} sm={6} md={3}>
+              <AppWidgetSummary
+                title="Silver Rate (per Gram)"
+                total={loadingRates ? 'Loading...' : (silverRate ? `₹ ${silverRate}` : 'Not Set')}
+                icon={'mdi:silverware-spoon'}
+                bgColor="#fff"
+                iconColor="#8A1B9F"
+                textColor="#000"
+              />
+            </Grid>
+          </Grid>
+        </Box>
 
+        <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
+          Quick Links
+        </Typography>
+
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Link href="/admin-desk/customer" underline="none">
+              <AppWidgetSummary
+                title="Customers"
+                total={false}
+                icon={'mdi:account-group'}
+                bgColor="#fff"
+                iconColor="#8A1B9F"
+                textColor="#000"
+              />
+            </Link>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Link href="/admin-desk/sale" underline="none">
+              <AppWidgetSummary
+                title="Billing"
+                total={false}
+                icon={'mdi:file-document-edit'}
+                bgColor="#FFD700"
+                iconColor="#8A1B9F"
+                textColor="#000"
+              />
+            </Link>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Link href="/admin-desk/expense" underline="none">
+              <AppWidgetSummary
+                title="Expenses"
+                total={false}
+                icon={'mdi:wallet'}
+                bgColor="#fff"
+                iconColor="#8A1B9F"
+                textColor="#000"
+              />
+            </Link>
+          </Grid>
+          
+          <Grid item xs={12} sm={6} md={3}>
+            <Link href="/admin-desk/fund" underline="none">
+              <AppWidgetSummary
+                title="Funds"
+                total={false}
+                icon={'mdi:bank'}
+                bgColor="#FFD700"
+                iconColor="#8A1B9F"
+                textColor="#000"
+              />
+            </Link>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Link href="/admin-desk/leave" underline="none">
+              <AppWidgetSummary
+                title="Leave"
+                total={false}
+                icon={'mdi:calendar-remove'}
+                bgColor="#fff"
+                iconColor="#8A1B9F"
+                textColor="#000"
+              />
+            </Link>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Link href="/admin-desk/attendance" underline="none">
+              <AppWidgetSummary
+                title="Attendance"
+                total={false}
+                icon={'mdi:clock-check'}
+                bgColor="#FFD700"
+                iconColor="#8A1B9F"
+                textColor="#000"
+              />
+            </Link>
+          </Grid>
+
+        </Grid>
       </Container>
     </>
   );
 }
-

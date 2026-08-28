@@ -938,7 +938,7 @@ export default function Leads({ title = "Leads Management" }) {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25, 50, 100]}
             component="div"
-            count={data?.length || 0}
+            count={filteredData?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}

@@ -39,6 +39,7 @@ export default function DashboardPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              disableShorten={true}
             />
           </Grid>
 
@@ -83,6 +84,7 @@ export default function DashboardPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              disableShorten={true}
             />
           </Grid>
 

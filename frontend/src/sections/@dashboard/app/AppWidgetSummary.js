@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { alpha, styled } from '@mui/material/styles';
 import { Box, Card, Typography } from '@mui/material';
 // utils
-import { fShortenNumber } from '../../../utils/formatNumber';
+import { fShortenNumber, fNumber } from '../../../utils/formatNumber';
 // components
 import Iconify from '../../../components/iconify';
 
@@ -31,6 +31,7 @@ AppWidgetSummary.propTypes = {
   bgColor: PropTypes.string,
   iconColor: PropTypes.string,
   textColor: PropTypes.string,
+  disableShorten: PropTypes.bool,
 };
 
 export default function AppWidgetSummary({ 
@@ -42,6 +43,7 @@ export default function AppWidgetSummary({
   bgColor, 
   iconColor, 
   textColor,
+  disableShorten = false,
   ...other 
 }) {
   return (
@@ -88,7 +90,7 @@ export default function AppWidgetSummary({
 
       {total !== false ? (
         <Typography variant="h3">
-          {typeof total === 'number' ? fShortenNumber(total) : total || 0}
+          {typeof total === 'number' ? (disableShorten ? fNumber(total) : fShortenNumber(total)) : total || 0}
         </Typography>
       ) : (
         <Box sx={{ height: 48 }} /> // Placeholder to maintain equal height when total is hidden

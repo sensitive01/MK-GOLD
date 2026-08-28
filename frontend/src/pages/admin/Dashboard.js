@@ -42,6 +42,7 @@ export default function DashboardAppPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              disableShorten={true}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -52,6 +53,7 @@ export default function DashboardAppPage() {
               bgColor="#FFD700"
               iconColor="#8A1B9F"
               textColor="#000"
+              disableShorten={true}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>

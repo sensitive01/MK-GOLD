@@ -1,10 +1,12 @@
 import { Helmet } from 'react-helmet-async';
 import { Container, Typography, Grid, Backdrop, CircularProgress } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getLeadStats } from '../../apis/branch/lead';
 import { AppWidgetSummary } from '../../sections/@dashboard/app';
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [stats, setStats] = useState(null);
 
@@ -34,6 +36,7 @@ export default function DashboardPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/telecalling/leads', { state: { tab: 'all' } })}
             />
           </Grid>
 
@@ -45,6 +48,7 @@ export default function DashboardPage() {
               bgColor="#FFD700"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/telecalling/leads', { state: { tab: 'pending' } })}
             />
           </Grid>
 
@@ -56,10 +60,11 @@ export default function DashboardPage() {
               bgColor="#FFF8E7"
               iconColor="#D4AF37"
               textColor="#000"
+              disableShorten={true}
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={2}>
             <AppWidgetSummary
               title="Silver Rate"
               total={stats?.silverRate}
@@ -67,6 +72,7 @@ export default function DashboardPage() {
               bgColor="#F5F5F5"
               iconColor="#C0C0C0"
               textColor="#000"
+              disableShorten={true}
             />
           </Grid>
 
@@ -78,17 +84,19 @@ export default function DashboardPage() {
               bgColor="#E3F2FD"
               iconColor="#1565C0"
               textColor="#000"
+              onClick={() => navigate('/telecalling/leads', { state: { tab: 'follow_ups' } })}
             />
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
             <AppWidgetSummary
-              title="Business Converted (This Month)"
+              title="Converted (This Month)"
               total={stats?.businessConverted}
               icon={'mdi:briefcase-check'}
               bgColor="#E8F5E9"
               iconColor="#2E7D32"
               textColor="#000"
+              onClick={() => navigate('/telecalling/leads', { state: { tab: 'converted' } })}
             />
           </Grid>
         </Grid>

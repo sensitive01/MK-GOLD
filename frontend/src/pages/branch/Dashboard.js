@@ -18,14 +18,13 @@ export default function DashboardAppPage() {
   const [loadingRates, setLoadingRates] = useState(true);
 
   useEffect(() => {
-    const branch = auth.user?.branch;
-    if (branch && branch.address?.state) {
-      setLoadingRates(true);
-      const today = moment().format('YYYY-MM-DD');
+    const state = auth.user?.branch?.address?.state || 'Karnataka';
+    setLoadingRates(true);
+    const today = moment().format('YYYY-MM-DD');
       
       // Fetch gold rate
       getGoldRateByState({
-        state: branch.address.state,
+        state: state,
         type: 'gold',
         date: today,
       }).then((res) => {
@@ -36,7 +35,7 @@ export default function DashboardAppPage() {
 
       // Fetch silver rate
       getGoldRateByState({
-        state: branch.address.state,
+        state: state,
         type: 'silver',
         date: today,
       }).then((res) => {
@@ -47,9 +46,6 @@ export default function DashboardAppPage() {
       }).catch(() => {
         setLoadingRates(false);
       });
-    } else {
-      setLoadingRates(false);
-    }
   }, [auth.user?.branch]);
 
   return (
@@ -63,11 +59,10 @@ export default function DashboardAppPage() {
           Hi, Welcome back
         </Typography>
 
-        {auth.user?.branch?.address?.state && (
-          <Box sx={{ mb: 5 }}>
-            <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
-              Today's Rates ({auth.user.branch.address.state})
-            </Typography>
+        <Box sx={{ mb: 5 }}>
+          <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
+            Today's Rates ({auth.user?.branch?.address?.state || 'Karnataka'})
+          </Typography>
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={3}>
                 <AppWidgetSummary
@@ -91,7 +86,6 @@ export default function DashboardAppPage() {
               </Grid>
             </Grid>
           </Box>
-        )}
 
         <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
           Quick Links

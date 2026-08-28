@@ -1,9 +1,24 @@
 const employeeService = require("../../services/employee");
 const leaveService = require("../../services/leave");
 const expenseService = require("../../services/expense");
+const goldRateService = require("../../services/goldrate");
 
 async function get(req, res) {
   const date = new Date().toISOString().slice(0, 10);
+  const fullDate = new Date().toISOString();
+
+  const goldRate = await goldRateService.findOne({
+    date: fullDate,
+    state: "Karnataka",
+    type: "gold",
+  });
+  
+  const silverRate = await goldRateService.findOne({
+    date: fullDate,
+    state: "Karnataka",
+    type: "silver",
+  });
+
   const totalPresent = await employeeService.aggregate([
     {
       $lookup: {
@@ -163,6 +178,8 @@ async function get(req, res) {
       totalAbsent: totalAbsent[0]?.count ?? 0,
       totalLate: totalLate[0]?.count ?? 0,
       totalEmployee: await employeeService.count({ status: "active" }),
+      todayGoldRate: goldRate?.rate ?? 0,
+      todaySilverRate: silverRate?.rate ?? 0,
       femaleEmployeeCount,
       maleEmployeeCount,
       leavesTodayCount,
