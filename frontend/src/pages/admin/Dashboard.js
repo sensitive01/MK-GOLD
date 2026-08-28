@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { Backdrop, CircularProgress, Container, Grid, Typography, Card, Box } from '@mui/material';
 
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 // sections
 import { getCount } from '../../apis/admin/dashboard';
 import { AppWidgetSummary } from '../../sections/@dashboard/app';
@@ -11,6 +12,7 @@ import Iconify from '../../components/iconify';
 // ----------------------------------------------------------------------
 
 export default function DashboardAppPage() {
+  const navigate = useNavigate();
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [count, setCount] = useState(null);
 
@@ -43,6 +45,7 @@ export default function DashboardAppPage() {
               iconColor="#8A1B9F"
               textColor="#000"
               disableShorten={true}
+              onClick={() => navigate('/admin/gold-rate')}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -54,6 +57,7 @@ export default function DashboardAppPage() {
               iconColor="#8A1B9F"
               textColor="#000"
               disableShorten={true}
+              onClick={() => navigate('/admin/gold-rate')}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -64,6 +68,7 @@ export default function DashboardAppPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/customer')}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -91,6 +96,7 @@ export default function DashboardAppPage() {
                   cursor: 'pointer',
                 },
               }}
+              onClick={() => navigate('/admin/sale')}
             >
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>
@@ -133,6 +139,7 @@ export default function DashboardAppPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/sale')}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -143,6 +150,7 @@ export default function DashboardAppPage() {
               bgColor="#FFD700"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/release')}
             />
           </Grid>
 
@@ -155,6 +163,7 @@ export default function DashboardAppPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/release')}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -165,6 +174,7 @@ export default function DashboardAppPage() {
               bgColor="#FFD700"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/sale')}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -175,6 +185,7 @@ export default function DashboardAppPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/fund')}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -185,6 +196,7 @@ export default function DashboardAppPage() {
               bgColor="#FFD700"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/sale')}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -195,6 +207,7 @@ export default function DashboardAppPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/fund')}
             />
           </Grid>
           {/* Empty slot for the 6th tile in Row 2 to align properly, or we can just leave it as 5 items in a 6-item grid which will just leave a space at the end. I will leave it empty. */}
@@ -208,6 +221,7 @@ export default function DashboardAppPage() {
               bgColor="#FFD700"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/expense')}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -218,6 +232,7 @@ export default function DashboardAppPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/leads')}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -228,6 +243,7 @@ export default function DashboardAppPage() {
               bgColor="#FFD700"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/employee/attendance')}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -238,6 +254,7 @@ export default function DashboardAppPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/employee/attendance')}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -248,6 +265,7 @@ export default function DashboardAppPage() {
               bgColor="#FFD700"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/employee/attendance')}
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
@@ -258,6 +276,7 @@ export default function DashboardAppPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/admin/employee/details')}
             />
           </Grid>
         </Grid>

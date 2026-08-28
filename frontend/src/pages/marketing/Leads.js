@@ -638,7 +638,7 @@ export default function Leads({ title = "Leads Management" }) {
         setSelected([]);
         setNotify({
           open: true,
-          message: isAllExclusive ? 'Leads unmarked as exclusive' : 'Leads marked as exclusive',
+          message: isAllExclusive ? 'Leads unmarked as Hot Leads' : 'Leads marked as Hot Leads',
           severity: 'success',
         });
       }
@@ -768,14 +768,14 @@ export default function Leads({ title = "Leads Management" }) {
               filters.status !== 'all' ? `Status: ${filters.status.charAt(0).toUpperCase() + filters.status.slice(1)}` : null,
               filters.category !== 'all' ? `Category: ${filters.category.charAt(0).toUpperCase() + filters.category.slice(1)}` : null,
               filters.type !== 'all' ? `Type: ${filters.type.charAt(0).toUpperCase() + filters.type.slice(1)}` : null,
-              filters.isExclusive !== 'all' ? `Exclusive: Yes` : null,
+              filters.isExclusive !== 'all' ? `Hot Leads: Yes` : null,
             ].filter(Boolean).join(', ')}
           </p>
         )}
 
         {showExclusiveTip && (
           <MuiAlert severity="info" sx={{ mb: 3 }} onClose={() => setShowExclusiveTip(false)}>
-            <strong>Tip:</strong> To mark leads as exclusive, check the boxes next to the leads and click the star (⭐️) icon above the table.
+            <strong>Tip:</strong> To mark leads as hot leads, check the boxes next to the leads and click the star (⭐️) icon above the table.
           </MuiAlert>
         )}
 

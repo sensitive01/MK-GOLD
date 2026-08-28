@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { Backdrop, CircularProgress, Container, Grid, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 // sections
 import { getCount } from '../../apis/accounts/dashboard';
 import { AppWidgetSummary } from '../../sections/@dashboard/app';
@@ -10,6 +11,7 @@ import { AppWidgetSummary } from '../../sections/@dashboard/app';
 // ----------------------------------------------------------------------
 
 export default function DashboardAppPage() {
+  const navigate = useNavigate();
   const [count, setCount] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const theme = useTheme();
@@ -42,6 +44,7 @@ export default function DashboardAppPage() {
               iconColor="#8A1B9F"
               textColor="#000"
               disableShorten={true}
+              onClick={() => navigate('/accounts/gold-rate')}
             />
           </Grid>
 
@@ -54,6 +57,7 @@ export default function DashboardAppPage() {
               iconColor="#8A1B9F"
               textColor="#000"
               disableShorten={true}
+              onClick={() => navigate('/accounts/gold-rate')}
             />
           </Grid>
 
@@ -73,9 +77,9 @@ export default function DashboardAppPage() {
               title="Today's bills"
               total={count?.todayBills}
               icon={'mdi:file-document-edit'}
-              bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/accounts/sale')}
             />
           </Grid>
 
@@ -84,9 +88,9 @@ export default function DashboardAppPage() {
               title="Today’s physical bills"
               total={count?.todayPhysicalBills}
               icon={'mdi:printer-pos'}
-              bgColor="#FFD700"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/accounts/sale')}
             />
           </Grid>
 
@@ -106,9 +110,9 @@ export default function DashboardAppPage() {
               title="Total gross weight"
               total={count?.totalGrossWeight}
               icon={'mdi:weight'}
-              bgColor="#FFD700"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/accounts/sale')}
             />
           </Grid>
 
@@ -117,9 +121,9 @@ export default function DashboardAppPage() {
               title="Total net amount"
               total={count?.totalNetAmount}
               icon={'mdi:cash-multiple'}
-              bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/accounts/fund')}
             />
           </Grid>
 
@@ -131,6 +135,7 @@ export default function DashboardAppPage() {
               bgColor="#FFD700" 
               iconColor="#8A1B9F" 
               textColor="#000"
+              onClick={() => navigate('/accounts/expense')}
             />
           </Grid>
 

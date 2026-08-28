@@ -82,7 +82,7 @@ export default function LeadListToolbar({ isAdmin, handleDelete, handleMarkExclu
         {numSelected > 0 ? (
           <>
             {handleMarkExclusive && (
-              <Tooltip title={isAllExclusive ? "Unmark Exclusive" : "Mark Exclusive"}>
+              <Tooltip title={isAllExclusive ? "Unmark Hot Leads" : "Mark Hot Leads"}>
                 <span>
                   <IconButton onClick={handleMarkExclusive} sx={{ ml: 1, color: 'warning.main' }}>
                     <Iconify icon={isAllExclusive ? "eva:star-outline" : "eva:star-fill"} />

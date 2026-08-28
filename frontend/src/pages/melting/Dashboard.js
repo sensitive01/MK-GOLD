@@ -1,10 +1,12 @@
 import { Helmet } from 'react-helmet-async';
 import { Backdrop, CircularProgress, Container, Grid, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getCount } from '../../apis/admin/dashboard';
 import { AppWidgetSummary } from '../../sections/@dashboard/app';
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [count, setCount] = useState(null);
 
@@ -51,6 +53,7 @@ export default function DashboardPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/melting/sale')}
             />
           </Grid>
 
@@ -62,6 +65,7 @@ export default function DashboardPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/melting/release')}
             />
           </Grid>
 
@@ -73,6 +77,7 @@ export default function DashboardPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/melting/sale')}
             />
           </Grid>
 
@@ -96,6 +101,7 @@ export default function DashboardPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/melting/sale')}
             />
           </Grid>
 
@@ -107,6 +113,7 @@ export default function DashboardPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/melting/sale')}
             />
           </Grid>
         </Grid>

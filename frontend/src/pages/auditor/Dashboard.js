@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { Backdrop, CircularProgress, Container, Grid, Typography } from '@mui/material';
 
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 // sections
 import { getCount } from '../../apis/admin/dashboard';
 import { AppWidgetSummary } from '../../sections/@dashboard/app';
@@ -10,6 +11,7 @@ import { AppWidgetSummary } from '../../sections/@dashboard/app';
 // ----------------------------------------------------------------------
 
 export default function AuditorDashboard() {
+  const navigate = useNavigate();
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [count, setCount] = useState(null);
 
@@ -41,6 +43,7 @@ export default function AuditorDashboard() {
               iconColor="#8A1B9F"
               textColor="#000"
               disableShorten={true}
+              onClick={() => navigate('/auditor/gold-rate')}
             />
           </Grid>
 
@@ -53,6 +56,7 @@ export default function AuditorDashboard() {
               iconColor="#8A1B9F"
               textColor="#000"
               disableShorten={true}
+              onClick={() => navigate('/auditor/gold-rate')}
             />
           </Grid>
 
@@ -86,6 +90,7 @@ export default function AuditorDashboard() {
               bgColor="#FFD700"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/auditor/sale')}
             />
           </Grid>
 
@@ -108,6 +113,7 @@ export default function AuditorDashboard() {
               bgColor="#FFD700"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/auditor/sale')}
             />
           </Grid>
 
@@ -119,6 +125,7 @@ export default function AuditorDashboard() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/auditor/fund')}
             />
           </Grid>
 

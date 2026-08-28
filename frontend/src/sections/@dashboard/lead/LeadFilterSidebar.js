@@ -157,7 +157,7 @@ export default function LeadFilterSidebar({ openFilter, onOpenFilter, onCloseFil
 
             <div>
               <Typography variant="subtitle1" gutterBottom>
-                Exclusive Leads
+                Hot Leads
               </Typography>
               <FormControl fullWidth size="small">
                 <Select
@@ -167,7 +167,7 @@ export default function LeadFilterSidebar({ openFilter, onOpenFilter, onCloseFil
                 >
                   {EXCLUSIVE_OPTIONS.map((opt) => (
                     <MenuItem key={opt} value={opt}>
-                      {opt === 'all' ? 'All Leads' : 'Exclusive Only'}
+                      {opt === 'all' ? 'All Leads' : 'Hot Leads Only'}
                     </MenuItem>
                   ))}
                 </Select>

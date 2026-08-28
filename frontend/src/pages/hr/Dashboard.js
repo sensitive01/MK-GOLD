@@ -2,6 +2,7 @@ import { Helmet } from 'react-helmet-async';
 // @mui
 import { Backdrop, CircularProgress, Container, Grid, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 // sections
 import { getCount } from '../../apis/hr/dashboard';
 import { AppWidgetSummary } from '../../sections/@dashboard/app';
@@ -9,6 +10,7 @@ import { AppWidgetSummary } from '../../sections/@dashboard/app';
 // ----------------------------------------------------------------------
 
 export default function DashboardAppPage() {
+  const navigate = useNavigate();
   const [count, setCount] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
 
@@ -63,6 +65,7 @@ export default function DashboardAppPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+              onClick={() => navigate('/hr/employee')}
             />
           </Grid>
 

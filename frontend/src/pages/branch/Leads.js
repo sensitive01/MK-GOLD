@@ -685,7 +685,7 @@ export default function Leads({ title = "Leads Management" }) {
         setSelected([]);
         setNotify({
           open: true,
-          message: isAllExclusive ? 'Leads unmarked as exclusive' : 'Leads marked as exclusive',
+          message: isAllExclusive ? 'Leads unmarked as Hot Leads' : 'Leads marked as Hot Leads',
           severity: 'success',
         });
       }
@@ -817,14 +817,14 @@ export default function Leads({ title = "Leads Management" }) {
               filters.status !== 'all' ? `Status: ${filters.status.charAt(0).toUpperCase() + filters.status.slice(1)}` : null,
               filters.category !== 'all' ? `Category: ${filters.category.charAt(0).toUpperCase() + filters.category.slice(1)}` : null,
               filters.type !== 'all' ? `Type: ${filters.type.charAt(0).toUpperCase() + filters.type.slice(1)}` : null,
-              filters.isExclusive !== 'all' ? `Exclusive: Yes` : null,
+              filters.isExclusive !== 'all' ? `Hot Leads: Yes` : null,
             ].filter(Boolean).join(', ')}
           </p>
         )}
 
         {showExclusiveTip && (
           <MuiAlert severity="info" sx={{ mb: 3 }} onClose={() => setShowExclusiveTip(false)}>
-            <strong>Tip:</strong> To mark leads as exclusive, check the boxes next to the leads and click the star (⭐️) icon above the table.
+            <strong>Tip:</strong> To mark leads as hot leads, check the boxes next to the leads and click the star (⭐️) icon above the table.
           </MuiAlert>
         )}
 
@@ -843,10 +843,11 @@ export default function Leads({ title = "Leads Management" }) {
                 borderBottom: (theme) => `solid 1px ${theme.palette.divider}`,
               }}
             >
+              <Tab value="all" label="All Leads" />
               <Tab value="pending" label="Pending" />
               <Tab value="my_leads" label="My Leads" />
               <Tab value="follow_ups" label="Follow Ups" />
-              <Tab value="exclusive" label="Exclusive" />
+              <Tab value="exclusive" label="Hot Leads" />
               <Tab value="rejected" label="Rejected" />
               <Tab value="converted" label="Converted" />
             </Tabs>
@@ -1020,10 +1021,18 @@ export default function Leads({ title = "Leads Management" }) {
 
         {auth?.user?.userType === 'telecalling' && (
           <Box sx={{ display: 'flex', gap: 3, mt: 3, flexWrap: 'wrap' }}>
+            {/* All Leads */}
+            <Card
+              onClick={() => { setPage(0); setCurrentTab('all'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              sx={{ flex: 1, p: 3, textAlign: 'center', bgcolor: '#e8f0fe', color: '#1967d2', cursor: 'pointer', outline: currentTab === 'all' ? '3px solid #1967d2' : 'none', transform: currentTab === 'all' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
+            >
+              <Typography variant="h3">{data?.length || 0}</Typography>
+              <Typography variant="subtitle2">All Leads</Typography>
+            </Card>
             {/* Pending Leads */}
             <Card
               onClick={() => { setPage(0); setCurrentTab('pending'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#ffe7d9', color: '#7a0c2e', cursor: 'pointer', outline: currentTab === 'pending' ? '3px solid #7a0c2e' : 'none', transform: currentTab === 'pending' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
+              sx={{ flex: 1, p: 3, textAlign: 'center', bgcolor: '#ffe7d9', color: '#7a0c2e', cursor: 'pointer', outline: currentTab === 'pending' ? '3px solid #7a0c2e' : 'none', transform: currentTab === 'pending' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
             >
               <Typography variant="h3">{data?.filter(row => row.status !== 'rejected' && row.status !== 'converted' && (!row.dispositions || row.dispositions.length === 0)).length || 0}</Typography>
               <Typography variant="subtitle2">Pending Leads</Typography>
@@ -1031,7 +1040,7 @@ export default function Leads({ title = "Leads Management" }) {
             {/* My Leads */}
             <Card
               onClick={() => { setPage(0); setCurrentTab('my_leads'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#d0f2ff', color: '#04297a', cursor: 'pointer', outline: currentTab === 'my_leads' ? '3px solid #04297a' : 'none', transform: currentTab === 'my_leads' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
+              sx={{ flex: 1, p: 3, textAlign: 'center', bgcolor: '#d0f2ff', color: '#04297a', cursor: 'pointer', outline: currentTab === 'my_leads' ? '3px solid #04297a' : 'none', transform: currentTab === 'my_leads' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
             >
               <Typography variant="h3">{data?.filter(row => {
                 const currentUserId = auth?.user?._id || auth?.user?.id;
@@ -1047,7 +1056,7 @@ export default function Leads({ title = "Leads Management" }) {
             {/* Follow Ups */}
             <Card
               onClick={() => { setPage(0); setCurrentTab('follow_ups'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#e4f8dd', color: '#135222', cursor: 'pointer', outline: currentTab === 'follow_ups' ? '3px solid #135222' : 'none', transform: currentTab === 'follow_ups' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
+              sx={{ flex: 1, p: 3, textAlign: 'center', bgcolor: '#e4f8dd', color: '#135222', cursor: 'pointer', outline: currentTab === 'follow_ups' ? '3px solid #135222' : 'none', transform: currentTab === 'follow_ups' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
             >
               <Typography variant="h3">{data?.filter(row => {
                 if (row.status === 'rejected' || row.status === 'converted') return false;
@@ -1060,15 +1069,15 @@ export default function Leads({ title = "Leads Management" }) {
             {/* Exclusive */}
             <Card
               onClick={() => { setPage(0); setCurrentTab('exclusive'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#f4e6ff', color: '#6200ea', cursor: 'pointer', outline: currentTab === 'exclusive' ? '3px solid #6200ea' : 'none', transform: currentTab === 'exclusive' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
+              sx={{ flex: 1, p: 3, textAlign: 'center', bgcolor: '#f4e6ff', color: '#6200ea', cursor: 'pointer', outline: currentTab === 'exclusive' ? '3px solid #6200ea' : 'none', transform: currentTab === 'exclusive' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
             >
               <Typography variant="h3">{data?.filter(row => row.isExclusive === true).length || 0}</Typography>
-              <Typography variant="subtitle2">Exclusive</Typography>
+              <Typography variant="subtitle2">Hot Leads</Typography>
             </Card>
             {/* Rejected */}
             <Card
               onClick={() => { setPage(0); setCurrentTab('rejected'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#e6e6e6', color: '#4a4a4a', cursor: 'pointer', outline: currentTab === 'rejected' ? '3px solid #4a4a4a' : 'none', transform: currentTab === 'rejected' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
+              sx={{ flex: 1, p: 3, textAlign: 'center', bgcolor: '#e6e6e6', color: '#4a4a4a', cursor: 'pointer', outline: currentTab === 'rejected' ? '3px solid #4a4a4a' : 'none', transform: currentTab === 'rejected' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
             >
               <Typography variant="h3">{data?.filter(row => row.status === 'rejected').length || 0}</Typography>
               <Typography variant="subtitle2">Rejected</Typography>
@@ -1076,7 +1085,7 @@ export default function Leads({ title = "Leads Management" }) {
             {/* Converted */}
             <Card
               onClick={() => { setPage(0); setCurrentTab('converted'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              sx={{ flex: '1 1 150px', p: 3, textAlign: 'center', bgcolor: '#fff3d6', color: '#7a4f01', cursor: 'pointer', outline: currentTab === 'converted' ? '3px solid #7a4f01' : 'none', transform: currentTab === 'converted' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
+              sx={{ flex: 1, p: 3, textAlign: 'center', bgcolor: '#fff3d6', color: '#7a4f01', cursor: 'pointer', outline: currentTab === 'converted' ? '3px solid #7a4f01' : 'none', transform: currentTab === 'converted' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
             >
               <Typography variant="h3">{data?.filter(row => row.status === 'converted').length || 0}</Typography>
               <Typography variant="subtitle2">Converted</Typography>
