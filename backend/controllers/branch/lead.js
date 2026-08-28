@@ -24,6 +24,8 @@ async function create(req, res) {
     if (req.user) {
       if (req.user.userType?.toLowerCase() !== 'telecalling') {
         req.body.branch = req.user.branch?._id || req.user.branch;
+      } else {
+        req.body.assignedTo = req.user._id;
       }
       req.body.createdBy = req.user._id;
     }

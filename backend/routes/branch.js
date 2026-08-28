@@ -22,6 +22,7 @@ const lead = require("../controllers/branch/lead");
 const importedLead = require("../controllers/branch/importedLead");
 const qrEnquiry = require("../controllers/qrEnquiry");
 const fileUpload = require("../controllers/branch/fileupload");
+const user = require("../controllers/admin/user");
 const { isBranch, enforceAuditorReadOnly } = require("../middlewares/authorization");
 const transit = require("../controllers/branch/transit");
 const multer = require("../config/multer");
@@ -160,6 +161,8 @@ branchRouter.post(
 
 branchRouter.get("/qr-enquiry/get-by-enqid/:enqId", qrEnquiry.findByEnqIdStrict);
 branchRouter.post("/qr-enquiry/get", qrEnquiry.getEnquiries);
+
+branchRouter.post("/user/get", user.find);
 
 branchRouter.get("/profile", profile.get);
 branchRouter.post("/profile/change-password", profile.changePassword);

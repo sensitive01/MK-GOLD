@@ -7,19 +7,32 @@ import {
   Grid,
   TextField,
   Typography,
+  FormHelperText,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import moment from 'moment';
 import { createLead } from '../../../apis/branch/lead';
 import { createFile } from '../../../apis/branch/fileupload';
+import { getUser } from '../../../apis/branch/user';
 import global from '../../../utils/global';
 
 function CreateLead(props) {
   const [file, setFile] = useState(null);
   const [focusedField, setFocusedField] = useState(null);
+  const [telecallers, setTelecallers] = useState([]);
+
+  useEffect(() => {
+    if (props.leadSource === 'marketing') {
+      getUser({ userType: 'telecalling', status: 'active' }).then(res => {
+        if (res?.status) {
+          setTelecallers(res.data || []);
+        }
+      });
+    }
+  }, [props.leadSource]);
 
   const schema = Yup.object({
     name: Yup.string(),
@@ -36,6 +49,7 @@ function CreateLead(props) {
     type: Yup.string().required('Type is required'),
     releaseAmount: Yup.number().min(0),
     pledgedAmount: Yup.number().min(0),
+    assignedTo: props.leadSource === 'marketing' ? Yup.string().required('Agent is required') : Yup.string(),
   });
 
   const { handleSubmit, handleChange, handleBlur, values, touched, errors, setValues, resetForm } = useFormik({
@@ -59,6 +73,7 @@ function CreateLead(props) {
       status: 'pending',
       source: '',
       leadSource: props.leadSource || 'admin',
+      assignedTo: '',
     },
     validationSchema: schema,
     onSubmit: (values) => {
@@ -142,6 +157,21 @@ function CreateLead(props) {
               required
             />
           </Grid>
+          {props.leadSource === 'marketing' && (
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth error={touched.assignedTo && Boolean(errors.assignedTo)}>
+                <InputLabel>Agent</InputLabel>
+                <Select label="Agent" name="assignedTo" value={values.assignedTo} onChange={handleChange} onBlur={handleBlur}>
+                  {telecallers.map((t) => (
+                    <MenuItem key={t._id} value={t._id}>{t.employee?.name || t.username}</MenuItem>
+                  ))}
+                </Select>
+                {touched.assignedTo && errors.assignedTo && (
+                  <FormHelperText>{errors.assignedTo}</FormHelperText>
+                )}
+              </FormControl>
+            </Grid>
+          )}
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>

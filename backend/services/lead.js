@@ -85,6 +85,8 @@ async function findById(id) {
   }
 }
 
+let currentTelecallerIndex = 0;
+
 async function create(data) {
   try {
     if (data.mobile && data.date) {
@@ -96,6 +98,16 @@ async function create(data) {
         throw new Error("A lead with this mobile number already exists for this date.");
       }
     }
+
+    if (!data.assignedTo) {
+      const User = require("../models/user");
+      const telecallers = await User.find({ userType: "telecalling", status: "active" }).select("_id").lean();
+      if (telecallers.length > 0) {
+        data.assignedTo = telecallers[currentTelecallerIndex % telecallers.length]._id;
+        currentTelecallerIndex = (currentTelecallerIndex + 1) % telecallers.length;
+      }
+    }
+
     return await Lead.create(data);
   } catch (err) {
     throw err;
@@ -254,13 +266,21 @@ async function bulkCreate(leadsArray) {
       existingLeads.map(l => `${l.mobile}_${l.date.toISOString()}`)
     );
 
+    const User = require("../models/user");
+    const telecallers = await User.find({ userType: "telecalling", status: "active" }).select("_id").lean();
+
     const uniqueLeads = [];
     const currentSet = new Set();
     let duplicateCount = 0;
+    let tIndex = 0;
 
     for (const lead of leadsArray) {
       const key = `${lead.mobile}_${new Date(lead.date).toISOString()}`;
       if (!existingSet.has(key) && !currentSet.has(key)) {
+        if (telecallers.length > 0) {
+            lead.assignedTo = telecallers[tIndex]._id;
+            tIndex = (tIndex + 1) % telecallers.length;
+        }
         uniqueLeads.push(lead);
         currentSet.add(key);
       } else {
