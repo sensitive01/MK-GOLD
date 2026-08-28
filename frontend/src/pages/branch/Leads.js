@@ -779,7 +779,7 @@ export default function Leads({ title = "Leads Management" }) {
             >
               Filter
             </Button>
-            {auth.user?.userType?.toLowerCase() === 'telecalling' && (
+            {/* {auth.user?.userType?.toLowerCase() === 'telecalling' && (
               <>
                 <Button
                   variant="outlined"
@@ -795,7 +795,7 @@ export default function Leads({ title = "Leads Management" }) {
                   Import Leads
                 </Button>
               </>
-            )}
+            )} */}
             <Button
               variant="contained"
               startIcon={<Iconify icon="eva:plus-fill" />}

@@ -64,7 +64,7 @@ export default function DashboardPage() {
             />
           </Grid>
 
-          <Grid item xs={6} sm={6} md={2}>
+          <Grid item xs={12} sm={6} md={3}>
             <AppWidgetSummary
               title="Silver Rate"
               total={stats?.silverRate}
