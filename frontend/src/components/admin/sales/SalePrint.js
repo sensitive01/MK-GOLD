@@ -151,7 +151,7 @@ export default function SalePrint({ id }) {
       )}
       <iframe id="iframe" style={{ display: 'none', height: '0px', width: '0px', position: 'absolute' }} title="pdf" />
       <div id="pdf" style={{ color: '#000', backgroundColor: '#fff', padding: '30px', fontFamily: 'Arial, sans-serif', fontSize: '13px', width: '750px', margin: '0 auto', boxSizing: 'border-box' }}>
-        
+
         {/* Header Section */}
         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
           <tbody>
@@ -216,7 +216,7 @@ export default function SalePrint({ id }) {
                     <tr>
                       <td style={{ border: '1px solid #000', padding: '6px 8px', fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Address</td>
                       <td style={{ border: '1px solid #000', padding: '6px 8px' }}>
-                        {data?.customer?.address?.length > 0 
+                        {data?.customer?.address?.length > 0
                           ? `${data?.customer?.address[0]?.address}, ${data?.customer?.address[0]?.city}, ${data?.customer?.address[0]?.state}, ${data?.customer?.address[0]?.pincode}`
                           : ''}
                       </td>
@@ -234,8 +234,8 @@ export default function SalePrint({ id }) {
                 <div style={{ width: '100%', height: '116px', border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa', overflow: 'hidden' }}>
                   {data?.customer?.profileImage?.uploadedFile ? (
                     <img
-                      src={data.customer.profileImage.uploadedFile.startsWith('http') 
-                        ? data.customer.profileImage.uploadedFile 
+                      src={data.customer.profileImage.uploadedFile.startsWith('http')
+                        ? data.customer.profileImage.uploadedFile
                         : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`}
                       alt="Customer"
                       style={{ width: '100%', height: '100%', objectFit: 'contain' }}
@@ -337,7 +337,7 @@ export default function SalePrint({ id }) {
                   <tbody>
                     <tr>
                       <td style={{ border: '1px solid #000', padding: '4px 6px', fontSize: '11px', color: '#444', verticalAlign: 'middle', width: '65%' }}>
-                        (Service Charges are typically charges against Appraiser Charges, Payment Handling Charges, Release Handling Charges, Melting Charges, etc.) 
+                        (Service Charges are typically charges against Appraiser Charges, Payment Handling Charges, Release Handling Charges, Melting Charges, etc.)
                         <strong style={{ display: 'block', color: '#000', fontSize: '12px', marginTop: '2px' }}>Service Charges ({serviceChargesPercent}%) =</strong>
                       </td>
                       <td style={{ border: '1px solid #000', padding: '4px 6px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px', verticalAlign: 'bottom', width: '35%' }}>
@@ -404,8 +404,8 @@ export default function SalePrint({ id }) {
                 <div style={{ height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
                   {data?.customer?.signatureImage?.uploadedFile ? (
                     <img
-                      src={data.customer.signatureImage.uploadedFile.startsWith('http') 
-                        ? data.customer.signatureImage.uploadedFile 
+                      src={data.customer.signatureImage.uploadedFile.startsWith('http')
+                        ? data.customer.signatureImage.uploadedFile
                         : `${global.baseURL}/${data.customer.signatureImage.uploadedFile}`}
                       alt="Customer Signature"
                       style={{ maxHeight: '50px', maxWidth: '160px', objectFit: 'contain' }}

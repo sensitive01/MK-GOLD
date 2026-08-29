@@ -70,6 +70,10 @@ const meltingSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'fileuploads'
     },
+    afterMeltProof: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'fileuploads'
+    },
     meltUpdatedAt: {
         type: Date
     },

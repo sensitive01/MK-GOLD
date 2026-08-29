@@ -108,7 +108,7 @@ function PreviewLead(props) {
     formData.append('remark', logForm.remark);
     if (logForm.branch) formData.append('branch', logForm.branch);
     if (logForm.uploadedFile) formData.append('uploadedFile', logForm.uploadedFile);
-    if (logForm.status === 'Callback' || logForm.status === 'Planning to Visit') {
+    if (logForm.status === 'Callback' || logForm.status === 'Planning to Visit' || logForm.status === 'Follow Up' || logForm.status === 'Business Closed') {
       if (logForm.callbackDate) formData.append('callbackDate', logForm.callbackDate);
       if (logForm.callbackTime) formData.append('callbackTime', logForm.callbackTime);
     }
@@ -419,7 +419,7 @@ function PreviewLead(props) {
                   </Select>
                </FormControl>
             </Grid>
-            {(logForm.status === 'Visited Branch' || logForm.status === 'Planning to Visit') && (
+            {(logForm.status === 'Visited Branch' || logForm.status === 'Planning to Visit' || logForm.status === 'Business Closed') && (
               <Grid item xs={12}>
                 <FormControl fullWidth>
                   <InputLabel>Select Branch</InputLabel>
@@ -433,7 +433,7 @@ function PreviewLead(props) {
                 </FormControl>
               </Grid>
             )}
-            {(logForm.status === 'Callback' || logForm.status === 'Planning to Visit' || logForm.status === 'Follow Up') && (
+            {(logForm.status === 'Callback' || logForm.status === 'Planning to Visit' || logForm.status === 'Follow Up' || logForm.status === 'Business Closed') && (
               <>
                 <Grid item xs={12} sm={6}>
                   <TextField

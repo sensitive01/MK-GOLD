@@ -6,6 +6,7 @@ async function find(query = {}) {
     .populate('transitId')
     .populate('saleIds')
     .populate('meltProof')
+    .populate('afterMeltProof')
     .populate('createdBy', 'name')
     .populate('vendor')
     .sort({ createdAt: -1 })

@@ -707,7 +707,11 @@ function Customer(props) {
                           }
 
                           setOtpStatus('success');
-                          setAltOtpStatus('success');
+                          if (e.alternatePhoneNumber) {
+                            setAltOtpStatus('success');
+                          } else {
+                            setAltOtpStatus(null);
+                          }
                           setEnquiryId(e.enqID || '');
                           setTabValue(0);
                           setCustomerModal(true);
@@ -896,7 +900,11 @@ function Customer(props) {
                               }
                               setEnquiryId(existingUser.enqID || '');
                               setOtpStatus('success');
-                              setAltOtpStatus('success');
+                              if (existingUser.alternatePhoneNumber) {
+                                setAltOtpStatus('success');
+                              } else {
+                                setAltOtpStatus(null);
+                              }
                               setNotify({
                                 open: true,
                                 message: 'Existing customer found. Details loaded.',
@@ -921,6 +929,16 @@ function Customer(props) {
                       setValues({ ...values, phoneNumber: val.slice(0, 10) });
                     }}
                     inputProps={{ maxLength: 10 }}
+                    InputProps={otpStatus === 'success' ? {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main' }}>
+                            <Iconify icon="mdi:check-circle" sx={{ mr: 0.5 }} />
+                            <Typography variant="caption" fontWeight="bold">Verified</Typography>
+                          </Box>
+                        </InputAdornment>
+                      )
+                    } : null}
                   />
                 </Grid>
                 <Grid item xs={12} md={4}>

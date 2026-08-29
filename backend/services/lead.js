@@ -143,7 +143,7 @@ async function remove(id) {
 async function addDisposition(id, payload, user = null) {
   try {
     const update = { $push: { dispositions: payload } };
-    if ((payload.status === "Visited Branch" || payload.status === "Planning to Visit") && payload.branch) {
+    if ((payload.status === "Visited Branch" || payload.status === "Planning to Visit" || payload.status === "Business Closed") && payload.branch) {
       update.$set = { branch: payload.branch };
     }
 

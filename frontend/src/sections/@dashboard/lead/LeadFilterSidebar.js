@@ -7,6 +7,8 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Checkbox,
+  ListItemText,
 } from '@mui/material';
 
 export const STATUS_OPTIONS = ['all', 'pending', 'converted', 'rejected'];
@@ -77,14 +79,17 @@ export default function LeadFilterSidebar({ filters, setFilters, userType, curre
           <FormControl fullWidth size="small">
             <InputLabel>Category</InputLabel>
             <Select
+              multiple
               name="category"
-              value={filters.category}
+              value={filters.category || []}
               label="Category"
               onChange={handleChange}
+              renderValue={(selected) => selected.length === 0 ? 'All' : selected.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')}
             >
-              {CATEGORY_OPTIONS.map((option) => (
+              {['gold', 'silver'].map((option) => (
                 <MenuItem key={option} value={option}>
-                  {option === 'all' ? 'All' : option.charAt(0).toUpperCase() + option.slice(1)}
+                  <Checkbox checked={(filters.category || []).indexOf(option) > -1} />
+                  <ListItemText primary={option.charAt(0).toUpperCase() + option.slice(1)} />
                 </MenuItem>
               ))}
             </Select>
@@ -94,14 +99,17 @@ export default function LeadFilterSidebar({ filters, setFilters, userType, curre
           <FormControl fullWidth size="small">
             <InputLabel>Type</InputLabel>
             <Select
+              multiple
               name="type"
-              value={filters.type}
+              value={filters.type || []}
               label="Type"
               onChange={handleChange}
+              renderValue={(selected) => selected.length === 0 ? 'All' : selected.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')}
             >
-              {TYPE_OPTIONS.map((option) => (
+              {['physical', 'pledged'].map((option) => (
                 <MenuItem key={option} value={option}>
-                  {option === 'all' ? 'All' : option.charAt(0).toUpperCase() + option.slice(1)}
+                  <Checkbox checked={(filters.type || []).indexOf(option) > -1} />
+                  <ListItemText primary={option.charAt(0).toUpperCase() + option.slice(1)} />
                 </MenuItem>
               ))}
             </Select>

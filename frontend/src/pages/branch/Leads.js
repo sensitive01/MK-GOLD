@@ -119,11 +119,11 @@ function applySortFilter(array, comparator, query, filters, user) {
     if (filters.status && filters.status !== 'all') {
       filteredArray = filteredArray.filter((row) => row.status?.toLowerCase() === filters.status.toLowerCase());
     }
-    if (filters.category && filters.category !== 'all') {
-      filteredArray = filteredArray.filter((row) => row.category?.toLowerCase() === filters.category.toLowerCase());
+    if (filters.category && filters.category.length > 0) {
+      filteredArray = filteredArray.filter((row) => filters.category.includes(row.category?.toLowerCase()));
     }
-    if (filters.type && filters.type !== 'all') {
-      filteredArray = filteredArray.filter((row) => row.type?.toLowerCase() === filters.type.toLowerCase());
+    if (filters.type && filters.type.length > 0) {
+      filteredArray = filteredArray.filter((row) => filters.type.includes(row.type?.toLowerCase()));
     }
     if (filters.startDate || filters.endDate) {
       const start = filters.startDate ? new Date(filters.startDate).setHours(0, 0, 0, 0) : null;
@@ -235,8 +235,8 @@ export default function Leads({ title = "Leads Management" }) {
     startDate: '',
     endDate: '',
     status: 'all',
-    category: 'all',
-    type: 'all',
+    category: [],
+    type: [],
     isExclusive: 'all'
   });
 
@@ -759,14 +759,14 @@ export default function Leads({ title = "Leads Management" }) {
             {title}
           </Typography>
           <Stack direction="row" spacing={2}>
-            {(filters.startDate || filters.endDate || filters.status !== 'all' || filters.category !== 'all' || filters.type !== 'all' || filters.isExclusive !== 'all') && (
+            {(filters.startDate || filters.endDate || filters.status !== 'all' || (filters.category && filters.category.length > 0) || (filters.type && filters.type.length > 0) || filters.isExclusive !== 'all') && (
               <Button
                 variant="contained"
                 color="error"
                 startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
                 onClick={() => {
                   setFilters({
-                    startDate: '', endDate: '', status: 'all', category: 'all', type: 'all', isExclusive: 'all'
+                    startDate: '', endDate: '', status: 'all', category: [], type: [], isExclusive: 'all'
                   });
                 }}
               >
@@ -804,14 +804,14 @@ export default function Leads({ title = "Leads Management" }) {
           </Stack>
         </Stack>
 
-        {(filters.startDate || filters.endDate || filters.status !== 'all' || filters.category !== 'all' || filters.type !== 'all' || filters.isExclusive !== 'all') && (
+        {(filters.startDate || filters.endDate || filters.status !== 'all' || (filters.category && filters.category.length > 0) || (filters.type && filters.type.length > 0) || filters.isExclusive !== 'all') && (
           <p style={{ color: '#fff', marginBottom: '20px' }}>
             {[
               filters.startDate ? `From Date: ${moment(filters.startDate).format('YYYY-MM-DD')}` : null,
               filters.endDate ? `To Date: ${moment(filters.endDate).format('YYYY-MM-DD')}` : null,
               filters.status !== 'all' ? `Status: ${filters.status.charAt(0).toUpperCase() + filters.status.slice(1)}` : null,
-              filters.category !== 'all' ? `Category: ${filters.category.charAt(0).toUpperCase() + filters.category.slice(1)}` : null,
-              filters.type !== 'all' ? `Type: ${filters.type.charAt(0).toUpperCase() + filters.type.slice(1)}` : null,
+              (filters.category && filters.category.length > 0) ? `Category: ${filters.category.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ')}` : null,
+              (filters.type && filters.type.length > 0) ? `Type: ${filters.type.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ')}` : null,
               filters.isExclusive !== 'all' ? `Hot Leads: Yes` : null,
             ].filter(Boolean).join(', ')}
           </p>

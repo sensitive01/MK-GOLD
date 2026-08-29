@@ -1088,7 +1088,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     <Dialog open={open} onClose={handleModalClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
+        <DialogContent sx={{ pt: 2, mt: 1 }}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <TextField

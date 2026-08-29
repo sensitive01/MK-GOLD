@@ -121,6 +121,8 @@ export default function Melting() {
   const [meltUpdateNotes, setMeltUpdateNotes] = useState('');
   const [meltProof, setMeltProof] = useState(null);
   const [meltProofName, setMeltProofName] = useState('');
+  const [afterMeltProof, setAfterMeltProof] = useState(null);
+  const [afterMeltProofName, setAfterMeltProofName] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
 
   // Sell Bar state
@@ -341,8 +343,8 @@ export default function Melting() {
     setBarWeight(row.barWeight || '');
     setBarPurity(row.barPurity || '');
     setMeltUpdateNotes(row.meltUpdateNotes || '');
-    setMeltProof(row.meltProof || null);
-    setMeltProofName('');
+    setAfterMeltProof(row.afterMeltProof || null);
+    setAfterMeltProofName('');
     setOpenUpdateDialog(true);
   };
 
@@ -428,8 +430,8 @@ export default function Melting() {
       status: 'melt_updated'
     };
     
-    if (meltProof) {
-      payload.meltProof = typeof meltProof === 'object' ? meltProof._id : meltProof;
+    if (afterMeltProof) {
+      payload.afterMeltProof = typeof afterMeltProof === 'object' ? afterMeltProof._id : afterMeltProof;
     }
     
     const res = await updateMelting(selectedMelting._id, payload);
@@ -471,6 +473,26 @@ export default function Melting() {
         setMeltProof(response.data?._id);
         setMeltProofName(file.name);
         setNotify({ open: true, message: 'Proof uploaded successfully', severity: 'success' });
+      } else {
+        setNotify({ open: true, message: 'File upload failed', severity: 'error' });
+      }
+    }
+  };
+
+  const handleAfterFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setUploadLoading(true);
+      const formData = new FormData();
+      formData.append('uploadedFile', file);
+      formData.append('uploadName', 'after_melt_proof');
+      formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
+      const response = await createFile(formData);
+      setUploadLoading(false);
+      if (response.status) {
+        setAfterMeltProof(response.data?._id);
+        setAfterMeltProofName(file.name);
+        setNotify({ open: true, message: 'After Melt Proof uploaded successfully', severity: 'success' });
       } else {
         setNotify({ open: true, message: 'File upload failed', severity: 'error' });
       }
@@ -856,7 +878,7 @@ export default function Melting() {
               ) : meltProof ? (
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 2 }}>
                   <Typography variant="body2" sx={{ color: 'success.main' }}>
-                    {meltProofName || 'Proof uploaded successfully!'}
+                    {meltProofName || 'Before Melt Proof uploaded successfully!'}
                   </Typography>
                   <IconButton size="small" onClick={() => { setMeltProof(null); setMeltProofName(''); }} sx={{ color: 'error.main' }}>
                     <Iconify icon="eva:close-fill" />
@@ -940,25 +962,25 @@ export default function Melting() {
                 component="label"
                 disabled={uploadLoading}
               >
-                {uploadLoading ? 'Uploading...' : 'Upload Proof'}
+                {uploadLoading ? 'Uploading...' : 'Upload After Melt Proof'}
                 <input
                   type="file"
                   hidden
-                  onChange={handleFileUpload}
+                  onChange={handleAfterFileUpload}
                 />
               </Button>
-              {meltProof && typeof meltProof === 'object' && meltProof.uploadedFile ? (
-                meltProof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
-                  <Box component="iframe" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} title="Proof" sx={{ width: '100%', height: 200, border: 'none' }} />
+              {afterMeltProof && typeof afterMeltProof === 'object' && afterMeltProof.uploadedFile ? (
+                afterMeltProof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
+                  <Box component="iframe" src={afterMeltProof.uploadedFile.startsWith('http') ? afterMeltProof.uploadedFile : `${global.BASE_URL}/${afterMeltProof.uploadedFile}`} title="Proof" sx={{ width: '100%', height: 200, border: 'none' }} />
                 ) : (
-                  <Box component="img" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} alt="Proof" sx={{ width: '100%', maxHeight: 200, objectFit: 'contain' }} />
+                  <Box component="img" src={afterMeltProof.uploadedFile.startsWith('http') ? afterMeltProof.uploadedFile : `${global.BASE_URL}/${afterMeltProof.uploadedFile}`} alt="Proof" sx={{ width: '100%', maxHeight: 200, objectFit: 'contain' }} />
                 )
-              ) : meltProof ? (
+              ) : afterMeltProof ? (
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 2 }}>
                   <Typography variant="body2" sx={{ color: 'success.main' }}>
-                    {meltProofName || 'Proof uploaded successfully!'}
+                    {afterMeltProofName || 'After Melt Proof uploaded successfully!'}
                   </Typography>
-                  <IconButton size="small" onClick={() => { setMeltProof(null); setMeltProofName(''); }} sx={{ color: 'error.main' }}>
+                  <IconButton size="small" onClick={() => { setAfterMeltProof(null); setAfterMeltProofName(''); }} sx={{ color: 'error.main' }}>
                     <Iconify icon="eva:close-fill" />
                   </IconButton>
                 </Stack>
@@ -1216,7 +1238,7 @@ export default function Melting() {
               {rowToView.meltProof && (
                 <Grid item xs={12}>
                   <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                    <Typography variant="subtitle2">Proof Document</Typography>
+                    <Typography variant="subtitle2">Before Melt Proof</Typography>
                     {((rowToView.meltProof?.uploadedFile && rowToView.meltProof.uploadedFile.toLowerCase().endsWith('.pdf')) ||
                       (typeof rowToView.meltProof === 'string' && rowToView.meltProof.toLowerCase().endsWith('.pdf'))) && (
                       <Button
@@ -1228,24 +1250,43 @@ export default function Melting() {
                           window.open(url.startsWith('http') ? url : `${global.BASE_URL}/${url}`, '_blank');
                         }}
                       >
-                        Full View PDF
+                        Open PDF
                       </Button>
                     )}
                   </Stack>
-                  {rowToView.meltProof?.uploadedFile ? (
-                    rowToView.meltProof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
-                      <Box component="iframe" src={rowToView.meltProof.uploadedFile.startsWith('http') ? rowToView.meltProof.uploadedFile : `${global.BASE_URL}/${rowToView.meltProof.uploadedFile}`} title="Proof" sx={{ width: '100%', height: 400, border: 'none' }} />
-                    ) : (
-                      <Box component="img" src={rowToView.meltProof.uploadedFile.startsWith('http') ? rowToView.meltProof.uploadedFile : `${global.BASE_URL}/${rowToView.meltProof.uploadedFile}`} alt="Proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain' }} />
-                    )
+                  {((rowToView.meltProof?.uploadedFile && rowToView.meltProof.uploadedFile.toLowerCase().endsWith('.pdf')) ||
+                    (typeof rowToView.meltProof === 'string' && rowToView.meltProof.toLowerCase().endsWith('.pdf'))) ? (
+                    <Box component="iframe" src={rowToView.meltProof?.uploadedFile?.startsWith('http') ? rowToView.meltProof.uploadedFile : `${global.BASE_URL}/${rowToView.meltProof?.uploadedFile || rowToView.meltProof}`} title="Before Melt Proof" sx={{ width: '100%', height: 400, border: 'none' }} />
                   ) : (
-                    typeof rowToView.meltProof === 'string' && (
-                      rowToView.meltProof.toLowerCase().endsWith('.pdf') ? (
-                        <Box component="iframe" src={rowToView.meltProof.startsWith('http') ? rowToView.meltProof : `${global.BASE_URL}/${rowToView.meltProof}`} title="Proof" sx={{ width: '100%', height: 400, border: 'none' }} />
-                      ) : (
-                        <Box component="img" src={rowToView.meltProof.startsWith('http') ? rowToView.meltProof : `${global.BASE_URL}/${rowToView.meltProof}`} alt="Proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain' }} />
-                      )
-                    )
+                    <Box component="img" src={rowToView.meltProof?.uploadedFile?.startsWith('http') ? rowToView.meltProof.uploadedFile : `${global.BASE_URL}/${rowToView.meltProof?.uploadedFile || rowToView.meltProof}`} alt="Before Melt Proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain' }} />
+                  )}
+                </Grid>
+              )}
+
+              {rowToView.afterMeltProof && (
+                <Grid item xs={12}>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                    <Typography variant="subtitle2">After Melt Proof</Typography>
+                    {((rowToView.afterMeltProof?.uploadedFile && rowToView.afterMeltProof.uploadedFile.toLowerCase().endsWith('.pdf')) ||
+                      (typeof rowToView.afterMeltProof === 'string' && rowToView.afterMeltProof.toLowerCase().endsWith('.pdf'))) && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Iconify icon="eva:external-link-outline" />}
+                        onClick={() => {
+                          const url = rowToView.afterMeltProof?.uploadedFile || rowToView.afterMeltProof;
+                          window.open(url.startsWith('http') ? url : `${global.BASE_URL}/${url}`, '_blank');
+                        }}
+                      >
+                        Open PDF
+                      </Button>
+                    )}
+                  </Stack>
+                  {((rowToView.afterMeltProof?.uploadedFile && rowToView.afterMeltProof.uploadedFile.toLowerCase().endsWith('.pdf')) ||
+                    (typeof rowToView.afterMeltProof === 'string' && rowToView.afterMeltProof.toLowerCase().endsWith('.pdf'))) ? (
+                    <Box component="iframe" src={rowToView.afterMeltProof?.uploadedFile?.startsWith('http') ? rowToView.afterMeltProof.uploadedFile : `${global.BASE_URL}/${rowToView.afterMeltProof?.uploadedFile || rowToView.afterMeltProof}`} title="After Melt Proof" sx={{ width: '100%', height: 400, border: 'none' }} />
+                  ) : (
+                    <Box component="img" src={rowToView.afterMeltProof?.uploadedFile?.startsWith('http') ? rowToView.afterMeltProof.uploadedFile : `${global.BASE_URL}/${rowToView.afterMeltProof?.uploadedFile || rowToView.afterMeltProof}`} alt="After Melt Proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain' }} />
                   )}
                 </Grid>
               )}
