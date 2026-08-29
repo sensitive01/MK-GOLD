@@ -51,6 +51,7 @@ import { getEmployee } from '../../../apis/branch/employee';
 import global from '../../../utils/global';
 import { getAddressById, createAddress } from '../../../apis/branch/customer-address';
 import Iconify from '../../iconify';
+import { pinToAddress } from 'india-pincode-finder';
 
 
 function CreateSale(props) {
@@ -165,6 +166,20 @@ function CreateSale(props) {
     },
   });
 
+  useEffect(() => {
+    if (addressForm.values.pincode && addressForm.values.pincode.toString().length === 6) {
+      try {
+        const address = pinToAddress(Number(addressForm.values.pincode));
+        if (address) {
+          const divisionCity = address.divisionname ? address.divisionname.replace(/ Division/gi, '').replace(/ GPO/gi, '').trim() : '';
+          addressForm.setFieldValue('city', divisionCity || address.district || address.block || '');
+          addressForm.setFieldValue('state', address.state || '');
+        }
+      } catch (err) {
+        console.error('Error fetching pincode:', err);
+      }
+    }
+  }, [addressForm.values.pincode, addressForm.setFieldValue]);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -610,12 +625,14 @@ function CreateSale(props) {
                 onChange={handleChange}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between' }}>
               <LoadingButton
                 size="large"
                 name="submit"
                 type="button"
                 variant="contained"
+                startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+                sx={{ bgcolor: 'primary.main', color: '#fff', '&:hover': { bgcolor: 'primary.dark' }, '& .iconify': { color: '#fff' } }}
                 onClick={() => setStep(step - 1)}
               >
                 Back to customer selection
@@ -625,7 +642,8 @@ function CreateSale(props) {
                 name="submit"
                 type="button"
                 variant="contained"
-                sx={{ ml: 3 }}
+                endIcon={<Iconify icon="eva:arrow-ios-forward-fill" />}
+                sx={{ ml: 3, bgcolor: 'primary.main', color: '#fff', '&:hover': { bgcolor: 'primary.dark' }, '& .iconify': { color: '#fff' } }}
                 onClick={async () => {
                   if (values.paymentType === 'bank' && !selectedBank) {
                     props.setNotify({

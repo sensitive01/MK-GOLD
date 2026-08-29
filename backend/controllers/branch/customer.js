@@ -2,10 +2,14 @@ const customerService = require("../../services/customer");
 const fileUploadService = require("../../services/fileupload");
 
 async function find(req, res) {
+  const query = req.body ?? {};
+  if (req.user && req.user.branch) {
+    query.branch = req.user.branch?._id || req.user.branch;
+  }
   res.json({
     status: true,
     message: "",
-    data: await customerService.find(req.body ?? {}),
+    data: await customerService.find(query),
   });
 }
 
@@ -21,6 +25,9 @@ async function create(req, res) {
   try {
     const payload = { ...req.body };
     payload.createdBy = req.user.employee || req.user._id;
+    if (req.user && req.user.branch) {
+      payload.branch = req.user.branch?._id || req.user.branch;
+    }
     let createdData = await customerService.create(payload);
     res.json({
       status: true,

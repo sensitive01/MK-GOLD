@@ -18,6 +18,8 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { LoadingButton } from '@mui/lab';
@@ -25,6 +27,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import Webcam from 'react-webcam';
 import axios from 'axios';
+import { pinToAddress } from 'india-pincode-finder';
 import { Helmet } from 'react-helmet-async';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -115,7 +118,7 @@ export default function PublicKYC() {
     alternatePhoneNumber: Yup.string()
       .matches(/^[0-9]{10}$/, { message: 'Alternate phone number must be exactly 10 digits', excludeEmptyString: true }),
     source: Yup.string().required('Source is required'),
-    email: Yup.string().required('Email id is required'),
+    email: Yup.string().email('Enter a valid email'),
     dob: Yup.string().required('DOB is required'),
     gender: Yup.string().required('Gender is required'),
     maritalStatus: Yup.string().required('Marital Status is required'),
@@ -145,6 +148,8 @@ export default function PublicKYC() {
       maritalStatus: '',
       source: '',
       status: 'active',
+      isWhatsapp: false,
+      isAlternateWhatsapp: false,
       chooseId: '',
       idNo: '',
       uploadId: null,
@@ -170,7 +175,9 @@ export default function PublicKYC() {
         branch: branch?._id,
         name: formValues.name,
         phoneNumber: formValues.phoneNumber,
+        whatsappNumber: formValues.isWhatsapp ? formValues.phoneNumber : '',
         alternatePhoneNumber: formValues.alternatePhoneNumber,
+        alternateWhatsappNumber: formValues.isAlternateWhatsapp ? formValues.alternatePhoneNumber : '',
         email: formValues.email,
         dob: formValues.dob,
         gender: formValues.gender,
@@ -253,18 +260,16 @@ export default function PublicKYC() {
 
   useEffect(() => {
     if (values.pincode && values.pincode.toString().length === 6) {
-      fetch(`https://api.postalpincode.in/pincode/${values.pincode}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && data[0] && data[0].Status === 'Success') {
-            const postOffice = data[0].PostOffice[0];
-            if (postOffice) {
-              setFieldValue('city', postOffice.District || postOffice.Block || '');
-              setFieldValue('state', postOffice.State || '');
-            }
-          }
-        })
-        .catch(err => console.error('Error fetching pincode:', err));
+      try {
+        const address = pinToAddress(Number(values.pincode));
+        if (address) {
+          const divisionCity = address.divisionname ? address.divisionname.replace(/ Division/gi, '').replace(/ GPO/gi, '').trim() : '';
+          setFieldValue('city', divisionCity || address.district || address.block || '');
+          setFieldValue('state', address.state || '');
+        }
+      } catch (err) {
+        console.error('Error fetching pincode:', err);
+      }
     }
   }, [values.pincode, setFieldValue]);
 
@@ -432,6 +437,18 @@ export default function PublicKYC() {
                       </Grid>
                       <Grid item xs={12} sm={6}>
                         <TextField
+                          name="email"
+                          value={values.email}
+                          error={touched.email && Boolean(errors.email)}
+                          helperText={touched.email && errors.email}
+                          label="Email ID"
+                          fullWidth
+                          onBlur={handleBlur}
+                          onChange={handleChange}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
                           required
                           name="phoneNumber"
                           value={values.phoneNumber}
@@ -443,6 +460,18 @@ export default function PublicKYC() {
                           onChange={handleChange}
                           inputProps={{ maxLength: 10 }}
                         />
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+                            <FormControlLabel
+                              control={<Checkbox name="isWhatsapp" checked={values.isWhatsapp} onChange={handleChange} size="small" sx={{ color: '#25D366', '&.Mui-checked': { color: '#25D366' } }} />}
+                              label={
+                                <Box sx={{ display: 'flex', alignItems: 'center', color: '#25D366' }}>
+                                  <Typography variant="body2" sx={{ mr: 0.5 }}>Mark as WhatsApp number</Typography>
+                                  <Iconify icon="mdi:whatsapp" width={18} height={18} />
+                                </Box>
+                              }
+                              sx={{ mt: 0.5, mr: 0, ml: 0 }}
+                            />
+                          </Box>
                       </Grid>
                       <Grid item xs={12} sm={6}>
                         <TextField
@@ -456,19 +485,18 @@ export default function PublicKYC() {
                           onChange={handleChange}
                           inputProps={{ maxLength: 10 }}
                         />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <TextField
-                          required
-                          name="email"
-                          value={values.email}
-                          error={touched.email && Boolean(errors.email)}
-                          helperText={touched.email && errors.email}
-                          label="Email ID"
-                          fullWidth
-                          onBlur={handleBlur}
-                          onChange={handleChange}
-                        />
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+                            <FormControlLabel
+                              control={<Checkbox name="isAlternateWhatsapp" checked={values.isAlternateWhatsapp} onChange={handleChange} size="small" sx={{ color: '#25D366', '&.Mui-checked': { color: '#25D366' } }} />}
+                              label={
+                                <Box sx={{ display: 'flex', alignItems: 'center', color: '#25D366' }}>
+                                  <Typography variant="body2" sx={{ mr: 0.5 }}>Mark as WhatsApp number</Typography>
+                                  <Iconify icon="mdi:whatsapp" width={18} height={18} />
+                                </Box>
+                              }
+                              sx={{ mt: 0.5, mr: 0, ml: 0 }}
+                            />
+                          </Box>
                       </Grid>
                       <Grid item xs={12} sm={6}>
                         <LocalizationProvider dateAdapter={AdapterMoment}>
@@ -763,12 +791,11 @@ export default function PublicKYC() {
                     
                     {tabValue < 3 ? (
                       <Button
-                        type="button"
                         size="large"
                         variant="contained"
                         onClick={handleNext}
                         disabled={
-                          (tabValue === 0 && (!values.name || !values.phoneNumber || !values.email || !values.dob || !values.gender || !values.maritalStatus || !values.source)) ||
+                          (tabValue === 0 && (!values.name || !values.phoneNumber || !values.dob || !values.gender || !values.maritalStatus || !values.source)) ||
                           (tabValue === 1 && (!values.chooseId || !values.idNo || !values.uploadId || !values.signature)) ||
                           (tabValue === 2 && !img)
                         }
@@ -776,13 +803,13 @@ export default function PublicKYC() {
                         Next
                       </Button>
                     ) : (
-                      <Button 
+                      <LoadingButton 
                         size="large" 
                         type="submit" 
                         variant="contained" 
                         disabled={
                           loading || 
-                          !values.name || !values.phoneNumber || !values.email || !values.dob || !values.gender || !values.maritalStatus || !values.source ||
+                          !values.name || !values.phoneNumber || !values.dob || !values.gender || !values.maritalStatus || !values.source ||
                           !values.chooseId || !values.idNo || !values.uploadId || !values.signature ||
                           !img ||
                           !values.line1 || !values.city || !values.state || !values.pincode
@@ -790,7 +817,7 @@ export default function PublicKYC() {
                         sx={{ bgcolor: '#8A1B9F', color: '#fff', '&:hover': { bgcolor: '#711683' } }}
                       >
                         {loading ? <CircularProgress size={24} color="inherit" /> : 'Submit KYC'}
-                      </Button>
+                      </LoadingButton>
                     )}
                   </Stack>
                 </form>

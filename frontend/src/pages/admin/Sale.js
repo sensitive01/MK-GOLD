@@ -1314,6 +1314,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               <TextField
                 name="amount"
                 label="Payment Amount"
+                InputLabelProps={{ shrink: true }}
                 type="number"
                 value={values.amount}
                 error={touched.amount && errors.amount && true}
@@ -1326,6 +1327,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               <TextField
                 name="comments"
                 label="Comments"
+                InputLabelProps={{ shrink: true }}
                 multiline
                 rows={3}
                 value={values.comments}

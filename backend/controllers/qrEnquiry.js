@@ -7,7 +7,7 @@ async function sendOtp(req, res) {
   try {
     const { phoneNumber } = req.body;
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    
+
     await otpService.create({ phoneNumber, otp, type: 'enquiry' });
     await smsService.sendOtpSms(phoneNumber, otp);
 
@@ -21,13 +21,13 @@ async function verifyOtp(req, res) {
   try {
     const { phoneNumber, otp } = req.body;
     if (!otp) {
-        return res.json({ status: false, message: "OTP is required" });
+      return res.json({ status: false, message: "OTP is required" });
     }
     const otpRecord = await otpService.findOne({ phoneNumber, otp, type: 'enquiry' });
     if (!otpRecord) {
-        return res.json({ status: false, message: "Invalid OTP" });
+      return res.json({ status: false, message: "Invalid OTP" });
     }
-    
+
     // Once verified, we can choose to delete it, or keep it so verifyAndSubmit can check it again
     // For a two-step process, it's safer to just confirm it's valid here
     res.json({ status: true, message: "OTP Verified" });
@@ -68,51 +68,55 @@ async function verifyAndSubmit(req, res) {
 }
 
 async function getEnquiries(req, res) {
-    try {
-        res.json({ status: true, data: await qrService.find(req.body) });
-    } catch (err) {
-        res.json({ status: false, message: err.message });
+  try {
+    const query = req.body || {};
+    if (req.user && req.user.branch) {
+      query.branch = req.user.branch?._id || req.user.branch;
     }
+    res.json({ status: true, data: await qrService.find(query) });
+  } catch (err) {
+    res.json({ status: false, message: err.message });
+  }
 }
 
 async function findByEnqId(req, res) {
   try {
     const { enqId } = req.params;
     if (!enqId) {
-        return res.json({ status: false, message: "Enquiry ID is required" });
+      return res.json({ status: false, message: "Enquiry ID is required" });
     }
-    
+
     // Try case-insensitive and trimmed search
     const trimmedId = enqId.trim();
-    let result = await qrService.findOne({ 
-        enqID: { $regex: new RegExp("^" + trimmedId + "$", "i") } 
+    let result = await qrService.findOne({
+      enqID: { $regex: new RegExp("^" + trimmedId + "$", "i") }
     });
-    
+
     if (!result) {
-        // Fallback 1: Check if it's a customerId (e.g., BGC001)
-        const customerByCode = await Customer.findOne({ 
-            customerId: { $regex: new RegExp("^" + trimmedId + "$", "i") } 
-        }).select("enqID phoneNumber").lean().exec();
-        
-        if (customerByCode && customerByCode.enqID) {
-            result = await qrService.findOne({ enqID: customerByCode.enqID });
+      // Fallback 1: Check if it's a customerId (e.g., BGC001)
+      const customerByCode = await Customer.findOne({
+        customerId: { $regex: new RegExp("^" + trimmedId + "$", "i") }
+      }).select("enqID phoneNumber").lean().exec();
+
+      if (customerByCode && customerByCode.enqID) {
+        result = await qrService.findOne({ enqID: customerByCode.enqID });
+      } else {
+        // Fallback 2: Check if it's a phoneNumber
+        const customerByPhone = await Customer.findOne({
+          phoneNumber: trimmedId
+        }).select("enqID").lean().exec();
+
+        if (customerByPhone && customerByPhone.enqID) {
+          result = await qrService.findOne({ enqID: customerByPhone.enqID });
         } else {
-            // Fallback 2: Check if it's a phoneNumber
-            const customerByPhone = await Customer.findOne({ 
-                phoneNumber: trimmedId 
-            }).select("enqID").lean().exec();
-            
-            if (customerByPhone && customerByPhone.enqID) {
-                result = await qrService.findOne({ enqID: customerByPhone.enqID });
-            } else {
-                // Fallback 3: Search enquiry directly by phone
-                result = await qrService.findOne({ phoneNumber: trimmedId });
-            }
+          // Fallback 3: Search enquiry directly by phone
+          result = await qrService.findOne({ phoneNumber: trimmedId });
         }
+      }
     }
-    
+
     if (!result) {
-        return res.json({ status: false, message: "Enquiry not found" });
+      return res.json({ status: false, message: "Enquiry not found" });
     }
     res.json({ status: true, data: result });
   } catch (err) {
@@ -124,17 +128,17 @@ async function findByEnqIdStrict(req, res) {
   try {
     const { enqId } = req.params;
     if (!enqId) {
-        return res.json({ status: false, message: "Enquiry ID is required" });
+      return res.json({ status: false, message: "Enquiry ID is required" });
     }
-    
+
     // Only search by enqID without fallbacks for public security
     const trimmedId = enqId.trim();
-    let result = await qrService.findOne({ 
-        enqID: { $regex: new RegExp("^" + trimmedId + "$", "i") } 
+    let result = await qrService.findOne({
+      enqID: { $regex: new RegExp("^" + trimmedId + "$", "i") }
     });
-    
+
     if (!result) {
-        return res.json({ status: false, message: "Enquiry not found or Invalid ID" });
+      return res.json({ status: false, message: "Enquiry not found or Invalid ID" });
     }
     res.json({ status: true, data: result });
   } catch (err) {

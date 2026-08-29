@@ -68,19 +68,19 @@ const navConfig = [
     icon: <SellIcon sx={{ width: 1, height: 1 }} />,
     children: [
       {
+        title: 'Billing',
+        path: '/admin/purchase',
+        icon: <StoreIcon sx={{ width: 1, height: 1 }} />,
+      },
+      {
         title: 'Transit',
         path: '/admin/transit',
         icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
       },
       {
-        title: 'Report',
+        title: 'Reports',
         path: '/admin/report',
         icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
-      },
-      {
-        title: 'Purchases',
-        path: '/admin/purchase',
-        icon: <StoreIcon sx={{ width: 1, height: 1 }} />,
       }
     ]
   },

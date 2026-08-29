@@ -47,7 +47,7 @@ export default function Searchbar() {
     <ClickAwayListener onClickAway={handleClose}>
       <div>
         {!open && (
-          <IconButton onClick={handleOpen}>
+          <IconButton onClick={handleOpen} sx={{ color: 'white' }}>
             <Iconify icon="eva:search-fill" />
           </IconButton>
         )}

@@ -122,37 +122,43 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
     
     setIsVerifying(true);
 
-    // Also fetch Bank/Branch if not already present
-    if (!values.bankName || !values.branch) {
-      fetch(`https://ifsc.razorpay.com/${values.ifscCode}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data && data.BANK) {
-            setFieldValue('bankName', data.BANK);
-            setFieldValue('branch', data.BRANCH);
+    fetch(`https://ifsc.razorpay.com/${values.ifscCode}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Incorrect IFSC code');
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.BANK) {
+          setFieldValue('bankName', data.BANK);
+          setFieldValue('branch', data.BRANCH);
+        }
+        
+        // Simulate Bank Verification API (Penny Drop)
+        setTimeout(() => {
+          setIsVerifying(false);
+          // Mocking a successful name fetch for the test account
+          let mockName = selectedUser?.name || 'Customer Name';
+          if (values.accountNo === '10710100283243') {
+            mockName = 'ASWINRAJ';
           }
-        })
-        .catch(() => console.error('Failed to fetch IFSC details'));
-    }
-
-    // Simulate Bank Verification API (Penny Drop)
-    setTimeout(() => {
-      setIsVerifying(false);
-      // Mocking a successful name fetch for the test account
-      let mockName = selectedUser?.name || 'Customer Name';
-      if (values.accountNo === '10710100283243') {
-        mockName = 'ASWINRAJ';
-      }
-      setFieldValue('accountHolderName', mockName);
-      setNotify({ open: true, message: 'Account details verified successfully', severity: 'success' });
-    }, 1500);
-  }, [values.accountNo, values.ifscCode, values.bankName, values.branch, selectedUser, setFieldValue, setNotify]);
+          setFieldValue('accountHolderName', mockName);
+          setNotify({ open: true, message: 'Account details verified successfully', severity: 'success' });
+        }, 1500);
+      })
+      .catch(() => {
+        setIsVerifying(false);
+        setNotify({ open: true, message: 'Incorrect IFSC code', severity: 'error' });
+      });
+  }, [values.accountNo, values.ifscCode, selectedUser, setFieldValue, setNotify]);
 
   // Auto-fetch Bank Name and Branch from IFSC
   useEffect(() => {
     if (values.ifscCode?.length === 11) {
       fetch(`https://ifsc.razorpay.com/${values.ifscCode}`)
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) throw new Error('Incorrect IFSC code');
+          return res.json();
+        })
         .then((data) => {
           if (data && data.BANK) {
             setFieldValue('bankName', data.BANK);
@@ -160,10 +166,15 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
           }
         })
         .catch(() => {
-          console.error('Failed to fetch IFSC details');
+          // Toast is handled by handleVerifyAccount if both trigger, but if only IFSC is entered, we still want a toast
+          if (!values.accountNo || values.accountNo.length < 9) {
+            setNotify({ open: true, message: 'Incorrect IFSC code', severity: 'error' });
+          }
+          setFieldValue('bankName', '');
+          setFieldValue('branch', '');
         });
     }
-  }, [values.ifscCode, setFieldValue]);
+  }, [values.ifscCode, values.accountNo, setFieldValue, setNotify]);
 
   // Auto-verify Account Holder Name when Account No and IFSC are filled
   useEffect(() => {

@@ -39,6 +39,12 @@ const Customer = mongoose.model(
       alternatePhoneNumber: {
         type: String,
       },
+      whatsappNumber: {
+        type: String,
+      },
+      alternateWhatsappNumber: {
+        type: String,
+      },
       referralPhoneNumber: {
         type: String,
       },

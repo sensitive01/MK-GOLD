@@ -235,7 +235,7 @@ export default function PublicEnquiry() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.phoneNumber || !formData.grossWeight || !formData.email) {
+    if (!formData.name || !formData.phoneNumber || !formData.grossWeight) {
         setError(lang === 'en' ? 'Please fill all required fields' : 'ದಯವಿಟ್ಟು ಎಲ್ಲಾ ಅಗತ್ಯವಿರುವ ವಿವರಗಳನ್ನು ಭರ್ತಿ ಮಾಡಿ');
         return;
     }

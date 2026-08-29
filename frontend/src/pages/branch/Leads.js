@@ -58,11 +58,11 @@ const TABLE_HEAD = [
   { id: 'category', label: 'Category', alignRight: false },
   { id: 'type', label: 'Type', alignRight: false },
   { id: 'weight', label: 'Weight', alignRight: false },
-  { id: 'status', label: 'Status', alignRight: false },
+//  { id: 'status', label: 'Status', alignRight: false },
   { id: 'date', label: 'Date', alignRight: false },
   { id: 'editedBy', label: 'Agent', alignRight: false },
   { id: 'remarks', label: 'Remarks', alignRight: false },
-  { id: 'disposition', label: 'Disposition', alignRight: false },
+  { id: 'disposition', label: 'Status', alignRight: false },
   { id: '' },
 ];
 
@@ -621,6 +621,10 @@ export default function Leads({ title = "Leads Management" }) {
   if (auth?.user?.userType?.toLowerCase() === 'telecalling' && currentTab) {
     const currentUserId = auth?.user?._id || auth?.user?.id;
     tabFilteredData = data?.filter(row => {
+      if (currentTab !== 'converted' && row.status?.toLowerCase() === 'converted') {
+        return false;
+      }
+      
       if (currentTab === 'pending') {
         return row.status !== 'rejected' && row.status !== 'converted' && (!row.dispositions || row.dispositions.length === 0);
       }
@@ -759,20 +763,6 @@ export default function Leads({ title = "Leads Management" }) {
             {title}
           </Typography>
           <Stack direction="row" spacing={2}>
-            {(filters.startDate || filters.endDate || filters.status !== 'all' || (filters.category && filters.category.length > 0) || (filters.type && filters.type.length > 0) || filters.isExclusive !== 'all') && (
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
-                onClick={() => {
-                  setFilters({
-                    startDate: '', endDate: '', status: 'all', category: [], type: [], isExclusive: 'all'
-                  });
-                }}
-              >
-                Clear Filter
-              </Button>
-            )}
 
             {/* {auth.user?.userType?.toLowerCase() === 'telecalling' && (
               <>
@@ -904,10 +894,21 @@ export default function Leads({ title = "Leads Management" }) {
                         style={{ cursor: 'pointer' }}
                         sx={(theme) => {
                           const lowerStatus = status?.toLowerCase();
+                          const lastDisp = row.dispositions?.length > 0 ? row.dispositions[row.dispositions.length - 1].status : '';
+
+                          if (!row.dispositions || row.dispositions.length === 0) {
+                            return { '& .MuiTableCell-root': { color: theme.palette.error.main } };
+                          }
+                          if (lowerStatus === 'converted' || lastDisp === 'Business Closed') {
+                            return { '& .MuiTableCell-root': { color: theme.palette.primary.main } };
+                          }
+                          if (lastDisp === 'Follow Up' || lastDisp === 'Planning to Visit') {
+                            return { '& .MuiTableCell-root': { color: theme.palette.success.main } };
+                          }
                           if (lowerStatus === 'rejected') {
                             return {
                               '& .MuiTableCell-root': {
-                                color: 'info.main',
+                                color: theme.palette.info.main,
                                 backgroundImage: `linear-gradient(to right, ${theme.palette.info.main}, ${theme.palette.info.main})`,
                                 backgroundSize: '100% 1px',
                                 backgroundRepeat: 'no-repeat',
@@ -915,17 +916,7 @@ export default function Leads({ title = "Leads Management" }) {
                               }
                             };
                           }
-                          if (lowerStatus === 'converted') {
-                            return { '& .MuiTableCell-root': { color: 'primary.main' } };
-                          }
-                          if (!row.dispositions || row.dispositions.length === 0) {
-                            return { '& .MuiTableCell-root': { color: 'error.main' } };
-                          }
-                          const lastDisp = row.dispositions[row.dispositions.length - 1].status;
-                          if (lastDisp === 'Callback' || lastDisp === 'Follow Up' || lastDisp === 'Planning to Visit' || lastDisp === 'Visited Branch') {
-                            return { '& .MuiTableCell-root': { color: 'success.main' } };
-                          }
-                          return {};
+                          return { '& .MuiTableCell-root': { color: '#000' } };
                         }}
                       >
                         <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
@@ -955,11 +946,11 @@ export default function Leads({ title = "Leads Management" }) {
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{category}</TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{type}</TableCell>
                         <TableCell align="left">{row.weight ? `${row.weight} ${row.unit || 'gm'}` : 'N/A'}</TableCell>
-                        <TableCell align="left">
+                        {/* <TableCell align="left">
                           <Box sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: status?.toLowerCase() === 'pending' ? 'warning.main' : status?.toLowerCase() === 'converted' ? 'primary.main' : status?.toLowerCase() === 'rejected' ? 'info.main' : 'error.main', color: '#fff', width: 'fit-content', textTransform: 'capitalize' }}>
                             {status?.toLowerCase() === 'converted' && row.branch ? `${status} (${row.branch.branchName})` : status}
                           </Box>
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell align="left">{date ? moment(date).format('YYYY-MM-DD') : 'N/A'}</TableCell>
                         <TableCell align="left">{updatedBy?.employee?.name || updatedBy?.username || '-'}</TableCell>
                         <TableCell align="left" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={displayRemark || ''}>{displayRemark || '-'}</TableCell>
@@ -967,23 +958,20 @@ export default function Leads({ title = "Leads Management" }) {
                           {!row.isImported ? (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               {dispositions?.length > 0 ? (
-                                <>
-                                  <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={dispositions[dispositions.length - 1].status}>
-                                    {dispositions[dispositions.length - 1].status}
-                                  </Typography>
-                                  <IconButton
-                                    size="small"
-                                    color="primary"
-                                    sx={{ p: 0.5, flexShrink: 0 }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setOpenId(_id);
-                                      setAutoOpenLogModal(true);
-                                    }}
-                                  >
-                                    <Iconify icon="eva:plus-circle-outline" width={22} />
-                                  </IconButton>
-                                </>
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenId(_id);
+                                    setAutoOpenLogModal(true);
+                                  }}
+                                  endIcon={<Iconify icon="eva:arrow-ios-downward-fill" />}
+                                  color={(dispositions[dispositions.length - 1].status === 'Follow Up' || dispositions[dispositions.length - 1].status === 'Planning to Visit') ? 'success' : (dispositions[dispositions.length - 1].status === 'Business Closed' || status?.toLowerCase() === 'converted') ? 'primary' : 'inherit'}
+                                  sx={{ whiteSpace: 'nowrap', minWidth: 'max-content', ...((!(dispositions[dispositions.length - 1].status === 'Follow Up' || dispositions[dispositions.length - 1].status === 'Planning to Visit' || dispositions[dispositions.length - 1].status === 'Business Closed' || status?.toLowerCase() === 'converted')) && { borderColor: 'rgba(0, 0, 0, 0.5)' }) }}
+                                >
+                                  {dispositions[dispositions.length - 1].status}
+                                </Button>
                               ) : (
                                 <Button
                                   variant="outlined"
@@ -993,6 +981,8 @@ export default function Leads({ title = "Leads Management" }) {
                                     setOpenId(_id);
                                     setAutoOpenLogModal(true);
                                   }}
+                                  endIcon={<Iconify icon="eva:arrow-ios-downward-fill" />}
+                                  sx={{ whiteSpace: 'nowrap', minWidth: 'max-content' }}
                                 >
                                   Update Status
                                 </Button>
