@@ -37,8 +37,8 @@ import {
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
 import * as XLSX from 'xlsx';
-// components
 import { CreateLead, UpdateLead, PreviewLead } from '../../components/branch/lead';
+import AddCallLogModal from '../../components/branch/lead/AddCallLogModal';
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
 // sections
@@ -225,6 +225,7 @@ export default function Leads({ title = "Leads Management" }) {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
+  const [autoOpenLogModal, setAutoOpenLogModal] = useState(false);
   const [data, setData] = useState([]);
   const location = useLocation();
   const [currentTab, setCurrentTab] = useState(location.state?.tab || 'pending');
@@ -772,13 +773,7 @@ export default function Leads({ title = "Leads Management" }) {
                 Clear Filter
               </Button>
             )}
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="material-symbols:filter-alt" />}
-              onClick={() => setOpenFilter(true)}
-            >
-              Filter
-            </Button>
+
             {/* {auth.user?.userType?.toLowerCase() === 'telecalling' && (
               <>
                 <Button
@@ -828,6 +823,15 @@ export default function Leads({ title = "Leads Management" }) {
           </MuiAlert>
         )}
 
+        <Card sx={{ mb: 3 }}>
+          <LeadFilterSidebar
+            filters={filters}
+            setFilters={setFilters}
+            userType={auth.user?.userType}
+            currentTab={currentTab}
+          />
+        </Card>
+
         <Card>
           {auth?.user?.userType === 'telecalling' && (
             <Tabs
@@ -863,16 +867,6 @@ export default function Leads({ title = "Leads Management" }) {
             }}
             handleMarkExclusive={handleMarkExclusive}
             isAllExclusive={selected?.length > 0 && selected.every(id => data?.find(item => item._id === id)?.isExclusive)}
-            filterComponent={
-              <LeadFilterSidebar
-                openFilter={openFilter}
-                onOpenFilter={() => setOpenFilter(true)}
-                onCloseFilter={() => setOpenFilter(false)}
-                filters={filters}
-                setFilters={setFilters}
-                userType={auth.user?.userType}
-              />
-            }
           />
 
           <Scrollbar>
@@ -903,6 +897,7 @@ export default function Leads({ title = "Leads Management" }) {
                         onClick={() => {
                           setOpenId(_id);
                           setIsImportedLead(!!row.isImported);
+                          setAutoOpenLogModal(false);
                           setToggleContainer(true);
                           setToggleContainerType('preview');
                         }}
@@ -968,7 +963,47 @@ export default function Leads({ title = "Leads Management" }) {
                         <TableCell align="left">{date ? moment(date).format('YYYY-MM-DD') : 'N/A'}</TableCell>
                         <TableCell align="left">{updatedBy?.employee?.name || updatedBy?.username || '-'}</TableCell>
                         <TableCell align="left" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={displayRemark || ''}>{displayRemark || '-'}</TableCell>
-                        <TableCell align="left" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={dispositions?.length > 0 ? dispositions[dispositions.length - 1].status : ''}>{dispositions?.length > 0 ? dispositions[dispositions.length - 1].status : '-'}</TableCell>
+                        <TableCell align="left" sx={{ maxWidth: 150 }}>
+                          {!row.isImported ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {dispositions?.length > 0 ? (
+                                <>
+                                  <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={dispositions[dispositions.length - 1].status}>
+                                    {dispositions[dispositions.length - 1].status}
+                                  </Typography>
+                                  <IconButton
+                                    size="small"
+                                    color="primary"
+                                    sx={{ p: 0.5, flexShrink: 0 }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenId(_id);
+                                      setAutoOpenLogModal(true);
+                                    }}
+                                  >
+                                    <Iconify icon="eva:plus-circle-outline" width={22} />
+                                  </IconButton>
+                                </>
+                              ) : (
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenId(_id);
+                                    setAutoOpenLogModal(true);
+                                  }}
+                                >
+                                  Update Status
+                                </Button>
+                              )}
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={dispositions?.length > 0 ? dispositions[dispositions.length - 1].status : '-'}>
+                              {dispositions?.length > 0 ? dispositions[dispositions.length - 1].status : '-'}
+                            </Typography>
+                          )}
+                        </TableCell>
                         <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           {auth.user?.userType?.toLowerCase() === 'admin' ? (
                             <IconButton
@@ -1103,7 +1138,7 @@ export default function Leads({ title = "Leads Management" }) {
             <Button
               variant="contained"
               startIcon={<Iconify icon="mdi:arrow-left" />}
-              onClick={() => setToggleContainer(false)}
+              onClick={() => { setToggleContainer(false); setAutoOpenLogModal(false); }}
             >
               Back
             </Button>
@@ -1111,7 +1146,7 @@ export default function Leads({ title = "Leads Management" }) {
           {isImportedLead ? (
             <PreviewImportedLead data={data.find(item => item._id === openId)} />
           ) : (
-            <PreviewLead setToggleContainer={setToggleContainer} setToggleContainerType={setToggleContainerType} id={openId} />
+            <PreviewLead setToggleContainer={setToggleContainer} setToggleContainerType={setToggleContainerType} id={openId} autoOpenLogModal={autoOpenLogModal} />
           )}
         </Container>
       )}
@@ -1163,6 +1198,7 @@ export default function Leads({ title = "Leads Management" }) {
         <MenuItem
           onClick={() => {
             setOpen(null);
+            setAutoOpenLogModal(false);
             setToggleContainer(true);
             setToggleContainerType('preview');
           }}
@@ -1205,6 +1241,13 @@ export default function Leads({ title = "Leads Management" }) {
           </Stack>
         </Box>
       </Modal>
+
+      <AddCallLogModal
+        open={autoOpenLogModal}
+        onClose={() => setAutoOpenLogModal(false)}
+        leadId={openId}
+        onSuccess={() => fetchData()}
+      />
 
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />

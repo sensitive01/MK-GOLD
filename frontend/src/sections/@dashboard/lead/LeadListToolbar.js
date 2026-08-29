@@ -37,7 +37,7 @@ LeadListToolbar.propTypes = {
   filterComponent: PropTypes.node,
 };
 
-export default function LeadListToolbar({ isAdmin, handleDelete, handleMarkExclusive, isAllExclusive, numSelected, filterName, onFilterName, filterComponent }) {
+export default function LeadListToolbar({ isAdmin, handleDelete, handleMarkExclusive, isAllExclusive, numSelected, filterName, onFilterName }) {
   return (
     <StyledRoot
       sx={{
@@ -78,7 +78,6 @@ export default function LeadListToolbar({ isAdmin, handleDelete, handleMarkExclu
       )}
 
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        {filterComponent}
         {numSelected > 0 ? (
           <>
             {handleMarkExclusive && (

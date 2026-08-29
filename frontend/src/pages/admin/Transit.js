@@ -135,6 +135,7 @@ export default function Transit() {
   const [adminNotes, setAdminNotes] = useState('');
   const [deviation, setDeviation] = useState('no');
   const [adminProof, setAdminProof] = useState(null);
+  const [adminProofName, setAdminProofName] = useState('');
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
   const fileInputRef = useRef();
@@ -396,6 +397,7 @@ export default function Transit() {
       setUploadLoading(false);
       if (response.status) {
         setAdminProof(response.data?._id);
+        setAdminProofName(file.name);
         setNotify({ open: true, message: 'Proof uploaded successfully', severity: 'success' });
       } else {
         alert('File upload failed');
@@ -595,6 +597,7 @@ export default function Transit() {
               setDeviation(selectedTransitObj?.deviations || 'no');
               setAdminNotes(selectedTransitObj?.receivedNotes || '');
               setAdminProof(selectedTransitObj?.receivedProof || '');
+              setAdminProofName('');
               setViewModalOpen(true);
             }}
           >
@@ -633,7 +636,11 @@ export default function Transit() {
               Proof:
             </Typography>
             {selectedTransitObj?.proof?.uploadedFile ? (
-              <Box component="img" src={selectedTransitObj.proof.uploadedFile.startsWith('http') ? selectedTransitObj.proof.uploadedFile : `${global.BASE_URL}/${selectedTransitObj.proof.uploadedFile}`} alt="proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain', mb: 3 }} />
+              selectedTransitObj.proof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
+                <Box component="iframe" src={selectedTransitObj.proof.uploadedFile.startsWith('http') ? selectedTransitObj.proof.uploadedFile : `${global.BASE_URL}/${selectedTransitObj.proof.uploadedFile}`} title="proof" sx={{ width: '100%', height: 400, border: 'none', mb: 3 }} />
+              ) : (
+                <Box component="img" src={selectedTransitObj.proof.uploadedFile.startsWith('http') ? selectedTransitObj.proof.uploadedFile : `${global.BASE_URL}/${selectedTransitObj.proof.uploadedFile}`} alt="proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain', mb: 3 }} />
+              )
             ) : (
               <Typography variant="body2" sx={{ mb: 3 }}>
                 No proof uploaded.
@@ -665,11 +672,20 @@ export default function Transit() {
               />
             </Button>
             {adminProof && typeof adminProof === 'object' && adminProof.uploadedFile ? (
-              <Box component="img" src={adminProof.uploadedFile.startsWith('http') ? adminProof.uploadedFile : `${global.BASE_URL}/${adminProof.uploadedFile}`} alt="Admin proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain', mb: 3, mt: 2 }} />
+              adminProof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
+                <Box component="iframe" src={adminProof.uploadedFile.startsWith('http') ? adminProof.uploadedFile : `${global.BASE_URL}/${adminProof.uploadedFile}`} title="Admin proof" sx={{ width: '100%', height: 400, border: 'none', mb: 3, mt: 2 }} />
+              ) : (
+                <Box component="img" src={adminProof.uploadedFile.startsWith('http') ? adminProof.uploadedFile : `${global.BASE_URL}/${adminProof.uploadedFile}`} alt="Admin proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain', mb: 3, mt: 2 }} />
+              )
             ) : adminProof ? (
-              <Typography variant="body2" sx={{ color: 'success.main', mb: 2 }}>
-                Proof uploaded successfully!
-              </Typography>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 2 }}>
+                <Typography variant="body2" sx={{ color: 'success.main' }}>
+                  {adminProofName || 'Proof uploaded successfully!'}
+                </Typography>
+                <IconButton size="small" onClick={() => { setAdminProof(null); setAdminProofName(''); }} sx={{ color: 'error.main' }}>
+                  <Iconify icon="eva:close-fill" />
+                </IconButton>
+              </Stack>
             ) : null}
 
             <FormControl fullWidth sx={{ mt: 2 }}>

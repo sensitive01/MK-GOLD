@@ -1,22 +1,13 @@
 import PropTypes from 'prop-types';
 import {
   Box,
-  Stack,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Divider,
-  IconButton,
-  Typography,
+  Grid,
   TextField,
   Select,
   MenuItem,
-  FormControl
+  FormControl,
+  InputLabel,
 } from '@mui/material';
-import Iconify from '../../../components/iconify';
-import Scrollbar from '../../../components/scrollbar';
 
 export const STATUS_OPTIONS = ['all', 'pending', 'converted', 'rejected'];
 export const CATEGORY_OPTIONS = ['all', 'gold', 'silver'];
@@ -24,184 +15,118 @@ export const TYPE_OPTIONS = ['all', 'physical', 'pledged'];
 export const EXCLUSIVE_OPTIONS = ['all', 'exclusive'];
 
 LeadFilterSidebar.propTypes = {
-  openFilter: PropTypes.bool,
-  onOpenFilter: PropTypes.func,
-  onCloseFilter: PropTypes.func,
   filters: PropTypes.object,
   setFilters: PropTypes.func,
   userType: PropTypes.string,
+  currentTab: PropTypes.string,
 };
 
-export default function LeadFilterSidebar({ openFilter, onOpenFilter, onCloseFilter, filters, setFilters, userType }) {
+export default function LeadFilterSidebar({ filters, setFilters, userType, currentTab }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleReset = () => {
-    setFilters({
-      startDate: '',
-      endDate: '',
-      status: 'all',
-      category: 'all',
-      type: 'all',
-      isExclusive: 'all'
-    });
-  };
-
   return (
-    <>
-
-      <Dialog
-        open={openFilter}
-        onClose={onCloseFilter}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Filters
-          <IconButton onClick={onCloseFilter} size="small">
-            <Iconify icon="eva:close-fill" />
-          </IconButton>
-        </DialogTitle>
-
-        <Divider />
-
-        <DialogContent sx={{ p: 3 }}>
-          <Stack spacing={3}>
-            <div>
-              <Typography variant="subtitle1" gutterBottom>
-                Date Range
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
-                label="From Date"
-                InputLabelProps={{ shrink: true }}
-                name="startDate"
-                value={filters.startDate}
-                onChange={handleChange}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
-                label="To Date"
-                InputLabelProps={{ shrink: true }}
-                name="endDate"
-                value={filters.endDate}
-                onChange={handleChange}
-              />
-            </div>
-
-            {userType?.toLowerCase() !== 'telecalling' && (
-              <div>
-                <Typography variant="subtitle1" gutterBottom>
-                  Status
-                </Typography>
-                <FormControl fullWidth size="small">
-                  <Select
-                    name="status"
-                    value={filters.status}
-                    onChange={handleChange}
-                  >
-                    {STATUS_OPTIONS.map((status) => (
-                      <MenuItem key={status} value={status}>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </div>
-            )}
-
-            <div>
-              <Typography variant="subtitle1" gutterBottom>
-                Category
-              </Typography>
-              <FormControl fullWidth size="small">
-                <Select
-                  name="category"
-                  value={filters.category}
-                  onChange={handleChange}
-                >
-                  {CATEGORY_OPTIONS.map((cat) => (
-                    <MenuItem key={cat} value={cat}>
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </div>
-
-            <div>
-              <Typography variant="subtitle1" gutterBottom>
-                Type
-              </Typography>
-              <FormControl fullWidth size="small">
-                <Select
-                  name="type"
-                  value={filters.type}
-                  onChange={handleChange}
-                >
-                  {TYPE_OPTIONS.map((t) => (
-                    <MenuItem key={t} value={t}>
-                      {t.charAt(0).toUpperCase() + t.slice(1)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </div>
-
-            <div>
-              <Typography variant="subtitle1" gutterBottom>
-                Hot Leads
-              </Typography>
-              <FormControl fullWidth size="small">
-                <Select
-                  name="isExclusive"
-                  value={filters.isExclusive || 'all'}
-                  onChange={handleChange}
-                >
-                  {EXCLUSIVE_OPTIONS.map((opt) => (
-                    <MenuItem key={opt} value={opt}>
-                      {opt === 'all' ? 'All Leads' : 'Hot Leads Only'}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </div>
-          </Stack>
-        </DialogContent>
-
-        <Divider />
-        <DialogActions sx={{ p: 2 }}>
-          <Button
+    <Box sx={{ p: 2, borderBottom: '1px solid #f0f0f0' }}>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} sm={6} md={2}>
+          <TextField
             fullWidth
-            size="large"
-            type="submit"
-            color="inherit"
-            variant="outlined"
-            startIcon={<Iconify icon="ic:round-clear-all" />}
-            onClick={handleReset}
-          >
-            Clear All
-          </Button>
-                    <Button
+            size="small"
+            type="date"
+            label="From Date"
+            InputLabelProps={{ shrink: true }}
+            name="startDate"
+            value={filters.startDate}
+            onChange={handleChange}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <TextField
             fullWidth
-            size="large"
-            type="submit"
-            color="inherit"
-            variant="outlined"
-            startIcon={<Iconify icon="ic:round-clear-all" />}
-            onClick={onCloseFilter}
-          >
-           Apply Filter 
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
+            size="small"
+            type="date"
+            label="To Date"
+            InputLabelProps={{ shrink: true }}
+            name="endDate"
+            value={filters.endDate}
+            onChange={handleChange}
+          />
+        </Grid>
+        {!['pending', 'converted', 'rejected'].includes(currentTab) && (
+          <Grid item xs={12} sm={6} md={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Status</InputLabel>
+              <Select
+                name="status"
+                value={filters.status}
+                label="Status"
+                onChange={handleChange}
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option === 'all' ? 'All' : option.charAt(0).toUpperCase() + option.slice(1)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        )}
+        <Grid item xs={12} sm={6} md={2}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Category</InputLabel>
+            <Select
+              name="category"
+              value={filters.category}
+              label="Category"
+              onChange={handleChange}
+            >
+              {CATEGORY_OPTIONS.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option === 'all' ? 'All' : option.charAt(0).toUpperCase() + option.slice(1)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Type</InputLabel>
+            <Select
+              name="type"
+              value={filters.type}
+              label="Type"
+              onChange={handleChange}
+            >
+              {TYPE_OPTIONS.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option === 'all' ? 'All' : option.charAt(0).toUpperCase() + option.slice(1)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        {userType?.toLowerCase() !== 'telecalling' && (
+          <Grid item xs={12} sm={6} md={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Hot Leads</InputLabel>
+              <Select
+                name="isExclusive"
+                value={filters.isExclusive}
+                label="Hot Leads"
+                onChange={handleChange}
+              >
+                {EXCLUSIVE_OPTIONS.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option === 'all' ? 'All Leads' : 'Hot Leads Only'}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        )}
+      </Grid>
+    </Box>
   );
 }

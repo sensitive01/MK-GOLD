@@ -30,19 +30,14 @@ import Iconify from '../../iconify';
 
 const DISPOSITIONS = [
   'RNR',
-  'Call Busy',
-  'Switched Off',
-  'Not Reachable',
   'Wrong Enquiry',
-  'Not Interested',
   'Follow Up',
-  'Visited Branch',
-  'Callback',
   'Planning to Visit',
   'Sold outside',
   'Price issues',
-  'Release Not feasible',
-  'Location Not feasible',
+  'Not Connected',
+  'Not Feasible',
+  'Business Closed',
 ];
 
 const modalStyle = {
@@ -91,6 +86,12 @@ function PreviewLead(props) {
       }
     });
   }, [props.id]);
+
+  useEffect(() => {
+    if (props.autoOpenLogModal) {
+      setOpenModal(true);
+    }
+  }, [props.autoOpenLogModal]);
 
   const handleAddLog = () => {
     if (!logForm.status) return;
@@ -364,9 +365,19 @@ function PreviewLead(props) {
                 onChange={(e) => setLogForm({ ...logForm, remark: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12}>
+          <Grid item xs={12}>
+            {logForm.uploadedFile ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, px: 2 }}>
+                <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {logForm.uploadedFile.name}
+                </Typography>
+                <IconButton size="small" onClick={() => setLogForm({ ...logForm, uploadedFile: null })} color="error" sx={{ ml: 1 }}>
+                  <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
+                </IconButton>
+              </Box>
+            ) : (
               <Button variant="outlined" component="label" fullWidth sx={{ textTransform: 'none' }}>
-                {logForm.uploadedFile ? logForm.uploadedFile.name : 'Upload Photo'}
+                Upload Photo
                 <input
                   type="file"
                   hidden
@@ -374,7 +385,8 @@ function PreviewLead(props) {
                   onChange={(e) => setLogForm({ ...logForm, uploadedFile: e.target.files[0] })}
                 />
               </Button>
-            </Grid>
+            )}
+          </Grid>
             <Grid item xs={12}>
               <Stack direction="row" spacing={2} justifyContent="flex-end">
                 <Button variant="outlined" onClick={() => setOpenModal(false)}>Cancel</Button>

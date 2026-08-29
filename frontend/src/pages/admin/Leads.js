@@ -573,13 +573,7 @@ export default function Leads({ title = "Leads Management" }) {
                 Clear Filter
               </Button>
             )}
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="material-symbols:filter-alt" />}
-              onClick={() => setOpenFilter(true)}
-            >
-              Filter
-            </Button>
+
             {auth.user?.userType?.toLowerCase() === 'telecalling' && (
               <Button
                 variant="outlined"
@@ -627,6 +621,14 @@ export default function Leads({ title = "Leads Management" }) {
           </MuiAlert>
         )}
 
+        <Card sx={{ mb: 3 }}>
+          <LeadFilterSidebar
+            filters={filters}
+            setFilters={setFilters}
+            userType={auth.user?.userType}
+          />
+        </Card>
+
         <Card>
           <LeadListToolbar
             isAdmin={true}
@@ -639,15 +641,6 @@ export default function Leads({ title = "Leads Management" }) {
             }}
             handleMarkExclusive={handleMarkExclusive}
             isAllExclusive={selected?.length > 0 && selected.every(id => data?.find(item => item._id === id)?.isExclusive)}
-            filterComponent={
-              <LeadFilterSidebar
-                openFilter={openFilter}
-                onOpenFilter={() => setOpenFilter(true)}
-                onCloseFilter={() => setOpenFilter(false)}
-                filters={filters}
-                setFilters={setFilters}
-              />
-            }
           />
 
           <Scrollbar>

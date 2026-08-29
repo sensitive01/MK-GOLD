@@ -147,6 +147,17 @@ async function addDisposition(id, payload, user = null) {
       update.$set = { branch: payload.branch };
     }
 
+    if (payload.status === "Business Closed" || payload.status === "Business Converted") {
+      update.$set = update.$set || {};
+      update.$set.status = "converted";
+    }
+
+    const rejectedStatuses = ["Wrong Enquiry", "Not Connected", "Not Feasible", "Sold outside"];
+    if (rejectedStatuses.includes(payload.status)) {
+      update.$set = update.$set || {};
+      update.$set.status = "rejected";
+    }
+
     if (user) {
       if (!update.$set) update.$set = {};
       update.$set.updatedBy = user._id;

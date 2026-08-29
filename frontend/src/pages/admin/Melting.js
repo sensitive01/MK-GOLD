@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, forwardRef } from 'react';
+import { filter } from 'lodash';
 import { sentenceCase } from 'change-case';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -18,6 +19,7 @@ import Label from '../../components/label';
 import { SaleDetail } from '../../components/branch/sales';
 import { createFile } from '../../apis/branch/fileupload';
 import global from '../../utils/global';
+import { MeltingListHead, MeltingListToolbar } from '../../sections/@dashboard/melting';
 
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
@@ -27,10 +29,67 @@ import * as Yup from 'yup';
 
 const AlertComponent = forwardRef((props, ref) => <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />);
 
+const TABLE_HEAD = [
+  { id: 'createdAt', label: 'Date', alignRight: false },
+  { id: 'transitIds', label: 'Transit IDs', alignRight: false },
+  { id: 'saleIds', label: 'Sales', alignRight: false },
+  { id: 'totalOrnaments', label: 'Ornaments', alignRight: false },
+  { id: 'totalGrossWeight', label: 'Gross Wt.', alignRight: false },
+  { id: 'totalNetWeight', label: 'Net Wt.', alignRight: false },
+  { id: 'createdBy', label: 'Created By', alignRight: false },
+  { id: '' },
+];
+
+function descendingComparator(a, b, orderBy) {
+  if (b[orderBy] < a[orderBy]) {
+    return -1;
+  }
+  if (b[orderBy] > a[orderBy]) {
+    return 1;
+  }
+  return 0;
+}
+
+function getComparator(order, orderBy) {
+  return order === 'desc'
+    ? (a, b) => descendingComparator(a, b, orderBy)
+    : (a, b) => -descendingComparator(a, b, orderBy);
+}
+
+function applySortFilter(array, comparator, query) {
+  const stabilizedThis = array.map((el, index) => [el, index]);
+  stabilizedThis.sort((a, b) => {
+    const order = comparator(a[0], b[0]);
+    if (order !== 0) return order;
+    return a[1] - b[1];
+  });
+  if (query) {
+    return filter(array, (_row) => {
+      const transitIdsStr = _row.transitIds?.length ? _row.transitIds.map(t => t.transitId).join(', ') : (_row.transitId?.transitId || '');
+      return transitIdsStr.toLowerCase().indexOf(query.toLowerCase()) !== -1;
+    });
+  }
+  return stabilizedThis.map((el) => el[0]);
+}
+
 export default function Melting() {
   const [data, setData] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [order, setOrder] = useState('desc');
+  const [orderBy, setOrderBy] = useState('createdAt');
+  const [filterName, setFilterName] = useState('');
+
+  const handleRequestSort = (event, property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+  
+  const handleFilterByName = (event) => {
+    setPage(0);
+    setFilterName(event.target.value);
+  };
   
   const [notify, setNotify] = useState({ open: false, message: '', severity: 'success' });
 
@@ -46,6 +105,14 @@ export default function Melting() {
   const [notes, setNotes] = useState('');
   const [saleIdToView, setSaleIdToView] = useState(null);
 
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [rowToView, setRowToView] = useState(null);
+
+  const handleViewRow = (row) => {
+    setRowToView(row);
+    setViewDialogOpen(true);
+  };
+
   // Melt Update state
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
   const [selectedMelting, setSelectedMelting] = useState(null);
@@ -53,6 +120,7 @@ export default function Melting() {
   const [barPurity, setBarPurity] = useState('');
   const [meltUpdateNotes, setMeltUpdateNotes] = useState('');
   const [meltProof, setMeltProof] = useState(null);
+  const [meltProofName, setMeltProofName] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
 
   // Sell Bar state
@@ -140,6 +208,7 @@ export default function Melting() {
     setSelectedOrnaments([]);
     setNotes('');
     setMeltProof(null);
+    setMeltProofName('');
     setOpenWizard(true);
   };
 
@@ -273,6 +342,7 @@ export default function Melting() {
     setBarPurity(row.barPurity || '');
     setMeltUpdateNotes(row.meltUpdateNotes || '');
     setMeltProof(row.meltProof || null);
+    setMeltProofName('');
     setOpenUpdateDialog(true);
   };
 
@@ -399,12 +469,16 @@ export default function Melting() {
       setUploadLoading(false);
       if (response.status) {
         setMeltProof(response.data?._id);
+        setMeltProofName(file.name);
         setNotify({ open: true, message: 'Proof uploaded successfully', severity: 'success' });
       } else {
         setNotify({ open: true, message: 'File upload failed', severity: 'error' });
       }
     }
   };
+
+  const filteredMeltings = applySortFilter(data, getComparator(order, orderBy), filterName);
+  const isNotFound = !filteredMeltings.length && !!filterName;
 
   return (
     <>
@@ -474,24 +548,22 @@ export default function Melting() {
             )}
 
             <Card>
+              <MeltingListToolbar filterName={filterName} onFilterName={handleFilterByName} />
               <Scrollbar>
                 <TableContainer sx={{ minWidth: 800 }}>
                   <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Date</TableCell>
-                        <TableCell>Transit IDs</TableCell>
-                        <TableCell>Sales</TableCell>
-                        <TableCell>Ornaments</TableCell>
-                        <TableCell>Gross Wt.</TableCell>
-                        <TableCell>Net Wt.</TableCell>
-                        <TableCell>Created By</TableCell>
-                        <TableCell>Action</TableCell>
-                      </TableRow>
-                    </TableHead>
+                    <MeltingListHead
+                      order={order}
+                      orderBy={orderBy}
+                      headLabel={TABLE_HEAD}
+                      rowCount={data?.length || 0}
+                      numSelected={0}
+                      onRequestSort={handleRequestSort}
+                      hideCheckbox={true}
+                    />
                     <TableBody>
-                      {data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => (
-                        <TableRow hover key={row._id}>
+                      {filteredMeltings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => (
+                        <TableRow hover key={row._id} onClick={() => handleViewRow(row)} sx={{ cursor: 'pointer' }}>
                           <TableCell>{moment(row.createdAt).format('YYYY-MM-DD HH:mm')}</TableCell>
                           <TableCell>{row.transitIds?.length ? row.transitIds.map(t => t.transitId).join(', ') : (row.transitId?.transitId || 'N/A')}</TableCell>
                           <TableCell>{row.saleIds?.length || 0}</TableCell>
@@ -508,7 +580,8 @@ export default function Melting() {
                                   variant={row.status === 'melt_updated' ? "contained" : "outlined"} 
                                   color={row.status === 'melt_updated' ? "success" : "primary"}
                                   size="small" 
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     if (row.status !== 'melt_updated') {
                                       handleOpenUpdateDialog(row);
                                     } else {
@@ -519,14 +592,21 @@ export default function Melting() {
                                   {row.status === 'melt_updated' ? 'Sell Bar' : 'Melt Update'}
                                 </Button>
                               )}
-                              <IconButton color="error" onClick={() => handleDeleteMelting(row._id)}>
+                              <IconButton color="error" onClick={(e) => { e.stopPropagation(); handleDeleteMelting(row._id); }}>
                                 <Iconify icon={'eva:trash-2-outline'} />
                               </IconButton>
                             </Stack>
                           </TableCell>
                         </TableRow>
                       ))}
-                      {data.length === 0 && (
+                      {isNotFound && (
+                        <TableRow>
+                          <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
+                            <Typography variant="body1">No records found for &quot;{filterName}&quot;</Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {data.length === 0 && !filterName && (
                         <TableRow>
                           <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
                             <Typography variant="body1">No melting records found</Typography>
@@ -768,11 +848,20 @@ export default function Melting() {
                 />
               </Button>
               {meltProof && typeof meltProof === 'object' && meltProof.uploadedFile ? (
-                <Box component="img" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} alt="Proof" sx={{ width: '100%', maxHeight: 200, objectFit: 'contain', mt: 2 }} />
+                meltProof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
+                  <Box component="iframe" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} title="Proof" sx={{ width: '100%', height: 200, border: 'none', mt: 2 }} />
+                ) : (
+                  <Box component="img" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} alt="Proof" sx={{ width: '100%', maxHeight: 200, objectFit: 'contain', mt: 2 }} />
+                )
               ) : meltProof ? (
-                <Typography variant="body2" sx={{ color: 'success.main', mt: 1 }}>
-                  Proof uploaded successfully!
-                </Typography>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 2 }}>
+                  <Typography variant="body2" sx={{ color: 'success.main' }}>
+                    {meltProofName || 'Proof uploaded successfully!'}
+                  </Typography>
+                  <IconButton size="small" onClick={() => { setMeltProof(null); setMeltProofName(''); }} sx={{ color: 'error.main' }}>
+                    <Iconify icon="eva:close-fill" />
+                  </IconButton>
+                </Stack>
               ) : null}
             </Box>
           )}
@@ -859,11 +948,20 @@ export default function Melting() {
                 />
               </Button>
               {meltProof && typeof meltProof === 'object' && meltProof.uploadedFile ? (
-                <Box component="img" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} alt="Proof" sx={{ width: '100%', maxHeight: 200, objectFit: 'contain' }} />
+                meltProof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
+                  <Box component="iframe" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} title="Proof" sx={{ width: '100%', height: 200, border: 'none' }} />
+                ) : (
+                  <Box component="img" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} alt="Proof" sx={{ width: '100%', maxHeight: 200, objectFit: 'contain' }} />
+                )
               ) : meltProof ? (
-                <Typography variant="body2" sx={{ color: 'success.main' }}>
-                  Proof uploaded successfully!
-                </Typography>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 2 }}>
+                  <Typography variant="body2" sx={{ color: 'success.main' }}>
+                    {meltProofName || 'Proof uploaded successfully!'}
+                  </Typography>
+                  <IconButton size="small" onClick={() => { setMeltProof(null); setMeltProofName(''); }} sx={{ color: 'error.main' }}>
+                    <Iconify icon="eva:close-fill" />
+                  </IconButton>
+                </Stack>
               ) : null}
 
             </Stack>
@@ -1045,6 +1143,118 @@ export default function Melting() {
             <Button variant="contained" type="submit">Filter</Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* View Details Dialog */}
+      <Dialog open={viewDialogOpen} onClose={() => setViewDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Melting Details</DialogTitle>
+        <DialogContent dividers>
+          {rowToView && (
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2">Date</Typography>
+                <Typography variant="body2" gutterBottom>{moment(rowToView.createdAt).format('YYYY-MM-DD HH:mm')}</Typography>
+                
+                <Typography variant="subtitle2">Transit IDs</Typography>
+                <Typography variant="body2" gutterBottom>
+                  {rowToView.transitIds?.length ? rowToView.transitIds.map(t => t.transitId).join(', ') : (rowToView.transitId?.transitId || 'N/A')}
+                </Typography>
+
+                <Typography variant="subtitle2">Status</Typography>
+                <Typography variant="body2" gutterBottom>{sentenceCase(rowToView.status)}</Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2">Total Ornaments</Typography>
+                <Typography variant="body2" gutterBottom>{rowToView.totalOrnaments}</Typography>
+
+                <Typography variant="subtitle2">Gross Weight (g)</Typography>
+                <Typography variant="body2" gutterBottom>{rowToView.totalGrossWeight}</Typography>
+
+                <Typography variant="subtitle2">Net Weight (g)</Typography>
+                <Typography variant="body2" gutterBottom>{rowToView.totalNetWeight}</Typography>
+              </Grid>
+
+              {rowToView.notes && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2">Notes</Typography>
+                  <Typography variant="body2">{rowToView.notes}</Typography>
+                </Grid>
+              )}
+
+              {rowToView.status === 'melt_updated' && (
+                <>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2">Final Bar Weight (g)</Typography>
+                    <Typography variant="body2" gutterBottom>{rowToView.barWeight}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2">Final Bar Purity (%)</Typography>
+                    <Typography variant="body2" gutterBottom>{rowToView.barPurity}</Typography>
+                  </Grid>
+                  {rowToView.meltUpdateNotes && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2">Update Notes</Typography>
+                      <Typography variant="body2">{rowToView.meltUpdateNotes}</Typography>
+                    </Grid>
+                  )}
+                </>
+              )}
+
+              {rowToView.status === 'sold' && (
+                <>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2">Sold Amount</Typography>
+                    <Typography variant="body2" gutterBottom>{rowToView.sellAmount}</Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2">Payment Mode</Typography>
+                    <Typography variant="body2" gutterBottom>{rowToView.paymentMode}</Typography>
+                  </Grid>
+                </>
+              )}
+
+              {rowToView.meltProof && (
+                <Grid item xs={12}>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                    <Typography variant="subtitle2">Proof Document</Typography>
+                    {((rowToView.meltProof?.uploadedFile && rowToView.meltProof.uploadedFile.toLowerCase().endsWith('.pdf')) ||
+                      (typeof rowToView.meltProof === 'string' && rowToView.meltProof.toLowerCase().endsWith('.pdf'))) && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Iconify icon="eva:external-link-outline" />}
+                        onClick={() => {
+                          const url = rowToView.meltProof?.uploadedFile || rowToView.meltProof;
+                          window.open(url.startsWith('http') ? url : `${global.BASE_URL}/${url}`, '_blank');
+                        }}
+                      >
+                        Full View PDF
+                      </Button>
+                    )}
+                  </Stack>
+                  {rowToView.meltProof?.uploadedFile ? (
+                    rowToView.meltProof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
+                      <Box component="iframe" src={rowToView.meltProof.uploadedFile.startsWith('http') ? rowToView.meltProof.uploadedFile : `${global.BASE_URL}/${rowToView.meltProof.uploadedFile}`} title="Proof" sx={{ width: '100%', height: 400, border: 'none' }} />
+                    ) : (
+                      <Box component="img" src={rowToView.meltProof.uploadedFile.startsWith('http') ? rowToView.meltProof.uploadedFile : `${global.BASE_URL}/${rowToView.meltProof.uploadedFile}`} alt="Proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain' }} />
+                    )
+                  ) : (
+                    typeof rowToView.meltProof === 'string' && (
+                      rowToView.meltProof.toLowerCase().endsWith('.pdf') ? (
+                        <Box component="iframe" src={rowToView.meltProof.startsWith('http') ? rowToView.meltProof : `${global.BASE_URL}/${rowToView.meltProof}`} title="Proof" sx={{ width: '100%', height: 400, border: 'none' }} />
+                      ) : (
+                        <Box component="img" src={rowToView.meltProof.startsWith('http') ? rowToView.meltProof : `${global.BASE_URL}/${rowToView.meltProof}`} alt="Proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain' }} />
+                      )
+                    )
+                  )}
+                </Grid>
+              )}
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
+        </DialogActions>
       </Dialog>
     </>
   );

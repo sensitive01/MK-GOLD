@@ -131,6 +131,7 @@ export default function PublicKYC() {
     handleBlur,
     values,
     setValues,
+    setFieldValue,
     touched,
     errors,
   } = useFormik({
@@ -249,6 +250,23 @@ export default function PublicKYC() {
       setLoading(false);
     },
   });
+
+  useEffect(() => {
+    if (values.pincode && values.pincode.toString().length === 6) {
+      fetch(`https://api.postalpincode.in/pincode/${values.pincode}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data[0] && data[0].Status === 'Success') {
+            const postOffice = data[0].PostOffice[0];
+            if (postOffice) {
+              setFieldValue('city', postOffice.District || postOffice.Block || '');
+              setFieldValue('state', postOffice.State || '');
+            }
+          }
+        })
+        .catch(err => console.error('Error fetching pincode:', err));
+    }
+  }, [values.pincode, setFieldValue]);
 
   const handleFetchEnquiry = async () => {
     if (!enquiryId) return;
@@ -564,6 +582,7 @@ export default function PublicKYC() {
                             required
                             type="file"
                             name="uploadId"
+                            id="uploadIdInput"
                             onBlur={handleBlur}
                             onChange={(e) => {
                               const file = e.target.files[0];
@@ -575,9 +594,22 @@ export default function PublicKYC() {
                             InputLabelProps={{ shrink: true }}
                           />
                           {uploadIdPreview && (
-                            <IconButton component="a" href={uploadIdPreview} target="_blank" color="primary">
-                              <Iconify icon="mdi:eye" />
-                            </IconButton>
+                            <>
+                              <IconButton component="a" href={uploadIdPreview} target="_blank" color="primary">
+                                <Iconify icon="mdi:eye" />
+                              </IconButton>
+                              <IconButton
+                                color="error"
+                                onClick={() => {
+                                  setValues({ ...values, uploadId: '' });
+                                  setUploadIdPreview(null);
+                                  const el = document.getElementById('uploadIdInput');
+                                  if (el) el.value = '';
+                                }}
+                              >
+                                <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
+                              </IconButton>
+                            </>
                           )}
                         </Stack>
                       </Grid>
@@ -587,6 +619,7 @@ export default function PublicKYC() {
                           <TextField
                             type="file"
                             name="signature"
+                            id="signatureInput"
                             onBlur={handleBlur}
                             onChange={(e) => {
                               const file = e.target.files[0];
@@ -598,9 +631,22 @@ export default function PublicKYC() {
                             InputLabelProps={{ shrink: true }}
                           />
                           {signaturePreview && (
-                            <IconButton component="a" href={signaturePreview} target="_blank" color="primary">
-                              <Iconify icon="mdi:eye" />
-                            </IconButton>
+                            <>
+                              <IconButton component="a" href={signaturePreview} target="_blank" color="primary">
+                                <Iconify icon="mdi:eye" />
+                              </IconButton>
+                              <IconButton
+                                color="error"
+                                onClick={() => {
+                                  setValues({ ...values, signature: '' });
+                                  setSignaturePreview(null);
+                                  const el = document.getElementById('signatureInput');
+                                  if (el) el.value = '';
+                                }}
+                              >
+                                <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
+                              </IconButton>
+                            </>
                           )}
                         </Stack>
                       </Grid>
