@@ -100,13 +100,21 @@ function CreateUser(props) {
     }
     
     if (values.userType === 'assistant_branch_manager') {
-      return designation.includes('assistant branch manager');
+      return designation.includes('assistant branch manager') || designation.includes('asst branch manager');
     }
 
     if (values.userType === 'telecalling') {
       return designation.includes('tele');
     }
     
+    if (values.userType === 'subadmin') {
+      return designation.includes('subadmin') || designation.includes('sub admin');
+    }
+
+    if (values.userType === 'transaction_executive') {
+      return designation.includes('transaction') || designation.includes('trans exec');
+    }
+
     return designation.includes(label) || designation.includes(values.userType.toLowerCase().replace('_', ' '));
   });
 
