@@ -66,7 +66,7 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
     proofType: Yup.string().required('Proof Type is required'),
   });
 
-  const { handleSubmit, handleChange, handleBlur, values, setValues, setFieldValue, resetForm, touched, errors } =
+  const { handleSubmit, handleChange, handleBlur, values, setValues, setFieldValue, resetForm, touched, errors, isSubmitting } =
     useFormik({
       initialValues: {
         accountNo: '',
@@ -78,8 +78,9 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
         proofFile: {},
       },
       validationSchema: schema,
-      onSubmit: (values) => {
-        createBank({ customerId: selectedUser._id, ...values }).then((data) => {
+      onSubmit: async (values, { setSubmitting }) => {
+        try {
+          const data = await createBank({ customerId: selectedUser._id, ...values });
           if (data.status === false) {
             setNotify({
               open: true,
@@ -94,12 +95,10 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
             formData.append('uploadedFile', values.proofFile);
             formData.append('documentType', values.proofType);
             
-            createFile(formData).then(() => {
-              getBankById(selectedUser._id).then((bankData) => {
-                setData(bankData.data);
-                window.dispatchEvent(new CustomEvent('bankUpdated'));
-              });
-            });
+            await createFile(formData);
+            const bankData = await getBankById(selectedUser._id);
+            setData(bankData.data);
+            window.dispatchEvent(new CustomEvent('bankUpdated'));
             
             resetForm();
             setFieldValue('proofFile', {});
@@ -111,7 +110,12 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
               severity: 'success',
             });
           }
-        });
+        } catch (error) {
+          console.error('Error creating bank:', error);
+          setNotify({ open: true, message: 'An error occurred', severity: 'error' });
+        } finally {
+          setSubmitting(false);
+        }
       },
     });
 
@@ -355,7 +359,7 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
               </Box>
             </Grid>
             <Grid item xs={12}>
-              <LoadingButton size="large" type="submit" variant="contained" startIcon={<SaveIcon />}>
+              <LoadingButton size="large" type="submit" variant="contained" loading={isSubmitting} startIcon={<SaveIcon />}>
                 Save Bank Details
               </LoadingButton>
               <Button
