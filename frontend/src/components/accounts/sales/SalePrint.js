@@ -126,6 +126,24 @@ export default function SalePrint({ id }) {
           <Button
             variant="contained"
             sx={{
+              bgcolor: '#25D366',
+              color: '#fff',
+              mr: 2,
+              '&:hover': {
+                bgcolor: '#128C7E',
+              },
+            }}
+            startIcon={<Iconify icon={'mdi:whatsapp'} sx={{ mr: 1, color: '#fff' }} />}
+            onClick={() => {
+              // Open WhatsApp without a pre-filled number to allow selecting the contact
+              window.open('https://api.whatsapp.com/send', '_blank');
+            }}
+          >
+            Share
+          </Button>
+          <Button
+            variant="contained"
+            sx={{
               bgcolor: '#FFD700',
               color: 'primary.main',
               '&:hover': {

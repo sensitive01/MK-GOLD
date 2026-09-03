@@ -60,7 +60,7 @@ const Release = mongoose.model(
       status: {
         type: String,
         required: true,
-        default: "release pending",
+        default: "pending approval",
       },
       assignee: {
         type: mongoose.Schema.Types.ObjectId,

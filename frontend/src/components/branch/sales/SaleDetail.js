@@ -19,7 +19,10 @@ import {
   Button,
   Box,
   Stack,
+  Avatar,
+  Chip,
 } from '@mui/material';
+import Iconify from '../../iconify';
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
 import Link from '@mui/material/Link';
@@ -172,6 +175,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell align="left">Ornament Type</TableCell>
                 <TableCell align="left">Purity</TableCell>
                 <TableCell align="left">Quantity</TableCell>
                 <TableCell align="left">Stone weight (Grams)</TableCell>
@@ -183,6 +187,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
             <TableBody>
               {data?.ornaments?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
                 <TableRow hover key={index} tabIndex={-1}>
+                  <TableCell align="left">{sentenceCase(e.ornamentType || '')}</TableCell>
                   <TableCell align="left">{e.purity}</TableCell>
                   <TableCell align="left">{e.quantity}</TableCell>
                   <TableCell align="left">{e.stoneWeight?.toFixed(2)}</TableCell>
@@ -193,7 +198,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
               ))}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={6} />
+                  <TableCell colSpan={7} />
                 </TableRow>
               )}
               {data?.ornaments?.length === 0 && (
@@ -306,7 +311,95 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
 
-    const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data?.proof?.length) : 0;
+    const manualProofUrls = [];
+    if (data?.financeProof) manualProofUrls.push(data.financeProof);
+    if (data?.assigneeProof) manualProofUrls.push(data.assigneeProof);
+    if (data?.fundTransferProof) manualProofUrls.push(data.fundTransferProof);
+
+    data?.release?.forEach(r => {
+      if (r.financeProof) manualProofUrls.push(r.financeProof);
+      if (r.assigneeProof) manualProofUrls.push(r.assigneeProof);
+      if (r.fundTransferProof) manualProofUrls.push(r.fundTransferProof);
+    });
+
+    const baseProofs = [...(data?.proof || [])]
+      .filter(p => !manualProofUrls.includes(p.uploadedFile) && !['transit_proof', 'transit_received_proof', 'melt_proof', 'after_melt_proof'].includes(p.uploadName))
+      .map(p => ({ ...p }));
+    const transitProofs = [...(data?.proof || [])]
+      .filter(p => ['transit_proof', 'transit_received_proof'].includes(p.uploadName))
+      .map(p => ({ ...p }));
+    const meltingProofs = [...(data?.proof || [])]
+      .filter(p => ['melt_proof', 'after_melt_proof'].includes(p.uploadName))
+      .map(p => ({ ...p }));
+
+    const allProofs = [...baseProofs];
+
+    const isPhysical = data?.saleType === 'physical';
+    if (data?.financeProof) {
+      allProofs.push({ uploadedFile: data.financeProof, documentType: isPhysical ? 'Finance Proof' : 'Release Finance Proof', documentNo: 'N/A', _id: 'finance' });
+    }
+    if (data?.assigneeProof) {
+      allProofs.push({ uploadedFile: data.assigneeProof, documentType: isPhysical ? 'Assignee Proof' : 'Release Assignee Proof', documentNo: 'N/A', _id: 'assignee' });
+    }
+    if (data?.fundTransferProof) {
+      allProofs.push({ uploadedFile: data.fundTransferProof, documentType: isPhysical ? 'Fund Transfer Proof' : 'Sale Finance Proof', documentNo: 'N/A', _id: 'fundTransfer' });
+    }
+
+    data?.release?.forEach(r => {
+      if (r.financeProof) {
+        allProofs.push({ uploadedFile: r.financeProof, documentType: 'Release Finance Proof', documentNo: 'N/A', _id: `rel_finance_${r._id}` });
+      }
+      if (r.assigneeProof) {
+        allProofs.push({ uploadedFile: r.assigneeProof, documentType: 'Release Assignee Proof', documentNo: 'N/A', _id: `rel_assignee_${r._id}` });
+      }
+      if (r.fundTransferProof) {
+        allProofs.push({ uploadedFile: r.fundTransferProof, documentType: 'Release Fund Transfer Proof', documentNo: 'N/A', _id: `rel_fundTransfer_${r._id}` });
+      }
+    });
+
+    allProofs.push(...transitProofs);
+    allProofs.push(...meltingProofs);
+
+    let fpCount = 0;
+    allProofs.forEach(e => {
+       const releaseDoc = data?.release?.flatMap((r) => r.proofDocuments || [])?.find((doc) => doc.documentFile === e.uploadedFile);
+       let docType = e.documentType || releaseDoc?.documentType;
+       let displayType = docType ? sentenceCase(docType) : 'Release Document';
+       
+       if (!docType && e.uploadName && e.uploadName !== 'Release Document' && e.uploadName !== 'release') {
+         if (e.uploadName === 'finance_proof') {
+           fpCount++;
+           displayType = isPhysical ? 'Finance Proof' : (fpCount > 1 ? 'Sale Finance Proof' : 'Release Finance Proof');
+         } else if (e.uploadName === 'sale_finance_proof' || e.uploadName === 'sale_proof') {
+           displayType = 'Sale Finance Proof';
+         } else if (e.uploadName === 'transit_proof') {
+           displayType = 'Transit Dispatch Proof';
+         } else if (e.uploadName === 'transit_received_proof') {
+           displayType = 'Transit Received Proof';
+         } else if (e.uploadName === 'melt_proof') {
+           displayType = 'Before Melt Proof';
+         } else if (e.uploadName === 'after_melt_proof') {
+           displayType = 'After Melt Proof';
+         } else {
+           displayType = e.uploadName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+         }
+       } else if (docType === 'Release Finance Proof' || docType === 'Finance Proof') {
+           fpCount++;
+           if (fpCount > 1 && docType === 'Release Finance Proof') {
+               displayType = 'Sale Finance Proof';
+           } else {
+               displayType = isPhysical ? 'Finance Proof' : 'Release Finance Proof';
+           }
+       }
+
+       if (displayType.toLowerCase() === 'sale finance proof') displayType = 'Sale Finance Proof';
+       if (displayType.toLowerCase() === 'release finance proof' || displayType.toLowerCase() === 'release finance document') displayType = 'Release Finance Proof';
+       
+       e.displayType = displayType;
+       e.documentNo = e.documentNo || releaseDoc?.documentNo || 'N/A';
+    });
+
+    const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - allProofs.length) : 0;
     const handleChangePage = (event, newPage) => {
       setPage(newPage);
     };
@@ -328,8 +421,105 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
               </TableRow>
             </TableHead>
             <TableBody>
-              {data?.proof?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
+              {allProofs.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => {
+                return (
+                  <TableRow hover key={e._id || index} tabIndex={-1}>
+                    <TableCell align="left">{e.displayType}</TableCell>
+                    <TableCell align="left">{e.documentNo}</TableCell>
+                    <TableCell align="left">
+                      {e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
+                        <a
+                          href={e?.uploadedFile?.startsWith('http') ? e.uploadedFile : `${global.baseURL}/${e?.uploadedFile}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <img
+                            key={index}
+                            src={e?.uploadedFile?.startsWith('http') ? e.uploadedFile : `${global.baseURL}/${e?.uploadedFile}`}
+                            alt="document"
+                            style={{ width: '80px' }}
+                          />
+                        </a>
+                      ) : (
+                        <a
+                          href={e?.uploadedFile?.startsWith('http') ? e.uploadedFile : `${global.baseURL}/${e?.uploadedFile}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <img key={index} src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />
+                        </a>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {emptyRows > 0 && (
+                <TableRow style={{ height: 53 * emptyRows }}>
+                  <TableCell colSpan={3} />
+                </TableRow>
+              )}
+              {allProofs.length === 0 && (
+                <TableRow>
+                  <TableCell align="center" colSpan={3} sx={{ py: 3 }}>
+                    <Paper
+                      sx={{
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Typography paragraph>No data in table</Typography>
+                    </Paper>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={allProofs.length || 0}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
+      </Scrollbar>
+    );
+  }
+
+  function KycProof() {
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(5);
+
+    const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data?.customer?.kycProofs?.length) : 0;
+    const handleChangePage = (event, newPage) => {
+      setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+      setPage(0);
+      setRowsPerPage(parseInt(event.target.value, 10));
+    };
+
+    return (
+      <Scrollbar>
+        <TableContainer sx={{ minWidth: 800, mb: 1 }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell align="left">Upload Type</TableCell>
+                <TableCell align="left">Document Type</TableCell>
+                <TableCell align="left">Document No</TableCell>
+                <TableCell align="left">File</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {data?.customer?.kycProofs?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
                 <TableRow hover key={e._id} tabIndex={-1}>
+                  <TableCell align="left">{sentenceCase(e.uploadType || '')}</TableCell>
                   <TableCell align="left">{sentenceCase(e.documentType || '')}</TableCell>
                   <TableCell align="left">{e.documentNo}</TableCell>
                   <TableCell align="left">
@@ -362,12 +552,12 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
               ))}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={3} />
+                  <TableCell colSpan={4} />
                 </TableRow>
               )}
-              {data?.proof?.length === 0 && (
+              {data?.customer?.kycProofs?.length === 0 && (
                 <TableRow>
-                  <TableCell align="center" colSpan={3} sx={{ py: 3 }}>
+                  <TableCell align="center" colSpan={4} sx={{ py: 3 }}>
                     <Paper
                       sx={{
                         textAlign: 'center',
@@ -385,7 +575,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={data?.proof?.length || 0}
+          count={data?.customer?.kycProofs?.length || 0}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -421,27 +611,58 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                 <TableCell align="left">Pincode</TableCell>
                 <TableCell align="left">Landmark</TableCell>
                 <TableCell align="left">Label</TableCell>
+                <TableCell align="left">Proof</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {data?.customer?.address?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
-                <TableRow hover key={e._id} tabIndex={-1}>
-                  <TableCell align="left">{sentenceCase(e.address || '')}</TableCell>
-                  <TableCell align="left">{e.area}</TableCell>
-                  <TableCell align="left">{e.city}</TableCell>
-                  <TableCell align="left">{e.pincode}</TableCell>
-                  <TableCell align="left">{e.landmark}</TableCell>
-                  <TableCell align="left">{e.label}</TableCell>
-                </TableRow>
-              ))}
+              {data?.customer?.address?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => {
+                const proof = data?.customer?.addressProofs?.find(p => p.uploadId === e._id.toString());
+                return (
+                  <TableRow hover key={e._id} tabIndex={-1}>
+                    <TableCell align="left">{sentenceCase(e.address || '')}</TableCell>
+                    <TableCell align="left">{e.area}</TableCell>
+                    <TableCell align="left">{e.city}</TableCell>
+                    <TableCell align="left">{e.pincode}</TableCell>
+                    <TableCell align="left">{e.landmark}</TableCell>
+                    <TableCell align="left">{e.label}</TableCell>
+                    <TableCell align="left">
+                      {proof?.uploadedFile ? (
+                        proof?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
+                          <a
+                            href={proof.uploadedFile.startsWith('http') ? proof.uploadedFile : `${global.baseURL}/${proof.uploadedFile}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <img
+                              src={proof.uploadedFile.startsWith('http') ? proof.uploadedFile : `${global.baseURL}/${proof.uploadedFile}`}
+                              alt="document"
+                              style={{ width: '80px' }}
+                            />
+                          </a>
+                        ) : (
+                          <a
+                            href={proof.uploadedFile.startsWith('http') ? proof.uploadedFile : `${global.baseURL}/${proof.uploadedFile}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <img src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />
+                          </a>
+                        )
+                      ) : 'N/A'}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={3} />
+                  <TableCell colSpan={7} />
                 </TableRow>
               )}
               {data?.customer?.address?.length === 0 && (
                 <TableRow>
-                  <TableCell align="center" colSpan={3} sx={{ py: 3 }}>
+                  <TableCell align="center" colSpan={7} sx={{ py: 3 }}>
                     <Paper
                       sx={{
                         textAlign: 'center',
@@ -485,50 +706,42 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
               <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
                 Customer Detail:
               </Typography>
-              <TableContainer>
-                <Table>
-                  <TableBody>
-                    <TableRow tabIndex={-1}>
-                      <TableCell align="left">
-                        Photo:
-                        {data?.customer?.profileImage?.uploadedFile ? (
-                          <a
-                            href={
-                              data.customer.profileImage.uploadedFile.startsWith('http')
-                                ? data.customer.profileImage.uploadedFile
-                                : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`
-                            }
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <img
-                              src={
-                                data.customer.profileImage.uploadedFile.startsWith('http')
-                                  ? data.customer.profileImage.uploadedFile
-                                  : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`
-                              }
-                              alt="document"
-                              style={{ width: '80px' }}
-                            />
-                          </a>
-                        ) : (
-                          <span style={{ marginLeft: 8 }}>N/A</span>
-                        )}
-                      </TableCell>
-                      <TableCell align="left">Customer Name: {data?.customer?.name}</TableCell>
-                      <TableCell align="left">Customer Email: {data?.customer?.email}</TableCell>
-                      <TableCell align="left">Customer Phone Number: {global.maskPhoneNumber(data?.customer?.phoneNumber)}</TableCell>
-                    </TableRow>
-                    <TableRow tabIndex={-1}>
-                      <TableCell align="left">Gender: {data?.customer?.gender}</TableCell>
-                      <TableCell align="left">Marital Status: {data?.customer?.maritalStatus}</TableCell>
-                      <TableCell align="left">Source: {data?.customer?.source}</TableCell>
-                      <TableCell align="left">ChooseId: {data?.customer?.chooseId}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              <Box sx={{ p: 3, bgcolor: 'background.neutral', borderRadius: 2 }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} alignItems="center">
+                  <Avatar
+                    src={data?.customer?.profileImage?.uploadedFile ? (data.customer.profileImage.uploadedFile.startsWith('http')
+                      ? data.customer.profileImage.uploadedFile
+                      : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`) : null}
+                    alt={data?.customer?.name}
+                    sx={{ width: 100, height: 100 }}
+                  />
+                  <Stack spacing={1} flexGrow={1}>
+                    <Typography variant="h5">{data?.customer?.name || 'N/A'}</Typography>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', sm: 'center' }} sx={{ color: 'text.secondary' }}>
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Iconify icon="eva:email-fill" width={20} />
+                        <Typography variant="body2">{data?.customer?.email || 'N/A'}</Typography>
+                      </Stack>
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Iconify icon="eva:phone-fill" width={20} />
+                        <Typography variant="body2">{global.maskPhoneNumber(data?.customer?.phoneNumber) || 'N/A'}</Typography>
+                      </Stack>
+                    </Stack>
+                    <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 1 }}>
+                      <Chip size="small" label={`Gender: ${data?.customer?.gender || 'N/A'}`} />
+                      <Chip size="small" label={`Marital Status: ${data?.customer?.maritalStatus || 'N/A'}`} />
+                      <Chip size="small" label={`Source: ${data?.customer?.source || 'N/A'}`} />
+                      <Chip size="small" label={`ChooseId: ${data?.customer?.chooseId || 'N/A'}`} />
+                    </Stack>
+                  </Stack>
+                </Stack>
+              </Box>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
+                Customer KYC Proofs:
+              </Typography>
+              <KycProof />
             </Grid>
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
@@ -544,14 +757,18 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
             <Grid item xs={12}>
               <Ornament />
             </Grid>
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
-                Release Detail:
-              </Typography>
-            </Grid>
-            <Grid item xs={12}>
-              <Release />
-            </Grid>
+            {data?.saleType !== 'physical' && (
+              <>
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
+                    Release Detail:
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Release />
+                </Grid>
+              </>
+            )}
             {data?.paymentType === 'bank' && (
               <>
                 <Grid item xs={12}>
@@ -568,6 +785,34 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                           <TableCell align="left">Account No: {data?.bank?.accountNo}</TableCell>
                           <TableCell align="left">Branch: {data?.bank?.branch}</TableCell>
                           <TableCell align="left">IFSC Code: {data?.bank?.ifscCode}</TableCell>
+                          {data?.bank?.proof?.uploadedFile && (
+                            <TableCell align="left">
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>Bank Proof:</Typography>
+                                {data.bank.proof.uploadedFile.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
+                                  <a
+                                    href={data.bank.proof.uploadedFile.startsWith('http') ? data.bank.proof.uploadedFile : `${global.baseURL}/${data.bank.proof.uploadedFile}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <img
+                                      src={data.bank.proof.uploadedFile.startsWith('http') ? data.bank.proof.uploadedFile : `${global.baseURL}/${data.bank.proof.uploadedFile}`}
+                                      alt="bank proof"
+                                      style={{ height: '30px', borderRadius: 4 }}
+                                    />
+                                  </a>
+                                ) : (
+                                  <a
+                                    href={data.bank.proof.uploadedFile.startsWith('http') ? data.bank.proof.uploadedFile : `${global.baseURL}/${data.bank.proof.uploadedFile}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <img src="/assets/doc.svg" alt="bank proof" style={{ height: '30px' }} />
+                                  </a>
+                                )}
+                              </Box>
+                            </TableCell>
+                          )}
                         </TableRow>
                       </TableBody>
                     </Table>
@@ -608,10 +853,10 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                         Margin Amount:{' '}
                         {data.status === 'approved'
                           ? Math.round(
-                              data.netAmount -
-                                data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0) -
-                                data.payableAmount
-                            )
+                            data.netAmount -
+                            data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0) -
+                            data.payableAmount
+                          )
                           : Math.round((data.netAmount * data.margin) / 100)}
                       </TableCell>
                       <TableCell align="left">

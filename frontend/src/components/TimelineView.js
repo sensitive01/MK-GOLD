@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import moment from 'moment';
 import { sentenceCase } from 'change-case';
+import Iconify from './iconify';
 
 export default function TimelineView({ timeline }) {
   if (!timeline || timeline.length === 0) {
@@ -98,6 +99,21 @@ export default function TimelineView({ timeline }) {
                 </TableCell>
                 <TableCell sx={{ maxWidth: 200, whiteSpace: 'normal', wordBreak: 'break-word' }}>
                   {item.details || '-'}
+                  {item.proof && (
+                    <Box sx={{ mt: 1 }}>
+                      <a
+                        href={item.proof.startsWith('http') ? item.proof : `${global.baseURL}/${item.proof}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
+                      >
+                        <Iconify icon="eva:file-text-fill" sx={{ color: 'primary.main' }} />
+                        <Typography variant="caption" sx={{ color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}>
+                          View Proof
+                        </Typography>
+                      </a>
+                    </Box>
+                  )}
                 </TableCell>
                 <TableCell align="right">
                     <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'info.main' }}>

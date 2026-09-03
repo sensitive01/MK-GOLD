@@ -1182,9 +1182,16 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
       const formData = new FormData();
       formData.append('uploadedFile', file);
       formData.append('uploadId', id);
+      
+      let uploadName = 'proof';
+      if (type === 'finance') uploadName = 'finance_proof';
+      else if (type === 'fund transfer') uploadName = 'fundTransfer_proof';
+      else uploadName = 'assignee_proof';
+      
+      formData.append('uploadName', uploadName);
       const res = await createFile(formData);
       if (res.status) {
-        setFieldValue('proof', res.data.fileUrl || res.data.path);
+        setFieldValue('proof', res.data.uploadedFile);
       }
     }
   };
@@ -1308,10 +1315,11 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
+        <DialogContent sx={{ mt: 1, pt: 2 }}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <TextField
+                sx={{ mt: 1 }}
                 name="amount"
                 label="Payment Amount"
                 InputLabelProps={{ shrink: true }}

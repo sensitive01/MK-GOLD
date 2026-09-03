@@ -107,7 +107,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
       comments: '',
       assignee: '',
       releaseDocument: {},
-      status: 'release pending',
+      status: 'pending approval',
     },
     validationSchema: schema,
     onSubmit: (values) => {
@@ -293,7 +293,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                   comments: '',
                   assignee: '',
                   releaseDocument: {},
-                  status: 'release pending',
+                  status: 'pending approval',
                 });
                 setReleaseModal(true);
               }}
@@ -341,8 +341,8 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                         borderRadius: 12,
                         fontSize: 12,
                         fontWeight: 600,
-                        background: e.status === 'completed' ? '#d4edda' : e.status === 'release pending' ? '#fff3cd' : '#cce5ff',
-                        color: e.status === 'completed' ? '#155724' : e.status === 'release pending' ? '#856404' : '#004085',
+                        background: e.status === 'completed' ? '#d4edda' : e.status === 'release pending' ? '#fff3cd' : '#e2e3e5',
+                        color: e.status === 'completed' ? '#155724' : e.status === 'release pending' ? '#856404' : '#383d41',
                       }}>
                         {e.status ? sentenceCase(e.status) : 'Pending'}
                       </span>

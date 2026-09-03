@@ -954,7 +954,10 @@ function Status(props) {
 
 function VerificationModal({ open, id, type, handleClose, fetchData, saleType, assigneeCompleted }) {
   const [loading, setLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [fileType, setFileType] = useState('');
+  const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
   const [ornaments, setOrnaments] = useState([]);
   const [showOrnamentForm, setShowOrnamentForm] = useState(false);
 
@@ -974,7 +977,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     isCompleted: Yup.boolean(),
   });
 
-  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue } = useFormik({
+  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue, resetForm } = useFormik({
     initialValues: {
       amount: '',
       comments: '',
@@ -1029,30 +1032,50 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     },
   });
 
+  const handleModalClose = () => {
+    setPreview(null);
+    setFileType('');
+    setPdfBlobUrl(null);
+    resetForm();
+    handleClose();
+  };
+
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setPreview(URL.createObjectURL(file));
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        setFileType('pdf');
+        setPreview(file.name);
+        setPdfBlobUrl(URL.createObjectURL(file));
+      } else {
+        setFileType('image');
+        setPreview(URL.createObjectURL(file));
+        setPdfBlobUrl(null);
+      }
+      setIsUploading(true);
       const formData = new FormData();
       formData.append('uploadedFile', file);
       formData.append('uploadId', id);
+      formData.append('uploadName', `${type}_proof`);
       const res = await createFile(formData);
+      setIsUploading(false);
       if (res.status) {
-        setFieldValue('proof', res.data.fileUrl || res.data.path);
+        setFieldValue('proof', res.data.uploadedFile);
       }
     }
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
+    <Dialog open={open} onClose={handleModalClose} maxWidth="lg" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
+        <DialogContent sx={{ mt: 1, pt: 2 }}>
           <Grid container spacing={3}>
             {type !== 'bullion' && (
               <>
                 <Grid item xs={12}>
                   <TextField
+                    sx={{ mt: 1 }}
                     name="amount"
                     label="Payment Amount"
                     type="number"
@@ -1067,16 +1090,22 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                 <Grid item xs={12}>
                   <Stack spacing={2}>
                     <Typography variant="subtitle2">Upload Proof</Typography>
-                    <input type="file" accept="image/*" onChange={handleFileChange} />
+                    <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} />
                     {preview && (
                       <a
-                        href={values.proof ? (values.proof.startsWith('http') ? values.proof : `${global.baseURL}/${values.proof}`) : preview}
+                        href={values.proof ? (values.proof.startsWith('http') ? values.proof : `${global.baseURL}/${values.proof}`) : (pdfBlobUrl || preview)}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ cursor: 'pointer' }}
                       >
                         <Box sx={{ mt: 2, position: 'relative', width: '100%', height: 200, borderRadius: 1, overflow: 'hidden', border: '1px solid #eee' }}>
-                          <img src={preview} alt="Proof Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                          {fileType === 'pdf' ? (
+                              <Box display="flex" alignItems="center" justifyContent="center" height="100%">
+                                  <Typography>View PDF Document: {preview}</Typography>
+                              </Box>
+                          ) : (
+                              <img src={preview} alt="Proof Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                          )}
                         </Box>
                       </a>
                     )}
@@ -1238,8 +1267,8 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <LoadingButton type="submit" variant="contained" loading={loading} sx={{ color: '#fff' }}>
+          <Button onClick={handleModalClose}>Cancel</Button>
+          <LoadingButton type="submit" variant="contained" loading={loading || isUploading} disabled={isUploading} sx={{ color: '#fff' }}>
             Save & Update Status
           </LoadingButton>
         </DialogActions>

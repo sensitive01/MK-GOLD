@@ -1050,6 +1050,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
   const isAdmin = userType === 'admin';
 
   const [loading, setLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [ornaments, setOrnaments] = useState([]);
   const [showOrnamentForm, setShowOrnamentForm] = useState(false);
@@ -1162,12 +1163,15 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     const file = e.target.files[0];
     if (file) {
       setPreview(URL.createObjectURL(file));
+      setIsUploading(true);
       const formData = new FormData();
       formData.append('uploadedFile', file);
       formData.append('uploadId', id);
+      formData.append('uploadName', `${type}_proof`);
       const res = await createFile(formData);
+      setIsUploading(false);
       if (res.status) {
-        setFieldValue('proof', res.data.fileUrl || res.data.path);
+        setFieldValue('proof', res.data.uploadedFile);
       }
     }
   };
@@ -1291,10 +1295,11 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
+        <DialogContent sx={{ mt: 1, pt: 2 }}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <TextField
+                sx={{ mt: 1 }}
                 name="amount"
                 label="Payment Amount"
                 type="number"
@@ -1435,7 +1440,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <LoadingButton type="submit" variant="contained" loading={loading} sx={{ color: '#fff' }}>
+          <LoadingButton type="submit" variant="contained" loading={loading || isUploading} disabled={isUploading} sx={{ color: '#fff' }}>
             Save & Update Status
           </LoadingButton>
         </DialogActions>

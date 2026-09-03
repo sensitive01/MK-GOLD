@@ -152,12 +152,12 @@ async function find(query = {}) {
                       $cond: {
                         if: "$$emp",
                         then: { name: "$$emp.name", employeeId: "$$emp.employeeId" },
-                        else: { 
+                        else: {
                           $cond: {
                             if: "$$usr",
-                            then: { 
-                              name: { $ifNull: ["$$usr.employeeData.name", { $ifNull: ["$$usr.username", "Staff"] }] }, 
-                              employeeId: { $ifNull: ["$$usr.employeeData.employeeId", "ADMIN-USER"] } 
+                            then: {
+                              name: { $ifNull: ["$$usr.employeeData.name", { $ifNull: ["$$usr.username", "Staff"] }] },
+                              employeeId: { $ifNull: ["$$usr.employeeData.employeeId", "ADMIN-USER"] }
                             },
                             else: { name: "System", employeeId: "N/A" }
                           }
@@ -300,12 +300,12 @@ async function findById(id) {
                       $cond: {
                         if: "$$emp",
                         then: { name: "$$emp.name", employeeId: "$$emp.employeeId" },
-                        else: { 
+                        else: {
                           $cond: {
                             if: "$$usr",
-                            then: { 
-                              name: { $ifNull: ["$$usr.employeeData.name", { $ifNull: ["$$usr.username", "Staff"] }] }, 
-                              employeeId: { $ifNull: ["$$usr.employeeData.employeeId", "ADMIN-USER"] } 
+                            then: {
+                              name: { $ifNull: ["$$usr.employeeData.name", { $ifNull: ["$$usr.username", "Staff"] }] },
+                              employeeId: { $ifNull: ["$$usr.employeeData.employeeId", "ADMIN-USER"] }
                             },
                             else: { name: "System", employeeId: "N/A" }
                           }
@@ -483,7 +483,12 @@ async function updateWithLog(id, setData, logEntry) {
           setDataSales.assigneeCompleted = setData.assigneeCompleted;
         }
 
-        await salesService.updateWithLog(sale._id, setDataSales, logEntry);
+        let saleLogEntry = { ...logEntry };
+        if (setDataSales.status === "bullion pending") {
+          saleLogEntry.action = "Bullion pending";
+        }
+
+        await salesService.updateWithLog(sale._id, setDataSales, saleLogEntry);
       }
     }
 
@@ -499,7 +504,7 @@ async function remove(id) {
     const objectIds = ids.map(idStr => new mongoose.Types.ObjectId(idStr));
     const stringIds = ids.map(idStr => idStr.toString());
     const queryIds = [...objectIds, ...stringIds];
-    
+
     // Remove references/embedded documents from Sales model
     await Sales.updateMany(
       { "release._id": { $in: queryIds } },

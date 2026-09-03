@@ -832,6 +832,7 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
     numberOfDays: Yup.number().required('Number of days is required'),
     packetWeight: Yup.number().required('Packet weight is required'),
     deliveryBy: Yup.string().required('Delivery by is required'),
+    transitMovedThrough: Yup.string().required('Transit moved through is required'),
     notes: Yup.string(),
     proof: Yup.string().required('Proof is required'),
   });
@@ -851,6 +852,7 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
       numberOfDays: '',
       packetWeight: '',
       deliveryBy: '',
+      transitMovedThrough: '',
       notes: '',
       proof: '',
     },
@@ -959,6 +961,9 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField name="deliveryBy" label="Delivery By" value={values.deliveryBy} onChange={handleChange} onBlur={handleBlur} error={touched.deliveryBy && !!errors.deliveryBy} helperText={touched.deliveryBy && errors.deliveryBy} fullWidth />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField name="transitMovedThrough" label="Transit Moved Through" value={values.transitMovedThrough} onChange={handleChange} onBlur={handleBlur} error={touched.transitMovedThrough && !!errors.transitMovedThrough} helperText={touched.transitMovedThrough && errors.transitMovedThrough} fullWidth />
             </Grid>
             <Grid item xs={12} sm={6}>
                <input type="file" style={{ display: 'none' }} ref={fileInputRef} accept="image/*,application/pdf" onChange={handleFileUpload} />

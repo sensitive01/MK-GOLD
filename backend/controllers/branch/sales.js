@@ -47,6 +47,7 @@ async function create(req, res) {
 
 async function update(req, res) {
   try {
+    console.log("SALE UPDATE PAYLOAD:", req.body);
     const performerId = req.user.employee?._id || req.user.employee || req.user._id;
     let result;
     

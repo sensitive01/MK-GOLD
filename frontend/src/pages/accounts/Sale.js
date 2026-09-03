@@ -5,33 +5,33 @@ import { Helmet } from 'react-helmet-async';
 import { useSelector } from 'react-redux';
 // @mui
 import {
-    Backdrop,
-    Box,
-    Button,
-    Card,
-    Checkbox,
-    CircularProgress,
-    Container,
-    Grid,
-    IconButton,
-    InputLabel,
-    MenuItem,
-    Modal,
-    Paper,
-    Popover,
-    Select,
-    Snackbar,
-    Stack,
-    Table,
-    TableHead,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TablePagination,
-    TableRow,
-    TextField,
-    Typography,
-    Divider,
+  Backdrop,
+  Box,
+  Button,
+  Card,
+  Checkbox,
+  CircularProgress,
+  Container,
+  Grid,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Modal,
+  Paper,
+  Popover,
+  Select,
+  Snackbar,
+  Stack,
+  Table,
+  TableHead,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TablePagination,
+  TableRow,
+  TextField,
+  Typography,
+  Divider,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import MuiAlert from '@mui/material/Alert';
@@ -409,135 +409,135 @@ export default function Sale() {
           <TableContainer>
             <Table sx={{ minWidth: 800 }}>
               <SaleListHead
-                  order={order}
-                  orderBy={orderBy}
-                  headLabel={TABLE_HEAD}
-                  rowCount={data?.length || 0}
-                  numSelected={selected?.length}
-                  onRequestSort={handleRequestSort}
-                  onSelectAllClick={handleSelectAllClick}
-                  hideCheckbox={true}
-                />
-                <TableBody>
-                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, billId, saleType, netAmount, branch, purchaseType, status, createdAt } = row;
-                    const selectedData = selected.indexOf(_id) !== -1;
+                order={order}
+                orderBy={orderBy}
+                headLabel={TABLE_HEAD}
+                rowCount={data?.length || 0}
+                numSelected={selected?.length}
+                onRequestSort={handleRequestSort}
+                onSelectAllClick={handleSelectAllClick}
+                hideCheckbox={true}
+              />
+              <TableBody>
+                {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
+                  const { _id, billId, saleType, netAmount, branch, purchaseType, status, createdAt } = row;
+                  const selectedData = selected.indexOf(_id) !== -1;
 
-                    return (
-                      <TableRow
-                        hover
-                        key={_id}
-                        tabIndex={-1}
-                        role="checkbox"
-                        selected={selectedData}
-                        onClick={() => {
-                          setOpenId(_id);
-                          setToggleContainer(true);
-                          setToggleContainerType('detail');
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {false && (
-                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selectedData}
-                              onChange={(event) => handleClick(event, _id)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </TableCell>
-                        )}
-                        <TableCell align="left">{billId}</TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                        <TableCell align="left">
-                          {row.customer ? (
-                            <Typography variant="subtitle2">
-                              {row.customer.name}
-                              <br />
-                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                {row.customer.phoneNumber}
-                              </Typography>
-                            </Typography>
-                          ) : (
-                            '-'
-                          )}
-                        </TableCell>
-                        <TableCell align="left">{branch?.branchId || '-'}</TableCell>
-                        <TableCell align="left">{branch?.branchName || '-'}</TableCell>
-                        <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
-                        <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
-                        <TableCell align="left">&#8377; {netAmount}</TableCell>
-                        <TableCell align="left" onClick={(e) => e.stopPropagation()}>
-                          <Status 
-                            status={status} 
-                            _id={_id} 
-                            assignee={row.assignee?._id || row.assignee}
-                            fetchData={fetchData}
-                            saleType={saleType}
-                            assigneeCompleted={row.assigneeCompleted}
+                  return (
+                    <TableRow
+                      hover
+                      key={_id}
+                      tabIndex={-1}
+                      role="checkbox"
+                      selected={selectedData}
+                      onClick={() => {
+                        setOpenId(_id);
+                        setToggleContainer(true);
+                        setToggleContainerType('detail');
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {false && (
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedData}
+                            onChange={(event) => handleClick(event, _id)}
+                            onClick={(e) => e.stopPropagation()}
                           />
                         </TableCell>
-                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                          <IconButton
-                            size="large"
-                            color="inherit"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              setOpenId(_id);
-                              handleOpenMenu(e);
-                            }}
-                          >
-                            <Iconify icon={'eva:more-vertical-fill'} />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {emptyRows > 0 && (
-                    <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={9} />
-                    </TableRow>
-                  )}
-                  {filteredData?.length === 0 && (
-                    <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
+                      )}
+                      <TableCell align="left">{billId}</TableCell>
+                      <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                      <TableCell align="left">
+                        {row.customer ? (
+                          <Typography variant="subtitle2">
+                            {row.customer.name}
+                            <br />
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              {row.customer.phoneNumber}
+                            </Typography>
+                          </Typography>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell align="left">{branch?.branchId || '-'}</TableCell>
+                      <TableCell align="left">{branch?.branchName || '-'}</TableCell>
+                      <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
+                      <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
+                      <TableCell align="left">&#8377; {netAmount}</TableCell>
+                      <TableCell align="left" onClick={(e) => e.stopPropagation()}>
+                        <Status
+                          status={status}
+                          _id={_id}
+                          assignee={row.assignee?._id || row.assignee}
+                          fetchData={fetchData}
+                          saleType={saleType}
+                          assigneeCompleted={row.assigneeCompleted}
+                        />
+                      </TableCell>
+                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                        <IconButton
+                          size="large"
+                          color="inherit"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setOpenId(_id);
+                            handleOpenMenu(e);
                           }}
                         >
-                          <Typography paragraph>No data in table</Typography>
-                        </Paper>
+                          <Iconify icon={'eva:more-vertical-fill'} />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-
-                {filteredData?.length > 0 && isNotFound && (
-                  <TableBody>
-                    <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
-                          }}
-                        >
-                          <Typography variant="h6" paragraph>
-                            Not found
-                          </Typography>
-
-                          <Typography variant="body2">
-                            No results found for &nbsp;
-                            <strong>&quot;{filterName}&quot;</strong>.
-                            <br /> Try checking for typos or using complete words.
-                          </Typography>
-                        </Paper>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
+                  );
+                })}
+                {emptyRows > 0 && (
+                  <TableRow style={{ height: 53 * emptyRows }}>
+                    <TableCell colSpan={9} />
+                  </TableRow>
                 )}
-              </Table>
-            </TableContainer>
+                {filteredData?.length === 0 && (
+                  <TableRow>
+                    <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <Paper
+                        sx={{
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Typography paragraph>No data in table</Typography>
+                      </Paper>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+
+              {filteredData?.length > 0 && isNotFound && (
+                <TableBody>
+                  <TableRow>
+                    <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <Paper
+                        sx={{
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Typography variant="h6" paragraph>
+                          Not found
+                        </Typography>
+
+                        <Typography variant="body2">
+                          No results found for &nbsp;
+                          <strong>&quot;{filterName}&quot;</strong>.
+                          <br /> Try checking for typos or using complete words.
+                        </Typography>
+                      </Paper>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              )}
+            </Table>
+          </TableContainer>
 
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
@@ -959,7 +959,7 @@ function Status(props) {
     <>
       {content}
 
-      <VerificationModal 
+      <VerificationModal
         open={openVerifyModal}
         id={_id}
         type={verifyType}
@@ -974,6 +974,7 @@ function Status(props) {
 
 function VerificationModal({ open, id, type, handleClose, fetchData, saleType, assigneeCompleted }) {
   const [loading, setLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [ornaments, setOrnaments] = useState([]);
   const [showOrnamentForm, setShowOrnamentForm] = useState(false);
@@ -1007,7 +1008,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     validationSchema: schema,
     onSubmit: async (values) => {
       setLoading(true);
-      
+
       const payload = {};
       if (type === 'finance') {
         payload.financeAmount = values.amount;
@@ -1074,12 +1075,15 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         setPreview(URL.createObjectURL(file));
         setPdfBlobUrl(null);
       }
+      setIsUploading(true);
       const formData = new FormData();
       formData.append('uploadedFile', file);
       formData.append('uploadId', id);
+      formData.append('uploadName', `${type}_proof`);
       const res = await createFile(formData);
+      setIsUploading(false);
       if (res.status) {
-        setFieldValue('proof', res.data.fileUrl || res.data.path);
+        setFieldValue('proof', res.data.uploadedFile);
       }
     }
   };
@@ -1092,6 +1096,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <TextField
+                sx={{ mt: 1 }}
                 name="amount"
                 label="Payment Amount"
                 InputLabelProps={{ shrink: true }}
@@ -1187,9 +1192,9 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                         />
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <Button 
-                          variant="contained" 
-                          fullWidth 
+                        <Button
+                          variant="contained"
+                          fullWidth
                           onClick={() => {
                             if (ornamentValues.ornamentType && ornamentValues.netWeight) {
                               setOrnaments([...ornaments, ornamentValues]);
@@ -1248,7 +1253,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         </DialogContent>
         <DialogActions>
           <Button onClick={handleModalClose}>Cancel</Button>
-          <LoadingButton type="submit" variant="contained" loading={loading} sx={{ color: '#fff' }}>
+          <LoadingButton type="submit" variant="contained" loading={loading || isUploading} disabled={isUploading} sx={{ color: '#fff' }}>
             Save & Update Status
           </LoadingButton>
         </DialogActions>

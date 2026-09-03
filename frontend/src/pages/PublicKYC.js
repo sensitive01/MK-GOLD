@@ -185,6 +185,8 @@ export default function PublicKYC() {
         source: formValues.source,
         status: formValues.status,
         enqID: enquiryId,
+        chooseId: formValues.chooseId,
+        idNo: formValues.idNo,
       };
 
       try {

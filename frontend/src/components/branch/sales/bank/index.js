@@ -36,6 +36,7 @@ import Iconify from '../../../iconify';
 import Scrollbar from '../../../scrollbar';
 import { getBankById, createBank, deleteBankById } from '../../../../apis/branch/customer-bank';
 import { createFile } from '../../../../apis/branch/fileupload';
+import global from '../../../../utils/global';
 
 const style = {
   position: 'absolute',
@@ -86,16 +87,20 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
               severity: 'error',
             });
           } else {
-            getBankById(selectedUser._id).then((data) => {
-              setData(data.data);
-            });
             const formData = new FormData();
             formData.append('uploadId', data.data.fileUpload.uploadId);
             formData.append('uploadName', data.data.fileUpload.uploadName);
             formData.append('uploadType', 'proof');
             formData.append('uploadedFile', values.proofFile);
             formData.append('documentType', values.proofType);
-            createFile(formData);
+            
+            createFile(formData).then(() => {
+              getBankById(selectedUser._id).then((bankData) => {
+                setData(bankData.data);
+                window.dispatchEvent(new CustomEvent('bankUpdated'));
+              });
+            });
+            
             resetForm();
             setFieldValue('proofFile', {});
             setBankProofPreview(null);
@@ -409,7 +414,7 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
     setRowsPerPage(parseInt(event.target.value, 10));
   };
 
-  useEffect(() => {
+  const fetchBank = () => {
     if (selectedUser) {
       getBankById(selectedUser._id).then((data) => {
         setData(data.data);
@@ -418,7 +423,13 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
         }
       });
     }
-  }, [selectedUser]);
+  };
+
+  useEffect(() => {
+    fetchBank();
+    window.addEventListener('bankUpdated', fetchBank);
+    return () => window.removeEventListener('bankUpdated', fetchBank);
+  }, [selectedUser, selectedBank]);
 
   const handleSelect = (bank) => {
     if (selectedBank && selectedBank._id === bank._id) {
@@ -432,6 +443,7 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
     deleteBankById(selectedUser._id, openId).then(() => {
       getBankById(selectedUser._id).then((data) => {
         setData(data.data);
+        window.dispatchEvent(new CustomEvent('bankUpdated'));
       });
       handleCloseDeleteModal();
     });
@@ -459,6 +471,7 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
                   <TableCell align="left">Account Holder Name</TableCell>
                   <TableCell align="left">Branch</TableCell>
                   <TableCell align="left">IFSC Code</TableCell>
+                  <TableCell align="left">Proof</TableCell>
                   <TableCell align="left">Action</TableCell>
                 </TableRow>
               </TableHead>
@@ -473,6 +486,33 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
                     <TableCell align="left">{sentenceCase(e.accountHolderName)}</TableCell>
                     <TableCell align="left">{sentenceCase(e.branch)}</TableCell>
                     <TableCell align="left">{e.ifscCode}</TableCell>
+                    <TableCell align="left">
+                      {e.proof?.uploadedFile ? (
+                        e.proof?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
+                          <a
+                            href={e.proof.uploadedFile.startsWith('http') ? e.proof.uploadedFile : `${global.baseURL}/${e.proof.uploadedFile}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <img
+                              src={e.proof.uploadedFile.startsWith('http') ? e.proof.uploadedFile : `${global.baseURL}/${e.proof.uploadedFile}`}
+                              alt="document"
+                              style={{ width: '80px' }}
+                            />
+                          </a>
+                        ) : (
+                          <a
+                            href={e.proof.uploadedFile.startsWith('http') ? e.proof.uploadedFile : `${global.baseURL}/${e.proof.uploadedFile}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <img src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />
+                          </a>
+                        )
+                      ) : 'N/A'}
+                    </TableCell>
                     <TableCell align="left">
                       {!(selectedUser?.sales?.some((sale) => sale.bank === e._id)) && (
                         <Button

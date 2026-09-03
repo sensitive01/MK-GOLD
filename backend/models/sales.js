@@ -211,6 +211,7 @@ const Sales = mongoose.model(
           performedBy: { type: mongoose.Schema.Types.ObjectId, ref: "employees" },
           performedAt: { type: Date, default: Date.now },
           details: { type: String },
+          proof: { type: String },
           timeTaken: { type: Number }, // in seconds
         },
       ],

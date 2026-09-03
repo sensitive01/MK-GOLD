@@ -68,6 +68,30 @@ async function find(query = {}) {
             { $unwind: "$bank" },
             { $match: { $expr: { $eq: ["$bank._id", "$$bankId"] } } },
             { $replaceRoot: { newRoot: "$bank" } },
+            {
+              $lookup: {
+                from: "fileuploads",
+                let: { bid: "$_id" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: [{ $toString: "$uploadId" }, { $toString: "$$bid" }] },
+                          { $eq: ["$uploadName", "customer_bank"] }
+                        ]
+                      }
+                    }
+                  }
+                ],
+                as: "proofFiles",
+              },
+            },
+            {
+              $addFields: {
+                proof: { $first: "$proofFiles" }
+              }
+            },
           ],
         },
       },
@@ -126,6 +150,22 @@ async function find(query = {}) {
               },
             },
             {
+              $lookup: {
+                from: "fileuploads",
+                let: { customerId: "$_id" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }]
+                      }
+                    }
+                  }
+                ],
+                as: "kycProofs",
+              },
+            },
+            {
               $addFields: {
                 profileImage: { $first: "$profileImage" },
                 signatureImage: { $first: "$signatureImage" },
@@ -139,10 +179,117 @@ async function find(query = {}) {
       {
         $lookup: {
           from: "fileuploads",
-          localField: "_id",
-          foreignField: "uploadId",
+          let: { 
+            saleId: "$_id", 
+            releaseIds: { $map: { input: { $ifNull: ["$release", []] }, as: "r", in: "$$r._id" } } 
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$uploadId", { $concatArrays: [["$$saleId"], "$$releaseIds"] }]
+                }
+              }
+            }
+          ],
           as: "proof",
         },
+      },
+      {
+        $lookup: {
+          from: "transits",
+          localField: "_id",
+          foreignField: "saleIds",
+          as: "transits"
+        }
+      },
+      {
+        $lookup: {
+          from: "fileuploads",
+          let: { 
+            transitProofIds: { 
+              $filter: {
+                input: {
+                  $concatArrays: [
+                    { $map: { input: "$transits", as: "t", in: "$$t.proof" } },
+                    { $map: { input: "$transits", as: "t", in: "$$t.receivedProof" } }
+                  ]
+                },
+                as: "pid",
+                cond: { $ne: ["$$pid", null] }
+              }
+            } 
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$_id", "$$transitProofIds"]
+                }
+              }
+            }
+          ],
+          as: "transitProofs",
+        }
+      },
+      {
+        $addFields: {
+          proof: { $concatArrays: ["$proof", "$transitProofs"] }
+        }
+      },
+      {
+         $project: {
+            transits: 0,
+            transitProofs: 0
+         }
+      },
+      {
+        $lookup: {
+          from: "meltings",
+          localField: "_id",
+          foreignField: "saleIds",
+          as: "meltings"
+        }
+      },
+      {
+        $lookup: {
+          from: "fileuploads",
+          let: { 
+            meltingProofIds: { 
+              $filter: {
+                input: {
+                  $concatArrays: [
+                    { $map: { input: "$meltings", as: "m", in: "$$m.meltProof" } },
+                    { $map: { input: "$meltings", as: "m", in: "$$m.afterMeltProof" } }
+                  ]
+                },
+                as: "pid",
+                cond: { $ne: ["$$pid", null] }
+              }
+            } 
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$_id", "$$meltingProofIds"]
+                }
+              }
+            }
+          ],
+          as: "meltingProofs",
+        }
+      },
+      {
+        $addFields: {
+          proof: { $concatArrays: ["$proof", "$meltingProofs"] }
+        }
+      },
+      {
+         $project: {
+            meltings: 0,
+            meltingProofs: 0
+         }
       },
       {
         $addFields: {
@@ -304,6 +451,7 @@ async function find(query = {}) {
                 performedBy: "$$tl.performedBy",
                 performedAt: "$$tl.performedAt",
                 details: "$$tl.details",
+                proof: "$$tl.proof",
                 timeTaken: "$$tl.timeTaken",
                 performerName: {
                   $let: {
@@ -381,6 +529,30 @@ async function findById(id) {
             { $unwind: "$bank" },
             { $match: { $expr: { $eq: ["$bank._id", "$$bankId"] } } },
             { $replaceRoot: { newRoot: "$bank" } },
+            {
+              $lookup: {
+                from: "fileuploads",
+                let: { bid: "$_id" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: [{ $toString: "$uploadId" }, { $toString: "$$bid" }] },
+                          { $eq: ["$uploadName", "customer_bank"] }
+                        ]
+                      }
+                    }
+                  }
+                ],
+                as: "proofFiles",
+              },
+            },
+            {
+              $addFields: {
+                proof: { $first: "$proofFiles" }
+              }
+            },
           ],
         },
       },
@@ -439,6 +611,41 @@ async function findById(id) {
               },
             },
             {
+              $lookup: {
+                from: "fileuploads",
+                let: { customerId: "$_id" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }]
+                      }
+                    }
+                  }
+                ],
+                as: "kycProofs",
+              },
+            },
+            {
+              $lookup: {
+                from: "fileuploads",
+                let: { addressIds: "$address._id" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $in: ["$uploadId", { $ifNull: ["$$addressIds", []] }] },
+                          { $eq: ["$uploadName", "customer_address"] }
+                        ]
+                      }
+                    }
+                  }
+                ],
+                as: "addressProofs",
+              },
+            },
+            {
               $addFields: {
                 profileImage: { $first: "$profileImage" },
                 signatureImage: { $first: "$signatureImage" },
@@ -452,10 +659,117 @@ async function findById(id) {
       {
         $lookup: {
           from: "fileuploads",
-          localField: "_id",
-          foreignField: "uploadId",
+          let: { 
+            saleId: "$_id", 
+            releaseIds: { $map: { input: { $ifNull: ["$release", []] }, as: "r", in: "$$r._id" } } 
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$uploadId", { $concatArrays: [["$$saleId"], "$$releaseIds"] }]
+                }
+              }
+            }
+          ],
           as: "proof",
         },
+      },
+      {
+        $lookup: {
+          from: "transits",
+          localField: "_id",
+          foreignField: "saleIds",
+          as: "transits"
+        }
+      },
+      {
+        $lookup: {
+          from: "fileuploads",
+          let: { 
+            transitProofIds: { 
+              $filter: {
+                input: {
+                  $concatArrays: [
+                    { $map: { input: "$transits", as: "t", in: "$$t.proof" } },
+                    { $map: { input: "$transits", as: "t", in: "$$t.receivedProof" } }
+                  ]
+                },
+                as: "pid",
+                cond: { $ne: ["$$pid", null] }
+              }
+            } 
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$_id", "$$transitProofIds"]
+                }
+              }
+            }
+          ],
+          as: "transitProofs",
+        }
+      },
+      {
+        $addFields: {
+          proof: { $concatArrays: ["$proof", "$transitProofs"] }
+        }
+      },
+      {
+         $project: {
+            transits: 0,
+            transitProofs: 0
+         }
+      },
+      {
+        $lookup: {
+          from: "meltings",
+          localField: "_id",
+          foreignField: "saleIds",
+          as: "meltings"
+        }
+      },
+      {
+        $lookup: {
+          from: "fileuploads",
+          let: { 
+            meltingProofIds: { 
+              $filter: {
+                input: {
+                  $concatArrays: [
+                    { $map: { input: "$meltings", as: "m", in: "$$m.meltProof" } },
+                    { $map: { input: "$meltings", as: "m", in: "$$m.afterMeltProof" } }
+                  ]
+                },
+                as: "pid",
+                cond: { $ne: ["$$pid", null] }
+              }
+            } 
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$_id", "$$meltingProofIds"]
+                }
+              }
+            }
+          ],
+          as: "meltingProofs",
+        }
+      },
+      {
+        $addFields: {
+          proof: { $concatArrays: ["$proof", "$meltingProofs"] }
+        }
+      },
+      {
+         $project: {
+            meltings: 0,
+            meltingProofs: 0
+         }
       },
       {
         $addFields: {
@@ -619,6 +933,7 @@ async function findById(id) {
                 performedBy: "$$tl.performedBy",
                 performedAt: "$$tl.performedAt",
                 details: "$$tl.details",
+                proof: "$$tl.proof",
                 timeTaken: "$$tl.timeTaken",
                 performerName: {
                   $let: {
@@ -779,11 +1094,24 @@ async function create(payload) {
       performedAt: new Date(),
     });
 
+    // 7. Initial State (e.g. Bullion Pending)
+    timeline.push({
+      event: payload.status || "bullion pending",
+      performedBy: payload.employee,
+      performedAt: new Date(),
+    });
+
     // Calculate timeTaken (TTL) for each stage
     for (let i = 1; i < timeline.length; i++) {
       const prev = timeline[i - 1];
       const curr = timeline[i];
-      curr.timeTaken = Math.floor((new Date(curr.performedAt) - new Date(prev.performedAt)) / 1000);
+      let diff = Math.floor((new Date(curr.performedAt) - new Date(prev.performedAt)) / 1000);
+      
+      if (diff === 0 && curr.event && curr.event.toLowerCase() === 'bullion pending' && prev.event && prev.event.toLowerCase() === 'billing initiated') {
+        curr.timeTaken = prev.timeTaken || 0;
+      } else {
+        curr.timeTaken = diff;
+      }
     }
 
     payload.timeline = timeline;
@@ -866,6 +1194,7 @@ async function updateWithLog(id, setData, logEntry) {
       performedBy: logEntry.performedBy,
       performedAt: logEntry.performedAt,
       details: logEntry.comments,
+      proof: setData.financeProof || setData.assigneeProof || setData.fundTransferProof || null,
     };
 
     // Calculate TTL for this stage

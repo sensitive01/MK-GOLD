@@ -2,7 +2,19 @@ const Customer = require("../models/customer");
 
 async function findById(id) {
   try {
-    return await Customer.findById(id, { bank: 1, _id: 0 }).exec();
+    const customer = await Customer.findById(id, { bank: 1, _id: 0 }).lean().exec();
+    if (!customer) return null;
+
+    const fileUpload = require("../models/fileupload");
+    const bankIds = customer.bank.map(b => b._id);
+    const proofs = await fileUpload.find({ uploadId: { $in: bankIds }, uploadName: "customer_bank" }).lean().exec();
+    
+    const banksWithProofs = customer.bank.map(b => {
+      const proof = proofs.find(p => p.uploadId.toString() === b._id.toString());
+      return { ...b, proof };
+    });
+    
+    return { bank: banksWithProofs };
   } catch (err) {
     throw err;
   }

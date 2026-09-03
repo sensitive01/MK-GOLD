@@ -107,6 +107,8 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         source: values.source,
         status: values.status,
         enqID: enquiryId,
+        chooseId: values.chooseId,
+        idNo: values.idNo,
       };
       createCustomer(payload).then((data) => {
         if (data.status === false) {

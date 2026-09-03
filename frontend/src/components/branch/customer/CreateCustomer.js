@@ -1,4 +1,4 @@
-import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid, Tab, Tabs, Box, Button, Typography, IconButton } from '@mui/material';
+  import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid, Tab, Tabs, Box, Button, Typography, IconButton } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
@@ -107,6 +107,8 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         source: values.source,
         status: values.status,
         enqID: enquiryId,
+        chooseId: values.chooseId,
+        idNo: values.idNo,
       };
       createCustomer(payload).then((data) => {
         if (data.status === false) {

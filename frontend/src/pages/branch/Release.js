@@ -143,12 +143,17 @@ function Status(props) {
     return <Label color="warning">Release Pending</Label>;
   }
 
-  // Completed
-  if (status === 'completed') {
-    return <Label color="success">Completed</Label>;
-  }
+    // Completed
+    if (status === 'completed') {
+      return <Label color="success">Completed</Label>;
+    }
 
-  // Fallback
+    // Pending Approval (Before Finance completes)
+    if (status === 'pending approval') {
+      return <Label color="info">Pending Approval</Label>;
+    }
+
+    // Fallback
   return <Label color="error">Unknown Status</Label>;
 }
 
@@ -1153,6 +1158,12 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         formData.append('uploadedFile', file);
         formData.append('uploadName', file.name);
         formData.append('uploadId', id);
+        if (proofValues?.documentType) {
+          formData.append('documentType', proofValues.documentType);
+        }
+        if (proofValues?.documentNo) {
+          formData.append('documentNo', proofValues.documentNo);
+        }
         try {
           const res = await createFile(formData);
           if (res.status) {

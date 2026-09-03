@@ -7,6 +7,8 @@ import PropTypes from 'prop-types';
 import { getBranchById, updateBranch } from '../../../apis/admin/branch';
 import { createFile, deleteFileById } from '../../../apis/admin/fileupload';
 import global from '../../../utils/global';
+import MapPicker from '../../../components/MapPicker';
+import { pinToAddress } from 'india-pincode-finder';
 
 const initialValues = {
   branchId: '',
@@ -123,6 +125,22 @@ function UpdateBranch(props) {
       });
     }
   }, [props.id, resetForm, setValues]);
+
+  // Auto-fill city and state from pincode
+  useEffect(() => {
+    if (values && values.pincode && values.pincode.toString().length === 6) {
+      try {
+        const address = pinToAddress(Number(values.pincode));
+        if (address) {
+          const divisionCity = address.divisionname ? address.divisionname.replace(/ Division/gi, '').replace(/ GPO/gi, '').trim() : '';
+          setFieldValue('city', divisionCity || address.district || address.block || '');
+          setFieldValue('state', address.state || '');
+        }
+      } catch (err) {
+        console.error('Error fetching pincode:', err);
+      }
+    }
+  }, [values?.pincode, setFieldValue]);
 
   return (
     <Card sx={{ p: 4, my: 4 }}>
@@ -303,6 +321,13 @@ function UpdateBranch(props) {
                 <MenuItem value="yes">Yes</MenuItem>
               </Select>
             </FormControl>
+          </Grid>
+          <Grid item xs={12}>
+            <MapPicker 
+              lat={values.latitude}
+              lng={values.longitude}
+              setFieldValue={setFieldValue}
+            />
           </Grid>
           <Grid item xs={12}>
             <LoadingButton size="large" type="submit" variant="contained">
