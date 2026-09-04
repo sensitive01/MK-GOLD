@@ -3,6 +3,7 @@ const customerService = require("../../services/customer");
 const Customer = require("../../models/customer");
 const otpService = require("../../services/otp");
 const axios = require("axios");
+const { sendWhatsAppOtp } = require("../../services/whatsapp");
 
 async function login(req, res) {
   try {
@@ -18,7 +19,15 @@ async function login(req, res) {
 
     const otp = String(Math.floor(1000 + Math.random() * 9000)).substring(0, 4);
 
-    console.log("BYPASSING SMS: Customer OTP for", req.body.phoneNumber, "is", otp);
+    const whatsappResult = await sendWhatsAppOtp(req.body.phoneNumber, otp);
+
+    if (!whatsappResult.success) {
+      return res.json({
+        status: false,
+        message: "Failed to send OTP via WhatsApp",
+        data: {},
+      });
+    }
 
     const token = jwt.sign(
       {
@@ -37,43 +46,9 @@ async function login(req, res) {
 
     return res.json({
       status: true,
-      message: "OTP generated successfully (SMS bypassed).",
+      message: "OTP sent successfully via WhatsApp.",
       data: { token, otp },
     });
-
-    /*
-    let data = await axios.get(
-      `https://pgapi.vispl.in/fe/api/v1/send?username=mkgold.trans&password=hhwGK&unicode=false&from=MKGOLD&to=${req.body.phoneNumber}&text=Hi.%20Your%20One%20Time%20Password%20to%20login%20MK%20Gold%20World%20is%20${otp}.%20This%20OTP%20is%20valid%20for%205%20minutes%20only.&dltContentId=1707168542360758659`
-    );
-    if (data.data.statusCode == 200 && data.data.state == "SUBMIT_ACCEPTED") {
-      const token = jwt.sign(
-        {
-          otp: otp,
-          phoneNumber: req.body.phoneNumber,
-        },
-        process.env.SECRET,
-        { expiresIn: "5m" }
-      );
-
-      otpService.create({
-        type: "customer",
-        otp: otp,
-        phoneNumber: req.body.phoneNumber,
-      });
-
-      return res.json({
-        status: true,
-        message: "OTP sent successfully",
-        data: { token, otp },
-      });
-    } else {
-      return res.json({
-        status: false,
-        message: "OTP not sent",
-        data: {},
-      });
-    }
-    */
   } catch (err) {
     return res.json({
       status: false,

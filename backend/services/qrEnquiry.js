@@ -19,7 +19,7 @@ async function generateEnqId() {
       [parts[i], parts[j]] = [parts[j], parts[i]];
     }
 
-    finalId = "ENQ" + parts.join("");
+    finalId = "MKG" + parts.join("");
 
     // Check uniqueness
     const existing = await QREnquiry.findOne({ enqID: finalId });

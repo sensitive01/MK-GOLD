@@ -1,7 +1,8 @@
 const qrService = require("../services/qrEnquiry");
 const otpService = require("../services/otp");
-const smsService = require("../services/sms");
+const { sendWhatsAppOtp, sendValidationUpdate } = require("../services/whatsapp");
 const Customer = require("../models/customer");
+const Branch = require("../models/branch");
 
 async function sendOtp(req, res) {
   try {
@@ -9,9 +10,14 @@ async function sendOtp(req, res) {
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
     await otpService.create({ phoneNumber, otp, type: 'enquiry' });
-    await smsService.sendOtpSms(phoneNumber, otp);
+    
+    const whatsappResult = await sendWhatsAppOtp(phoneNumber, otp);
+    
+    if (!whatsappResult.success) {
+      return res.json({ status: false, message: "Failed to send OTP via WhatsApp" });
+    }
 
-    res.json({ status: true, message: "OTP sent successfully" });
+    res.json({ status: true, message: "OTP sent successfully via WhatsApp" });
   } catch (err) {
     res.json({ status: false, message: err.message });
   }
@@ -61,6 +67,26 @@ async function verifyAndSubmit(req, res) {
     }
 
     const result = await qrService.create({ ...formData, phoneNumber });
+
+    // Send WhatsApp confirmation update with KYC link
+    try {
+      let branchName = "MK Gold";
+      if (result.branch) {
+        const branchRecord = await Branch.findById(result.branch).select("branchName").lean().exec();
+        if (branchRecord && branchRecord.branchName) {
+          branchName = branchRecord.branchName;
+        }
+      }
+      
+      const baseUrl = process.env.PUBLIC_APP_URL || "https://mkgold.tech";
+      const kycLink = `${baseUrl}/k/${result.enqID}`;
+      const customerId = result.mkgCustomerId || result.enqID;
+
+      await sendValidationUpdate(phoneNumber, result.name, branchName, customerId, kycLink);
+    } catch (whatsappErr) {
+      console.error("Failed to send validation WhatsApp update:", whatsappErr.message);
+    }
+
     res.json({ status: true, data: result });
   } catch (err) {
     res.json({ status: false, message: err.message });

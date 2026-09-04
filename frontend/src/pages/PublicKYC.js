@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
   Container,
   Typography,
@@ -78,7 +78,9 @@ const StyledContent = styled('div')(({ theme }) => ({
 }));
 
 export default function PublicKYC() {
-  const { branchId } = useParams();
+  const { branchId, id } = useParams();
+  const [searchParams] = useSearchParams();
+  const targetParam = id || branchId;
   const mdUp = useResponsive('up', 'md');
   const [branch, setBranch] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -95,15 +97,6 @@ export default function PublicKYC() {
   
   const [uploadIdPreview, setUploadIdPreview] = useState(null);
   const [signaturePreview, setSignaturePreview] = useState(null);
-
-  useEffect(() => {
-    axios.get(`${global.baseURL}/api/v1.0/public/branch/${branchId}`)
-      .then((res) => {
-        if (res.data.status) setBranch(res.data.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [branchId]);
 
   const capture = useCallback(() => {
     const imageSrc = webcamRef.current.getScreenshot();
@@ -275,21 +268,19 @@ export default function PublicKYC() {
     }
   }, [values.pincode, setFieldValue]);
 
-  const handleFetchEnquiry = async () => {
-    if (!enquiryId) return;
+  const handleFetchEnquiry = async (idOverride) => {
+    const idToFetch = idOverride || enquiryId;
+    if (!idToFetch) return;
     setFetchingEnquiry(true);
     setError('');
     try {
-      const res = await axios.get(`${global.baseURL}/api/v1.0/public/qr-enquiry/get-by-enqid/${enquiryId}`);
+      const res = await axios.get(`${global.baseURL}/api/v1.0/public/qr-enquiry/get-by-enqid/${encodeURIComponent(idToFetch.trim())}`);
       if (res.data.status) {
         const data = res.data.data;
-        setValues({
-          ...values,
-          name: data.name || values.name,
-          phoneNumber: data.phoneNumber || values.phoneNumber,
-          email: data.email || values.email,
-          pincode: data.pincode || values.pincode,
-        });
+        if (data.name) setFieldValue('name', data.name);
+        if (data.phoneNumber) setFieldValue('phoneNumber', data.phoneNumber);
+        if (data.email) setFieldValue('email', data.email);
+        if (data.pincode) setFieldValue('pincode', data.pincode);
       } else {
         setError(res.data.message);
       }
@@ -298,6 +289,66 @@ export default function PublicKYC() {
     }
     setFetchingEnquiry(false);
   };
+
+  useEffect(() => {
+    if (!targetParam) {
+      setLoading(false);
+      return;
+    }
+
+    const isEnquiryId = Boolean(id) || targetParam.toUpperCase().startsWith('MKG') || targetParam.length !== 24;
+
+    if (isEnquiryId) {
+      setLoading(true);
+      setError('');
+      setEnquiryId(targetParam);
+      axios.get(`${global.baseURL}/api/v1.0/public/qr-enquiry/get-by-enqid/${encodeURIComponent(targetParam.trim())}`)
+        .then((res) => {
+          if (res.data.status && res.data.data) {
+            const data = res.data.data;
+            if (data.branch) {
+              setBranch(data.branch);
+            }
+            if (data.enqID) setEnquiryId(data.enqID);
+            if (data.name) setFieldValue('name', data.name);
+            if (data.phoneNumber) setFieldValue('phoneNumber', data.phoneNumber);
+            if (data.email) setFieldValue('email', data.email);
+            if (data.pincode) setFieldValue('pincode', data.pincode);
+          } else {
+            setError(res.data.message || 'Enquiry details not found');
+          }
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error(err);
+          setError('Failed to load enquiry details');
+          setLoading(false);
+        });
+    } else {
+      // Normal branchId route (/kyc/69b39dd649121dda25fbf607)
+      setLoading(true);
+      axios.get(`${global.baseURL}/api/v1.0/public/branch/${targetParam}`)
+        .then((res) => {
+          if (res.data.status) setBranch(res.data.data);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+
+      let urlEnqId = null;
+      for (const [key, value] of searchParams.entries()) {
+        const lower = key.toLowerCase();
+        if (lower === 'enqid' || lower === 'enqld' || lower === 'enq_id' || lower === 'customerid') {
+          urlEnqId = value;
+          break;
+        }
+      }
+      if (urlEnqId) {
+        const cleanId = urlEnqId.trim();
+        setEnquiryId(cleanId);
+        handleFetchEnquiry(cleanId);
+      }
+    }
+  }, [targetParam, id, searchParams, setFieldValue]);
 
   const handleNext = () => {
     // Validate basic fields before moving to next tab if needed
@@ -376,7 +427,7 @@ export default function PublicKYC() {
                     <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4 }}>
                         Thank you for registering with MK Gold World. Our team will review your details.
                     </Typography>
-                    <Button variant="contained" onClick={() => window.location.href = `/enquiry/${branchId}`}>
+                    <Button variant="contained" onClick={() => window.location.href = `/enquiry/${branch?._id || branchId}`}>
                         Return to Enquiry
                     </Button>
                 </Box>

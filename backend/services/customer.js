@@ -3,6 +3,7 @@ const otpService = require("./otp");
 const mongoose = require("mongoose");
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
+const { sendWhatsAppOtp } = require("./whatsapp");
 
 async function find(query = {}) {
   try {
@@ -314,15 +315,11 @@ async function remove(id) {
 
 async function sendOtp(payload) {
   try {
-    const otp = String(Math.floor(100000 + Math.random() * 900000)).substring(
-      0,
-      6
-    );
+    const otp = String(Math.floor(100000 + Math.random() * 900000)).substring(0, 6);
 
-    const smsService = require("./sms");
-    const smsRes = await smsService.sendOtpSms(payload.phoneNumber, otp);
+    const whatsappRes = await sendWhatsAppOtp(payload.phoneNumber, otp);
 
-    if (smsRes.success) {
+    if (whatsappRes.success) {
       const token = jwt.sign(
         {
           sub: {
@@ -343,15 +340,15 @@ async function sendOtp(payload) {
 
       return {
         status: true,
-        message: "OTP sent Successfully.",
+        message: "OTP sent Successfully via WhatsApp.",
         data: { token },
       };
     } else {
-      console.log("OTP failed with error:", smsRes.error);
+      console.log("OTP failed with error:", whatsappRes.error);
       return {
         status: false,
-        message: `OTP not sent: ${smsRes.error}`,
-        data: { error: smsRes.error },
+        message: `OTP not sent: ${whatsappRes.error}`,
+        data: { error: whatsappRes.error },
       };
     }
   } catch (err) {

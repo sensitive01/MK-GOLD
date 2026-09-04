@@ -471,6 +471,10 @@ export default function Router() {
       element: <PublicKYC />,
     },
     {
+      path: '/k/:id',
+      element: <PublicKYC />,
+    },
+    {
       element: <ErrorPageLayout />,
       children: [
         { path: 'profile', element: <Profile /> },
