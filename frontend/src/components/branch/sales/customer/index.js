@@ -60,11 +60,12 @@ const style = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 800,
-  maxHeight: '95%',
+  width: { xs: '95%', sm: '90%', md: 800 },
+  maxWidth: 800,
+  maxHeight: '94vh',
   bgcolor: 'background.paper',
   boxShadow: 24,
-  p: 4,
+  p: { xs: 2, sm: 3, md: 4 },
   borderRadius: 2,
   overflow: 'auto',
 };
@@ -157,11 +158,7 @@ function Customer(props) {
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
-  if (width < 899) {
-    style.width = '80%';
-  } else {
-    style.width = 800;
-  }
+
 
   const displayData = (() => {
     const list = data || [];
@@ -577,15 +574,28 @@ function Customer(props) {
 
   return (
     <>
-      <Card sx={{ display: step === 1 ? 'block' : 'none', p: 4, my: 4 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mt={2} mb={3}>
-          <Typography variant="h4" gutterBottom>
+      <Card sx={{ display: step === 1 ? 'block' : 'none', p: { xs: 2, md: 4 }, my: { xs: 2, md: 4 } }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'stretch', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={2}
+          mt={1}
+          mb={3}
+        >
+          <Typography variant="h4" sx={{ minWidth: 'fit-content' }}>
             Customers
           </Typography>
-          <Stack direction="row" spacing={2}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+            spacing={1.5}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
+          >
             <TextField
               size="small"
               placeholder="Search by Phone..."
+              sx={{ width: { xs: '100%', sm: 260 } }}
               onChange={(e) => {
                 const val = e.target.value;
                 if (val.length >= 3) {
@@ -603,16 +613,17 @@ function Customer(props) {
             <Button
               variant="contained"
               startIcon={<Iconify icon="eva:plus-fill" />}
+              sx={{ whiteSpace: 'nowrap', width: { xs: '100%', sm: 'auto' } }}
               onClick={() => {
                 setOpenId(null);
-              resetForm();
-              setImg(null);
-              setUploadIdPreview(null);
-              setSignaturePreview(null);
-              setOtpStatus(null);
-              setAltOtpStatus(null);
-              setTabValue(0);
-              setCustomerModal(true);
+                resetForm();
+                setImg(null);
+                setUploadIdPreview(null);
+                setSignaturePreview(null);
+                setOtpStatus(null);
+                setAltOtpStatus(null);
+                setTabValue(0);
+                setCustomerModal(true);
               }}
             >
               New Customer
@@ -781,82 +792,127 @@ function Customer(props) {
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
         </Scrollbar>
-        <LoadingButton
-          size="large"
-          name="submit"
-          type="button"
-          variant="contained"
-          sx={{ ml: 2 }}
-          onClick={() => {
-            if (!selectedUser) {
-              setNotify({
-                open: true,
-                message: 'Please select customer',
-                severity: 'info',
-              });
-            } else {
-              setStep(step + 1);
-            }
-          }}
-        >
-          Next
-        </LoadingButton>
+        <Box sx={{ mt: 3, pl: { xs: 0, sm: 2 }, display: 'flex', justifyContent: { xs: 'stretch', sm: 'flex-start' } }}>
+          <LoadingButton
+            size="large"
+            name="submit"
+            type="button"
+            variant="contained"
+            sx={{ width: { xs: '100%', sm: 'auto' }, px: { sm: 4 } }}
+            onClick={() => {
+              if (!selectedUser) {
+                setNotify({
+                  open: true,
+                  message: 'Please select customer',
+                  severity: 'info',
+                });
+              } else {
+                setStep(step + 1);
+              }
+            }}
+          >
+            Next
+          </LoadingButton>
+        </Box>
       </Card>
 
-      <Modal
+      <Dialog
         open={customerModal}
         onClose={() => setCustomerModal(false)}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
+        maxWidth="md"
+        fullWidth
+        scroll="paper"
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            m: { xs: 1.5, sm: 3 },
+            maxHeight: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 64px)' },
+            display: 'flex',
+            flexDirection: 'column',
+          },
+        }}
       >
-        <Box sx={style}>
-          <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 3 }}>
+        <DialogTitle
+          sx={{
+            m: 0,
+            p: { xs: 2, sm: 2.5 },
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: 1,
+            borderColor: 'divider',
+          }}
+        >
+          <Typography variant="h5" component="span" fontWeight="bold">
             {openId ? 'Edit Customer' : 'Add Customer'}
-            <Button
-              sx={{ color: '#222', float: 'right' }}
-              startIcon={<CloseIcon />}
-              onClick={() => setCustomerModal(false)}
-            />
           </Typography>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmit(e);
-            }}
-            autoComplete="off"
+          <IconButton
+            aria-label="close"
+            onClick={() => setCustomerModal(false)}
+            sx={{ color: 'text.secondary', p: 0.5 }}
           >
-            <Tabs
-              value={tabValue}
-              onChange={(e, newValue) => setTabValue(newValue)}
-              sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
-              variant="fullWidth"
-            >
-              <Tab label="1. Details" />
-              <Tab label="2. Documents" />
-              <Tab label="3. Photo Capture" />
-            </Tabs>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
 
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', px: { xs: 1, sm: 2.5 }, bgcolor: 'background.neutral' }}>
+          <Tabs
+            value={tabValue}
+            onChange={(e, newValue) => setTabValue(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+            sx={{
+              minHeight: 48,
+              '& .MuiTab-root': {
+                minWidth: { xs: 'auto', sm: 120 },
+                px: { xs: 1.5, sm: 2.5 },
+                py: 1,
+                fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+                fontWeight: 600,
+                textTransform: 'none',
+                whiteSpace: 'nowrap',
+              },
+            }}
+          >
+            <Tab label="1. Details" />
+            <Tab label="2. Documents" />
+            <Tab label="3. Photo Capture" />
+          </Tabs>
+        </Box>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit(e);
+          }}
+          autoComplete="off"
+          style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}
+        >
+          <DialogContent sx={{ p: { xs: 2, sm: 3 }, overflowY: 'auto' }}>
             {tabValue === 0 && (
-              <Grid container spacing={3}>
+              <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }} sx={{ pt: 0.5 }}>
                 <Grid item xs={12}>
-                  <Stack direction="row" spacing={2} alignItems="center">
-                      <TextField
-                          size="small"
-                          label="Enquiry ID (e.g. ENQ123A)"
-                          value={enquiryId}
-                          onChange={(e) => setEnquiryId(e.target.value)}
-                          sx={{ maxWidth: 300 }}
-                      />
-                      <LoadingButton
-                          loading={fetchingEnquiry}
-                          variant="outlined"
-                          onClick={handleFetchEnquiry}
-                      >
-                          Fetch Detail
-                      </LoadingButton>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <TextField
+                      size="small"
+                      label="Enquiry ID (e.g. ENQ123A)"
+                      placeholder="e.g. ENQ123A"
+                      value={enquiryId}
+                      onChange={(e) => setEnquiryId(e.target.value)}
+                      sx={{ flex: 1, maxWidth: { xs: '100%', sm: 320 } }}
+                    />
+                    <LoadingButton
+                      loading={fetchingEnquiry}
+                      variant="outlined"
+                      onClick={handleFetchEnquiry}
+                      sx={{ whiteSpace: 'nowrap', minWidth: 'fit-content' }}
+                    >
+                      Fetch Detail
+                    </LoadingButton>
                   </Stack>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} sm={6} md={4}>
                   <TextField
                     name="name"
                     value={values.name}
@@ -867,7 +923,7 @@ function Customer(props) {
                     onChange={handleChange}
                   />
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} sm={6} md={4}>
                   <TextField
                     name="phoneNumber"
                     value={focusedField === 'phoneNumber' ? values.phoneNumber : global.maskPhoneNumber(values.phoneNumber)}
@@ -941,7 +997,7 @@ function Customer(props) {
                     } : null}
                   />
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} sm={6} md={4}>
                   <TextField
                     name="alternatePhoneNumber"
                     value={focusedField === 'alternatePhoneNumber' ? values.alternatePhoneNumber : global.maskPhoneNumber(values.alternatePhoneNumber)}
@@ -989,7 +1045,7 @@ function Customer(props) {
                   />
                 </Grid>
                 {values.alternatePhoneNumber?.length === 10 && altOtpStatus !== 'success' && (
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} sm={6} md={4}>
                     <TextField
                       name="altOtp"
                       value={values.altOtp}
@@ -1018,7 +1074,7 @@ function Customer(props) {
                     {altOtpStatus === 'error' && <Typography variant="caption" color="error.main">Invalid OTP</Typography>}
                   </Grid>
                 )}
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} sm={6} md={4}>
                   <TextField
                     name="email"
                     value={values.email}
@@ -1029,7 +1085,7 @@ function Customer(props) {
                     onChange={handleChange}
                   />
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} sm={6} md={4}>
                   <LocalizationProvider dateAdapter={AdapterMoment}>
                     <DesktopDatePicker
                       name="dob"
@@ -1044,12 +1100,12 @@ function Customer(props) {
                     />
                   </LocalizationProvider>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} sm={6} md={4}>
                   <FormControl fullWidth error={touched.gender && errors.gender && true}>
-                    <InputLabel id="select-label">Select gender</InputLabel>
+                    <InputLabel id="select-gender-label">Select gender</InputLabel>
                     <Select
-                      labelId="select-label"
-                      id="select"
+                      labelId="select-gender-label"
+                      id="select-gender"
                       label={touched.gender && errors.gender ? errors.gender : 'Select gender'}
                       name="gender"
                       value={values.gender}
@@ -1062,12 +1118,12 @@ function Customer(props) {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} sm={6} md={4}>
                   <FormControl fullWidth error={touched.maritalStatus && errors.maritalStatus && true}>
-                    <InputLabel id="select-label">Select marital status</InputLabel>
+                    <InputLabel id="select-marital-label">Select marital status</InputLabel>
                     <Select
-                      labelId="select-label"
-                      id="select"
+                      labelId="select-marital-label"
+                      id="select-marital"
                       label={
                         touched.maritalStatus && errors.maritalStatus ? errors.maritalStatus : 'Select marital status'
                       }
@@ -1081,12 +1137,12 @@ function Customer(props) {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} sm={6} md={4}>
                   <FormControl fullWidth error={touched.source && errors.source && true}>
-                    <InputLabel id="select-label">Select source</InputLabel>
+                    <InputLabel id="select-source-label">Select source</InputLabel>
                     <Select
-                      labelId="select-label"
-                      id="select"
+                      labelId="select-source-label"
+                      id="select-source"
                       label={touched.source && errors.source ? errors.source : 'Select source'}
                       name="source"
                       value={values.source}
@@ -1108,13 +1164,13 @@ function Customer(props) {
             )}
 
             {tabValue === 1 && (
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
+              <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }} sx={{ pt: 0.5 }}>
+                <Grid item xs={12} sm={6}>
                   <FormControl fullWidth error={touched.chooseId && errors.chooseId && true}>
-                    <InputLabel id="select-label">Select choose id</InputLabel>
+                    <InputLabel id="select-id-label">Select choose id</InputLabel>
                     <Select
-                      labelId="select-label"
-                      id="select"
+                      labelId="select-id-label"
+                      id="select-id"
                       label={touched.chooseId && errors.chooseId ? errors.chooseId : 'Select choose id'}
                       name="chooseId"
                       value={values.chooseId}
@@ -1130,7 +1186,7 @@ function Customer(props) {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} sm={6}>
                   <TextField
                     name="idNo"
                     value={values.idNo}
@@ -1141,97 +1197,111 @@ function Customer(props) {
                     onChange={handleChange}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
+                <Grid item xs={12} sm={6}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
                     <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
                       Upload ID:
                     </Typography>
-                    <TextField
-                      name="uploadId"
-                      type={'file'}
-                      onBlur={handleBlur}
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        setValues({ ...values, uploadId: file });
-                        if (file) {
-                          setUploadIdPreview(URL.createObjectURL(file));
-                        }
-                      }}
-                      size="small"
-                      fullWidth
-                    />
-                    {uploadIdPreview && (
-                      <IconButton
-                        component="a"
-                        href={uploadIdPreview}
-                        target="_blank"
-                        rel="noreferrer"
-                        color="secondary"
-                        title="View ID Document"
-                      >
-                        <Iconify icon="mdi:eye" />
-                      </IconButton>
-                    )}
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+                      <TextField
+                        name="uploadId"
+                        type={'file'}
+                        onBlur={handleBlur}
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          setValues({ ...values, uploadId: file });
+                          if (file) {
+                            setUploadIdPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        size="small"
+                        fullWidth
+                      />
+                      {uploadIdPreview && (
+                        <IconButton
+                          component="a"
+                          href={uploadIdPreview}
+                          target="_blank"
+                          rel="noreferrer"
+                          color="secondary"
+                          title="View ID Document"
+                        >
+                          <Iconify icon="mdi:eye" />
+                        </IconButton>
+                      )}
+                    </Box>
                   </Stack>
                 </Grid>
-                <Grid item xs={12} md={6}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
+                <Grid item xs={12} sm={6}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
                     <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
                       Signature:
                     </Typography>
-                    <TextField
-                      name="signature"
-                      type={'file'}
-                      onBlur={handleBlur}
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        setValues({ ...values, signature: file });
-                        if (file) {
-                          setSignaturePreview(URL.createObjectURL(file));
-                        }
-                      }}
-                      size="small"
-                      fullWidth
-                    />
-                    {signaturePreview && (
-                      <IconButton
-                        component="a"
-                        href={signaturePreview}
-                        target="_blank"
-                        rel="noreferrer"
-                        color="secondary"
-                        title="View Signature"
-                      >
-                        <Iconify icon="mdi:eye" />
-                      </IconButton>
-                    )}
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+                      <TextField
+                        name="signature"
+                        type={'file'}
+                        onBlur={handleBlur}
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          setValues({ ...values, signature: file });
+                          if (file) {
+                            setSignaturePreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        size="small"
+                        fullWidth
+                      />
+                      {signaturePreview && (
+                        <IconButton
+                          component="a"
+                          href={signaturePreview}
+                          target="_blank"
+                          rel="noreferrer"
+                          color="secondary"
+                          title="View Signature"
+                        >
+                          <Iconify icon="mdi:eye" />
+                        </IconButton>
+                      )}
+                    </Box>
                   </Stack>
                 </Grid>
               </Grid>
             )}
 
             {tabValue === 2 && (
-              <Grid container spacing={3}>
+              <Grid container spacing={2} sx={{ pt: 0.5 }}>
                 {customerModal && (
                   <Grid item xs={12}>
                     {img === null ? (
-                      <div style={{ textAlign: 'center' }}>
-                        <Webcam
-                          mirrored
-                          audio={false}
-                          height={240}
-                          width={320}
-                          ref={webcamRef}
-                          screenshotFormat="image/jpeg"
-                          videoConstraints={videoConstraints}
-                        />
-                        <br />
-                        <Button size="small" variant="contained" onClick={capture} sx={{ mt: 1 }}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Box
+                          sx={{
+                            maxWidth: 320,
+                            mx: 'auto',
+                            borderRadius: 1.5,
+                            overflow: 'hidden',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            '& video': { width: '100% !important', height: 'auto !important' },
+                          }}
+                        >
+                          <Webcam
+                            mirrored
+                            audio={false}
+                            ref={webcamRef}
+                            screenshotFormat="image/jpeg"
+                            videoConstraints={videoConstraints}
+                            style={{ width: '100%', height: 'auto', display: 'block' }}
+                          />
+                        </Box>
+                        <Button size="medium" variant="contained" onClick={capture} sx={{ mt: 2 }}>
                           Capture photo
                         </Button>
-                      </div>
+                      </Box>
                     ) : (
-                      <div style={{ textAlign: 'center' }}>
+                      <Box sx={{ textAlign: 'center' }}>
                         <img 
                           src={img} 
                           alt="Captured" 
@@ -1245,57 +1315,73 @@ function Customer(props) {
                             border: '1px solid #ccc' 
                           }} 
                         />
-                        <Button size="small" variant="contained" color="warning" onClick={() => setImg(null)} sx={{ mt: 1 }}>
+                        <Button size="medium" variant="contained" color="warning" onClick={() => setImg(null)} sx={{ mt: 2 }}>
                           Retake
                         </Button>
-                      </div>
+                      </Box>
                     )}
                   </Grid>
                 )}
               </Grid>
             )}
+          </DialogContent>
 
-            <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3, borderTop: 1, borderColor: 'divider', pt: 2 }}>
+          <DialogActions
+            sx={{
+              px: { xs: 2, sm: 3 },
+              py: { xs: 1.5, sm: 2 },
+              borderTop: 1,
+              borderColor: 'divider',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Box>
               {tabValue > 0 && (
                 <Button
-                  size="large"
+                  size="medium"
                   variant="outlined"
                   onClick={() => setTabValue((prev) => prev - 1)}
+                  sx={{ minWidth: { xs: 70, sm: 100 } }}
                 >
                   Back
                 </Button>
               )}
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+              <Button
+                size="medium"
+                variant="outlined"
+                color="inherit"
+                onClick={() => setCustomerModal(false)}
+              >
+                Close
+              </Button>
               {tabValue < 2 ? (
                 <Button
-                  size="large"
+                  size="medium"
                   variant="contained"
                   onClick={() => setTabValue((prev) => prev + 1)}
+                  sx={{ minWidth: { xs: 80, sm: 100 } }}
                 >
                   Next
                 </Button>
               ) : (
                 <LoadingButton
-                  size="large"
+                  size="medium"
                   type="submit"
                   variant="contained"
                   startIcon={<SaveIcon />}
+                  sx={{ minWidth: { xs: 80, sm: 100 } }}
                 >
                   Save
                 </LoadingButton>
               )}
-              <Button
-                size="large"
-                variant="outlined"
-                color="error"
-                startIcon={<CloseIcon />}
-                onClick={() => setCustomerModal(false)}
-              >
-                Close
-              </Button>
-            </Stack>
-          </form>
-        </Box>
-      </Modal>
+            </Box>
+          </DialogActions>
+        </form>
+      </Dialog>
 
       <Modal
         open={openDeleteModal}
@@ -1303,7 +1389,7 @@ function Customer(props) {
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
       >
-        <Box sx={{ ...style, width: 400 }}>
+        <Box sx={{ ...style, width: { xs: '90%', sm: 400 }, maxWidth: 400 }}>
           <Typography id="modal-modal-title" variant="h6" component="h2">
             Delete
           </Typography>

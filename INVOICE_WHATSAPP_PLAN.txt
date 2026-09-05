@@ -1,0 +1,108 @@
+================================================================================
+PLAN: AUTOMATED INVOICE PDF & WHATSAPP NOTIFICATION FOR COMPLETED PHYSICAL BILLS
+================================================================================
+
+1. OBJECTIVE:
+When a physical bill's status is changed to "completed" after finance approval,
+the system will automatically generate a purchase invoice PDF, upload it to 
+Cloudinary to get a public HTTPS URL, and send it to the customer via WhatsApp 
+using the approved "invoice" template.
+
+--------------------------------------------------------------------------------
+2. WHATSAPP TEMPLATE PAYLOAD & SPECIFICATION:
+--------------------------------------------------------------------------------
+Template Name: invoice
+Language: en
+
+Sample Payload:
+{
+  "messaging_product": "whatsapp",
+  "recipient_type": "individual",
+  "to": "917760693359",
+  "type": "template",
+  "template": {
+    "name": "invoice",
+    "language": {
+      "code": "en"
+    },
+    "components": [
+      {
+        "type": "header",
+        "parameters": [
+          {
+            "type": "document",
+            "document": {
+              "link": "https://res.cloudinary.com/.../MKGold_Invoice_BILL1001.pdf",
+              "filename": "MKGold_Invoice_BILL1001.pdf"
+            }
+          }
+        ]
+      },
+      {
+        "type": "body",
+        "parameters": [
+          { "type": "text", "text": "Dilip" },      // {{1}}: Customer Name
+          { "type": "text", "text": "Mysore" },     // {{2}}: Branch Name
+          { "type": "text", "text": "9850" },       // {{3}}: Gold Rate per gm
+          { "type": "text", "text": "BILL1001" },   // {{4}}: Bill Number / ID
+          { "type": "text", "text": "25.50" },      // {{5}}: Total Gross Weight (gms)
+          { "type": "text", "text": "24.80" },      // {{6}}: Total Net Weight (gms)
+          { "type": "text", "text": "244280" }      // {{7}}: Net / Payable Amount (Rs)
+        ]
+      }
+    ]
+  }
+}
+
+--------------------------------------------------------------------------------
+3. STEP-BY-STEP IMPLEMENTATION PLAN:
+--------------------------------------------------------------------------------
+
+STEP A: PDF Generation Service (`backend/services/invoicePdf.js`)
+- Install `pdfkit` in backend (`npm install pdfkit`).
+- Build invoice PDF matching MK Gold purchase invoice layout:
+  * Company Header: MK Gold World logo, branch name, GST number, address, phone.
+  * Invoice Metadata: Invoice number (billId), date & time.
+  * Customer Section: Name, masked phone number, address, ID proof details.
+  * Ornaments Table: Type, quantity, gross weight, stone weight, net weight, purity %, amount.
+  * Valuation Summary: Total gross weight, net weight, gold rate, margin, CGST, SGST, payable amount.
+- Upload generated PDF buffer to Cloudinary using existing Cloudinary credentials
+  (folder: `mk_gold_invoices`, filename: `MKGold_Invoice_${billId}.pdf`)
+  to obtain a permanent, publicly accessible HTTPS URL.
+
+STEP B: WhatsApp Invoice Function (`backend/services/whatsapp.js`)
+- Add `sendWhatsAppInvoice(to, pdfUrl, filename, invoiceData)`:
+  * Builds the document header component with `pdfUrl` and `filename`.
+  * Formats the 7 parameters for the body component:
+    1. Customer Name (`sale.customer.name`)
+    2. Branch Name (`sale.branch.branchName`)
+    3. Gold Rate (`sale.goldRate`)
+    4. Bill Number (`sale.billId`)
+    5. Gross Weight (sum of ornament gross weights)
+    6. Net Weight (`sale.netWeight`)
+    7. Payable Amount (`sale.payableAmount` or `sale.netAmount`)
+  * Calls `sendWhatsAppTemplate` with template "invoice" and language "en".
+
+STEP C: Sales Model & Controller Trigger (`backend/services/sales.js`)
+- In `backend/models/sales.js`:
+  Add optional fields:
+  * `invoicePdfUrl: { type: String }`
+  * `invoiceSent: { type: Boolean, default: false }`
+- In `backend/services/sales.js`:
+  In `update` and `updateWithLog`:
+  When `sale.saleType === 'physical'` and status becomes `'completed'`:
+  * Check that `!sale.invoiceSent` to prevent duplicate sends.
+  * Asynchronously:
+    1. Populate customer and branch on sale.
+    2. Generate PDF and upload to Cloudinary.
+    3. Update sale with `invoicePdfUrl` and set `invoiceSent: true`.
+    4. Call `sendWhatsAppInvoice` to send the invoice to the customer's phone number.
+    5. Add log entry to sale timeline.
+
+--------------------------------------------------------------------------------
+4. VERIFICATION PLAN:
+--------------------------------------------------------------------------------
+1. Test PDF generation with an existing physical sale (e.g. billId '915908').
+2. Send test WhatsApp invoice template to 917760693359 or 9345004690 to confirm delivery.
+3. Test end-to-end status change to "completed" in branch/admin/accounts sales flow.
+================================================================================

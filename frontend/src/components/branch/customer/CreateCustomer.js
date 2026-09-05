@@ -202,7 +202,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
   };
 
   return (
-    <Card sx={{ p: 4, my: 4 }}>
+    <Card sx={{ p: { xs: 2, sm: 3, md: 4 }, my: { xs: 2, sm: 3 } }}>
       <form
         ref={form}
         onSubmit={(e) => {
@@ -214,8 +214,22 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         <Tabs
           value={tabValue}
           onChange={(e, newValue) => setTabValue(newValue)}
-          sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
-          variant="fullWidth"
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{
+            borderBottom: 1,
+            borderColor: 'divider',
+            mb: 3,
+            '& .MuiTab-root': {
+              minWidth: { xs: 'auto', sm: 120 },
+              px: { xs: 1.5, sm: 2.5 },
+              fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+              fontWeight: 600,
+              textTransform: 'none',
+              whiteSpace: 'nowrap',
+            },
+          }}
         >
           <Tab label="1. Details" />
           <Tab label="2. Documents" />
@@ -223,26 +237,28 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         </Tabs>
 
         {tabValue === 0 && (
-          <Grid container spacing={3}>
+          <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
             <Grid item xs={12}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                  <TextField
-                      size="small"
-                      label="Enquiry ID (e.g. ENQ123A)"
-                      value={enquiryId}
-                      onChange={(e) => setEnquiryId(e.target.value)}
-                      sx={{ maxWidth: 300 }}
-                  />
-                  <LoadingButton
-                      loading={fetchingEnquiry}
-                      variant="outlined"
-                      onClick={handleFetchEnquiry}
-                  >
-                      Fetch Detail
-                  </LoadingButton>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <TextField
+                  size="small"
+                  label="Enquiry ID (e.g. MKG123A)"
+                  placeholder="e.g. MKG123A"
+                  value={enquiryId}
+                  onChange={(e) => setEnquiryId(e.target.value)}
+                  sx={{ flex: 1, maxWidth: { xs: '100%', sm: 320 } }}
+                />
+                <LoadingButton
+                  loading={fetchingEnquiry}
+                  variant="outlined"
+                  onClick={handleFetchEnquiry}
+                  sx={{ whiteSpace: 'nowrap', minWidth: 'fit-content' }}
+                >
+                  Fetch Detail
+                </LoadingButton>
               </Stack>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6} md={4}>
               <TextField
                 name="name"
                 value={values.name}
@@ -253,7 +269,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                 onChange={handleChange}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6} md={4}>
               <TextField
                 name="phoneNumber"
                 value={focusedField === 'phoneNumber' ? values.phoneNumber : global.maskPhoneNumber(values.phoneNumber)}
@@ -269,7 +285,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                 inputProps={{ maxLength: 10 }}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6} md={4}>
               <TextField
                 name="alternatePhoneNumber"
                 value={focusedField === 'alternatePhoneNumber' ? values.alternatePhoneNumber : global.maskPhoneNumber(values.alternatePhoneNumber)}
@@ -287,7 +303,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                 inputProps={{ maxLength: 10 }}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6} md={4}>
               <TextField
                 name="email"
                 value={values.email}
@@ -298,7 +314,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                 onChange={handleChange}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6} md={4}>
               <LocalizationProvider dateAdapter={AdapterMoment}>
                 <DesktopDatePicker
                   name="dob"
@@ -313,7 +329,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                 />
               </LocalizationProvider>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth error={touched.gender && errors.gender && true}>
                 <InputLabel id="select-label">Select gender</InputLabel>
                 <Select
@@ -331,7 +347,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth error={touched.maritalStatus && errors.maritalStatus && true}>
                 <InputLabel id="select-label">Select marital status</InputLabel>
                 <Select
@@ -348,7 +364,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth error={touched.source && errors.source && true}>
                 <InputLabel id="select-label">Select source</InputLabel>
                 <Select
@@ -375,8 +391,8 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         )}
 
         {tabValue === 1 && (
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+          <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth error={touched.chooseId && errors.chooseId && true}>
                 <InputLabel id="select-label">Select chooseId</InputLabel>
                 <Select
@@ -397,7 +413,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 name="idNo"
                 value={values.idNo}
@@ -408,96 +424,110 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                 onChange={handleChange}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
-              <Stack direction="row" alignItems="center" spacing={1}>
+            <Grid item xs={12} sm={6}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
                   Upload ID:
                 </Typography>
-                <TextField
-                  name="uploadId"
-                  type={'file'}
-                  onBlur={handleBlur}
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    setValues({ ...values, uploadId: file });
-                    if (file) {
-                      setUploadIdPreview(URL.createObjectURL(file));
-                    }
-                  }}
-                  size="small"
-                  fullWidth
-                />
-                {uploadIdPreview && (
-                  <IconButton
-                    component="a"
-                    href={uploadIdPreview}
-                    target="_blank"
-                    rel="noreferrer"
-                    color="secondary"
-                    title="View ID Document"
-                  >
-                    <Iconify icon="mdi:eye" />
-                  </IconButton>
-                )}
+                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+                  <TextField
+                    name="uploadId"
+                    type={'file'}
+                    onBlur={handleBlur}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      setValues({ ...values, uploadId: file });
+                      if (file) {
+                        setUploadIdPreview(URL.createObjectURL(file));
+                      }
+                    }}
+                    size="small"
+                    fullWidth
+                  />
+                  {uploadIdPreview && (
+                    <IconButton
+                      component="a"
+                      href={uploadIdPreview}
+                      target="_blank"
+                      rel="noreferrer"
+                      color="secondary"
+                      title="View ID Document"
+                    >
+                      <Iconify icon="mdi:eye" />
+                    </IconButton>
+                  )}
+                </Box>
               </Stack>
             </Grid>
-            <Grid item xs={12} md={6}>
-              <Stack direction="row" alignItems="center" spacing={1}>
+            <Grid item xs={12} sm={6}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
                   Signature:
                 </Typography>
-                <TextField
-                  name="signature"
-                  type={'file'}
-                  onBlur={handleBlur}
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    setValues({ ...values, signature: file });
-                    if (file) {
-                      setSignaturePreview(URL.createObjectURL(file));
-                    }
-                  }}
-                  size="small"
-                  fullWidth
-                />
-                {signaturePreview && (
-                  <IconButton
-                    component="a"
-                    href={signaturePreview}
-                    target="_blank"
-                    rel="noreferrer"
-                    color="secondary"
-                    title="View Signature"
-                  >
-                    <Iconify icon="mdi:eye" />
-                  </IconButton>
-                )}
+                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+                  <TextField
+                    name="signature"
+                    type={'file'}
+                    onBlur={handleBlur}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      setValues({ ...values, signature: file });
+                      if (file) {
+                        setSignaturePreview(URL.createObjectURL(file));
+                      }
+                    }}
+                    size="small"
+                    fullWidth
+                  />
+                  {signaturePreview && (
+                    <IconButton
+                      component="a"
+                      href={signaturePreview}
+                      target="_blank"
+                      rel="noreferrer"
+                      color="secondary"
+                      title="View Signature"
+                    >
+                      <Iconify icon="mdi:eye" />
+                    </IconButton>
+                  )}
+                </Box>
               </Stack>
             </Grid>
           </Grid>
         )}
 
         {tabValue === 2 && (
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             <Grid item xs={12}>
               {img === null ? (
-                <div style={{ textAlign: 'center' }}>
-                  <Webcam
-                    mirrored
-                    audio={false}
-                    height={240}
-                    width={320}
-                    ref={webcamRef}
-                    screenshotFormat="image/png"
-                    videoConstraints={videoConstraints}
-                  />
-                  <br />
-                  <LoadingButton size="small" type="button" variant="contained" onClick={capture} sx={{ mt: 1 }}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Box
+                    sx={{
+                      maxWidth: 320,
+                      mx: 'auto',
+                      borderRadius: 1.5,
+                      overflow: 'hidden',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      '& video': { width: '100% !important', height: 'auto !important' },
+                    }}
+                  >
+                    <Webcam
+                      mirrored
+                      audio={false}
+                      ref={webcamRef}
+                      screenshotFormat="image/png"
+                      videoConstraints={videoConstraints}
+                      style={{ width: '100%', height: 'auto', display: 'block' }}
+                    />
+                  </Box>
+                  <LoadingButton size="medium" type="button" variant="contained" onClick={capture} sx={{ mt: 2 }}>
                     Capture photo
                   </LoadingButton>
-                </div>
+                </Box>
               ) : (
-                <div style={{ textAlign: 'center' }}>
+                <Box sx={{ textAlign: 'center' }}>
                   <img 
                     src={img} 
                     alt="screenshot" 
@@ -511,36 +541,42 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                       border: '1px solid #ccc' 
                     }} 
                   />
-                  <br />
-                  <LoadingButton size="small" type="button" variant="contained" onClick={() => setImg(null)} sx={{ mt: 1 }}>
+                  <LoadingButton size="medium" type="button" variant="contained" color="warning" onClick={() => setImg(null)} sx={{ mt: 2 }}>
                     Retake
                   </LoadingButton>
-                </div>
+                </Box>
               )}
             </Grid>
           </Grid>
         )}
 
-        <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3, borderTop: 1, borderColor: 'divider', pt: 2 }}>
+        <Stack
+          direction="row"
+          spacing={2}
+          justifyContent="flex-end"
+          sx={{ mt: 3, borderTop: 1, borderColor: 'divider', pt: 2 }}
+        >
           {tabValue > 0 && (
             <Button
-              size="large"
+              size="medium"
               variant="outlined"
               onClick={() => setTabValue((prev) => prev - 1)}
+              sx={{ minWidth: { xs: 70, sm: 100 } }}
             >
               Back
             </Button>
           )}
           {tabValue < 2 ? (
             <Button
-              size="large"
+              size="medium"
               variant="contained"
               onClick={() => setTabValue((prev) => prev + 1)}
+              sx={{ minWidth: { xs: 80, sm: 100 } }}
             >
               Next
             </Button>
           ) : (
-            <LoadingButton size="large" type="submit" variant="contained">
+            <LoadingButton size="medium" type="submit" variant="contained" sx={{ minWidth: { xs: 80, sm: 100 } }}>
               Save
             </LoadingButton>
           )}

@@ -35,11 +35,12 @@ const style = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 800,
-  maxHeight: '95%',
+  width: { xs: '95%', sm: '90%', md: 800 },
+  maxWidth: 800,
+  maxHeight: '94vh',
   bgcolor: 'background.paper',
   boxShadow: 24,
-  p: 4,
+  p: { xs: 2, sm: 3, md: 4 },
   borderRadius: 2,
   overflowY: 'auto',
   border: 'none',
@@ -66,11 +67,7 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
-  if (width < 899) {
-    style.width = '80%';
-  } else {
-    style.width = 800;
-  }
+
 
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - ornaments?.length) : 0;
   const handleChangePage = (event, newPage) => {
@@ -398,7 +395,7 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
       >
-        <Box sx={{ ...style, width: 400 }}>
+        <Box sx={{ ...style, width: { xs: '90%', sm: 400 }, maxWidth: 400 }}>
           <Typography id="modal-modal-title" variant="h6" component="h2">
             Delete
           </Typography>

@@ -13,7 +13,7 @@ const sendWhatsAppTemplate = async (to, templateName, components, languageCode =
   const payload = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
-    to: to,
+    to: String(to).replace(/\D/g, '').replace(/^0/, ''),
     type: "template",
     template: {
       name: templateName,
@@ -96,4 +96,100 @@ const sendValidationUpdate = async (phoneNumber, name, branchName, customerId, k
   return await sendWhatsAppTemplate(phoneNumber, "validation_update_to_customer", components, "en");
 };
 
-module.exports = { sendWhatsAppTemplate, sendWhatsAppOtp, sendValidationUpdate };
+const sendWhatsAppInvoice = async (phoneNumber, pdfUrl, filename, invoiceData) => {
+  const {
+    customerName = "Customer",
+    branchName = "MK Gold",
+    goldRate = "0",
+    billId = "",
+    grossWeight = "0.00",
+    netWeight = "0.00",
+    totalAmount = "0"
+  } = invoiceData || {};
+
+  const components = [
+    {
+      type: "header",
+      parameters: [
+        {
+          type: "document",
+          document: {
+            link: pdfUrl,
+            filename: filename || `MKGold_Invoice_${billId || 'BILL'}.pdf`
+          }
+        }
+      ]
+    },
+    {
+      type: "body",
+      parameters: [
+        { type: "text", text: String(customerName) },
+        { type: "text", text: String(branchName) },
+        { type: "text", text: String(goldRate) },
+        { type: "text", text: String(billId) },
+        { type: "text", text: String(grossWeight) },
+        { type: "text", text: String(netWeight) },
+        { type: "text", text: String(totalAmount) }
+      ]
+    }
+  ];
+
+  return await sendWhatsAppTemplate(phoneNumber, "invoice", components, "en");
+};
+
+const sendWhatsAppReleaseInvoice = async (phoneNumber, pdfUrl, filename, releaseData) => {
+  const {
+    customerName = "Customer",
+    bankName = "Bank",
+    loanNo = "N/A",
+    date = "",
+    branchName = "MK Gold",
+    goldRate = "0",
+    billId = "",
+    grossWeight = "0.00",
+    netWeight = "0.00",
+    releaseAmount = "0",
+    payableAmount = "0"
+  } = releaseData || {};
+
+  const components = [
+    {
+      type: "header",
+      parameters: [
+        {
+          type: "document",
+          document: {
+            link: pdfUrl,
+            filename: filename || "gold_release_receipt.pdf"
+          }
+        }
+      ]
+    },
+    {
+      type: "body",
+      parameters: [
+        { type: "text", text: String(customerName) },
+        { type: "text", text: String(bankName) },
+        { type: "text", text: String(loanNo) },
+        { type: "text", text: String(date) },
+        { type: "text", text: String(branchName) },
+        { type: "text", text: String(goldRate) },
+        { type: "text", text: String(billId) },
+        { type: "text", text: String(grossWeight) },
+        { type: "text", text: String(netWeight) },
+        { type: "text", text: String(releaseAmount) },
+        { type: "text", text: String(payableAmount) }
+      ]
+    }
+  ];
+
+  return await sendWhatsAppTemplate(phoneNumber, "gold_release_buyback_has_been_completed_successfully", components, "en");
+};
+
+module.exports = { 
+  sendWhatsAppTemplate, 
+  sendWhatsAppOtp, 
+  sendValidationUpdate, 
+  sendWhatsAppInvoice,
+  sendWhatsAppReleaseInvoice
+};

@@ -314,17 +314,32 @@ export default function Customer({ isTab = false }) {
         </Alert>
       </Snackbar>
 
-      <Wrapper {...(!isTab ? { maxWidth: 'xl' } : {})} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+      <Wrapper {...(!isTab ? { maxWidth: 'xl' } : {})} sx={{ display: toggleContainer === true ? 'none' : 'block', px: { xs: 0.5, sm: 2, md: 3 } }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={2}
+          mb={{ xs: 2.5, sm: 5 }}
+        >
+          <Typography variant="h4" sx={{ color: '#fff', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
             Customer
           </Typography>
-          <Stack direction="row" spacing={2}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              width: { xs: '100%', sm: 'auto' },
+              flexWrap: 'wrap',
+              gap: 1,
+            }}
+          >
             {(values.fromDate || values.toDate) && (
               <Button
                 variant="contained"
                 color="error"
                 startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                sx={{ flex: { xs: '1 1 auto', sm: 'initial' }, whiteSpace: 'nowrap' }}
                 onClick={() => {
                   setFilterOpen(false);
                   resetForm();
@@ -343,6 +358,7 @@ export default function Customer({ isTab = false }) {
             <Button
               variant="contained"
               startIcon={<Iconify icon="material-symbols:filter-alt" />}
+              sx={{ flex: { xs: '1 1 auto', sm: 'initial' }, whiteSpace: 'nowrap' }}
               onClick={handleFilterOpen}
             >
               Filter
@@ -350,6 +366,7 @@ export default function Customer({ isTab = false }) {
             <Button
               variant="contained"
               startIcon={<Iconify icon="eva:plus-fill" />}
+              sx={{ flex: { xs: '1 1 auto', sm: 'initial' }, whiteSpace: 'nowrap' }}
               onClick={() => {
                 setToggleContainer(!toggleContainer);
                 setToggleContainerType('create');
@@ -382,7 +399,7 @@ export default function Customer({ isTab = false }) {
 
           <Scrollbar>
             <TableContainer>
-              <Table sx={{ minWidth: 800 }}>
+              <Table sx={{ minWidth: filteredData?.length === 0 ? 'auto' : 800 }}>
                 <CustomerListHead
                   order={order}
                   orderBy={orderBy}
@@ -512,14 +529,20 @@ export default function Customer({ isTab = false }) {
       </Wrapper>
 
       {toggleContainer === true && (toggleContainerType === 'create') === true && (
-        <Wrapper {...(!isTab ? { maxWidth: 'xl' } : {})}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+        <Wrapper {...(!isTab ? { maxWidth: 'xl' } : {})} sx={{ px: { xs: 0.5, sm: 2, md: 3 } }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            mb={{ xs: 2.5, sm: 4 }}
+          >
+            <Typography variant="h4" sx={{ color: '#fff', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
               Create Customer
             </Typography>
             <Button
               variant="contained"
               startIcon={<Iconify icon="mdi:arrow-left" />}
+              sx={{ whiteSpace: 'nowrap' }}
               onClick={() => {
                 setToggleContainer(!toggleContainer);
               }}
@@ -535,15 +558,21 @@ export default function Customer({ isTab = false }) {
       {toggleContainer === true && (toggleContainerType === 'detail') === true && (
         <Wrapper
           {...(!isTab ? { maxWidth: 'xl' } : {})}
-          sx={{ display: toggleContainer === true && toggleContainerType === 'detail' ? 'block' : 'none' }}
+          sx={{ display: toggleContainer === true && toggleContainerType === 'detail' ? 'block' : 'none', px: { xs: 0.5, sm: 2, md: 3 } }}
         >
-          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            mb={{ xs: 2.5, sm: 4 }}
+          >
+            <Typography variant="h4" sx={{ color: '#fff', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
               Customer Details
             </Typography>
             <Button
               variant="contained"
               startIcon={<Iconify icon="mdi:arrow-left" />}
+              sx={{ whiteSpace: 'nowrap' }}
               onClick={() => {
                 setToggleContainer(!toggleContainer);
               }}

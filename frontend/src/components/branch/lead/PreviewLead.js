@@ -47,11 +47,14 @@ const modalStyle = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 500,
+  width: { xs: '92%', sm: 500 },
+  maxWidth: 500,
+  maxHeight: '90vh',
+  overflowY: 'auto',
   bgcolor: 'background.paper',
   borderRadius: 2,
   boxShadow: 24,
-  p: 4,
+  p: { xs: 2.5, sm: 4 },
 };
 
 function PreviewLead(props) {

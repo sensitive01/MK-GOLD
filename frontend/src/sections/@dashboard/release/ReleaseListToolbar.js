@@ -12,6 +12,11 @@ const StyledRoot = styled(Toolbar)(({ theme }) => ({
   display: 'flex',
   justifyContent: 'space-between',
   padding: theme.spacing(0, 1, 0, 3),
+  [theme.breakpoints.down('sm')]: {
+    height: 'auto',
+    padding: theme.spacing(1.5),
+    gap: theme.spacing(1),
+  },
 }));
 
 const StyledSearch = styled(OutlinedInput)(({ theme }) => ({
@@ -23,6 +28,12 @@ const StyledSearch = styled(OutlinedInput)(({ theme }) => ({
   '&.Mui-focused': {
     width: 320,
     boxShadow: theme.customShadows.z8,
+  },
+  [theme.breakpoints.down('sm')]: {
+    width: '100%',
+    '&.Mui-focused': {
+      width: '100%',
+    },
   },
   '& fieldset': {
     borderWidth: `1px !important`,

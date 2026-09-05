@@ -74,9 +74,23 @@ export default function TransitPrint({ id, open, onClose }) {
   const preparerEmpId = data?.createdEmployee?.employeeId || '';
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle>Verify Transit Details</DialogTitle>
-      <DialogContent sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="lg" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          maxHeight: { xs: '92vh', sm: '90vh' },
+          m: { xs: 1.5, sm: 3 },
+          borderRadius: { xs: 2, sm: 3 },
+          display: 'flex',
+          flexDirection: 'column',
+        },
+      }}
+    >
+      <DialogTitle sx={{ p: { xs: 2, sm: 2.5 } }}>Verify Transit Details</DialogTitle>
+      <DialogContent dividers sx={{ p: { xs: 1, sm: 2 }, display: 'flex', justifyContent: 'center', overflowY: 'auto' }}>
         <Box sx={{ overflowX: 'auto', width: '100%' }}>
           <iframe id="transit-iframe" style={{ display: 'none', height: '0px', width: '0px', position: 'absolute' }} title="pdf" />
           
@@ -216,7 +230,7 @@ export default function TransitPrint({ id, open, onClose }) {
           </div>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: 3 }}>
+      <DialogActions sx={{ p: { xs: 1.5, sm: 2 }, px: { xs: 2, sm: 3 } }}>
         <Button onClick={onClose} variant="outlined">Close</Button>
         <Button onClick={handlePrint} variant="contained" startIcon={<Iconify icon="material-symbols:print" />}>
           Print

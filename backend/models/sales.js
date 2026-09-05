@@ -218,6 +218,13 @@ const Sales = mongoose.model(
       comments: {
         type: String,
       },
+      invoicePdfUrl: {
+        type: String,
+      },
+      invoiceSent: {
+        type: Boolean,
+        default: false,
+      },
     },
     { timestamps: true }
   )

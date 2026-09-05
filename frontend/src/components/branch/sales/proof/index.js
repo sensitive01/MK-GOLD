@@ -39,11 +39,12 @@ const style = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 800,
-  maxHeight: '95%',
+  width: { xs: '95%', sm: '90%', md: 800 },
+  maxWidth: 800,
+  maxHeight: '94vh',
   bgcolor: 'background.paper',
   boxShadow: 24,
-  p: 4,
+  p: { xs: 2, sm: 3, md: 4 },
   borderRadius: 2,
   overflowY: 'auto',
   border: 'none',
@@ -86,11 +87,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
     };
   }, [previewUrls]);
 
-  if (width < 899) {
-    style.width = '80%';
-  } else {
-    style.width = 800;
-  }
+
 
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - proofDocument?.length) : 0;
   const handleChangePage = (event, newPage) => {
@@ -154,17 +151,25 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
 
   return (
     <>
-      <Card sx={{ display: step === 3 ? 'block' : 'none', p: 4, my: 4 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mt={2} mb={3}>
-          <Typography variant="h4" gutterBottom>
+      <Card sx={{ display: step === 3 ? 'block' : 'none', p: { xs: 2, md: 4 }, my: { xs: 2, md: 4 } }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'stretch', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={2}
+          mt={1}
+          mb={3}
+        >
+          <Typography variant="h4" sx={{ minWidth: 'fit-content' }}>
             Proof Documents
           </Typography>
           <Button
             variant="contained"
             startIcon={<Iconify icon="eva:plus-fill" />}
+            sx={{ whiteSpace: 'nowrap', width: { xs: '100%', sm: 'auto' } }}
             onClick={() => setProofDocumentModal(true)}
           >
-            Upload document
+            Upload Document
           </Button>
         </Stack>
         <Scrollbar>
@@ -249,34 +254,47 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
         </Scrollbar>
-        <LoadingButton size="large" name="submit" type="button" variant="contained" onClick={() => setStep(step - 1)}>
-          Back to billing details
-        </LoadingButton>
-        <LoadingButton
-          size="large"
-          name="submit"
-          type="button"
-          variant="contained"
-          sx={{ ml: 2 }}
-          onClick={() => {
-            if (saleType === 'physical') {
-              const hasOrnamentPhoto = proofDocument.some(
-                (doc) => doc.documentType?.toLowerCase() === 'ornaments photo'
-              );
-              if (!hasOrnamentPhoto) {
-                setNotify({
-                  open: true,
-                  message: 'Ornaments Photo is mandatory for physical sales.',
-                  severity: 'error',
-                });
-                return;
-              }
-            }
-            setStep(step + 1);
-          }}
+        <Stack
+          direction={{ xs: 'column-reverse', sm: 'row' }}
+          spacing={2}
+          sx={{ mt: 3 }}
         >
-          View summary
-        </LoadingButton>
+          <LoadingButton
+            size="large"
+            name="submit"
+            type="button"
+            variant="contained"
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
+            onClick={() => setStep(step - 1)}
+          >
+            Back to billing details
+          </LoadingButton>
+          <LoadingButton
+            size="large"
+            name="submit"
+            type="button"
+            variant="contained"
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
+            onClick={() => {
+              if (saleType === 'physical') {
+                const hasOrnamentPhoto = proofDocument.some(
+                  (doc) => doc.documentType?.toLowerCase() === 'ornaments photo'
+                );
+                if (!hasOrnamentPhoto) {
+                  setNotify({
+                    open: true,
+                    message: 'Ornaments Photo is mandatory for physical sales.',
+                    severity: 'error',
+                  });
+                  return;
+                }
+              }
+              setStep(step + 1);
+            }}
+          >
+            View summary
+          </LoadingButton>
+        </Stack>
       </Card>
 
       <Modal
@@ -470,7 +488,7 @@ function ProofDocument({ step, setStep, setNotify, proofDocument, setProofDocume
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
       >
-        <Box sx={{ ...style, width: 400 }}>
+        <Box sx={{ ...style, width: { xs: '90%', sm: 400 }, maxWidth: 400 }}>
           <Typography id="modal-modal-title" variant="h6" component="h2">
             Delete
           </Typography>

@@ -335,11 +335,25 @@ export default function Sale() {
 
       {toggleContainer === false && (
         <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={2}
+          mb={{ xs: 3, sm: 5 }}
+        >
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff', mb: { xs: 0, sm: 1 } }}>
             Sale
           </Typography>
-          <Stack direction="row" spacing={2}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              width: { xs: '100%', sm: 'auto' },
+              flexWrap: 'wrap',
+              gap: 1,
+            }}
+          >
             {isSelectForTransit && (
               <Button
                 variant="contained"
@@ -414,7 +428,7 @@ export default function Sale() {
           />
 
           <TableContainer>
-            <Table sx={{ minWidth: 800 }}>
+            <Table sx={{ minWidth: filteredData?.length === 0 ? 'auto' : 800 }}>
               <SaleListHead
                   order={order}
                   orderBy={orderBy}
@@ -556,8 +570,8 @@ export default function Sale() {
 
       {toggleContainer === true && toggleContainerType === 'create' && (
         <Container maxWidth="xl">
-          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={{ xs: 2.5, md: 4 }}>
+            <Typography variant="h4" sx={{ color: '#fff' }}>
               {saleIdToEdit ? 'Edit Sale' : 'Create Sale'}
             </Typography>
             <Button

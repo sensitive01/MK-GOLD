@@ -379,17 +379,32 @@ export default function Release() {
           {notify.message}
         </Alert>
       </Snackbar>
-      <Container maxWidth="xl">
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+      <Container maxWidth="xl" sx={{ px: { xs: 0.5, sm: 2, md: 3 } }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={2}
+          mb={{ xs: 2.5, sm: 5 }}
+        >
+          <Typography variant="h4" sx={{ color: '#fff', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
             Purchase / Release
           </Typography>
-          <Stack direction="row" spacing={2}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              width: { xs: '100%', sm: 'auto' },
+              flexWrap: 'wrap',
+              gap: 1,
+            }}
+          >
             {(values.fromDate || values.toDate) && (
               <Button
                 variant="contained"
                 color="error"
                 startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                sx={{ flex: { xs: '1 1 auto', sm: 'initial' }, whiteSpace: 'nowrap' }}
                 onClick={() => {
                   setFilterOpen(false);
                   resetForm();
@@ -408,6 +423,7 @@ export default function Release() {
             <Button
               variant="contained"
               startIcon={<Iconify icon="material-symbols:filter-alt" />}
+              sx={{ flex: { xs: '1 1 auto', sm: 'initial' }, whiteSpace: 'nowrap' }}
               onClick={handleFilterOpen}
             >
               Filter
@@ -416,6 +432,7 @@ export default function Release() {
               <Button
                 variant="contained"
                 startIcon={<Iconify icon="eva:plus-fill" />}
+                sx={{ flex: { xs: '1 1 auto', sm: 'initial' }, whiteSpace: 'nowrap' }}
                 onClick={() => setOpenEditModal(true)}
               >
                 New Pledged Release
@@ -446,7 +463,7 @@ export default function Release() {
 
           <Scrollbar>
             <TableContainer>
-              <Table sx={{ minWidth: 800 }}>
+              <Table sx={{ minWidth: filteredData?.length === 0 ? 'auto' : 800 }}>
                 <ReleaseListHead
                   order={order}
                   orderBy={orderBy}

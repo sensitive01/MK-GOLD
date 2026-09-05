@@ -5,13 +5,17 @@ import {
   MenuItem,
   TextField,
   Button,
-  Modal,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Box,
   Typography,
   Grid,
   Stack,
   IconButton,
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { LoadingButton } from '@mui/lab';
 import { useState, useEffect } from 'react';
 import { addDisposition } from '../../../apis/branch/lead';
@@ -28,18 +32,6 @@ const DISPOSITIONS = [
   'Not Feasible',
   'Business Closed',
 ];
-
-const modalStyle = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 500,
-  bgcolor: 'background.paper',
-  borderRadius: 2,
-  boxShadow: 24,
-  p: 4,
-};
 
 export default function AddCallLogModal({ open, onClose, leadId, onSuccess }) {
   const [addingLog, setAddingLog] = useState(false);
@@ -95,23 +87,59 @@ export default function AddCallLogModal({ open, onClose, leadId, onSuccess }) {
   };
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <Box sx={modalStyle}>
-        <Typography variant="h6" gutterBottom>Add New Call Log</Typography>
-        <Grid container spacing={3} sx={{ mt: 1 }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          m: { xs: 1.5, sm: 3 },
+          maxHeight: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 64px)' },
+        },
+      }}
+    >
+      <DialogTitle
+        sx={{
+          m: 0,
+          p: { xs: 2, sm: 2.5 },
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
+      >
+        <Typography variant="h6" fontWeight="bold">
+          Add New Call Log
+        </Typography>
+        <IconButton size="small" onClick={onClose} sx={{ color: 'text.secondary' }}>
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent sx={{ p: { xs: 2, sm: 3 }, pt: { xs: 2, sm: 2.5 } }}>
+        <Grid container spacing={2.5} sx={{ mt: 0.2 }}>
           <Grid item xs={12}>
-             <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  label="Status"
-                  value={logForm.status}
-                  onChange={(e) => setLogForm({ ...logForm, status: e.target.value })}
-                >
-                  {DISPOSITIONS?.map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}
-                </Select>
-             </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
+              <Select
+                label="Status"
+                value={logForm.status}
+                onChange={(e) => setLogForm({ ...logForm, status: e.target.value })}
+              >
+                {DISPOSITIONS?.map((d) => (
+                  <MenuItem key={d} value={d}>
+                    {d}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
-          {(logForm.status === 'Visited Branch' || logForm.status === 'Planning to Visit' || logForm.status === 'Business Closed') && (
+          {(logForm.status === 'Visited Branch' ||
+            logForm.status === 'Planning to Visit' ||
+            logForm.status === 'Business Closed') && (
             <Grid item xs={12}>
               <FormControl fullWidth>
                 <InputLabel>Select Branch</InputLabel>
@@ -120,12 +148,19 @@ export default function AddCallLogModal({ open, onClose, leadId, onSuccess }) {
                   value={logForm.branch}
                   onChange={(e) => setLogForm({ ...logForm, branch: e.target.value })}
                 >
-                  {branches?.map(b => <MenuItem key={b._id} value={b._id}>{b.branchName}</MenuItem>)}
+                  {branches?.map((b) => (
+                    <MenuItem key={b._id} value={b._id}>
+                      {b.branchName}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
           )}
-          {(logForm.status === 'Callback' || logForm.status === 'Planning to Visit' || logForm.status === 'Follow Up' || logForm.status === 'Business Closed') && (
+          {(logForm.status === 'Callback' ||
+            logForm.status === 'Planning to Visit' ||
+            logForm.status === 'Follow Up' ||
+            logForm.status === 'Business Closed') && (
             <>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -161,7 +196,18 @@ export default function AddCallLogModal({ open, onClose, leadId, onSuccess }) {
           </Grid>
           <Grid item xs={12}>
             {logForm.uploadedFile ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, px: 2 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  p: 1,
+                  px: 2,
+                }}
+              >
                 <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {logForm.uploadedFile.name}
                 </Typography>
@@ -181,21 +227,22 @@ export default function AddCallLogModal({ open, onClose, leadId, onSuccess }) {
               </Button>
             )}
           </Grid>
-          <Grid item xs={12}>
-            <Stack direction="row" spacing={2} justifyContent="flex-end">
-              <Button variant="outlined" onClick={onClose}>Cancel</Button>
-              <LoadingButton
-                variant="contained"
-                onClick={handleAddLog}
-                loading={addingLog}
-                disabled={!logForm.status}
-              >
-                Save Log
-              </LoadingButton>
-            </Stack>
-          </Grid>
         </Grid>
-      </Box>
-    </Modal>
+      </DialogContent>
+
+      <DialogActions sx={{ px: { xs: 2, sm: 3 }, py: 1.5, borderTop: 1, borderColor: 'divider' }}>
+        <Button variant="outlined" onClick={onClose}>
+          Cancel
+        </Button>
+        <LoadingButton
+          variant="contained"
+          onClick={handleAddLog}
+          loading={addingLog}
+          disabled={!logForm.status}
+        >
+          Save Log
+        </LoadingButton>
+      </DialogActions>
+    </Dialog>
   );
 }

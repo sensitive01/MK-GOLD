@@ -321,11 +321,12 @@ export default function Transit() {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 400,
+    width: { xs: 'calc(100% - 32px)', sm: 400 },
+    maxWidth: 400,
     bgcolor: 'background.paper',
     borderRadius: 3,
     boxShadow: 24,
-    p: 4,
+    p: { xs: 2.5, sm: 4 },
   };
 
   function AlertComponent(props, ref) {
@@ -358,11 +359,11 @@ export default function Transit() {
       </Snackbar>
 
       <Container maxWidth="xl">
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" mb={{ xs: 3, sm: 5 }} spacing={2}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff', mb: { xs: 0, sm: 'inherit' } }}>
             Transit
           </Typography>
-          <Stack direction="row" alignItems="center" spacing={2}>
+          <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap" useFlexGap>
             {isFilterApplied && (
               <Button
                 variant="contained"
@@ -409,7 +410,7 @@ export default function Transit() {
 
           <Scrollbar>
             <TableContainer>
-              <Table sx={{ minWidth: 800 }}>
+              <Table sx={{ minWidth: filteredData?.length === 0 ? 'auto' : 800 }}>
                 <TransitListHead
                   order={order}
                   orderBy={orderBy}
@@ -618,11 +619,22 @@ export default function Transit() {
         />
       )}
 
-      <Dialog open={filterOpen} onClose={handleFilterClose}>
-        <DialogTitle>Filter Transits</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={3} sx={{ p: 1, mt: 1 }}>
-            <Grid item xs={12} sm={6}>
+      <Dialog 
+        open={filterOpen} 
+        onClose={handleFilterClose}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{
+          sx: {
+            m: { xs: 2, sm: 3 },
+            borderRadius: { xs: 2, sm: 3 },
+          },
+        }}
+      >
+        <DialogTitle sx={{ p: { xs: 2, sm: 2.5 } }}>Filter Transits</DialogTitle>
+        <DialogContent dividers sx={{ p: { xs: 2, sm: 3 } }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 size="small"
@@ -633,7 +645,7 @@ export default function Transit() {
                 onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 size="small"
@@ -644,7 +656,7 @@ export default function Transit() {
                 onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12}>
               <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -661,8 +673,8 @@ export default function Transit() {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleFilterClose} variant="contained">Apply</Button>
+        <DialogActions sx={{ p: { xs: 1.5, sm: 2 } }}>
+          <Button onClick={handleFilterClose} variant="contained" sx={{ color: '#fff' }}>Apply</Button>
         </DialogActions>
       </Dialog>
     </>
@@ -766,18 +778,61 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>Create Transit</DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          maxHeight: { xs: '92vh', sm: '90vh' },
+          m: { xs: 1.5, sm: 3 },
+          borderRadius: { xs: 2, sm: 3 },
+          display: 'flex',
+          flexDirection: 'column',
+        },
+      }}
+    >
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          maxHeight: '100%',
+          overflow: 'hidden',
+        }}
+      >
+        <DialogTitle
+          sx={{
+            p: { xs: 2, sm: 2.5 },
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Typography variant="h6" component="span" sx={{ fontWeight: 600 }}>
+            Create Transit
+          </Typography>
+          <IconButton onClick={handleClose} size="small" edge="end">
+            <Iconify icon="eva:close-fill" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          dividers
+          sx={{
+            p: { xs: 2, sm: 3 },
+            overflowY: 'auto',
+          }}
+        >
           {submitCount > 0 && Object.keys(errors).length > 0 && (
-            <Box mb={3}>
+            <Box mb={2.5}>
               <MuiAlert severity="error">
                 Please fix the following errors: {Object.values(errors).join(', ')}
               </MuiAlert>
             </Box>
           )}
-          <Grid container spacing={3}>
+          <Grid container spacing={{ xs: 2, sm: 3 }}>
             <Grid item xs={12} sm={6}>
               <TextField name="transitId" label="Transit ID" value={values.transitId} onChange={handleChange} onBlur={handleBlur} error={touched.transitId && !!errors.transitId} helperText={touched.transitId && errors.transitId} fullWidth />
             </Grid>
@@ -832,8 +887,8 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
+        <DialogActions sx={{ p: { xs: 1.5, sm: 2 }, px: { xs: 2, sm: 3 } }}>
+          <Button onClick={handleClose} color="inherit">Cancel</Button>
           <LoadingButton type="submit" variant="contained" loading={loading} sx={{ color: '#fff' }}>Create</LoadingButton>
         </DialogActions>
       </form>
@@ -944,11 +999,54 @@ function EditTransitModal({ open, id, handleClose, fetchData, setNotify }) {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>Edit Transit</DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <Grid container spacing={3}>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          maxHeight: { xs: '92vh', sm: '90vh' },
+          m: { xs: 1.5, sm: 3 },
+          borderRadius: { xs: 2, sm: 3 },
+          display: 'flex',
+          flexDirection: 'column',
+        },
+      }}
+    >
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          maxHeight: '100%',
+          overflow: 'hidden',
+        }}
+      >
+        <DialogTitle
+          sx={{
+            p: { xs: 2, sm: 2.5 },
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Typography variant="h6" component="span" sx={{ fontWeight: 600 }}>
+            Edit Transit
+          </Typography>
+          <IconButton onClick={handleClose} size="small" edge="end">
+            <Iconify icon="eva:close-fill" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent
+          dividers
+          sx={{
+            p: { xs: 2, sm: 3 },
+            overflowY: 'auto',
+          }}
+        >
+          <Grid container spacing={{ xs: 2, sm: 3 }}>
             <Grid item xs={12} sm={6}>
               <TextField name="transitId" label="Transit ID" value={values.transitId} onChange={handleChange} onBlur={handleBlur} error={touched.transitId && !!errors.transitId} helperText={touched.transitId && errors.transitId} fullWidth />
             </Grid>
@@ -1003,8 +1101,8 @@ function EditTransitModal({ open, id, handleClose, fetchData, setNotify }) {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
+        <DialogActions sx={{ p: { xs: 1.5, sm: 2 }, px: { xs: 2, sm: 3 } }}>
+          <Button onClick={handleClose} color="inherit">Cancel</Button>
           <LoadingButton type="submit" variant="contained" loading={loading} sx={{ color: '#fff' }}>Save Changes</LoadingButton>
         </DialogActions>
       </form>

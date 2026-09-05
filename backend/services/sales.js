@@ -1124,7 +1124,15 @@ async function create(payload) {
     ];
     
     let sale = new Sales(payload);
-    return await sale.save();
+    const savedSale = await sale.save();
+
+    if (savedSale && ['physical', 'pledged'].includes(savedSale.saleType) && savedSale.status === 'completed' && !savedSale.invoiceSent) {
+      setImmediate(() => {
+        triggerCompletedInvoiceWhatsApp(savedSale._id);
+      });
+    }
+
+    return savedSale;
   } catch (err) {
     throw err;
   }
@@ -1168,6 +1176,12 @@ async function update(id, payload) {
           { $set: releaseSync }
         ).exec();
       }
+    }
+
+    if (updatedSale && ['physical', 'pledged'].includes(updatedSale.saleType) && updatedSale.status === 'completed' && !updatedSale.invoiceSent) {
+      setImmediate(() => {
+        triggerCompletedInvoiceWhatsApp(updatedSale._id);
+      });
     }
 
     return updatedSale;
@@ -1246,6 +1260,12 @@ async function updateWithLog(id, setData, logEntry) {
           updatePayload
         ).exec();
       }
+    }
+
+    if (updatedSale && ['physical', 'pledged'].includes(updatedSale.saleType) && updatedSale.status === 'completed' && !updatedSale.invoiceSent) {
+      setImmediate(() => {
+        triggerCompletedInvoiceWhatsApp(updatedSale._id);
+      });
     }
 
     return updatedSale;
@@ -1453,6 +1473,119 @@ async function adminConsolidatedSaleReport(query = {}) {
   }
 }
 
+async function triggerCompletedInvoiceWhatsApp(saleId) {
+  try {
+    const sale = await Sales.findById(saleId)
+      .populate('customer branch')
+      .exec();
+
+    if (!sale) return;
+    if (!['physical', 'pledged'].includes(sale.saleType) || sale.status !== 'completed') return;
+    if (sale.invoiceSent) return;
+
+    const { generateAndUploadInvoice, generateAndUploadReleaseInvoice } = require('./invoicePdf');
+    const { sendWhatsAppInvoice, sendWhatsAppReleaseInvoice } = require('./whatsapp');
+
+    const customerPhone = sale.customer?.whatsappNumber || sale.customer?.phoneNumber;
+
+    if (sale.saleType === 'physical') {
+      // 1. Generate & upload physical invoice PDF
+      const { pdfUrl, filename } = await generateAndUploadInvoice(sale);
+
+      // 2. Calculate values for WhatsApp body template
+      const grossWeight = (sale.ornaments || []).reduce((sum, orn) => sum + Number(orn.grossWeight || 0), 0);
+      const netWeight = Number(sale.netWeight || 0);
+      const totalAmount = Math.round(Number(sale.payableAmount || sale.netAmount || 0));
+
+      // 3. Send WhatsApp Invoice to customer's WhatsApp/mobile number
+      if (customerPhone) {
+        const invoiceData = {
+          customerName: sale.customer?.name || "Customer",
+          branchName: sale.branch?.branchName || "MK Gold",
+          goldRate: sale.goldRate || "0",
+          billId: sale.billId || "",
+          grossWeight: grossWeight.toFixed(2),
+          netWeight: netWeight.toFixed(2),
+          totalAmount: totalAmount.toString()
+        };
+
+        await sendWhatsAppInvoice(customerPhone, pdfUrl, filename, invoiceData);
+      }
+
+      // 4. Update sale record with invoice URL and flag
+      await Sales.findByIdAndUpdate(saleId, {
+        $set: {
+          invoicePdfUrl: pdfUrl,
+          invoiceSent: true
+        }
+      });
+
+      console.log(`Invoice PDF generated and sent via WhatsApp for physical bill ${sale.billId}`);
+    } else if (sale.saleType === 'pledged') {
+      // 1. Generate & upload release receipt PDF
+      const { pdfUrl, filename } = await generateAndUploadReleaseInvoice(sale);
+
+      // 2. Calculate release values for WhatsApp template
+      const releases = sale.release || [];
+      const bankName = releases.map(r => r.pledgedIn).filter(Boolean).join(', ') || 'Bank';
+      const loanNo = releases.map(r => r.pledgeId).filter(Boolean).join(', ') || 'N/A';
+
+      const dateObj = sale.createdAt ? new Date(sale.createdAt) : new Date();
+      const dd = String(dateObj.getDate()).padStart(2, '0');
+      const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const yyyy = dateObj.getFullYear();
+      const date = `${dd}-${mm}-${yyyy}`;
+
+      const branchName = sale.branch?.branchName || 'MK Gold';
+      const goldRate = String(sale.goldRate || 0);
+      const billId = String(sale.billId || '');
+
+      let grossWeightNum = (sale.ornaments || []).reduce((sum, orn) => sum + Number(orn.grossWeight || 0), 0);
+      if (grossWeightNum === 0 && releases.length > 0) {
+        grossWeightNum = releases.reduce((sum, r) => sum + (Number(r.weight) || 0), 0);
+      }
+      const grossWeight = grossWeightNum.toFixed(2);
+      const netWeight = Number(sale.netWeight || 0).toFixed(2);
+
+      const totalPledgeAmt = releases.reduce((sum, r) => sum + (Number(r.pledgeAmount) || 0), 0);
+      const totalReleasePayable = releases.reduce((sum, r) => sum + (Number(r.payableAmount) || 0), 0);
+      const releaseAmount = Math.round(totalPledgeAmt > 0 ? totalPledgeAmt : totalReleasePayable).toString();
+      const payableAmount = Math.round(Number(sale.payableAmount || 0)).toString();
+
+      // 3. Send WhatsApp Release Invoice
+      if (customerPhone) {
+        const releaseData = {
+          customerName: sale.customer?.name || "Customer",
+          bankName,
+          loanNo,
+          date,
+          branchName,
+          goldRate,
+          billId,
+          grossWeight,
+          netWeight,
+          releaseAmount,
+          payableAmount
+        };
+
+        await sendWhatsAppReleaseInvoice(customerPhone, pdfUrl, filename, releaseData);
+      }
+
+      // 4. Update sale record with invoice URL and flag
+      await Sales.findByIdAndUpdate(saleId, {
+        $set: {
+          invoicePdfUrl: pdfUrl,
+          invoiceSent: true
+        }
+      });
+
+      console.log(`Release Receipt PDF generated and sent via WhatsApp for release bill ${sale.billId}`);
+    }
+  } catch (err) {
+    console.error(`Failed to trigger invoice WhatsApp for sale ${saleId}:`, err.message);
+  }
+}
+
 module.exports = {
   find,
   findById,
@@ -1464,4 +1597,5 @@ module.exports = {
   remove,
   branchConsolidatedSaleReport,
   adminConsolidatedSaleReport,
+  triggerCompletedInvoiceWhatsApp,
 };

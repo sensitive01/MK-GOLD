@@ -31,7 +31,7 @@ import { sentenceCase } from 'change-case';
 import { LoadingButton } from '@mui/lab';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import moment from 'moment';
@@ -70,7 +70,6 @@ function CreateSale(props) {
   const [assignees, setAssignees] = useState([]);
   const [addresses, setAddresses] = useState([]);
   const [addressModalOpen, setAddressModalOpen] = useState(false);
-  const [addressProofPreview, setAddressProofPreview] = useState(null);
   // Inline release form state for saleType === 'release'
   const [releaseForm, setReleaseForm] = useState({
     weight: '',
@@ -104,82 +103,7 @@ function CreateSale(props) {
     loadAddresses();
   }, [selectedUser]);
 
-  const addressSchema = Yup.object({
-    address: Yup.string().required('Address is required'),
-    area: Yup.string().required('Area is required'),
-    city: Yup.string().required('City is required'),
-    state: Yup.string().required('State is required'),
-    pincode: Yup.string()
-      .required('Pincode is required')
-      .matches(/^[0-9]+$/, 'Must be only digits')
-      ?.length(6),
-    landmark: Yup.string().required('Landmark is required'),
-    residential: Yup.string().required('Residential type is required'),
-    label: Yup.string().required('Label is required'),
-    documentType: Yup.string().required('Document type is required'),
-    documentNo: Yup.string().required('Document no is required'),
-  });
 
-  const addressForm = useFormik({
-    initialValues: {
-      address: '',
-      area: '',
-      city: '',
-      state: '',
-      pincode: '',
-      landmark: '',
-      residential: '',
-      label: '',
-      documentType: '',
-      documentNo: '',
-      documentFile: {},
-    },
-    validationSchema: addressSchema,
-    onSubmit: (values) => {
-      createAddress({ customerId: selectedUser._id, ...values }).then((res) => {
-        if (res.status === false) {
-          props.setNotify({
-            open: true,
-            message: 'Address not created',
-            severity: 'error',
-          });
-        } else {
-          setAddressModalOpen(false);
-          const formData = new FormData();
-          formData.append('uploadId', res.data.fileUpload.uploadId);
-          formData.append('uploadName', res.data.fileUpload.uploadName);
-          formData.append('uploadType', 'proof');
-          formData.append('uploadedFile', values.documentFile);
-          formData.append('documentType', values.documentType);
-          formData.append('documentNo', values.documentNo);
-          createFile(formData);
-          addressForm.resetForm();
-          setAddressProofPreview(null);
-          loadAddresses();
-          props.setNotify({
-            open: true,
-            message: 'Address created',
-            severity: 'success',
-          });
-        }
-      });
-    },
-  });
-
-  useEffect(() => {
-    if (addressForm.values.pincode && addressForm.values.pincode.toString().length === 6) {
-      try {
-        const address = pinToAddress(Number(addressForm.values.pincode));
-        if (address) {
-          const divisionCity = address.divisionname ? address.divisionname.replace(/ Division/gi, '').replace(/ GPO/gi, '').trim() : '';
-          addressForm.setFieldValue('city', divisionCity || address.district || address.block || '');
-          addressForm.setFieldValue('state', address.state || '');
-        }
-      } catch (err) {
-        console.error('Error fetching pincode:', err);
-      }
-    }
-  }, [addressForm.values.pincode, addressForm.setFieldValue]);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -399,7 +323,7 @@ function CreateSale(props) {
         autoComplete="off"
         encType="multipart/form-data"
       >
-        <Card sx={{ display: step === 2 ? 'block' : 'none', p: 4, my: 4 }}>
+        <Card sx={{ display: step === 2 ? 'block' : 'none', p: { xs: 2, sm: 3, md: 4 }, my: { xs: 2, sm: 3, md: 4 } }}>
           <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 1 }}>
             Billing Details {props.id ? `(Editing: ${props.id})` : ''}
           </Typography>
@@ -625,14 +549,14 @@ function CreateSale(props) {
                 onChange={handleChange}
               />
             </Grid>
-            <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Grid item xs={12} sx={{ display: 'flex', flexDirection: { xs: 'column-reverse', sm: 'row' }, justifyContent: 'space-between', gap: 2 }}>
               <LoadingButton
                 size="large"
                 name="submit"
                 type="button"
                 variant="contained"
                 startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
-                sx={{ bgcolor: 'primary.main', color: '#fff', '&:hover': { bgcolor: 'primary.dark' }, '& .iconify': { color: '#fff' } }}
+                sx={{ bgcolor: 'primary.main', color: '#fff', '&:hover': { bgcolor: 'primary.dark' }, '& .iconify': { color: '#fff' }, width: { xs: '100%', sm: 'auto' } }}
                 onClick={() => setStep(step - 1)}
               >
                 Back to customer selection
@@ -643,7 +567,7 @@ function CreateSale(props) {
                 type="button"
                 variant="contained"
                 endIcon={<Iconify icon="eva:arrow-ios-forward-fill" />}
-                sx={{ ml: 3, bgcolor: 'primary.main', color: '#fff', '&:hover': { bgcolor: 'primary.dark' }, '& .iconify': { color: '#fff' } }}
+                sx={{ ml: { xs: 0, sm: 3 }, bgcolor: 'primary.main', color: '#fff', '&:hover': { bgcolor: 'primary.dark' }, '& .iconify': { color: '#fff' }, width: { xs: '100%', sm: 'auto' } }}
                 onClick={async () => {
                   if (values.paymentType === 'bank' && !selectedBank) {
                     props.setNotify({
@@ -717,7 +641,7 @@ function CreateSale(props) {
           {...props}
         />
 
-        <Card sx={{ display: step === 4 ? 'block' : 'none', p: 4, my: 4 }}>
+        <Card sx={{ display: step === 4 ? 'block' : 'none', p: { xs: 2, md: 4 }, my: { xs: 2, md: 4 } }}>
           <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 3 }}>
             Billing Summary
           </Typography>
@@ -1079,269 +1003,36 @@ function CreateSale(props) {
                 </Grid>
               </>
             )}
-            <Grid item xs={12}>
+            <Grid item xs={12} sx={{ display: 'flex', flexDirection: { xs: 'column-reverse', sm: 'row' }, gap: 2, justifyContent: 'flex-start' }}>
               <LoadingButton
                 size="large"
                 name="submit"
                 type="button"
                 variant="contained"
                 onClick={() => setStep(step - 1)}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
                 Prev
               </LoadingButton>
-              <LoadingButton size="large" type="submit" variant="contained" sx={{ mx: 2 }}>
+              <LoadingButton
+                size="large"
+                type="submit"
+                variant="contained"
+                sx={{ mx: { xs: 0, sm: 2 }, width: { xs: '100%', sm: 'auto' } }}
+              >
                 Submit
               </LoadingButton>
             </Grid>
           </Grid>
         </Card>
       </form>
-      <Dialog
+      <CustomerAddressDialog
         open={addressModalOpen}
-        onClose={() => {
-          setAddressModalOpen(false);
-          addressForm.resetForm();
-          setAddressProofPreview(null);
-        }}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h4">Customer Address</Typography>
-          <IconButton
-            aria-label="close"
-            onClick={() => {
-              setAddressModalOpen(false);
-              addressForm.resetForm();
-              setAddressProofPreview(null);
-            }}
-            sx={{
-              color: (theme) => theme.palette.grey[500],
-            }}
-          >
-            <Iconify icon="eva:close-fill" />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: 3 }}>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              addressForm.handleSubmit(e);
-            }}
-            autoComplete="off"
-          >
-            <Grid container spacing={3} sx={{ mt: 0.5 }}>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  name="address"
-                  value={addressForm.values.address}
-                  error={addressForm.touched.address && addressForm.errors.address && true}
-                  label={addressForm.touched.address && addressForm.errors.address ? addressForm.errors.address : 'Address'}
-                  fullWidth
-                  onBlur={addressForm.handleBlur}
-                  onChange={addressForm.handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  name="area"
-                  value={addressForm.values.area}
-                  error={addressForm.touched.area && addressForm.errors.area && true}
-                  label={addressForm.touched.area && addressForm.errors.area ? addressForm.errors.area : 'Area'}
-                  fullWidth
-                  onBlur={addressForm.handleBlur}
-                  onChange={addressForm.handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth error={addressForm.touched.state && addressForm.errors.state && true}>
-                  <InputLabel id="address-select-state-label">Select state</InputLabel>
-                  <Select
-                    labelId="address-select-state-label"
-                    id="address-select-state"
-                    label={addressForm.touched.state && addressForm.errors.state ? addressForm.errors.state : 'Select state'}
-                    name="state"
-                    value={addressForm.values.state}
-                    onBlur={addressForm.handleBlur}
-                    onChange={addressForm.handleChange}
-                  >
-                    {global.states?.map((state) => (
-                      <MenuItem key={state} value={state}>{state}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth error={addressForm.touched.city && addressForm.errors.city && true}>
-                  <InputLabel id="address-select-city-label">Select city</InputLabel>
-                  <Select
-                    labelId="address-select-city-label"
-                    id="address-select-city"
-                    label={addressForm.touched.city && addressForm.errors.city ? addressForm.errors.city : 'Select city'}
-                    name="city"
-                    value={addressForm.values.city}
-                    onBlur={addressForm.handleBlur}
-                    onChange={addressForm.handleChange}
-                  >
-                    {global.cities[addressForm.values.state]?.split('|')?.map((city) => (
-                      <MenuItem key={city} value={city}>{city}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  name="pincode"
-                  value={addressForm.values.pincode}
-                  error={addressForm.touched.pincode && addressForm.errors.pincode && true}
-                  label={addressForm.touched.pincode && addressForm.errors.pincode ? addressForm.errors.pincode : 'Pincode'}
-                  fullWidth
-                  onBlur={addressForm.handleBlur}
-                  onChange={addressForm.handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  name="landmark"
-                  value={addressForm.values.landmark}
-                  error={addressForm.touched.landmark && addressForm.errors.landmark && true}
-                  label={addressForm.touched.landmark && addressForm.errors.landmark ? addressForm.errors.landmark : 'Landmark'}
-                  fullWidth
-                  onBlur={addressForm.handleBlur}
-                  onChange={addressForm.handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth error={addressForm.touched.residential && addressForm.errors.residential && true}>
-                  <InputLabel id="address-select-residential-label">Select residential</InputLabel>
-                  <Select
-                    labelId="address-select-residential-label"
-                    id="address-select-residential"
-                    label={addressForm.touched.residential && addressForm.errors.residential ? addressForm.errors.residential : 'Select residential'}
-                    name="residential"
-                    value={addressForm.values.residential}
-                    onBlur={addressForm.handleBlur}
-                    onChange={addressForm.handleChange}
-                  >
-                    <MenuItem value="Indian">Indian</MenuItem>
-                    <MenuItem value="NRI">NRI</MenuItem>
-                    <MenuItem value="Foreign Resident">Foreign Resident</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth error={addressForm.touched.label && addressForm.errors.label && true}>
-                  <InputLabel id="address-select-label-label">Select label</InputLabel>
-                  <Select
-                    labelId="address-select-label-label"
-                    id="address-select-label"
-                    label={addressForm.touched.label && addressForm.errors.label ? addressForm.errors.label : 'Select label'}
-                    name="label"
-                    value={addressForm.values.label}
-                    onBlur={addressForm.handleBlur}
-                    onChange={addressForm.handleChange}
-                  >
-                    <MenuItem value="home">Home</MenuItem>
-                    <MenuItem value="office">Office</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth error={addressForm.touched.documentType && addressForm.errors.documentType && true}>
-                  <InputLabel id="address-select-documentType-label">Select address proof</InputLabel>
-                  <Select
-                    labelId="address-select-documentType-label"
-                    id="address-select-documentType"
-                    label={addressForm.touched.documentType && addressForm.errors.documentType ? addressForm.errors.documentType : 'Select address proof'}
-                    name="documentType"
-                    value={addressForm.values.documentType}
-                    onBlur={addressForm.handleBlur}
-                    onChange={addressForm.handleChange}
-                  >
-                    <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
-                    <MenuItem value="Driving License">Driving License</MenuItem>
-                    <MenuItem value="Passport">Passport</MenuItem>
-                    <MenuItem value="Ration Card">Ration Card</MenuItem>
-                    <MenuItem value="Others">Others</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <TextField
-                  name="documentNo"
-                  value={addressForm.values.documentNo}
-                  error={addressForm.touched.documentNo && addressForm.errors.documentNo && true}
-                  label={addressForm.touched.documentNo && addressForm.errors.documentNo ? addressForm.errors.documentNo : 'Address proof number'}
-                  fullWidth
-                  onBlur={addressForm.handleBlur}
-                  onChange={addressForm.handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="body2" sx={{ mb: 0.5 }}>
-                      Attach address proof:
-                    </Typography>
-                    <TextField
-                      name="documentFile"
-                      type="file"
-                      error={addressForm.touched.documentFile && addressForm.errors.documentFile && true}
-                      onBlur={addressForm.handleBlur}
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        if (file) {
-                          addressForm.setFieldValue('documentFile', file);
-                          setAddressProofPreview(URL.createObjectURL(file));
-                        }
-                      }}
-                      required
-                      fullWidth
-                      size="small"
-                    />
-                  </Box>
-                  {addressProofPreview && (
-                    <IconButton
-                      component="a"
-                      href={addressProofPreview}
-                      target="_blank"
-                      rel="noreferrer"
-                      color="secondary"
-                      title="View Address Document"
-                      sx={{ mt: 3 }}
-                    >
-                      <Iconify icon="mdi:eye" />
-                    </IconButton>
-                  )}
-                </Stack>
-              </Grid>
-              <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                <LoadingButton
-                  size="large"
-                  type="submit"
-                  variant="contained"
-                  startIcon={<Iconify icon="eva:save-fill" />}
-                >
-                  Save
-                </LoadingButton>
-                <Button
-                  size="large"
-                  variant="contained"
-                  color="error"
-                  startIcon={<Iconify icon="eva:close-fill" />}
-                  onClick={() => {
-                    setAddressModalOpen(false);
-                    addressForm.resetForm();
-                    setAddressProofPreview(null);
-                  }}
-                >
-                  Close
-                </Button>
-              </Grid>
-            </Grid>
-          </form>
-        </DialogContent>
-      </Dialog>
+        onClose={() => setAddressModalOpen(false)}
+        selectedUser={selectedUser}
+        onAddressCreated={loadAddresses}
+        setNotify={props.setNotify}
+      />
       <ConfirmModal 
         open={openConfirmModal} 
         handleClose={() => setOpenConfirmModal(false)} 
@@ -1368,6 +1059,344 @@ function ConfirmModal({ open, handleClose, handleConfirm }) {
     </Dialog>
   );
 }
+
+const addressSchema = Yup.object({
+  address: Yup.string().required('Address is required'),
+  area: Yup.string().required('Area is required'),
+  city: Yup.string().required('City is required'),
+  state: Yup.string().required('State is required'),
+  pincode: Yup.string()
+    .required('Pincode is required')
+    .matches(/^[0-9]+$/, 'Must be only digits')
+    ?.length(6),
+  landmark: Yup.string().required('Landmark is required'),
+  residential: Yup.string().required('Residential type is required'),
+  label: Yup.string().required('Label is required'),
+  documentType: Yup.string().required('Document type is required'),
+  documentNo: Yup.string().required('Document no is required'),
+});
+
+const CustomerAddressDialog = React.memo(function CustomerAddressDialog({
+  open,
+  onClose,
+  selectedUser,
+  onAddressCreated,
+  setNotify,
+}) {
+  const [addressProofPreview, setAddressProofPreview] = useState(null);
+
+  const addressForm = useFormik({
+    initialValues: {
+      address: '',
+      area: '',
+      city: '',
+      state: '',
+      pincode: '',
+      landmark: '',
+      residential: '',
+      label: '',
+      documentType: '',
+      documentNo: '',
+      documentFile: {},
+    },
+    validationSchema: addressSchema,
+    validateOnChange: false,
+    validateOnBlur: true,
+    onSubmit: (values) => {
+      createAddress({ customerId: selectedUser?._id, ...values }).then((res) => {
+        if (res.status === false) {
+          setNotify({
+            open: true,
+            message: 'Address not created',
+            severity: 'error',
+          });
+        } else {
+          handleDialogClose();
+          const formData = new FormData();
+          formData.append('uploadId', res.data.fileUpload.uploadId);
+          formData.append('uploadName', res.data.fileUpload.uploadName);
+          formData.append('uploadType', 'proof');
+          formData.append('uploadedFile', values.documentFile);
+          formData.append('documentType', values.documentType);
+          formData.append('documentNo', values.documentNo);
+          createFile(formData);
+          onAddressCreated?.();
+          setNotify({
+            open: true,
+            message: 'Address created',
+            severity: 'success',
+          });
+        }
+      });
+    },
+  });
+
+  const handleDialogClose = () => {
+    onClose();
+    addressForm.resetForm();
+    setAddressProofPreview(null);
+  };
+
+  useEffect(() => {
+    if (addressForm.values.pincode && addressForm.values.pincode.toString().length === 6) {
+      try {
+        const address = pinToAddress(Number(addressForm.values.pincode));
+        if (address) {
+          const divisionCity = address.divisionname ? address.divisionname.replace(/ Division/gi, '').replace(/ GPO/gi, '').trim() : '';
+          addressForm.setFieldValue('city', divisionCity || address.district || address.block || '');
+          addressForm.setFieldValue('state', address.state || '');
+        }
+      } catch (err) {
+        console.error('Error fetching pincode:', err);
+      }
+    }
+  }, [addressForm.values.pincode, addressForm.setFieldValue]);
+
+  return (
+    <Dialog
+      open={open}
+      onClose={handleDialogClose}
+      maxWidth="md"
+      fullWidth
+    >
+      <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4">Customer Address</Typography>
+        <IconButton
+          aria-label="close"
+          onClick={handleDialogClose}
+          sx={{
+            color: (theme) => theme.palette.grey[500],
+          }}
+        >
+          <Iconify icon="eva:close-fill" />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers sx={{ p: { xs: 2, sm: 3 } }}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            addressForm.handleSubmit(e);
+          }}
+          autoComplete="off"
+        >
+          <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mt: 0.5 }}>
+            <Grid item xs={12} md={4}>
+              <TextField
+                name="address"
+                value={addressForm.values.address}
+                error={Boolean(addressForm.touched.address && addressForm.errors.address)}
+                label={addressForm.touched.address && addressForm.errors.address ? addressForm.errors.address : 'Address'}
+                fullWidth
+                onBlur={addressForm.handleBlur}
+                onChange={addressForm.handleChange}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                name="area"
+                value={addressForm.values.area}
+                error={Boolean(addressForm.touched.area && addressForm.errors.area)}
+                label={addressForm.touched.area && addressForm.errors.area ? addressForm.errors.area : 'Area'}
+                fullWidth
+                onBlur={addressForm.handleBlur}
+                onChange={addressForm.handleChange}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth error={Boolean(addressForm.touched.state && addressForm.errors.state)}>
+                <InputLabel id="address-select-state-label">Select state</InputLabel>
+                <Select
+                  labelId="address-select-state-label"
+                  id="address-select-state"
+                  label={addressForm.touched.state && addressForm.errors.state ? addressForm.errors.state : 'Select state'}
+                  name="state"
+                  value={addressForm.values.state}
+                  onBlur={addressForm.handleBlur}
+                  onChange={addressForm.handleChange}
+                >
+                  {global.states?.map((state) => (
+                    <MenuItem key={state} value={state}>{state}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth error={Boolean(addressForm.touched.city && addressForm.errors.city)}>
+                <InputLabel id="address-select-city-label">Select city</InputLabel>
+                <Select
+                  labelId="address-select-city-label"
+                  id="address-select-city"
+                  label={addressForm.touched.city && addressForm.errors.city ? addressForm.errors.city : 'Select city'}
+                  name="city"
+                  value={addressForm.values.city}
+                  onBlur={addressForm.handleBlur}
+                  onChange={addressForm.handleChange}
+                >
+                  {global.cities[addressForm.values.state]?.split('|')?.map((city) => (
+                    <MenuItem key={city} value={city}>{city}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                name="pincode"
+                value={addressForm.values.pincode}
+                error={Boolean(addressForm.touched.pincode && addressForm.errors.pincode)}
+                label={addressForm.touched.pincode && addressForm.errors.pincode ? addressForm.errors.pincode : 'Pincode'}
+                fullWidth
+                onBlur={addressForm.handleBlur}
+                onChange={addressForm.handleChange}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                name="landmark"
+                value={addressForm.values.landmark}
+                error={Boolean(addressForm.touched.landmark && addressForm.errors.landmark)}
+                label={addressForm.touched.landmark && addressForm.errors.landmark ? addressForm.errors.landmark : 'Landmark'}
+                fullWidth
+                onBlur={addressForm.handleBlur}
+                onChange={addressForm.handleChange}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth error={Boolean(addressForm.touched.residential && addressForm.errors.residential)}>
+                <InputLabel id="address-select-residential-label">Select residential</InputLabel>
+                <Select
+                  labelId="address-select-residential-label"
+                  id="address-select-residential"
+                  label={addressForm.touched.residential && addressForm.errors.residential ? addressForm.errors.residential : 'Select residential'}
+                  name="residential"
+                  value={addressForm.values.residential}
+                  onBlur={addressForm.handleBlur}
+                  onChange={addressForm.handleChange}
+                >
+                  <MenuItem value="Indian">Indian</MenuItem>
+                  <MenuItem value="NRI">NRI</MenuItem>
+                  <MenuItem value="Foreign Resident">Foreign Resident</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth error={Boolean(addressForm.touched.label && addressForm.errors.label)}>
+                <InputLabel id="address-select-label-label">Select label</InputLabel>
+                <Select
+                  labelId="address-select-label-label"
+                  id="address-select-label"
+                  label={addressForm.touched.label && addressForm.errors.label ? addressForm.errors.label : 'Select label'}
+                  name="label"
+                  value={addressForm.values.label}
+                  onBlur={addressForm.handleBlur}
+                  onChange={addressForm.handleChange}
+                >
+                  <MenuItem value="home">Home</MenuItem>
+                  <MenuItem value="office">Office</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth error={Boolean(addressForm.touched.documentType && addressForm.errors.documentType)}>
+                <InputLabel id="address-select-documentType-label">Select address proof</InputLabel>
+                <Select
+                  labelId="address-select-documentType-label"
+                  id="address-select-documentType"
+                  label={addressForm.touched.documentType && addressForm.errors.documentType ? addressForm.errors.documentType : 'Select address proof'}
+                  name="documentType"
+                  value={addressForm.values.documentType}
+                  onBlur={addressForm.handleBlur}
+                  onChange={addressForm.handleChange}
+                >
+                  <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
+                  <MenuItem value="Driving License">Driving License</MenuItem>
+                  <MenuItem value="Passport">Passport</MenuItem>
+                  <MenuItem value="Ration Card">Ration Card</MenuItem>
+                  <MenuItem value="Others">Others</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                name="documentNo"
+                value={addressForm.values.documentNo}
+                error={Boolean(addressForm.touched.documentNo && addressForm.errors.documentNo)}
+                label={addressForm.touched.documentNo && addressForm.errors.documentNo ? addressForm.errors.documentNo : 'Address proof number'}
+                fullWidth
+                onBlur={addressForm.handleBlur}
+                onChange={addressForm.handleChange}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="body2" sx={{ mb: 0.5 }}>
+                    Attach address proof:
+                  </Typography>
+                  <TextField
+                    name="documentFile"
+                    type="file"
+                    error={Boolean(addressForm.touched.documentFile && addressForm.errors.documentFile)}
+                    onBlur={addressForm.handleBlur}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        addressForm.setFieldValue('documentFile', file);
+                        setAddressProofPreview(URL.createObjectURL(file));
+                      }
+                    }}
+                    required
+                    fullWidth
+                    size="small"
+                  />
+                </Box>
+                {addressProofPreview && (
+                  <IconButton
+                    component="a"
+                    href={addressProofPreview}
+                    target="_blank"
+                    rel="noreferrer"
+                    color="secondary"
+                    title="View Address Document"
+                    sx={{ mt: 3 }}
+                  >
+                    <Iconify icon="mdi:eye" />
+                  </IconButton>
+                )}
+              </Stack>
+            </Grid>
+            <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+              <LoadingButton
+                size="large"
+                type="submit"
+                variant="contained"
+                startIcon={<Iconify icon="eva:save-fill" />}
+              >
+                Save
+              </LoadingButton>
+              <Button
+                size="large"
+                variant="contained"
+                color="error"
+                startIcon={<Iconify icon="eva:close-fill" />}
+                onClick={handleDialogClose}
+              >
+                Close
+              </Button>
+            </Grid>
+          </Grid>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+});
+
+CustomerAddressDialog.propTypes = {
+  open: PropTypes.bool,
+  onClose: PropTypes.func,
+  selectedUser: PropTypes.object,
+  onAddressCreated: PropTypes.func,
+  setNotify: PropTypes.func,
+};
 
 CreateSale.propTypes = {
   id: PropTypes.string,
