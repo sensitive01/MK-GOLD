@@ -1479,9 +1479,22 @@ async function triggerCompletedInvoiceWhatsApp(saleId) {
       .populate('customer branch')
       .exec();
 
-    if (!sale) return;
-    if (!['physical', 'pledged'].includes(sale.saleType) || sale.status !== 'completed') return;
-    if (sale.invoiceSent) return;
+    if (!sale) {
+      console.warn(`[WhatsApp Invoice] Sale not found: ${saleId}`);
+      return;
+    }
+    if (!['physical', 'pledged'].includes(sale.saleType)) {
+      console.log(`[WhatsApp Invoice] Skipped sale ${sale.billId || saleId}: saleType '${sale.saleType}' not eligible`);
+      return;
+    }
+    if (sale.status !== 'completed') {
+      console.log(`[WhatsApp Invoice] Skipped sale ${sale.billId || saleId}: status is '${sale.status}' (invoice triggers only when 'completed')`);
+      return;
+    }
+    if (sale.invoiceSent) {
+      console.log(`[WhatsApp Invoice] Skipped sale ${sale.billId || saleId}: invoice already sent`);
+      return;
+    }
 
     const { generateAndUploadInvoice, generateAndUploadReleaseInvoice } = require('./invoicePdf');
     const { sendWhatsAppInvoice, sendWhatsAppReleaseInvoice } = require('./whatsapp');
@@ -1582,7 +1595,7 @@ async function triggerCompletedInvoiceWhatsApp(saleId) {
       console.log(`Release Receipt PDF generated and sent via WhatsApp for release bill ${sale.billId}`);
     }
   } catch (err) {
-    console.error(`Failed to trigger invoice WhatsApp for sale ${saleId}:`, err.message);
+    console.error(`[WhatsApp Invoice] Failed to trigger invoice WhatsApp for sale ${saleId}:`, err);
   }
 }
 

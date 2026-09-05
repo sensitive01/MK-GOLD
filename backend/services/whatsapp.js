@@ -10,10 +10,15 @@ const sendWhatsAppTemplate = async (to, templateName, components, languageCode =
     return { success: false, error: "WhatsApp API key is not configured" };
   }
 
+  let cleanTo = String(to).replace(/\D/g, '').replace(/^0/, '');
+  if (cleanTo.length === 10) {
+    cleanTo = '91' + cleanTo;
+  }
+
   const payload = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
-    to: String(to).replace(/\D/g, '').replace(/^0/, ''),
+    to: cleanTo,
     type: "template",
     template: {
       name: templateName,

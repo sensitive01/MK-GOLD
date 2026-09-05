@@ -632,7 +632,7 @@ function Customer(props) {
         </Stack>
         <Scrollbar>
           <TableContainer>
-            <Table sx={{ minWidth: 800 }}>
+            <Table sx={{ minWidth: displayData?.length === 0 ? 'auto' : 850 }}>
               <TableHead>
                 <TableRow>
                   <TableCell align="left" />
@@ -641,7 +641,7 @@ function Customer(props) {
                   <TableCell align="left">Phone</TableCell>
                   <TableCell align="left">Gender</TableCell>
                   <TableCell align="left">Status</TableCell>
-                  <TableCell align="left">Action</TableCell>
+                  <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>Action</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -671,90 +671,93 @@ function Customer(props) {
                         {e.status ? sentenceCase(e.status) : ''}
                       </Label>
                     </TableCell>
-                    <TableCell align="left">
-                      <Button
-                        variant="contained"
-                        size="small"
-                        sx={{ mr: 1 }}
-                        startIcon={<Iconify icon="eva:edit-fill" />}
-                        onClick={() => {
-                          setOpenId(e._id);
-                          setValues({
-                            name: e.name || '',
-                            phoneNumber: e.phoneNumber || '',
-                            alternatePhoneNumber: e.alternatePhoneNumber || '',
-                            email: e.email || '',
-                            dob: e.dob || null,
-                            gender: e.gender || '',
-                            maritalStatus: e.maritalStatus || '',
-                            source: e.source || '',
-                            status: e.status || 'active',
-                            chooseId: e.chooseId || '',
-                            idNo: e.idNo || '',
-                            enqID: e.enqID || '',
-                          });
-                          setEnquiryId(e.enqID || '');
-                          // Fetch profile image if exists
-                          const profileImg = e.profileImage?.uploadedFile;
-                          if (profileImg) {
-                            setImg(profileImg.startsWith('http') ? profileImg : `${global.baseURL}/${profileImg}`);
-                          } else {
-                            setImg(null);
-                          }
-
-                          // Fetch ID Proof and Signature
-                          if (e.idProof?.uploadedFile) {
-                            const idImg = e.idProof.uploadedFile;
-                            setUploadIdPreview(idImg.startsWith('http') ? idImg : `${global.baseURL}/${idImg}`);
-                          } else {
-                            setUploadIdPreview(null);
-                          }
-
-                          if (e.signatureImage?.uploadedFile) {
-                            const sigImg = e.signatureImage.uploadedFile;
-                            setSignaturePreview(sigImg.startsWith('http') ? sigImg : `${global.baseURL}/${sigImg}`);
-                          } else {
-                            setSignaturePreview(null);
-                          }
-
-                          setOtpStatus('success');
-                          if (e.alternatePhoneNumber) {
-                            setAltOtpStatus('success');
-                          } else {
-                            setAltOtpStatus(null);
-                          }
-                          setEnquiryId(e.enqID || '');
-                          setTabValue(0);
-                          setCustomerModal(true);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                      {!(e.sales?.length > 0) && (
+                    <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
+                      <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="center">
                         <Button
                           variant="contained"
                           size="small"
-                          color="error"
-                          startIcon={<DeleteIcon />}
-                          sx={{ mr: 1 }}
+                          startIcon={<Iconify icon="eva:edit-fill" />}
+                          sx={{ whiteSpace: 'nowrap' }}
                           onClick={() => {
                             setOpenId(e._id);
-                            handleOpenDeleteModal();
+                            setValues({
+                              name: e.name || '',
+                              phoneNumber: e.phoneNumber || '',
+                              alternatePhoneNumber: e.alternatePhoneNumber || '',
+                              email: e.email || '',
+                              dob: e.dob || null,
+                              gender: e.gender || '',
+                              maritalStatus: e.maritalStatus || '',
+                              source: e.source || '',
+                              status: e.status || 'active',
+                              chooseId: e.chooseId || '',
+                              idNo: e.idNo || '',
+                              enqID: e.enqID || '',
+                            });
+                            setEnquiryId(e.enqID || '');
+                            // Fetch profile image if exists
+                            const profileImg = e.profileImage?.uploadedFile;
+                            if (profileImg) {
+                              setImg(profileImg.startsWith('http') ? profileImg : `${global.baseURL}/${profileImg}`);
+                            } else {
+                              setImg(null);
+                            }
+
+                            // Fetch ID Proof and Signature
+                            if (e.idProof?.uploadedFile) {
+                              const idImg = e.idProof.uploadedFile;
+                              setUploadIdPreview(idImg.startsWith('http') ? idImg : `${global.baseURL}/${idImg}`);
+                            } else {
+                              setUploadIdPreview(null);
+                            }
+
+                            if (e.signatureImage?.uploadedFile) {
+                              const sigImg = e.signatureImage.uploadedFile;
+                              setSignaturePreview(sigImg.startsWith('http') ? sigImg : `${global.baseURL}/${sigImg}`);
+                            } else {
+                              setSignaturePreview(null);
+                            }
+
+                            setOtpStatus('success');
+                            if (e.alternatePhoneNumber) {
+                              setAltOtpStatus('success');
+                            } else {
+                              setAltOtpStatus(null);
+                            }
+                            setEnquiryId(e.enqID || '');
+                            setTabValue(0);
+                            setCustomerModal(true);
                           }}
                         >
-                          Delete
+                          Edit
                         </Button>
-                      )}
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        color="secondary"
-                        startIcon={<Iconify icon="material-symbols:history" />}
-                        onClick={() => handleOpenLogModal(e)}
-                        disabled={fetchingLog}
-                      >
-                        Logs
-                      </Button>
+                        {!(e.sales?.length > 0) && (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            color="error"
+                            startIcon={<DeleteIcon />}
+                            sx={{ whiteSpace: 'nowrap' }}
+                            onClick={() => {
+                              setOpenId(e._id);
+                              handleOpenDeleteModal();
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="secondary"
+                          startIcon={<Iconify icon="material-symbols:history" />}
+                          sx={{ whiteSpace: 'nowrap' }}
+                          onClick={() => handleOpenLogModal(e)}
+                          disabled={fetchingLog}
+                        >
+                          Logs
+                        </Button>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))}
