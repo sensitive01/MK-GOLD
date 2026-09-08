@@ -78,4 +78,30 @@ async function createFile(req, res) {
   }
 }
 
-module.exports = { createCustomer, createAddress, createFile };
+async function sendOtp(req, res) {
+  try {
+    const phoneNumber = req.body?.phoneNumber;
+    if (!phoneNumber) {
+      return res.json({ status: false, message: "Phone number is required" });
+    }
+    const result = await customerService.sendOtp({ phoneNumber });
+    return res.json(result);
+  } catch (err) {
+    return res.json({ status: false, message: err.message });
+  }
+}
+
+async function verifyOtp(req, res) {
+  try {
+    const { token, otp } = req.body || {};
+    if (!token || !otp) {
+      return res.json({ status: false, message: "Token and OTP are required" });
+    }
+    const result = customerService.verifyOtp({ token, otp });
+    return res.json(result);
+  } catch (err) {
+    return res.json({ status: false, message: err.message });
+  }
+}
+
+module.exports = { createCustomer, createAddress, createFile, sendOtp, verifyOtp };

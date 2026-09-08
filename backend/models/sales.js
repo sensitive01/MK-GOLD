@@ -76,6 +76,22 @@ const Sales = mongoose.model(
             movedAt: {
               type: Date,
             },
+            ornamentPhoto: {
+              type: String,
+              default: "",
+            },
+            hasBill: {
+              type: Boolean,
+              default: false,
+            },
+            billDate: {
+              type: String,
+              default: "",
+            },
+            billProof: {
+              type: String,
+              default: "",
+            },
           },
           { timestamps: true }
         ),

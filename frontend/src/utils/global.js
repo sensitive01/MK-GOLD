@@ -1,6 +1,19 @@
+const getBaseURL = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:4998';
+    }
+    return window.location.origin;
+  }
+  return 'http://localhost:4998';
+};
+
 export default {
-  // baseURL: 'http://localhost:4998',
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: getBaseURL(),
   states: [
     'Andaman and Nicobar Islands',
     'Andhra Pradesh',

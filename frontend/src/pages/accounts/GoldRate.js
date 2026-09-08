@@ -258,11 +258,12 @@ export default function GoldRate() {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 400,
+    width: { xs: '90%', sm: 400 },
+    maxWidth: 400,
     bgcolor: 'background.paper',
     borderRadius: 3,
     boxShadow: 24,
-    p: 4,
+    p: { xs: 2.5, sm: 4 },
   };
 
   function AlertComponent(props, ref) {
@@ -308,14 +309,21 @@ export default function GoldRate() {
       )}
 
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={{ xs: 1.5, sm: 2 }}
+          mb={{ xs: 2.5, sm: 4 }}
+        >
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff', mb: { xs: 0, sm: 1 } }}>
             Gold Rate
           </Typography>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+          <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
             {userType !== 'finance' && (
               <Button
                 variant="contained"
+                size="small"
                 startIcon={<Iconify icon="eva:plus-fill" />}
                 onClick={() => {
                   setToggleContainer(!toggleContainer);
@@ -327,6 +335,7 @@ export default function GoldRate() {
             )}
             <Button
               variant="contained"
+              size="small"
               startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
               onClick={handleFilterOpen}
             >
@@ -335,10 +344,12 @@ export default function GoldRate() {
           </Stack>
         </Stack>
 
-        <p style={{ color: '#fff' }}>
-          From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date:{' '}
-          {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
-        </p>
+        {(values.fromDate || values.toDate) && (
+          <Typography variant="body2" sx={{ color: '#fff', mb: 2, opacity: 0.9 }}>
+            From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : '-'}, To Date:{' '}
+            {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : '-'}
+          </Typography>
+        )}
 
         <Card>
           <GoldRateListToolbar
@@ -352,8 +363,8 @@ export default function GoldRate() {
             }}
           />
 
-          <Scrollbar>
-            <TableContainer>
+          <Scrollbar sx={{ width: '100%' }}>
+            <TableContainer sx={{ minWidth: 800 }}>
               <Table sx={{ minWidth: 800 }}>
                 <GoldRateListHead
                   order={order}
@@ -582,20 +593,13 @@ export default function GoldRate() {
         </Box>
       </Modal>
 
-      <Dialog open={filterOpen} onClose={handleFilterClose}>
-        <form
-          ref={form}
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmit(e);
-          }}
-          autoComplete="off"
-        >
+      <Dialog open={filterOpen} onClose={handleFilterClose} fullWidth maxWidth="xs">
+        <form ref={form} onSubmit={handleSubmit} autoComplete="off">
           <DialogTitle>Filter</DialogTitle>
           <DialogContent>
-            <Grid container spacing={3} sx={{ p: 1 }}>
+            <Grid container spacing={2} sx={{ pt: 1 }}>
               <Grid item xs={12} sm={6}>
-                <FormControl sx={{ minWidth: 120 }}>
+                <FormControl fullWidth>
                   <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
                     <DesktopDatePicker
                       label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
@@ -605,13 +609,13 @@ export default function GoldRate() {
                       onChange={(value) => {
                         setFieldValue('fromDate', value, true);
                       }}
-                      renderInput={(params) => <TextField {...params} fullWidth />}
+                      renderInput={(params) => <TextField {...params} fullWidth helperText={null} />}
                     />
                   </LocalizationProvider>
                 </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
-                <FormControl sx={{ minWidth: 120 }}>
+                <FormControl fullWidth>
                   <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
                     <DesktopDatePicker
                       label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
@@ -621,7 +625,7 @@ export default function GoldRate() {
                       onChange={(value) => {
                         setFieldValue('toDate', value, true);
                       }}
-                      renderInput={(params) => <TextField {...params} fullWidth />}
+                      renderInput={(params) => <TextField {...params} fullWidth helperText={null} />}
                     />
                   </LocalizationProvider>
                 </FormControl>

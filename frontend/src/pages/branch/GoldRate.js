@@ -243,16 +243,23 @@ export default function GoldRate() {
         </Snackbar>
       )}
 
-      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+      <Container maxWidth="xl" sx={{ px: { xs: 1, sm: 2, md: 3 }, display: toggleContainer === true ? 'none' : 'block' }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={2}
+          mb={{ xs: 2.5, sm: 5 }}
+        >
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff', fontSize: { xs: '1.5rem', sm: '2rem' }, fontWeight: 700, mb: { xs: 0, sm: 1 } }}>
             Gold Rate
           </Typography>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ width: { xs: '100%', sm: 'auto' } }}>
             {isBullionDesk && (
               <Button
                 variant="contained"
                 startIcon={<Iconify icon="eva:plus-fill" />}
+                sx={{ flex: { xs: 1, sm: 'none' } }}
                 onClick={() => {
                   setToggleContainer(!toggleContainer);
                   setToggleContainerType('create');
@@ -264,6 +271,7 @@ export default function GoldRate() {
             <Button
               variant="contained"
               startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+              sx={{ flex: { xs: 1, sm: 'none' } }}
               onClick={handleFilterOpen}
             >
               Filter
@@ -460,7 +468,7 @@ export default function GoldRate() {
         </MenuItem>
       </Popover>
 
-      <Dialog open={filterOpen} onClose={handleFilterClose}>
+      <Dialog open={filterOpen} onClose={handleFilterClose} fullWidth maxWidth="xs">
         <form
           ref={form}
           onSubmit={(e) => {
@@ -471,9 +479,9 @@ export default function GoldRate() {
         >
           <DialogTitle>Filter</DialogTitle>
           <DialogContent>
-            <Grid container spacing={3} sx={{ p: 1 }}>
-              <Grid item xs={12} sm={6}>
-                <FormControl sx={{ minWidth: 120 }}>
+            <Grid container spacing={2} sx={{ pt: 1 }}>
+              <Grid item xs={12}>
+                <FormControl fullWidth sx={{ minWidth: 120 }}>
                   <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
                     <DesktopDatePicker
                       label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
@@ -488,8 +496,8 @@ export default function GoldRate() {
                   </LocalizationProvider>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl sx={{ minWidth: 120 }}>
+              <Grid item xs={12}>
+                <FormControl fullWidth sx={{ minWidth: 120 }}>
                   <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
                     <DesktopDatePicker
                       label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}

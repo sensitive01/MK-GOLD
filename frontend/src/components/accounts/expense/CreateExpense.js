@@ -60,7 +60,7 @@ function CreateExpense(props) {
   });
 
   return (
-    <Card sx={{ p: 4, my: 4 }}>
+    <Card sx={{ p: { xs: 2, sm: 4 }, my: { xs: 2, sm: 4 } }}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -142,7 +142,7 @@ function CreateExpense(props) {
             </FormControl>
           </Grid>
           <Grid item xs={12}>
-            <LoadingButton size="large" type="submit" variant="contained">
+            <LoadingButton size="large" type="submit" variant="contained" sx={{ width: { xs: '100%', sm: 'auto' } }}>
               Save
             </LoadingButton>
           </Grid>

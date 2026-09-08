@@ -89,34 +89,88 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
             <TableHead>
               <TableRow>
                 <TableCell align="left">Ornament Type</TableCell>
+                <TableCell align="center">Photo</TableCell>
                 <TableCell align="left">Purity</TableCell>
                 <TableCell align="left">Quantity</TableCell>
                 <TableCell align="left">Stone weight (Grams)</TableCell>
                 <TableCell align="left">Net weight (Grams)</TableCell>
                 <TableCell align="left">Gross weight (Grams)</TableCell>
                 <TableCell align="left">Net amount (INR)</TableCell>
+                <TableCell align="center">Bill</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {data?.ornaments?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
                 <TableRow hover key={index} tabIndex={-1}>
                   <TableCell align="left">{sentenceCase(e.ornamentType || '')}</TableCell>
+                  <TableCell align="center">
+                    {e.ornamentPhoto ? (
+                      <a
+                        href={e.ornamentPhoto.startsWith('http') ? e.ornamentPhoto : `${global.baseURL}/${e.ornamentPhoto}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ display: 'inline-block' }}
+                      >
+                        <Avatar
+                          src={e.ornamentPhoto.startsWith('http') ? e.ornamentPhoto : `${global.baseURL}/${e.ornamentPhoto}`}
+                          variant="rounded"
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            border: '1px solid #e0e0e0',
+                            mx: 'auto',
+                            cursor: 'pointer',
+                            '&:hover': { opacity: 0.8 },
+                          }}
+                        />
+                      </a>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        -
+                      </Typography>
+                    )}
+                  </TableCell>
                   <TableCell align="left">{e.purity}</TableCell>
                   <TableCell align="left">{e.quantity}</TableCell>
                   <TableCell align="left">{e.stoneWeight?.toFixed(2)}</TableCell>
                   <TableCell align="left">{e.netWeight?.toFixed(2)}</TableCell>
                   <TableCell align="left">{e.grossWeight?.toFixed(2)}</TableCell>
                   <TableCell align="left">{Math.round(e.netAmount)}</TableCell>
+                  <TableCell align="center">
+                    {e.hasBill ? (
+                      e.billProof ? (
+                        <a
+                          href={e.billProof.startsWith('http') ? e.billProof : `${global.baseURL}/${e.billProof}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ textDecoration: 'none' }}
+                        >
+                          <Chip
+                            size="small"
+                            color="primary"
+                            label={`Bill: ${e.billDate || 'Yes'}`}
+                            icon={<Iconify icon="eva:external-link-outline" />}
+                            clickable
+                            sx={{ fontWeight: 500 }}
+                          />
+                        </a>
+                      ) : (
+                        <Chip size="small" color="primary" label={`Bill: ${e.billDate || 'Yes'}`} sx={{ fontWeight: 500 }} />
+                      )
+                    ) : (
+                      <Chip size="small" variant="outlined" label="No Bill" sx={{ color: 'text.secondary' }} />
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={7} />
+                  <TableCell colSpan={9} />
                 </TableRow>
               )}
               {data?.ornaments?.length === 0 && (
                 <TableRow>
-                  <TableCell align="center" colSpan={7} sx={{ py: 3 }}>
+                  <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
                     <Paper
                       sx={{
                         textAlign: 'center',
@@ -273,7 +327,29 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
     allProofs.push(...transitProofs);
     allProofs.push(...meltingProofs);
 
-    let fpCount = 0;
+    data?.ornaments?.forEach((orn, idx) => {
+      const typeLabel = orn.ornamentType || `Ornament #${idx + 1}`;
+      if (orn.ornamentPhoto) {
+        allProofs.push({
+          uploadedFile: orn.ornamentPhoto,
+          documentType: `Ornament Photo (${typeLabel})`,
+          displayType: `Ornament Photo (${typeLabel})`,
+          documentNo: 'N/A',
+          _id: `orn_photo_${idx}`,
+        });
+      }
+      if (orn.billProof) {
+        const formattedDate = orn.billDate ? (orn.billDate.split('T')[0] || orn.billDate) : 'N/A';
+        allProofs.push({
+          uploadedFile: orn.billProof,
+          documentType: `Ornament Purchase Bill (${typeLabel})`,
+          displayType: `Ornament Purchase Bill (${typeLabel})`,
+          documentNo: formattedDate,
+          _id: `orn_bill_${idx}`,
+        });
+      }
+    });
+
     allProofs.forEach(e => {
        const releaseDoc = data?.release?.flatMap((r) => r.proofDocuments || [])?.find((doc) => doc.documentFile === e.uploadedFile);
        let docType = e.documentType || releaseDoc?.documentType;
@@ -281,8 +357,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
        
        if (!docType && e.uploadName && e.uploadName !== 'Release Document' && e.uploadName !== 'release') {
          if (e.uploadName === 'finance_proof') {
-           fpCount++;
-           displayType = isPhysical ? 'Finance Proof' : (fpCount > 1 ? 'Sale Finance Proof' : 'Release Finance Proof');
+           displayType = isPhysical ? 'Finance Proof' : 'Release Finance Proof';
          } else if (e.uploadName === 'sale_finance_proof' || e.uploadName === 'sale_proof') {
            displayType = 'Sale Finance Proof';
          } else if (e.uploadName === 'transit_proof') {
@@ -297,19 +372,31 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
            displayType = e.uploadName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
          }
        } else if (docType === 'Release Finance Proof' || docType === 'Finance Proof') {
-           fpCount++;
-           if (fpCount > 1 && docType === 'Release Finance Proof') {
-               displayType = 'Sale Finance Proof';
-           } else {
-               displayType = isPhysical ? 'Finance Proof' : 'Release Finance Proof';
-           }
+           displayType = isPhysical ? 'Finance Proof' : (docType || 'Finance Proof');
        }
 
        if (displayType.toLowerCase() === 'sale finance proof') displayType = 'Sale Finance Proof';
        if (displayType.toLowerCase() === 'release finance proof' || displayType.toLowerCase() === 'release finance document') displayType = 'Release Finance Proof';
        
-       e.displayType = displayType;
+       e.baseDisplayType = displayType;
        e.documentNo = e.documentNo || releaseDoc?.documentNo || 'N/A';
+    });
+
+    const proofTypeTotals = {};
+    allProofs.forEach(e => {
+      const typeKey = e.baseDisplayType || 'Document';
+      proofTypeTotals[typeKey] = (proofTypeTotals[typeKey] || 0) + 1;
+    });
+
+    const proofTypeCounters = {};
+    allProofs.forEach(e => {
+      const typeKey = e.baseDisplayType || 'Document';
+      if (proofTypeTotals[typeKey] > 1 && typeKey.toLowerCase().includes('finance proof')) {
+        proofTypeCounters[typeKey] = (proofTypeCounters[typeKey] || 0) + 1;
+        e.displayType = `${typeKey} ${proofTypeCounters[typeKey]}`;
+      } else {
+        e.displayType = typeKey;
+      }
     });
 
     const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - allProofs.length) : 0;

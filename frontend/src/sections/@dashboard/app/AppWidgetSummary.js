@@ -18,6 +18,11 @@ const StyledIcon = styled('div')(({ theme }) => ({
   height: theme.spacing(8),
   justifyContent: 'center',
   marginBottom: theme.spacing(3),
+  [theme.breakpoints.down('sm')]: {
+    width: theme.spacing(6),
+    height: theme.spacing(6),
+    marginBottom: theme.spacing(1.5),
+  },
 }));
 
 // ----------------------------------------------------------------------
@@ -42,14 +47,15 @@ export default function AppWidgetSummary({
   sx, 
   bgColor, 
   iconColor, 
-  textColor,
+  textColor, 
   disableShorten = false,
   ...other 
 }) {
   return (
     <Card
       sx={{
-        py: 5,
+        py: { xs: 2.5, sm: 3.5, md: 5 },
+        px: { xs: 1.5, sm: 2 },
         boxShadow: (theme) => theme.customShadows.z8,
         textAlign: 'center',
         color: textColor || ((theme) => theme.palette[color].darker),
@@ -60,7 +66,7 @@ export default function AppWidgetSummary({
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        minHeight: 220,
+        minHeight: { xs: 145, sm: 180, md: 220 },
         transition: (theme) => 
           theme.transitions.create(['transform', 'box-shadow', 'background-color'], {
             duration: theme.transitions.duration.shorter,
@@ -85,18 +91,30 @@ export default function AppWidgetSummary({
             )} 100%)`,
         }}
       >
-        <Iconify icon={icon} width={32} height={32} />
+        <Iconify icon={icon} sx={{ width: { xs: 24, sm: 28, md: 32 }, height: { xs: 24, sm: 28, md: 32 } }} />
       </StyledIcon>
 
       {total !== false ? (
-        <Typography variant="h3">
+        <Typography variant="h3" sx={{ fontSize: { xs: '1.25rem', sm: '1.75rem', md: '2.125rem' }, fontWeight: 700, px: 1, wordBreak: 'break-word' }}>
           {typeof total === 'number' ? (disableShorten ? fNumber(total) : fShortenNumber(total)) : total || 0}
         </Typography>
       ) : (
-        <Box sx={{ height: 48 }} /> // Placeholder to maintain equal height when total is hidden
+        <Box sx={{ height: { xs: 24, sm: 36, md: 48 } }} /> // Placeholder to maintain equal height when total is hidden
       )}
 
-      <Typography variant="subtitle2" sx={{ opacity: 0.8, fontWeight: 'bold', textTransform: 'uppercase', mt: 1 }}>
+      <Typography
+        variant="subtitle2"
+        sx={{
+          opacity: 0.85,
+          fontWeight: 'bold',
+          textTransform: 'uppercase',
+          mt: 0.75,
+          px: 0.5,
+          fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' },
+          letterSpacing: { xs: '0.01em', sm: '0.04em' },
+          lineHeight: 1.3,
+        }}
+      >
         {title}
       </Typography>
     </Card>

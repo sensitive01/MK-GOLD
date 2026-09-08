@@ -20,8 +20,10 @@ import {
   Select,
   Checkbox,
   FormControlLabel,
+  InputAdornment,
+  Chip,
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { styled, alpha } from '@mui/material/styles';
 import { LoadingButton } from '@mui/lab';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -35,7 +37,7 @@ import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
 import Iconify from '../components/iconify';
 import global from '../utils/global';
 import useResponsive from '../hooks/useResponsive';
-import { createCustomerKYC, createFileKYC, createAddressKYC } from '../apis/public/kyc';
+import { createCustomerKYC, createFileKYC, createAddressKYC, sendOtpKYC, verifyOtpKYC } from '../apis/public/kyc';
 
 const StyledRoot = styled('div')(({ theme }) => ({
   [theme.breakpoints.up('md')]: {
@@ -103,6 +105,73 @@ export default function PublicKYC() {
     setImg(imageSrc);
   }, [webcamRef]);
 
+  // Alternate WhatsApp OTP States
+  const [altOtp, setAltOtp] = useState('');
+  const [altToken, setAltToken] = useState(null);
+  const [altSendingOtp, setAltSendingOtp] = useState(false);
+  const [altVerifyingOtp, setAltVerifyingOtp] = useState(false);
+  const [isAltOtpVerified, setIsAltOtpVerified] = useState(false);
+  const [showAltOtpInput, setShowAltOtpInput] = useState(false);
+  const [altOtpError, setAltOtpError] = useState('');
+  const [altOtpSuccessMsg, setAltOtpSuccessMsg] = useState('');
+  const [altCountdown, setAltCountdown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (altCountdown > 0) {
+      timer = setTimeout(() => setAltCountdown((prev) => prev - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [altCountdown]);
+
+  const handleSendAltOtp = async () => {
+    if (!values.alternatePhoneNumber || values.alternatePhoneNumber.length !== 10) {
+      setAltOtpError('Please enter a valid 10-digit alternate phone number first.');
+      return;
+    }
+    setAltSendingOtp(true);
+    setAltOtpError('');
+    setAltOtpSuccessMsg('');
+    try {
+      const res = await sendOtpKYC({ phoneNumber: values.alternatePhoneNumber });
+      if (res?.status) {
+        setAltToken(res.data?.token);
+        setShowAltOtpInput(true);
+        setAltCountdown(30);
+        setAltOtpSuccessMsg('WhatsApp OTP sent successfully!');
+      } else {
+        setAltOtpError(res?.message || 'Failed to send WhatsApp OTP');
+      }
+    } catch (err) {
+      setAltOtpError(err?.message || 'Error sending WhatsApp OTP');
+    } finally {
+      setAltSendingOtp(false);
+    }
+  };
+
+  const handleVerifyAltOtp = async () => {
+    if (!altOtp || altOtp.length !== 6) {
+      setAltOtpError('Please enter a 6-digit OTP');
+      return;
+    }
+    setAltVerifyingOtp(true);
+    setAltOtpError('');
+    try {
+      const res = await verifyOtpKYC({ token: altToken, otp: altOtp });
+      if (res?.status) {
+        setIsAltOtpVerified(true);
+        setShowAltOtpInput(false);
+        setAltOtpSuccessMsg('Alternate WhatsApp number verified successfully!');
+      } else {
+        setAltOtpError(res?.message || 'Invalid or expired OTP');
+      }
+    } catch (err) {
+      setAltOtpError(err?.message || 'Error verifying OTP');
+    } finally {
+      setAltVerifyingOtp(false);
+    }
+  };
+
   const schema = Yup.object({
     name: Yup.string().required('Name is required'),
     phoneNumber: Yup.string()
@@ -155,6 +224,12 @@ export default function PublicKYC() {
     },
     validationSchema: schema,
     onSubmit: async (formValues) => {
+      if (formValues.isAlternateWhatsapp && formValues.alternatePhoneNumber?.length === 10 && !isAltOtpVerified) {
+        setError('Please verify your alternate WhatsApp number with OTP before submitting.');
+        setTabValue(0);
+        return;
+      }
+
       if (!img) {
         setError('Please capture your photo in the Photo Capture tab.');
         setTabValue(2);
@@ -269,23 +344,30 @@ export default function PublicKYC() {
   }, [values.pincode, setFieldValue]);
 
   const handleFetchEnquiry = async (idOverride) => {
-    const idToFetch = idOverride || enquiryId;
-    if (!idToFetch) return;
+    const cleanOverride = typeof idOverride === 'string' ? idOverride : null;
+    const idToFetch = cleanOverride || enquiryId;
+    if (!idToFetch || typeof idToFetch !== 'string') return;
     setFetchingEnquiry(true);
     setError('');
     try {
-      const res = await axios.get(`${global.baseURL}/api/v1.0/public/qr-enquiry/get-by-enqid/${encodeURIComponent(idToFetch.trim())}`);
-      if (res.data.status) {
+      const apiBase = global.baseURL || 'http://localhost:4998';
+      const res = await axios.get(`${apiBase}/api/v1.0/public/qr-enquiry/get-by-enqid/${encodeURIComponent(idToFetch.trim())}`);
+      if (res.data.status && res.data.data) {
         const data = res.data.data;
+        if (data.branch) {
+          setBranch(data.branch);
+        }
+        if (data.enqID) setEnquiryId(data.enqID);
         if (data.name) setFieldValue('name', data.name);
         if (data.phoneNumber) setFieldValue('phoneNumber', data.phoneNumber);
         if (data.email) setFieldValue('email', data.email);
         if (data.pincode) setFieldValue('pincode', data.pincode);
       } else {
-        setError(res.data.message);
+        setError(res.data.message || 'Enquiry details not found');
       }
     } catch (err) {
-      setError('Failed to fetch enquiry details');
+      console.error('Fetch enquiry error:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to fetch enquiry details');
     }
     setFetchingEnquiry(false);
   };
@@ -296,13 +378,14 @@ export default function PublicKYC() {
       return;
     }
 
+    const apiBase = global.baseURL || 'http://localhost:4998';
     const isEnquiryId = Boolean(id) || targetParam.toUpperCase().startsWith('MKG') || targetParam.length !== 24;
 
     if (isEnquiryId) {
       setLoading(true);
       setError('');
       setEnquiryId(targetParam);
-      axios.get(`${global.baseURL}/api/v1.0/public/qr-enquiry/get-by-enqid/${encodeURIComponent(targetParam.trim())}`)
+      axios.get(`${apiBase}/api/v1.0/public/qr-enquiry/get-by-enqid/${encodeURIComponent(targetParam.trim())}`)
         .then((res) => {
           if (res.data.status && res.data.data) {
             const data = res.data.data;
@@ -327,7 +410,7 @@ export default function PublicKYC() {
     } else {
       // Normal branchId route (/kyc/69b39dd649121dda25fbf607)
       setLoading(true);
-      axios.get(`${global.baseURL}/api/v1.0/public/branch/${targetParam}`)
+      axios.get(`${apiBase}/api/v1.0/public/branch/${targetParam}`)
         .then((res) => {
           if (res.data.status) setBranch(res.data.data);
           setLoading(false);
@@ -351,7 +434,11 @@ export default function PublicKYC() {
   }, [targetParam, id, searchParams, setFieldValue]);
 
   const handleNext = () => {
-    // Validate basic fields before moving to next tab if needed
+    if (tabValue === 0 && values.isAlternateWhatsapp && values.alternatePhoneNumber?.length === 10 && !isAltOtpVerified) {
+      setError('Please verify your alternate WhatsApp number with OTP before proceeding.');
+      return;
+    }
+    setError('');
     setTabValue((prev) => prev + 1);
   };
 
@@ -469,7 +556,7 @@ export default function PublicKYC() {
                             <LoadingButton
                                 loading={fetchingEnquiry}
                                 variant="outlined"
-                                onClick={handleFetchEnquiry}
+                                onClick={() => handleFetchEnquiry()}
                             >
                                 Fetch Detail
                             </LoadingButton>
@@ -535,21 +622,179 @@ export default function PublicKYC() {
                           label="Alt Phone (Optional)"
                           fullWidth
                           onBlur={handleBlur}
-                          onChange={handleChange}
+                          onChange={(e) => {
+                            let val = e.target.value.replace(/\D/g, '');
+                            if (val.startsWith('0')) {
+                              val = val.substring(1);
+                            }
+                            if (val.length > 0 && !/^[6-9]/.test(val)) {
+                              val = '';
+                            }
+                            setFieldValue('alternatePhoneNumber', val.slice(0, 10));
+                            if (isAltOtpVerified) {
+                              setIsAltOtpVerified(false);
+                              setAltToken(null);
+                              setAltOtp('');
+                              setAltOtpSuccessMsg('');
+                              setShowAltOtpInput(false);
+                            }
+                          }}
                           inputProps={{ maxLength: 10 }}
-                        />
-                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
-                            <FormControlLabel
-                              control={<Checkbox name="isAlternateWhatsapp" checked={values.isAlternateWhatsapp} onChange={handleChange} size="small" sx={{ color: '#25D366', '&.Mui-checked': { color: '#25D366' } }} />}
-                              label={
-                                <Box sx={{ display: 'flex', alignItems: 'center', color: '#25D366' }}>
-                                  <Typography variant="body2" sx={{ mr: 0.5 }}>Mark as WhatsApp number</Typography>
-                                  <Iconify icon="mdi:whatsapp" width={18} height={18} />
+                          InputProps={isAltOtpVerified ? {
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <Box sx={{ display: 'flex', alignItems: 'center', color: '#00a76f' }}>
+                                  <Iconify icon="mdi:check-circle" sx={{ mr: 0.5 }} />
+                                  <Typography variant="caption" fontWeight="bold">Verified</Typography>
                                 </Box>
-                              }
-                              sx={{ mt: 0.5, mr: 0, ml: 0 }}
-                            />
+                              </InputAdornment>
+                            ),
+                          } : null}
+                        />
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', mt: 0.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            {isAltOtpVerified && (
+                              <Chip
+                                size="small"
+                                icon={<Iconify icon="mdi:check-circle" />}
+                                label="WhatsApp Verified"
+                                color="success"
+                                variant="outlined"
+                                sx={{ height: 24, fontSize: '0.75rem', fontWeight: 600 }}
+                              />
+                            )}
                           </Box>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                name="isAlternateWhatsapp"
+                                checked={values.isAlternateWhatsapp}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  setFieldValue('isAlternateWhatsapp', checked);
+                                  if (!checked) {
+                                    setIsAltOtpVerified(false);
+                                    setShowAltOtpInput(false);
+                                    setAltOtp('');
+                                    setAltToken(null);
+                                    setAltOtpError('');
+                                    setAltOtpSuccessMsg('');
+                                  }
+                                }}
+                                size="small"
+                                sx={{ color: '#25D366', '&.Mui-checked': { color: '#25D366' } }}
+                              />
+                            }
+                            label={
+                              <Box sx={{ display: 'flex', alignItems: 'center', color: '#25D366' }}>
+                                <Typography variant="body2" sx={{ mr: 0.5 }}>Mark as WhatsApp number</Typography>
+                                <Iconify icon="mdi:whatsapp" width={18} height={18} />
+                              </Box>
+                            }
+                            sx={{ mr: 0, ml: 0 }}
+                          />
+                        </Box>
+
+                        {/* WhatsApp OTP Verification Box for Alternate Number */}
+                        {values.isAlternateWhatsapp && values.alternatePhoneNumber?.length === 10 && !isAltOtpVerified && (
+                          <Box sx={{ mt: 1 }}>
+                            {!showAltOtpInput ? (
+                              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  disabled={altSendingOtp}
+                                  onClick={handleSendAltOtp}
+                                  startIcon={altSendingOtp ? <CircularProgress size={16} color="inherit" /> : null}
+                                  sx={{
+                                    bgcolor: '#25D366',
+                                    color: '#fff',
+                                    '&:hover': { bgcolor: '#128C7E' },
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                    fontSize: '0.85rem',
+                                    boxShadow: 'none',
+                                    whiteSpace: 'nowrap',
+                                    px: 2.5,
+                                    py: 0.8,
+                                  }}
+                                >
+                                  {altSendingOtp ? 'Sending OTP...' : 'Send OTP'}
+                                </Button>
+                              </Box>
+                            ) : (
+                              <Box
+                                sx={{
+                                  mt: 1,
+                                  p: 2,
+                                  borderRadius: 1.5,
+                                  bgcolor: 'rgba(37, 211, 102, 0.06)',
+                                  border: '1px dashed #25D366',
+                                }}
+                              >
+                                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+                                  Enter the 6-digit OTP sent to WhatsApp number <strong>+91 {values.alternatePhoneNumber}</strong>
+                                </Typography>
+                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                                  <TextField
+                                    size="small"
+                                    placeholder="6-digit OTP"
+                                    value={altOtp}
+                                    onChange={(e) => {
+                                      const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                      setAltOtp(val);
+                                      setAltOtpError('');
+                                    }}
+                                    error={Boolean(altOtpError)}
+                                    inputProps={{ maxLength: 6, style: { letterSpacing: 4, fontWeight: 700, fontSize: '1rem', textAlign: 'center' } }}
+                                    sx={{ width: { xs: '100%', sm: 160 }, bgcolor: 'background.paper' }}
+                                  />
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    disabled={altOtp.length !== 6 || altVerifyingOtp}
+                                    onClick={handleVerifyAltOtp}
+                                    startIcon={altVerifyingOtp ? <CircularProgress size={16} color="inherit" /> : null}
+                                    sx={{
+                                      bgcolor: '#25D366',
+                                      color: '#fff',
+                                      '&:hover': { bgcolor: '#128C7E' },
+                                      textTransform: 'none',
+                                      fontWeight: 600,
+                                      boxShadow: 'none',
+                                      whiteSpace: 'nowrap',
+                                      height: 40,
+                                      px: 2,
+                                    }}
+                                  >
+                                    {altVerifyingOtp ? 'Verifying...' : 'Verify OTP'}
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    variant="text"
+                                    disabled={altCountdown > 0 || altSendingOtp}
+                                    onClick={handleSendAltOtp}
+                                    sx={{ textTransform: 'none', fontSize: '0.8rem', color: '#128C7E', whiteSpace: 'nowrap' }}
+                                  >
+                                    {altCountdown > 0 ? `Resend in ${altCountdown}s` : 'Resend OTP'}
+                                  </Button>
+                                </Stack>
+                              </Box>
+                            )}
+
+                            {altOtpError && (
+                              <Typography variant="caption" sx={{ color: 'error.main', display: 'block', mt: 0.5, fontWeight: 500 }}>
+                                {altOtpError}
+                              </Typography>
+                            )}
+
+                            {altOtpSuccessMsg && (
+                              <Typography variant="caption" sx={{ color: '#00a76f', display: 'block', mt: 0.5, fontWeight: 500 }}>
+                                {altOtpSuccessMsg}
+                              </Typography>
+                            )}
+                          </Box>
+                        )}
                       </Grid>
                       <Grid item xs={12} sm={6}>
                         <LocalizationProvider dateAdapter={AdapterMoment}>
@@ -848,7 +1093,15 @@ export default function PublicKYC() {
                         variant="contained"
                         onClick={handleNext}
                         disabled={
-                          (tabValue === 0 && (!values.name || !values.phoneNumber || !values.dob || !values.gender || !values.maritalStatus || !values.source)) ||
+                          (tabValue === 0 && (
+                            !values.name || 
+                            !values.phoneNumber || 
+                            !values.dob || 
+                            !values.gender || 
+                            !values.maritalStatus || 
+                            !values.source ||
+                            (values.isAlternateWhatsapp && values.alternatePhoneNumber?.length === 10 && !isAltOtpVerified)
+                          )) ||
                           (tabValue === 1 && (!values.chooseId || !values.idNo || !values.uploadId || !values.signature)) ||
                           (tabValue === 2 && !img)
                         }

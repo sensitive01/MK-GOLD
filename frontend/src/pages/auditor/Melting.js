@@ -522,8 +522,12 @@ export default function AuditorMelting() {
               <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
                 Process New Melting - {steps[activeStep]}
               </Typography>
-              <Button variant="outlined" onClick={() => setOpenWizard(false)}>
-                Cancel
+              <Button
+                variant="contained"
+                startIcon={<Iconify icon="mdi:arrow-left" />}
+                onClick={() => setOpenWizard(false)}
+              >
+                Back
               </Button>
             </Stack>
 
@@ -628,7 +632,15 @@ export default function AuditorMelting() {
               )}
 
               <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                {activeStep > 0 && activeStep < 2 && <Button onClick={handleBack} variant="outlined">Back</Button>}
+                {activeStep < 2 && (
+                  <Button 
+                    onClick={activeStep === 0 ? () => setOpenWizard(false) : handleBack} 
+                    variant="outlined"
+                    startIcon={<Iconify icon="mdi:arrow-left" />}
+                  >
+                    Back
+                  </Button>
+                )}
                 {activeStep < 2 && (
                   <Button 
                     variant="contained" 
@@ -746,7 +758,7 @@ export default function AuditorMelting() {
         <DialogActions>
           <Button onClick={() => setOpenWizard(false)} color="inherit">Cancel Wizard</Button>
           <Box sx={{ flexGrow: 1 }} />
-          <Button onClick={handleBack}>Back</Button>
+          <Button onClick={handleBack} startIcon={<Iconify icon="mdi:arrow-left" />}>Back</Button>
           {activeStep === 2 && (
              <Button variant="contained" onClick={handleNext} disabled={selectedOrnaments.length === 0}>
                Next

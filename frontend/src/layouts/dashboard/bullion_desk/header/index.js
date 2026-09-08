@@ -29,6 +29,10 @@ const StyledRoot = styled(AppBar)(({ theme }) => ({
 
 const StyledToolbar = styled(Toolbar)(({ theme }) => ({
   minHeight: HEADER_MOBILE,
+  padding: theme.spacing(0, 1.5),
+  [theme.breakpoints.up('sm')]: {
+    padding: theme.spacing(0, 2.5),
+  },
   [theme.breakpoints.up('lg')]: {
     minHeight: HEADER_DESKTOP,
     padding: theme.spacing(0, 5),
@@ -49,11 +53,15 @@ export default function Header({ onOpenNav }) {
           onClick={onOpenNav}
           sx={{
             mr: 1,
-            color: 'text.primary',
+            color: '#fff',
+            bgcolor: 'rgba(255, 255, 255, 0.08)',
+            '&:hover': {
+              bgcolor: 'rgba(255, 255, 255, 0.16)',
+            },
             display: { lg: 'none' },
           }}
         >
-          <Iconify icon="eva:menu-2-fill" />
+          <Iconify icon="eva:menu-2-fill" width={24} height={24} />
         </IconButton>
 
         <Searchbar />

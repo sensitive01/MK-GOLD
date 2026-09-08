@@ -44,8 +44,8 @@ exports.updateTransitStatus = async (req, res) => {
             { new: true }
         );
         
-        // Update the sales status to 'moved' when transit is received
-        if (status === 'submitted' || status === 'moved') {
+        // Update the sales status to 'moved' only when transit is moved without deviations
+        if (status === 'moved') {
             await salesModel.updateMany(
                 { _id: { $in: updateData.saleIds } },
                 { status: 'moved' }

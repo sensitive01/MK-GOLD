@@ -32,7 +32,7 @@ import {
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
 // components
-import { CreateBranch, UpdateBranch } from '../../components/admin/branch';
+import { CreateBranch, UpdateBranch, PreviewBranch } from '../../components/admin/branch';
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
 // sections
@@ -348,8 +348,23 @@ export default function Branch() {
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
-                      <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
+                      <TableRow
+                        hover
+                        key={_id}
+                        tabIndex={-1}
+                        role="checkbox"
+                        selected={selectedData}
+                        sx={{ cursor: 'pointer' }}
+                        onClick={() => {
+                          setOpenId(_id);
+                          setToggleContainerType('view');
+                          setToggleContainer(true);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                          const mainEl = document.querySelector('main') || document.querySelector('div[class*="Main"]');
+                          if (mainEl) mainEl.scrollTop = 0;
+                        }}
+                      >
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
                         <TableCell align="left">{branchId}</TableCell>
@@ -366,11 +381,11 @@ export default function Branch() {
                             'No Image'
                           )}
                         </TableCell>
-                        <TableCell align="left">
+                        <TableCell align="left" onClick={(e) => e.stopPropagation()}>
                           <Status status={status} _id={_id} />
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                        <TableCell align="right">
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton
                             size="large"
                             color="inherit"
@@ -488,6 +503,40 @@ export default function Branch() {
         <UpdateBranch setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
       </Container>
 
+      <Container
+        maxWidth="xl"
+        sx={{ display: toggleContainer === true && toggleContainerType === 'view' ? 'block' : 'none' }}
+      >
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2.5 }}>
+          <Typography variant="h4" sx={{ color: '#fff' }}>
+            View Branch
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="mdi:arrow-left" />}
+            onClick={() => {
+              setToggleContainer(false);
+              setToggleContainerType('');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              const mainEl = document.querySelector('main') || document.querySelector('div[class*="Main"]');
+              if (mainEl) mainEl.scrollTop = 0;
+            }}
+          >
+            Back
+          </Button>
+        </Stack>
+
+        <PreviewBranch
+          id={openId}
+          setToggleContainer={setToggleContainer}
+          setToggleContainerType={setToggleContainerType}
+          onOpenQr={(selectedBranch) => {
+            setQrBranch(selectedBranch);
+            setOpenQrModal(true);
+          }}
+        />
+      </Container>
+
       <Popover
         open={Boolean(open)}
         anchorEl={open}
@@ -509,8 +558,22 @@ export default function Branch() {
         <MenuItem
           onClick={() => {
             setOpen(null);
+            setToggleContainerType('view');
+            setToggleContainer(true);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            const mainEl = document.querySelector('main') || document.querySelector('div[class*="Main"]');
+            if (mainEl) mainEl.scrollTop = 0;
+          }}
+        >
+          <Iconify icon={'eva:eye-fill'} sx={{ mr: 2 }} />
+          View
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
             setToggleContainerType('update');
-            setToggleContainer(!toggleContainer);
+            setToggleContainer(true);
           }}
         >
           <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />

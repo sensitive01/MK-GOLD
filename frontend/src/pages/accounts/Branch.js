@@ -208,11 +208,12 @@ export default function Branch() {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 400,
+    width: { xs: '90%', sm: 400 },
+    maxWidth: 400,
     bgcolor: 'background.paper',
     borderRadius: 3,
     boxShadow: 24,
-    p: 4,
+    p: { xs: 2.5, sm: 4 },
   };
 
   function AlertComponent(props, ref) {
@@ -250,7 +251,7 @@ export default function Branch() {
       </Snackbar>
 
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={{ xs: 2.5, sm: 4 }}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
             Branch
           </Typography>
@@ -267,8 +268,8 @@ export default function Branch() {
             }}
           />
 
-          <Scrollbar>
-            <TableContainer>
+          <Scrollbar sx={{ width: '100%' }}>
+            <TableContainer sx={{ minWidth: 800 }}>
               <Table sx={{ minWidth: 800 }}>
                 <BranchListHead
                   order={order}

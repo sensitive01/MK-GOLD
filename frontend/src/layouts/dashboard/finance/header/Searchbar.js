@@ -13,7 +13,7 @@ const HEADER_MOBILE = 64;
 const HEADER_DESKTOP = 92;
 
 const StyledSearchbar = styled('div')(({ theme }) => ({
-  ...bgBlur({ color: theme.palette.background.default }),
+  ...bgBlur({ color: '#711683' }),
   top: 0,
   left: 0,
   zIndex: 99,
@@ -22,8 +22,11 @@ const StyledSearchbar = styled('div')(({ theme }) => ({
   position: 'absolute',
   alignItems: 'center',
   height: HEADER_MOBILE,
-  padding: theme.spacing(0, 3),
+  padding: theme.spacing(0, 1.5),
   boxShadow: theme.customShadows.z8,
+  [theme.breakpoints.up('sm')]: {
+    padding: theme.spacing(0, 3),
+  },
   [theme.breakpoints.up('md')]: {
     height: HEADER_DESKTOP,
     padding: theme.spacing(0, 5),
@@ -61,12 +64,34 @@ export default function Searchbar() {
               placeholder="Search…"
               startAdornment={
                 <InputAdornment position="start">
-                  <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled', width: 20, height: 20 }} />
+                  <Iconify icon="eva:search-fill" sx={{ color: 'rgba(255, 255, 255, 0.7)', width: 20, height: 20 }} />
                 </InputAdornment>
               }
-              sx={{ mr: 1, fontWeight: 'fontWeightBold' }}
+              sx={{
+                mr: 1,
+                fontWeight: 'fontWeightBold',
+                color: '#fff',
+                bgcolor: 'rgba(255, 255, 255, 0.12)',
+                borderRadius: 1,
+                px: 1.5,
+                py: 0.5,
+                '& input::placeholder': {
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  opacity: 1,
+                },
+              }}
             />
-            <Button variant="contained" onClick={handleClose}>
+            <Button
+              variant="contained"
+              onClick={handleClose}
+              sx={{
+                bgcolor: '#FFD700',
+                color: '#8A1B9F',
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap',
+                '&:hover': { bgcolor: '#ffae00' },
+              }}
+            >
               Search
             </Button>
           </StyledSearchbar>

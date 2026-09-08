@@ -50,14 +50,20 @@ function UpdateExpense(props) {
     setValues(initialValues);
     resetForm();
     if (props.id) {
-      getExpenseById(props.id).then((data) => {
-        setValues(data.data ?? {});
-      });
+      getExpenseById(props.id)
+        .then((data) => {
+          if (data?.data && typeof data.data === 'object') {
+            setValues(data.data);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load expense by id:', err);
+        });
     }
   }, [props.id, initialValues, resetForm, setValues]);
 
   return (
-    <Card sx={{ p: 4, my: 4 }}>
+    <Card sx={{ p: { xs: 2, sm: 4 }, my: { xs: 2, sm: 4 } }}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -119,7 +125,7 @@ function UpdateExpense(props) {
             </FormControl>
           </Grid>
           <Grid item xs={12}>
-            <LoadingButton size="large" type="submit" variant="contained">
+            <LoadingButton size="large" type="submit" variant="contained" sx={{ width: { xs: '100%', sm: 'auto' } }}>
               Save
             </LoadingButton>
           </Grid>

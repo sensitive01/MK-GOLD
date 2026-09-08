@@ -51,7 +51,7 @@ import Scrollbar from '../../components/scrollbar';
 // sections
 import { SaleListHead, SaleListToolbar } from '../../sections/@dashboard/sales';
 // mock
-import { deleteSalesById, findSales, updateSales } from '../../apis/branch/sales';
+import { deleteSalesById, findSales, updateSales, getSalesById } from '../../apis/branch/sales';
 import { createFile } from '../../apis/branch/fileupload';
 import global from '../../utils/global';
 import TimelineView from '../../components/TimelineView';
@@ -334,15 +334,15 @@ export default function Sale() {
       </Snackbar>
 
       {toggleContainer === false && (
-        <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
+        <Container maxWidth="xl" sx={{ px: { xs: 1, sm: 2, md: 3 }, display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           alignItems={{ xs: 'flex-start', sm: 'center' }}
           justifyContent="space-between"
           spacing={2}
-          mb={{ xs: 3, sm: 5 }}
+          mb={{ xs: 2.5, sm: 5 }}
         >
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff', mb: { xs: 0, sm: 1 } }}>
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff', fontSize: { xs: '1.5rem', sm: '2rem' }, fontWeight: 700, mb: { xs: 0, sm: 1 } }}>
             Sale
           </Typography>
           <Stack
@@ -427,7 +427,8 @@ export default function Sale() {
             }}
           />
 
-          <TableContainer>
+          <Scrollbar>
+            <TableContainer>
             <Table sx={{ minWidth: filteredData?.length === 0 ? 'auto' : 800 }}>
               <SaleListHead
                   order={order}
@@ -563,6 +564,7 @@ export default function Sale() {
                 )}
               </Table>
             </TableContainer>
+          </Scrollbar>
 
           </Card>
         </Container>
@@ -1005,6 +1007,9 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
       const payload = {};
       if (type === 'bullion') {
         payload.bullionComments = values.comments;
+        if (values.amount !== '' && values.amount !== null && !isNaN(Number(values.amount))) {
+          payload.payableAmount = Number(values.amount);
+        }
         if (values.isCompleted) {
           payload.bullionCompleted = true;
           payload.bullionCompletedAt = new Date();
@@ -1046,6 +1051,21 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     },
   });
 
+  useEffect(() => {
+    if (open && id && type === 'bullion') {
+      getSalesById(id).then((res) => {
+        if (res?.status && res?.data) {
+          if (res.data.payableAmount !== undefined && res.data.payableAmount !== null) {
+            setFieldValue('amount', Math.round(res.data.payableAmount));
+          }
+          if (res.data.bullionComments) {
+            setFieldValue('comments', res.data.bullionComments);
+          }
+        }
+      });
+    }
+  }, [open, id, type]);
+
   const handleModalClose = () => {
     setPreview(null);
     setFileType('');
@@ -1085,23 +1105,22 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
         <DialogContent sx={{ mt: 1, pt: 2 }}>
           <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <TextField
+                sx={{ mt: 1 }}
+                name="amount"
+                label={type === 'bullion' ? 'Payable Amount (₹)' : 'Payment Amount'}
+                type="number"
+                value={values.amount}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.amount && !!errors.amount}
+                helperText={touched.amount && errors.amount}
+                fullWidth
+              />
+            </Grid>
             {type !== 'bullion' && (
-              <>
-                <Grid item xs={12}>
-                  <TextField
-                    sx={{ mt: 1 }}
-                    name="amount"
-                    label="Payment Amount"
-                    type="number"
-                    value={values.amount}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    error={touched.amount && !!errors.amount}
-                    helperText={touched.amount && errors.amount}
-                    fullWidth
-                  />
-                </Grid>
-                <Grid item xs={12}>
+              <Grid item xs={12}>
                   <Stack spacing={2}>
                     <Typography variant="subtitle2">Upload Proof</Typography>
                     <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} />
@@ -1125,7 +1144,6 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                     )}
                   </Stack>
                 </Grid>
-              </>
             )}
             <Grid item xs={12}>
               <TextField

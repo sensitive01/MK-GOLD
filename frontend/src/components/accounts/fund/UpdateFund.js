@@ -71,14 +71,21 @@ function UpdateFund(props) {
     setValues(initialValues);
     resetForm();
     if (props.id) {
-      getFundById(props.id).then((data) => {
-        const payload = {
-          ...data.data,
-          from: data.data.from?._id,
-          to: data.data.to?._id,
-        };
-        setValues(payload ?? {});
-      });
+      getFundById(props.id)
+        .then((res) => {
+          const fundData = res?.data || res;
+          if (fundData && typeof fundData === 'object' && fundData._id) {
+            const payload = {
+              ...fundData,
+              from: fundData.from?._id || fundData.from || '',
+              to: fundData.to?._id || fundData.to || '',
+            };
+            setValues(payload);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load fund by ID:', err);
+        });
     }
   }, [props.id, initialValues, resetForm, setValues]);
 
@@ -91,7 +98,7 @@ function UpdateFund(props) {
   }, [values.type]);
 
   return (
-    <Card sx={{ p: 4, my: 4 }}>
+    <Card sx={{ p: { xs: 2, sm: 4 }, my: { xs: 2, sm: 4 } }}>
       <form
         ref={form}
         onSubmit={(e) => {
@@ -208,7 +215,7 @@ function UpdateFund(props) {
             </FormControl>
           </Grid>
           <Grid item xs={12}>
-            <LoadingButton size="large" type="submit" variant="contained">
+            <LoadingButton size="large" type="submit" variant="contained" sx={{ width: { xs: '100%', sm: 'auto' } }}>
               Save
             </LoadingButton>
           </Grid>

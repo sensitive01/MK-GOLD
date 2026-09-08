@@ -281,11 +281,12 @@ export default function Sale() {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 400,
+    width: { xs: '90%', sm: 400 },
+    maxWidth: 400,
     bgcolor: 'background.paper',
     borderRadius: 3,
     boxShadow: 24,
-    p: 4,
+    p: { xs: 2.5, sm: 4 },
   };
 
   function AlertComponent(props, ref) {
@@ -332,14 +333,21 @@ export default function Sale() {
       </Snackbar>
 
       <Container maxWidth={false} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={{ xs: 1.5, sm: 2 }}
+          mb={{ xs: 2.5, sm: 4 }}
+        >
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff', mb: { xs: 0, sm: 1 } }}>
             Billing
           </Typography>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+          <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
             {(values.fromDate || values.toDate || values.branch || values.phoneNumber) && (
               <Button
                 variant="contained"
+                size="small"
                 color="error"
                 startIcon={<Iconify icon="eva:trash-2-outline" />}
                 onClick={() => {
@@ -353,6 +361,7 @@ export default function Sale() {
             )}
             <Button
               variant="contained"
+              size="small"
               startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
               onClick={handleFilterOpen}
             >
@@ -360,6 +369,7 @@ export default function Sale() {
             </Button>
             <Button
               variant="contained"
+              size="small"
               startIcon={<Iconify icon="carbon:document-export" />}
               onClick={() => {
                 handleExport(
@@ -406,8 +416,9 @@ export default function Sale() {
             }}
           />
 
-          <TableContainer>
-            <Table sx={{ minWidth: 800 }}>
+          <Scrollbar sx={{ width: '100%' }}>
+            <TableContainer sx={{ minWidth: 800 }}>
+              <Table sx={{ minWidth: 800 }}>
               <SaleListHead
                 order={order}
                 orderBy={orderBy}
@@ -538,6 +549,7 @@ export default function Sale() {
               )}
             </Table>
           </TableContainer>
+        </Scrollbar>
 
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
@@ -725,7 +737,7 @@ export default function Sale() {
         </Box>
       </Modal>
 
-      <Dialog open={filterOpen} onClose={handleFilterClose}>
+      <Dialog open={filterOpen} onClose={handleFilterClose} fullWidth maxWidth="xs">
         <form
           ref={form}
           onSubmit={(e) => {

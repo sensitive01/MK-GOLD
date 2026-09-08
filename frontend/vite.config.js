@@ -40,6 +40,12 @@ export default defineConfig({
     hmr: {
       host: 'localhost',
     },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4998',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     outDir: 'dist',

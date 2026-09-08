@@ -57,7 +57,7 @@ function CreateGoldRate(props) {
   });
 
   return (
-    <Card sx={{ p: 4, my: 4 }}>
+    <Card sx={{ p: { xs: 2, sm: 4 }, my: { xs: 2, sm: 4 } }}>
       <form
         ref={form}
         onSubmit={(e) => {
@@ -66,7 +66,7 @@ function CreateGoldRate(props) {
         }}
         autoComplete="off"
       >
-        <Grid container spacing={3}>
+        <Grid container spacing={{ xs: 2, sm: 3 }}>
           <Grid item xs={12} sm={4}>
             <TextField
               name="rate"
@@ -117,7 +117,7 @@ function CreateGoldRate(props) {
             </FormControl>
           </Grid>
           <Grid item xs={12}>
-            <LoadingButton size="large" type="submit" variant="contained">
+            <LoadingButton size="large" type="submit" variant="contained" sx={{ width: { xs: '100%', sm: 'auto' } }}>
               Save
             </LoadingButton>
           </Grid>

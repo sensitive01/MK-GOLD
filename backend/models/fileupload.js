@@ -6,11 +6,13 @@ const Sales = mongoose.model(
     {
       uploadId: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true,
+        default: () => new mongoose.Types.ObjectId(),
+        required: false,
       },
       uploadName: {
         type: String,
-        required: true,
+        default: "general",
+        required: false,
       },
       uploadType: {
         type: String,

@@ -290,15 +290,22 @@ export default function Leave() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
-          <Typography variant="h4" sx={{ color: '#fff' }}>
+      <Container maxWidth="xl" sx={{ px: { xs: 1, sm: 2, md: 3 }, display: toggleContainer === true ? 'none' : 'block' }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={2}
+          mb={{ xs: 2.5, sm: 3 }}
+        >
+          <Typography variant="h4" sx={{ color: '#fff', fontSize: { xs: '1.5rem', sm: '2rem' }, fontWeight: 700 }}>
             Leave
           </Typography>
           {currentTab === 'my_leaves' && (
             <Button
               variant="contained"
               startIcon={<Iconify icon="eva:plus-fill" />}
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
               onClick={() => {
                 setToggleContainer(!toggleContainer);
                 setToggleContainerType('create');
@@ -313,6 +320,9 @@ export default function Leave() {
           <Tabs
             value={currentTab}
             onChange={(event, newValue) => setCurrentTab(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             sx={{
               '& .MuiTab-root': { color: 'white', opacity: 0.7 },
               '& .Mui-selected': { color: 'white !important', opacity: 1 },

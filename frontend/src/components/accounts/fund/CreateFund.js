@@ -77,7 +77,7 @@ function CreateFund(props) {
   }, [values.type]);
 
   return (
-    <Card sx={{ p: 4, my: 4 }}>
+    <Card sx={{ p: { xs: 2, sm: 4 }, my: { xs: 2, sm: 4 } }}>
       <form
         ref={form}
         onSubmit={(e) => {
@@ -168,7 +168,7 @@ function CreateFund(props) {
             />
           </Grid>
           <Grid item xs={12}>
-            <LoadingButton size="large" type="submit" variant="contained">
+            <LoadingButton size="large" type="submit" variant="contained" sx={{ width: { xs: '100%', sm: 'auto' } }}>
               Save
             </LoadingButton>
           </Grid>

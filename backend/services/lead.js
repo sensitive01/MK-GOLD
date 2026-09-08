@@ -85,7 +85,56 @@ async function findById(id) {
   }
 }
 
-let currentTelecallerIndex = 0;
+async function getNextTelecaller() {
+  try {
+    const User = require("../models/user");
+    const telecallers = await User.find({ userType: "telecalling", status: "active" }).select("_id username").lean();
+    if (!telecallers || telecallers.length === 0) return null;
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    // Option B: Query counts of leads assigned to each active telecaller today
+    const counts = await Lead.aggregate([
+      {
+        $match: {
+          assignedTo: { $in: telecallers.map(t => t._id) },
+          createdAt: { $gte: startOfToday, $lte: endOfToday }
+        }
+      },
+      {
+        $group: {
+          _id: "$assignedTo",
+          count: { $sum: 1 },
+          lastAssignedAt: { $max: "$createdAt" }
+        }
+      }
+    ]);
+
+    const telecallerStats = telecallers.map(t => {
+      const found = counts.find(c => c._id.toString() === t._id.toString());
+      return {
+        _id: t._id,
+        count: found ? found.count : 0,
+        lastAssignedAt: found && found.lastAssignedAt ? new Date(found.lastAssignedAt).getTime() : 0
+      };
+    });
+
+    // Sort by count ascending (least leads today gets priority)
+    // In case of a tie, sort by lastAssignedAt ascending (whoever waited longest gets it)
+    telecallerStats.sort((a, b) => {
+      if (a.count !== b.count) return a.count - b.count;
+      return a.lastAssignedAt - b.lastAssignedAt;
+    });
+
+    return telecallerStats[0]._id;
+  } catch (err) {
+    console.error("Error in getNextTelecaller:", err);
+    return null;
+  }
+}
 
 async function create(data) {
   try {
@@ -100,11 +149,9 @@ async function create(data) {
     }
 
     if (!data.assignedTo) {
-      const User = require("../models/user");
-      const telecallers = await User.find({ userType: "telecalling", status: "active" }).select("_id").lean();
-      if (telecallers.length > 0) {
-        data.assignedTo = telecallers[currentTelecallerIndex % telecallers.length]._id;
-        currentTelecallerIndex = (currentTelecallerIndex + 1) % telecallers.length;
+      const nextTelecallerId = await getNextTelecaller();
+      if (nextTelecallerId) {
+        data.assignedTo = nextTelecallerId;
       }
     }
 
@@ -280,17 +327,52 @@ async function bulkCreate(leadsArray) {
     const User = require("../models/user");
     const telecallers = await User.find({ userType: "telecalling", status: "active" }).select("_id").lean();
 
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const counts = await Lead.aggregate([
+      {
+        $match: {
+          assignedTo: { $in: telecallers.map(t => t._id) },
+          createdAt: { $gte: startOfToday, $lte: endOfToday }
+        }
+      },
+      {
+        $group: {
+          _id: "$assignedTo",
+          count: { $sum: 1 },
+          lastAssignedAt: { $max: "$createdAt" }
+        }
+      }
+    ]);
+
+    const telecallerStats = telecallers.map(t => {
+      const found = counts.find(c => c._id.toString() === t._id.toString());
+      return {
+        _id: t._id,
+        count: found ? found.count : 0,
+        lastAssignedAt: found && found.lastAssignedAt ? new Date(found.lastAssignedAt).getTime() : 0
+      };
+    });
+
     const uniqueLeads = [];
     const currentSet = new Set();
     let duplicateCount = 0;
-    let tIndex = 0;
 
     for (const lead of leadsArray) {
       const key = `${lead.mobile}_${new Date(lead.date).toISOString()}`;
       if (!existingSet.has(key) && !currentSet.has(key)) {
-        if (telecallers.length > 0) {
-            lead.assignedTo = telecallers[tIndex]._id;
-            tIndex = (tIndex + 1) % telecallers.length;
+        if (telecallerStats.length > 0) {
+          // Option B: Sort by count ascending (least leads today first)
+          telecallerStats.sort((a, b) => {
+            if (a.count !== b.count) return a.count - b.count;
+            return a.lastAssignedAt - b.lastAssignedAt;
+          });
+          lead.assignedTo = telecallerStats[0]._id;
+          telecallerStats[0].count++;
+          telecallerStats[0].lastAssignedAt = Date.now();
         }
         uniqueLeads.push(lead);
         currentSet.add(key);
@@ -323,4 +405,4 @@ async function markExclusive(ids, isExclusive, user = null) {
   }
 }
 
-module.exports = { find, findById, create, bulkCreate, update, remove, addDisposition, getLeadStats, markExclusive };
+module.exports = { find, findById, create, bulkCreate, update, remove, addDisposition, getLeadStats, markExclusive, getNextTelecaller };

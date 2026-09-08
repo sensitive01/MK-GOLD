@@ -1,241 +1,618 @@
-const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+const { execFile } = require('child_process');
+const axios = require('axios');
+const PDFDocument = require('pdfkit');
 const { cloudinary } = require('../config/cloudinary');
 
 /**
- * Generates an official MK Gold Purchase Invoice PDF
- * @param {Object} sale - Populated sale document (with customer and branch)
+ * Locate Chrome or Edge executable on Windows/Linux/Mac
+ */
+function getBrowserExecutablePath() {
+  const candidates = [
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+/**
+ * Safely fetches an image and converts to a Base64 data URL
+ * @param {string} urlOrPath 
+ * @returns {Promise<string>}
+ */
+async function toBase64DataUrl(urlOrPath) {
+  if (!urlOrPath || typeof urlOrPath !== 'string') return '';
+  try {
+    if (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://')) {
+      const res = await axios.get(urlOrPath, { responseType: 'arraybuffer', timeout: 8000 });
+      const contentType = res.headers['content-type'] || 'image/jpeg';
+      return `data:${contentType};base64,${Buffer.from(res.data).toString('base64')}`;
+    }
+    if (path.isAbsolute(urlOrPath) && fs.existsSync(urlOrPath)) {
+      const ext = path.extname(urlOrPath).toLowerCase();
+      const mime = ext === '.png' ? 'image/png' : ext === '.svg' ? 'image/svg+xml' : 'image/jpeg';
+      return `data:${mime};base64,${fs.readFileSync(urlOrPath).toString('base64')}`;
+    }
+    const cleanPath = urlOrPath.startsWith('/') ? urlOrPath.slice(1) : urlOrPath;
+    let localPath = path.join(__dirname, '..', cleanPath);
+    if (!fs.existsSync(localPath)) {
+      localPath = path.join(__dirname, '../public', cleanPath);
+    }
+    if (!fs.existsSync(localPath)) {
+      localPath = path.join(__dirname, '../../frontend/public', cleanPath);
+    }
+    if (fs.existsSync(localPath)) {
+      const ext = path.extname(localPath).toLowerCase();
+      const mime = ext === '.png' ? 'image/png' : ext === '.svg' ? 'image/svg+xml' : 'image/jpeg';
+      return `data:${mime};base64,${fs.readFileSync(localPath).toString('base64')}`;
+    }
+  } catch (e) {
+    // Return empty if image cannot be fetched
+  }
+  return '';
+}
+
+function maskPhoneNumber(phone) {
+  if (!phone) return '';
+  const str = phone.toString();
+  if (str.length <= 4) return str;
+  return `${str.slice(0, 2)}******${str.slice(-2)}`;
+}
+
+/**
+ * Generates exact HTML invoice matching the frontend SalePrint.js template
+ * @param {Object} data - Sale document
+ * @returns {Promise<string>}
+ */
+async function generateExactInvoiceHtml(data) {
+  // 1. Collect ornament photos
+  const ornamentPhotos = [];
+  if (data?.assigneeProof) {
+    ornamentPhotos.push(data.assigneeProof);
+  }
+  if (data?.release && data.release.length > 0) {
+    data.release.forEach((rel) => {
+      if (rel.proofDocuments && rel.proofDocuments.length > 0) {
+        rel.proofDocuments.forEach((doc) => {
+          if (doc.documentFile) {
+            if (doc.documentType === 'Ornaments Photo' || rel.proofDocuments.length === 1) {
+              ornamentPhotos.push(doc.documentFile);
+            }
+          }
+        });
+      }
+    });
+  }
+  if (data?.proof && data.proof.length > 0) {
+    data.proof.forEach((p) => {
+      if (p.uploadedFile && p.documentType?.toLowerCase() === 'ornaments photo') {
+        ornamentPhotos.push(p.uploadedFile);
+      }
+    });
+  }
+  if (data?.ornaments && data.ornaments.length > 0) {
+    data.ornaments.forEach((orn) => {
+      if (orn.ornamentPhoto) {
+        ornamentPhotos.push(orn.ornamentPhoto);
+      }
+    });
+  }
+  const uniqueOrnamentPhotos = Array.from(new Set(ornamentPhotos));
+
+  // 2. Table rows
+  const tableRows = [];
+  if (data?.ornaments && data.ornaments.length > 0) {
+    data.ornaments.forEach((orn) => {
+      tableRows.push({
+        name: orn.ornamentType || 'Ornament',
+        grossWeight: Number(orn.grossWeight) || 0,
+        stoneWeight: Number(orn.stoneWeight) || 0,
+        netWeight: Number(orn.netWeight) || 0,
+        purity: Number(orn.purity) || 0,
+        value: Number(orn.netAmount) || 0,
+      });
+    });
+  } else if (data?.release && data.release.length > 0) {
+    data.release.forEach((rel) => {
+      if (rel.ornaments && rel.ornaments.length > 0) {
+        rel.ornaments.forEach((relOrn) => {
+          tableRows.push({
+            name: `${relOrn.ornamentType} (Release)`,
+            grossWeight: Number(relOrn.grossWeight) || 0,
+            stoneWeight: 0,
+            netWeight: Number(relOrn.netWeight) || 0,
+            purity: Number(relOrn.purity) || 0,
+            value: 0,
+          });
+        });
+      } else {
+        tableRows.push({
+          name: `Release Pledge (${rel.pledgeId} - ${rel.pledgedIn})`,
+          grossWeight: Number(rel.weight) || 0,
+          stoneWeight: 0,
+          netWeight: Number(rel.weight) || 0,
+          purity: 0,
+          value: Number(rel.payableAmount) || 0,
+        });
+      }
+    });
+  }
+
+  const totalGrossWeight = tableRows.reduce((sum, row) => sum + row.grossWeight, 0);
+  const totalStoneWeight = tableRows.reduce((sum, row) => sum + row.stoneWeight, 0);
+  const totalNetWeight = tableRows.reduce((sum, row) => sum + row.netWeight, 0);
+  const totalValue = tableRows.reduce((sum, row) => sum + row.value, 0);
+  const totalFineWeight = tableRows.reduce((sum, row) => sum + ((Number(row.netWeight) || 0) * (Number(row.purity) || 0) / 100), 0);
+  const averagePurity = totalNetWeight > 0 ? (totalFineWeight / totalNetWeight) * 100 : 0;
+
+  // 3. Valuation summary calculations
+  const netAmount = Number(data?.netAmount) || 0;
+  const marginPercent = Number(data?.margin) || 0;
+  const marginAmount = Math.round((netAmount * marginPercent) / 100);
+
+  let cgstAmount = 0;
+  let sgstAmount = 0;
+  let serviceChargesAmount = 0;
+
+  if (marginPercent >= 3) {
+    cgstAmount = Math.round(netAmount * 0.015);
+    sgstAmount = Math.round(netAmount * 0.015);
+    serviceChargesAmount = Math.max(0, marginAmount - cgstAmount - sgstAmount);
+  } else {
+    cgstAmount = Math.round(marginAmount * 0.25);
+    sgstAmount = Math.round(marginAmount * 0.25);
+    serviceChargesAmount = Math.max(0, marginAmount - cgstAmount - sgstAmount);
+  }
+
+  const cgstPercent = marginPercent >= 3 ? 1.5 : (marginPercent * 0.25).toFixed(2);
+  const sgstPercent = marginPercent >= 3 ? 1.5 : (marginPercent * 0.25).toFixed(2);
+  const serviceChargesPercent = marginPercent >= 3 ? (marginPercent - 3) : (marginPercent * 0.5).toFixed(2);
+  const releaseChargesAmount = Math.round(data?.release?.reduce((prev, cur) => prev + (cur?.payableAmount || 0), 0) || 0);
+
+  // 4. Preload images as Base64 Data URLs
+  const logoPath = path.join(__dirname, '../assets/logo.png');
+  const logoBase64 = await toBase64DataUrl(logoPath);
+  const customerPhotoBase64 = await toBase64DataUrl(data?.customer?.profileImage?.uploadedFile);
+  const signatureBase64 = await toBase64DataUrl(data?.customer?.signatureImage?.uploadedFile);
+
+  const ornamentPhotosBase64 = [];
+  for (const photo of uniqueOrnamentPhotos) {
+    const b64 = await toBase64DataUrl(photo);
+    if (b64) ornamentPhotosBase64.push(b64);
+  }
+
+  const address = data?.customer?.address?.length > 0
+    ? `${data.customer.address[0]?.address || ''}, ${data.customer.address[0]?.city || ''}, ${data.customer.address[0]?.state || ''}, ${data.customer.address[0]?.pincode || ''}`
+    : '';
+
+  const idNo = data?.customer?.idNo ? `${data?.customer?.chooseId || 'ID'}: ${data?.customer?.idNo}` : '';
+
+  const formattedDate = data?.createdAt
+    ? new Date(data.createdAt).toISOString().replace('T', ' ').substring(0, 19)
+    : '';
+
+  const rateText = data?.purchaseType?.toLowerCase() === 'gold'
+    ? `24karat Gold Rate per Gram: ₹ ${Number(data?.goldRate || 0).toLocaleString('en-IN')}`
+    : `Silver Rate per Gram: ₹ ${Number(data?.silverRate || 0).toLocaleString('en-IN')}`;
+
+  const rowsHtml = tableRows.map((row, index) => `
+    <tr>
+      <td style="border: 1px solid #000; padding: 6px; text-align: center;">${index + 1}</td>
+      <td style="border: 1px solid #000; padding: 6px; text-align: left;">${row.name}</td>
+      <td style="border: 1px solid #000; padding: 6px; text-align: center;">${row.grossWeight.toFixed(2)}</td>
+      <td style="border: 1px solid #000; padding: 6px; text-align: center;">${row.stoneWeight.toFixed(2)}</td>
+      <td style="border: 1px solid #000; padding: 6px; text-align: center;">${row.netWeight.toFixed(2)}</td>
+      <td style="border: 1px solid #000; padding: 6px; text-align: center;">${row.purity}%</td>
+      <td style="border: 1px solid #000; padding: 6px; text-align: right;">${Math.round(row.value).toLocaleString('en-IN')}</td>
+    </tr>
+  `).join('');
+
+  let ornamentPhotosHtml = '';
+  if (ornamentPhotosBase64.length > 0) {
+    ornamentPhotosHtml = ornamentPhotosBase64.map((b64, idx) => {
+      let imgWidth = '100%';
+      let imgHeight = '100%';
+      if (ornamentPhotosBase64.length === 2) {
+        imgWidth = '48%';
+      } else if (ornamentPhotosBase64.length >= 3) {
+        imgWidth = '48%';
+        imgHeight = '48%';
+      }
+      return `<img key="${idx}" src="${b64}" alt="Ornament ${idx + 1}" style="width: ${imgWidth}; height: ${imgHeight}; object-fit: contain; border: 1px solid #ddd; background-color: #fff;" />`;
+    }).join('');
+  } else {
+    ornamentPhotosHtml = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; width: 100%;"><span style="font-size: 11px; color: #999;">No Ornament Photo</span></div>';
+  }
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Print Bill</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 8mm 10mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #fff;
+      font-family: Arial, sans-serif;
+      color: #000;
+    }
+    #pdf {
+      color: #000;
+      background-color: #fff;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      width: 100%;
+      max-width: 750px;
+      margin: 0 auto;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body style="margin:0;">
+  <div id="pdf" style="color: #000; background-color: #fff; padding: 10px 0; font-family: Arial, sans-serif; font-size: 13px; width: 750px; margin: 0 auto; box-sizing: border-box;">
+
+    <!-- Header Section -->
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+      <tbody>
+        <tr>
+          <td style="vertical-align: top; padding-bottom: 8px;">
+            <h2 style="margin: 0; font-size: 22px; font-weight: bold;">PURCHASE INVOICE</h2>
+          </td>
+          <td style="text-align: right; vertical-align: top; padding-bottom: 8px;">
+            ${logoBase64 ? `<img alt="Logo" src="${logoBase64}" style="width: 90px; height: auto; object-fit: contain;" />` : ''}
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align: top; width: 60%; padding-top: 6px;">
+            <h3 style="margin: 0; font-size: 16px; font-weight: bold;">
+              MK Gold | ${data?.branch?.branchName || ''}
+            </h3>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: #333;">
+              <strong>Address:</strong> ${data?.branch?.address?.address || data?.branch?.address?.city || ''}
+            </p>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: #333;">
+              <strong>Phone:</strong> 63661 11999 &nbsp;&nbsp;&nbsp;&nbsp; <strong>GST:</strong> ${data?.branch?.gstNumber || ''}
+            </p>
+          </td>
+          <td style="text-align: right; vertical-align: top; width: 40%; padding-top: 6px;">
+            <p style="margin: 0; font-size: 12px;">
+              <strong>Invoice No.:</strong> ${data?.billId || ''}
+            </p>
+            <p style="margin: 4px 0 0 0; font-size: 12px;">
+              <strong>Date & Time:</strong> ${formattedDate}
+            </p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Customer Details & Customer Photo Section -->
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+      <thead>
+        <tr>
+          <th style="text-align: left; font-size: 14px; padding-bottom: 6px; width: 72%;">Customer Details</th>
+          <th style="text-align: left; font-size: 14px; padding-bottom: 6px; width: 28%; padding-left: 15px;">Customer Photo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="vertical-align: top;">
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000;">
+              <tbody>
+                <tr>
+                  <td style="border: 1px solid #000; padding: 6px 8px; font-weight: bold; width: 30%; background-color: #f9f9f9;">Customer Name</td>
+                  <td style="border: 1px solid #000; padding: 6px 8px;">${data?.customer?.name || ''}</td>
+                </tr>
+                <tr>
+                  <td style="border: 1px solid #000; padding: 6px 8px; font-weight: bold; background-color: #f9f9f9;">Mobile Number</td>
+                  <td style="border: 1px solid #000; padding: 6px 8px;">${maskPhoneNumber(data?.customer?.phoneNumber)}</td>
+                </tr>
+                <tr>
+                  <td style="border: 1px solid #000; padding: 6px 8px; font-weight: bold; background-color: #f9f9f9;">Address</td>
+                  <td style="border: 1px solid #000; padding: 6px 8px;">${address}</td>
+                </tr>
+                <tr>
+                  <td style="border: 1px solid #000; padding: 6px 8px; font-weight: bold; background-color: #f9f9f9;">ID Proof Number</td>
+                  <td style="border: 1px solid #000; padding: 6px 8px;">${idNo}</td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+          <td style="vertical-align: top; padding-left: 15px;">
+            <div style="width: 100%; height: 116px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; background-color: #fafafa; overflow: hidden;">
+              ${customerPhotoBase64 ? `<img src="${customerPhotoBase64}" alt="Customer" style="width: 100%; height: 100%; object-fit: contain;" />` : '<span style="font-size: 11px; color: #999;">No Photo</span>'}
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Ornament Details Section Header -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 6px;">
+      <span style="font-size: 14px; font-weight: bold;">Ornament Details</span>
+      <span style="font-size: 12px; font-weight: bold;">${rateText}</span>
+    </div>
+
+    <!-- Ornament Table -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 16px;">
+      <thead>
+        <tr style="background-color: #FFD700;">
+          <th style="border: 1px solid #000; padding: 6px; color: #000; font-weight: bold; width: 6%; text-align: center;">Sno</th>
+          <th style="border: 1px solid #000; padding: 6px; color: #000; font-weight: bold; width: 38%; text-align: left;">Ornament(s)</th>
+          <th style="border: 1px solid #000; padding: 6px; color: #000; font-weight: bold; width: 11%; text-align: center;">Gross Wt</th>
+          <th style="border: 1px solid #000; padding: 6px; color: #000; font-weight: bold; width: 12%; text-align: center;">Stone / Wastage</th>
+          <th style="border: 1px solid #000; padding: 6px; color: #000; font-weight: bold; width: 11%; text-align: center;">Net Wt</th>
+          <th style="border: 1px solid #000; padding: 6px; color: #000; font-weight: bold; width: 11%; text-align: center;">Purity (%)</th>
+          <th style="border: 1px solid #000; padding: 6px; color: #000; font-weight: bold; width: 11%; text-align: right;">Value (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+        <!-- Grand Total Row -->
+        <tr style="font-weight: bold; background-color: #f9f9f9;">
+          <td colspan="2" style="border: 1px solid #000; padding: 6px; text-align: right;">Grand Total =</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: center;">${totalGrossWeight.toFixed(2)}</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: center;">${totalStoneWeight.toFixed(2)}</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: center;">${totalNetWeight.toFixed(2)}</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: center;">${averagePurity > 0 ? `${averagePurity.toFixed(2)}%` : '-'}</td>
+          <td style="border: 1px solid #000; padding: 6px; text-align: right;">${Math.round(totalValue).toLocaleString('en-IN')}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Ornament Photo & Valuation Summary Section -->
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+      <thead>
+        <tr>
+          <th style="text-align: left; font-size: 14px; padding-bottom: 6px; width: 40%;">Ornament Photo</th>
+          <th style="text-align: left; font-size: 14px; padding-bottom: 6px; width: 60%; padding-left: 15px;">Valuation Summary</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="vertical-align: top;">
+            <div style="width: 100%; height: 185px; border: 1px solid #000; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; background-color: #fafafa; overflow: hidden; padding: 4px; box-sizing: border-box; gap: 4px;">
+              ${ornamentPhotosHtml}
+            </div>
+          </td>
+          <td style="vertical-align: top; padding-left: 15px;">
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000;">
+              <tbody>
+                <tr>
+                  <td style="border: 1px solid #000; padding: 4px 6px; font-size: 11px; color: #444; vertical-align: middle; width: 65%;">
+                    (Service Charges are typically charges against Appraiser Charges, Payment Handling Charges, Release Handling Charges, Melting Charges, etc.)
+                    <strong style="display: block; color: #000; font-size: 12px; margin-top: 2px;">Service Charges (${serviceChargesPercent}%) =</strong>
+                  </td>
+                  <td style="border: 1px solid #000; padding: 4px 6px; text-align: right; font-weight: bold; font-size: 13px; vertical-align: bottom; width: 35%;">
+                    &#8377; ${serviceChargesAmount.toLocaleString('en-IN')}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="border: 1px solid #000; padding: 6px; font-weight: bold; font-size: 12px;">CGST (${cgstPercent}%) =</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: bold; font-size: 13px;">
+                    &#8377; ${cgstAmount.toLocaleString('en-IN')}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="border: 1px solid #000; padding: 6px; font-weight: bold; font-size: 12px;">SGST (${sgstPercent}%) =</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: bold; font-size: 13px;">
+                    &#8377; ${sgstAmount.toLocaleString('en-IN')}
+                  </td>
+                </tr>
+                ${data?.saleType === 'pledged' ? `
+                  <tr>
+                    <td style="border: 1px solid #000; padding: 6px; font-weight: bold; font-size: 12px;">Release Charges =</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: bold; font-size: 13px;">
+                      &#8377; ${releaseChargesAmount.toLocaleString('en-IN')}
+                    </td>
+                  </tr>
+                ` : ''}
+                <tr style="background-color: #FFD700;">
+                  <td style="border: 1px solid #000; padding: 8px 6px; font-weight: bold; font-size: 13px;">Payable Amount =</td>
+                  <td style="border: 1px solid #000; padding: 8px 6px; text-align: right; font-weight: bold; font-size: 15px;">
+                    &#8377; ${Math.abs(Math.round(data?.payableAmount || 0)).toLocaleString('en-IN')}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Terms & Conditions Section -->
+    <div style="border: 1px solid #000; padding: 8px; margin-bottom: 16px; box-sizing: border-box;">
+      <strong style="display: block; font-size: 12px; margin-bottom: 4px;">Terms & Conditions:</strong>
+      <ol style="margin: 0; padding-left: 18px; font-size: 10px; line-height: 1.3; color: #333;">
+        <li>All gold/silver purchase transactions are final and binding.</li>
+        <li>The valuation is calculated based on current market rates and gold/silver purity assessment.</li>
+        <li>In case of release pledged transactions, bank release receipt must be provided for verification.</li>
+        <li>Payment will be processed via approved banking channels or cash as per limits.</li>
+      </ol>
+    </div>
+
+    <!-- Customer Declaration Section -->
+    <div style="margin-bottom: 24px;">
+      <strong style="display: block; font-size: 12px; margin-bottom: 4px;">Customer Declaration</strong>
+      <p style="margin: 0; font-size: 11px; line-height: 1.4; text-align: justify; color: #333;">
+        I hereby declare that the ornaments sold by me are my lawful property and are free from any legal dispute, theft, pledge, or encumbrance. I voluntarily agree to sell the above-mentioned ornaments to MK Gold.
+      </p>
+    </div>
+
+    <!-- Signatures Section -->
+    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+      <tbody>
+        <tr>
+          <td style="width: 30%; text-align: center; vertical-align: bottom;">
+            <div style="height: 50px; display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
+              ${signatureBase64
+                ? `<img src="${signatureBase64}" alt="Customer Signature" style="max-height: 50px; max-width: 160px; object-fit: contain;" />`
+                : '<div style="border-bottom: 1px solid #000; width: 80%; height: 100%;"></div>'}
+            </div>
+            <span style="font-size: 11px; font-weight: bold; display: block; border-top: ${signatureBase64 ? '1px solid #000' : 'none'}; width: 80%; margin: 0 auto; padding-top: 4px;">
+              Customer Signature
+            </span>
+          </td>
+          <td style="width: 40%; text-align: center; font-size: 11px; color: #555; vertical-align: bottom; padding-bottom: 4px;">
+            Thanks For your billing
+            <br />
+            <a href="https://mkgold.in" target="_blank" rel="noopener noreferrer" style="color: #000; text-decoration: none; font-weight: bold;">mkgold.in</a>
+          </td>
+          <td style="width: 30%; text-align: center; vertical-align: bottom;">
+            <div style="height: 50px; margin-bottom: 4px; display: flex; flex-direction: column; justify-content: flex-end;">
+              ${data?.actionBy?.name ? `
+                <span style="font-size: 11px; font-style: italic;">${data.actionBy.name}</span>
+                <span style="font-size: 9px; color: #666;">(${data?.actionBy?.employeeId || ''})</span>
+              ` : '<div style="border-bottom: 1px solid #000; width: 80%; height: 100%;"></div>'}
+            </div>
+            <span style="font-size: 11px; font-weight: bold; display: block; border-top: 1px solid #000; width: 80%; margin: 0 auto; padding-top: 4px;">
+              Authorized Signatory
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Converts HTML to PDF Buffer via Headless Chrome
+ * @param {string} html 
  * @returns {Promise<Buffer>}
  */
-function createInvoicePdfBuffer(sale) {
+async function printHtmlToPdf(html) {
+  const browserPath = getBrowserExecutablePath();
+  if (!browserPath) {
+    throw new Error('No compatible browser found for headless PDF generation.');
+  }
+
+  const tempId = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  const tempHtml = path.join(os.tmpdir(), `${tempId}.html`);
+  const tempPdf = path.join(os.tmpdir(), `${tempId}.pdf`);
+
+  fs.writeFileSync(tempHtml, html, 'utf8');
+
+  return new Promise((resolve, reject) => {
+    const args = [
+      '--headless',
+      '--disable-gpu',
+      '--no-pdf-header-footer',
+      '--run-all-compositor-stages-before-draw',
+      `--print-to-pdf=${tempPdf}`,
+      tempHtml
+    ];
+
+    execFile(browserPath, args, { timeout: 25000 }, (error) => {
+      try {
+        if (fs.existsSync(tempHtml)) fs.unlinkSync(tempHtml);
+      } catch (e) {}
+
+      if (error && !fs.existsSync(tempPdf)) {
+        return reject(error);
+      }
+
+      try {
+        if (fs.existsSync(tempPdf)) {
+          const pdfBuffer = fs.readFileSync(tempPdf);
+          try {
+            fs.unlinkSync(tempPdf);
+          } catch (e) {}
+          return resolve(pdfBuffer);
+        }
+        reject(new Error('PDF file was not created by browser'));
+      } catch (readErr) {
+        reject(readErr);
+      }
+    });
+  });
+}
+
+/**
+ * Generates official MK Gold Purchase Invoice PDF matching the SalePrint UI layout exactly
+ * Uses Headless Chrome for 100% exact replicate of the printed bill
+ * @param {Object} sale - Fully populated sale document
+ * @returns {Promise<Buffer>}
+ */
+async function createInvoicePdfBuffer(sale) {
+  try {
+    const html = await generateExactInvoiceHtml(sale);
+    const pdfBuffer = await printHtmlToPdf(html);
+    return pdfBuffer;
+  } catch (err) {
+    console.error('[invoicePdf] Headless browser print error, falling back to PDFKit:', err.message);
+    return createPdfKitFallbackBuffer(sale);
+  }
+}
+
+/**
+ * Fallback PDFKit generator if headless browser is unavailable
+ */
+async function createPdfKitFallbackBuffer(sale) {
+  const branch = sale.branch || {};
+  const customer = sale.customer || {};
+  const ornaments = sale.ornaments || [];
+  const releases = sale.release || [];
+
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ margin: 40, size: 'A4' });
+      const doc = new PDFDocument({ margin: 30, size: 'A4' });
       const buffers = [];
 
-      doc.on('data', buffers.push.bind(buffers));
+      doc.on('data', b => buffers.push(b));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
       doc.on('error', reject);
 
-      const branch = sale.branch || {};
-      const customer = sale.customer || {};
-      const ornaments = sale.ornaments || [];
+      const margin = 30;
+      const contentWidth = 595.28 - (margin * 2);
 
-      // Primary colors
-      const primaryColor = '#8A1B9F';
-      const textColor = '#333333';
-      const grayBg = '#F7F7F7';
-      const borderColor = '#CCCCCC';
-
-      // 1. Header (Title & Logo)
-      const logoPath = path.join(__dirname, '../assets/logo.png');
-      if (fs.existsSync(logoPath)) {
-        try {
-          doc.image(logoPath, 465, 35, { width: 90 });
-        } catch (e) {
-          // ignore if image fails to load
-        }
-      }
-
-      doc.fillColor(primaryColor)
-        .fontSize(20)
-        .font('Helvetica-Bold')
-        .text('PURCHASE INVOICE', 40, 40);
-
-      doc.fillColor(textColor)
-        .fontSize(11)
-        .font('Helvetica-Bold')
-        .text(`MK Gold | ${branch.branchName || 'Head Office'}`, 40, 68);
-
-      doc.fontSize(8)
-        .font('Helvetica')
-        .text(`Address: ${branch.address?.address || branch.address?.city || 'Karnataka, India'}`, 40, 83)
-        .text(`Phone: 63661 11999    GST: ${branch.gstNumber || 'N/A'}`, 40, 95);
-
-      // Invoice metadata on the right side under logo
-      const invoiceDate = sale.createdAt ? new Date(sale.createdAt).toLocaleString('en-IN') : new Date().toLocaleString('en-IN');
-      doc.fontSize(9)
-        .font('Helvetica-Bold')
-        .text(`Invoice No: ${sale.billId || 'N/A'}`, 340, 95, { align: 'right' })
-        .font('Helvetica')
-        .text(`Date & Time: ${invoiceDate}`, 340, 108, { align: 'right' });
-
-      doc.moveTo(40, 125).lineTo(555, 125).strokeColor(primaryColor).lineWidth(1.5).stroke();
-
-      // 2. Customer Details Box
-      let customerY = 135;
-      doc.fillColor(primaryColor).fontSize(10).font('Helvetica-Bold').text('Customer Details', 40, customerY);
-
-      doc.rect(40, customerY + 15, 515, 60).fillColor(grayBg).fill().strokeColor(borderColor).lineWidth(0.5).stroke();
-
-      let custAddress = 'N/A';
-      if (customer.address && customer.address.length > 0) {
-        const addr = customer.address[0];
-        custAddress = [addr.address, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
-      }
-
-      const maskedPhone = customer.phoneNumber
-        ? `${customer.phoneNumber.slice(0, 2)}******${customer.phoneNumber.slice(-2)}`
-        : 'N/A';
-
-      doc.fillColor(textColor).fontSize(8.5);
-      doc.font('Helvetica-Bold').text('Name: ', 50, customerY + 23);
-      doc.font('Helvetica').text(customer.name || 'N/A', 110, customerY + 23);
-
-      doc.font('Helvetica-Bold').text('Phone: ', 300, customerY + 23);
-      doc.font('Helvetica').text(maskedPhone, 360, customerY + 23);
-
-      doc.font('Helvetica-Bold').text('Address: ', 50, customerY + 38);
-      doc.font('Helvetica').text(custAddress, 110, customerY + 38, { width: 430, height: 15, ellipsis: true });
-
-      doc.font('Helvetica-Bold').text('ID Proof: ', 50, customerY + 53);
-      doc.font('Helvetica').text(`${customer.chooseId || 'ID'}: ${customer.idNo || 'N/A'}`, 110, customerY + 53);
-
-      // 3. Ornaments Breakdown Table
-      let tableY = customerY + 90;
-      doc.fillColor(primaryColor).fontSize(10).font('Helvetica-Bold').text('Ornaments Breakdown', 40, tableY);
-
-      tableY += 15;
-      const col = {
-        sno: 45,
-        desc: 80,
-        qty: 180,
-        gross: 225,
-        stone: 285,
-        net: 345,
-        purity: 405,
-        amt: 475
-      };
-
-      // Header row
-      doc.rect(40, tableY, 515, 20).fillColor(primaryColor).fill();
-      doc.fillColor('#FFFFFF').fontSize(8).font('Helvetica-Bold');
-      doc.text('S.No', col.sno, tableY + 5);
-      doc.text('Ornament Type', col.desc, tableY + 5);
-      doc.text('Qty', col.qty, tableY + 5);
-      doc.text('Gross (g)', col.gross, tableY + 5);
-      doc.text('Stone (g)', col.stone, tableY + 5);
-      doc.text('Net (g)', col.net, tableY + 5);
-      doc.text('Purity', col.purity, tableY + 5);
-      doc.text('Amount (Rs.)', col.amt, tableY + 5, { width: 70, align: 'right' });
-
-      tableY += 20;
-      let totalGross = 0;
-      let totalStone = 0;
-      let totalNet = 0;
-      let totalVal = 0;
-
-      doc.font('Helvetica').fontSize(8);
-      ornaments.forEach((orn, idx) => {
-        const bg = idx % 2 === 0 ? '#FFFFFF' : '#FBFBFB';
-        doc.rect(40, tableY, 515, 18).fillColor(bg).fill().strokeColor(borderColor).lineWidth(0.5).stroke();
-
-        const gross = Number(orn.grossWeight || 0);
-        const stone = Number(orn.stoneWeight || 0);
-        const net = Number(orn.netWeight || 0);
-        const amt = Number(orn.netAmount || 0);
-
-        totalGross += gross;
-        totalStone += stone;
-        totalNet += net;
-        totalVal += amt;
-
-        doc.fillColor(textColor);
-        doc.text((idx + 1).toString(), col.sno, tableY + 5);
-        doc.text(orn.ornamentType || 'Ornament', col.desc, tableY + 5, { width: 95, ellipsis: true });
-        doc.text((orn.quantity || 1).toString(), col.qty, tableY + 5);
-        doc.text(gross.toFixed(2), col.gross, tableY + 5);
-        doc.text(stone.toFixed(2), col.stone, tableY + 5);
-        doc.text(net.toFixed(2), col.net, tableY + 5);
-        doc.text(`${orn.purity || 0}%`, col.purity, tableY + 5);
-        doc.text(Math.round(amt).toLocaleString('en-IN'), col.amt, tableY + 5, { width: 70, align: 'right' });
-
-        tableY += 18;
-      });
-
-      // Total row
-      doc.rect(40, tableY, 515, 20).fillColor(grayBg).fill().strokeColor(borderColor).lineWidth(0.5).stroke();
-      doc.fillColor(textColor).font('Helvetica-Bold').fontSize(8);
-      doc.text('Total', col.desc, tableY + 6);
-      doc.text(totalGross.toFixed(2), col.gross, tableY + 6);
-      doc.text(totalStone.toFixed(2), col.stone, tableY + 6);
-      doc.text(totalNet.toFixed(2), col.net, tableY + 6);
-      doc.text(`Rs. ${Math.round(totalVal).toLocaleString('en-IN')}`, col.amt, tableY + 6, { width: 70, align: 'right' });
-
-      // 4. Valuation Summary Box
-      tableY += 35;
-      const netAmount = Number(sale.netAmount || totalVal || 0);
-      const marginPercent = Number(sale.margin || 0);
-      const marginAmount = Math.round((netAmount * marginPercent) / 100);
-
-      let cgstAmount = 0;
-      let sgstAmount = 0;
-      if (marginPercent >= 3) {
-        cgstAmount = Math.round(netAmount * 0.015);
-        sgstAmount = Math.round(netAmount * 0.015);
-      } else {
-        cgstAmount = Math.round(marginAmount * 0.25);
-        sgstAmount = Math.round(marginAmount * 0.25);
-      }
-
-      const payableAmount = Number(sale.payableAmount || (netAmount - marginAmount));
-
-      doc.fillColor(primaryColor).fontSize(10).font('Helvetica-Bold').text('Valuation & Payment Summary', 300, tableY);
-      tableY += 15;
-
-      const summaryRows = [
-        ['Gold Rate (per gm):', `Rs. ${(sale.goldRate || 0).toLocaleString('en-IN')}`],
-        ['Gross Amount:', `Rs. ${Math.round(netAmount).toLocaleString('en-IN')}`],
-        [`Company Margin (${marginPercent}%):`, `- Rs. ${marginAmount.toLocaleString('en-IN')}`],
-        ['CGST (1.5%):', `Rs. ${cgstAmount.toLocaleString('en-IN')}`],
-        ['SGST (1.5%):', `Rs. ${sgstAmount.toLocaleString('en-IN')}`],
-        ['Net Payable Amount:', `Rs. ${Math.round(payableAmount).toLocaleString('en-IN')}`]
-      ];
-
-      doc.rect(300, tableY, 255, summaryRows.length * 18).fillColor(grayBg).fill().strokeColor(borderColor).lineWidth(0.5).stroke();
-
-      summaryRows.forEach(([lbl, val], idx) => {
-        const rowY = tableY + (idx * 18) + 5;
-        const isTotal = idx === summaryRows.length - 1;
-
-        if (isTotal) {
-          doc.rect(300, rowY - 5, 255, 18).fillColor('#E8D5EC').fill();
-          doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(9);
-        } else {
-          doc.fillColor(textColor).font('Helvetica').fontSize(8.5);
-        }
-
-        doc.text(lbl, 310, rowY);
-        doc.text(val, 430, rowY, { width: 115, align: 'right' });
-      });
-
-      // 5. Terms and Footer
-      const footerY = 730;
-      doc.moveTo(40, footerY).lineTo(555, footerY).strokeColor(borderColor).lineWidth(0.5).stroke();
-      doc.fillColor('#666666').fontSize(7.5).font('Helvetica');
-      doc.text('Terms & Conditions:', 40, footerY + 8);
-      doc.text('1. Gold ornaments sold once cannot be returned or cancelled.', 40, footerY + 18);
-      doc.text('2. Payment transferred directly to customer bank account / cash as per agreed receipt.', 40, footerY + 28);
-      doc.text('Thank you for choosing MK Gold World! Visit us at www.mkgold.in', 40, footerY + 45, { align: 'center', width: 515 });
+      doc.fillColor('#000000').fontSize(18).font('Helvetica-Bold').text('PURCHASE INVOICE', margin, 30);
+      doc.fontSize(12).text(`MK Gold | ${branch.branchName || ''}`, margin, 58);
+      doc.fontSize(9).font('Helvetica').text(`Invoice No.: ${sale.billId || ''}`, margin, 74);
+      doc.text(`Payable Amount: ₹ ${Math.abs(Math.round(sale.payableAmount || 0)).toLocaleString('en-IN')}`, margin, 88);
 
       doc.end();
-    } catch (err) {
-      reject(err);
+    } catch (e) {
+      reject(e);
     }
   });
 }
 
 /**
- * Uploads an invoice PDF buffer to Cloudinary and saves a local copy in public/invoices
- * @param {Buffer} pdfBuffer
- * @param {String} billId
- * @returns {Promise<String>} Public HTTPS URL
+ * Creates the invoice PDF matching SalePrint UI, saves a local copy, uploads to Cloudinary, and returns URL
+ * @param {Object} sale - Fully populated sale document
+ * @returns {Promise<{pdfUrl: string, filename: string}>}
  */
-async function uploadInvoicePdf(pdfBuffer, billId, customFilename) {
-  const filename = customFilename || `MKGold_Invoice_${billId}.pdf`;
+async function generateAndUploadInvoice(sale) {
+  const billId = sale.billId || sale._id.toString();
+  const filename = `MKGold_Invoice_${billId}.pdf`;
 
-  // 1. Save local copy in public/invoices folder for static serving
+  const pdfBuffer = await createInvoicePdfBuffer(sale);
+
+  // 1. Save local copy in public/invoices for fallback
   try {
     const publicInvoicesDir = path.join(__dirname, '../public/invoices');
     if (!fs.existsSync(publicInvoicesDir)) {
@@ -246,8 +623,8 @@ async function uploadInvoicePdf(pdfBuffer, billId, customFilename) {
     console.warn('Failed to save local invoice copy:', localErr.message);
   }
 
-  // 2. Upload to Cloudinary to obtain a CDN public HTTPS link
-  return new Promise((resolve) => {
+  // 2. Upload to Cloudinary to obtain a public HTTPS link
+  const pdfUrl = await new Promise((resolve) => {
     try {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
@@ -273,317 +650,64 @@ async function uploadInvoicePdf(pdfBuffer, billId, customFilename) {
       resolve(`${baseUrl}/invoices/${filename}`);
     }
   });
-}
 
-/**
- * Generates an official MK Gold Gold Release & Purchase Receipt PDF
- * @param {Object} sale - Populated sale document (with customer and branch)
- * @returns {Promise<Buffer>}
- */
-function createReleasePdfBuffer(sale) {
-  return new Promise((resolve, reject) => {
-    try {
-      const doc = new PDFDocument({ margin: 40, size: 'A4' });
-      const buffers = [];
-
-      doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', () => resolve(Buffer.concat(buffers)));
-      doc.on('error', reject);
-
-      const branch = sale.branch || {};
-      const customer = sale.customer || {};
-      const releases = sale.release || [];
-      const ornaments = (sale.ornaments && sale.ornaments.length > 0) 
-        ? sale.ornaments 
-        : (releases[0]?.ornaments || []);
-
-      // Primary colors
-      const primaryColor = '#8A1B9F';
-      const textColor = '#333333';
-      const grayBg = '#F7F7F7';
-      const borderColor = '#CCCCCC';
-
-      // 1. Header (Title & Logo)
-      const logoPath = path.join(__dirname, '../assets/logo.png');
-      if (fs.existsSync(logoPath)) {
-        try {
-          doc.image(logoPath, 465, 30, { width: 90 });
-        } catch (e) {}
-      }
-
-      doc.fillColor(primaryColor)
-        .fontSize(18)
-        .font('Helvetica-Bold')
-        .text('GOLD RELEASE & PURCHASE RECEIPT', 40, 35);
-
-      doc.fillColor(textColor)
-        .fontSize(10.5)
-        .font('Helvetica-Bold')
-        .text(`MK Gold | ${branch.branchName || 'Head Office'}`, 40, 58);
-
-      doc.fontSize(8)
-        .font('Helvetica')
-        .text(`Address: ${branch.address?.address || branch.address?.city || 'Karnataka, India'}`, 40, 72)
-        .text(`Phone: 63661 11999    GST: ${branch.gstNumber || 'N/A'}`, 40, 83);
-
-      const invoiceDate = sale.createdAt ? new Date(sale.createdAt).toLocaleString('en-IN') : new Date().toLocaleString('en-IN');
-      doc.fontSize(8.5)
-        .font('Helvetica-Bold')
-        .text(`Bill ID: ${sale.billId || 'N/A'}`, 340, 80, { align: 'right' })
-        .font('Helvetica')
-        .text(`Date & Time: ${invoiceDate}`, 340, 92, { align: 'right' });
-
-      doc.moveTo(40, 105).lineTo(555, 105).strokeColor(primaryColor).lineWidth(1.5).stroke();
-
-      // 2. Customer Details Box
-      let currentY = 112;
-      doc.fillColor(primaryColor).fontSize(9.5).font('Helvetica-Bold').text('Customer Details', 40, currentY);
-
-      doc.rect(40, currentY + 12, 515, 46).fillColor(grayBg).fill().strokeColor(borderColor).lineWidth(0.5).stroke();
-
-      let custAddress = 'N/A';
-      if (customer.address && customer.address.length > 0) {
-        const addr = customer.address[0];
-        custAddress = [addr.address, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
-      }
-
-      const maskedPhone = customer.phoneNumber
-        ? `${customer.phoneNumber.slice(0, 2)}******${customer.phoneNumber.slice(-2)}`
-        : 'N/A';
-
-      doc.fillColor(textColor).fontSize(8);
-      doc.font('Helvetica-Bold').text('Name: ', 50, currentY + 18);
-      doc.font('Helvetica').text(customer.name || 'N/A', 100, currentY + 18);
-
-      doc.font('Helvetica-Bold').text('Phone: ', 300, currentY + 18);
-      doc.font('Helvetica').text(maskedPhone, 345, currentY + 18);
-
-      doc.font('Helvetica-Bold').text('Address: ', 50, currentY + 30);
-      doc.font('Helvetica').text(custAddress, 100, currentY + 30, { width: 440, height: 12, ellipsis: true });
-
-      doc.font('Helvetica-Bold').text('ID Proof: ', 50, currentY + 42);
-      doc.font('Helvetica').text(`${customer.chooseId || 'ID'}: ${customer.idNo || 'N/A'}`, 100, currentY + 42);
-
-      // 3. Bank / Gold Loan Information Box
-      currentY += 66;
-      doc.fillColor(primaryColor).fontSize(9.5).font('Helvetica-Bold').text('Gold Loan / Pledge Details', 40, currentY);
-
-      doc.rect(40, currentY + 12, 515, 46).fillColor('#FAF5FC').fill().strokeColor('#E0D0E8').lineWidth(0.5).stroke();
-
-      const bankNames = releases.map(r => r.pledgedIn).filter(Boolean).join(', ') || 'N/A';
-      const pledgeIds = releases.map(r => r.pledgeId).filter(Boolean).join(', ') || 'N/A';
-      const pledgedBranches = releases.map(r => r.pledgedBranch).filter(Boolean).join(', ') || branch.branchName || 'N/A';
-      const totalPledgeAmt = releases.reduce((sum, r) => sum + (Number(r.pledgeAmount) || 0), 0);
-      const totalReleasePayable = releases.reduce((sum, r) => sum + (Number(r.payableAmount) || 0), 0);
-      const effectiveReleaseCharge = totalPledgeAmt > 0 ? totalPledgeAmt : totalReleasePayable;
-
-      doc.fillColor(textColor).fontSize(8);
-      doc.font('Helvetica-Bold').text('Pledged Bank / Fin: ', 50, currentY + 18);
-      doc.font('Helvetica').text(bankNames, 140, currentY + 18, { width: 155, ellipsis: true });
-
-      doc.font('Helvetica-Bold').text('Gold Loan / Pledge ID: ', 310, currentY + 18);
-      doc.font('Helvetica').text(pledgeIds, 410, currentY + 18, { width: 140, ellipsis: true });
-
-      doc.font('Helvetica-Bold').text('Pledged Branch: ', 50, currentY + 32);
-      doc.font('Helvetica').text(pledgedBranches, 140, currentY + 32, { width: 155, ellipsis: true });
-
-      doc.font('Helvetica-Bold').text('Bank Release Amount: ', 310, currentY + 32);
-      doc.font('Helvetica-Bold').fillColor(primaryColor).text(`Rs. ${Math.round(effectiveReleaseCharge).toLocaleString('en-IN')}`, 410, currentY + 32);
-
-      // 4. Ornaments Breakdown Table
-      currentY += 66;
-      doc.fillColor(primaryColor).fontSize(9.5).font('Helvetica-Bold').text('Released Ornaments Breakdown', 40, currentY);
-
-      currentY += 12;
-      const col = {
-        sno: 45,
-        desc: 75,
-        qty: 190,
-        gross: 240,
-        stone: 295,
-        net: 350,
-        purity: 410,
-        amt: 475
-      };
-
-      // Header row
-      doc.rect(40, currentY, 515, 18).fillColor(primaryColor).fill();
-      doc.fillColor('#FFFFFF').fontSize(7.5).font('Helvetica-Bold');
-      doc.text('S.No', col.sno, currentY + 5);
-      doc.text('Ornament Type', col.desc, currentY + 5);
-      doc.text('Qty', col.qty, currentY + 5);
-      doc.text('Gross (g)', col.gross, currentY + 5);
-      doc.text('Stone (g)', col.stone, currentY + 5);
-      doc.text('Net (g)', col.net, currentY + 5);
-      doc.text('Purity', col.purity, currentY + 5);
-      doc.text('Amount (Rs.)', col.amt, currentY + 5, { width: 70, align: 'right' });
-
-      currentY += 18;
-      let totalGross = 0;
-      let totalStone = 0;
-      let totalNet = 0;
-      let totalVal = 0;
-
-      doc.font('Helvetica').fontSize(7.5);
-      if (ornaments && ornaments.length > 0) {
-        ornaments.forEach((orn, idx) => {
-          const bg = idx % 2 === 0 ? '#FFFFFF' : '#FBFBFB';
-          doc.rect(40, currentY, 515, 16).fillColor(bg).fill().strokeColor(borderColor).lineWidth(0.5).stroke();
-
-          const gross = Number(orn.grossWeight || 0);
-          const stone = Number(orn.stoneWeight || 0);
-          const net = Number(orn.netWeight || 0);
-          const amt = Number(orn.netAmount || 0);
-
-          totalGross += gross;
-          totalStone += stone;
-          totalNet += net;
-          totalVal += amt;
-
-          doc.fillColor(textColor);
-          doc.text((idx + 1).toString(), col.sno, currentY + 4);
-          doc.text(orn.ornamentType || 'Ornament', col.desc, currentY + 4, { width: 110, ellipsis: true });
-          doc.text((orn.quantity || 1).toString(), col.qty, currentY + 4);
-          doc.text(gross.toFixed(2), col.gross, currentY + 4);
-          doc.text(stone.toFixed(2), col.stone, currentY + 4);
-          doc.text(net.toFixed(2), col.net, currentY + 4);
-          doc.text(`${orn.purity || 0}%`, col.purity, currentY + 4);
-          doc.text(Math.round(amt).toLocaleString('en-IN'), col.amt, currentY + 4, { width: 70, align: 'right' });
-
-          currentY += 16;
-        });
-      } else {
-        const net = Number(sale.netWeight || 0);
-        totalGross = net;
-        totalNet = net;
-        totalVal = Number(sale.netAmount || 0);
-
-        doc.rect(40, currentY, 515, 16).fillColor('#FFFFFF').fill().strokeColor(borderColor).lineWidth(0.5).stroke();
-        doc.fillColor(textColor);
-        doc.text('1', col.sno, currentY + 4);
-        doc.text('Released Gold Ornaments', col.desc, currentY + 4, { width: 110, ellipsis: true });
-        doc.text('1', col.qty, currentY + 4);
-        doc.text(net.toFixed(2), col.gross, currentY + 4);
-        doc.text('0.00', col.stone, currentY + 4);
-        doc.text(net.toFixed(2), col.net, currentY + 4);
-        doc.text('-', col.purity, currentY + 4);
-        doc.text(Math.round(totalVal).toLocaleString('en-IN'), col.amt, currentY + 4, { width: 70, align: 'right' });
-
-        currentY += 16;
-      }
-
-      // Total row
-      doc.rect(40, currentY, 515, 18).fillColor(grayBg).fill().strokeColor(borderColor).lineWidth(0.5).stroke();
-      doc.fillColor(textColor).font('Helvetica-Bold').fontSize(7.5);
-      doc.text('Total', col.desc, currentY + 5);
-      doc.text(totalGross.toFixed(2), col.gross, currentY + 5);
-      doc.text(totalStone.toFixed(2), col.stone, currentY + 5);
-      doc.text(totalNet.toFixed(2), col.net, currentY + 5);
-      doc.text(`Rs. ${Math.round(totalVal || sale.netAmount || 0).toLocaleString('en-IN')}`, col.amt, currentY + 5, { width: 70, align: 'right' });
-
-      // 5. Valuation & Settlement Summary Box
-      currentY += 26;
-      const netAmount = Number(sale.netAmount || totalVal || 0);
-      const marginPercent = Number(sale.margin || 0);
-      const marginAmount = Math.round((netAmount * marginPercent) / 100);
-
-      let cgstAmount = 0;
-      let sgstAmount = 0;
-      if (marginPercent >= 3) {
-        cgstAmount = Math.round(netAmount * 0.015);
-        sgstAmount = Math.round(netAmount * 0.015);
-      } else {
-        cgstAmount = Math.round(marginAmount * 0.25);
-        sgstAmount = Math.round(marginAmount * 0.25);
-      }
-
-      const payableAmount = Number(sale.payableAmount || 0);
-
-      doc.fillColor(primaryColor).fontSize(9.5).font('Helvetica-Bold').text('Valuation & Settlement Summary', 300, currentY);
-      currentY += 12;
-
-      const summaryRows = [
-        ['Gold Rate (per gm):', `Rs. ${(sale.goldRate || 0).toLocaleString('en-IN')}`],
-        ['Gross Valuation Amount:', `Rs. ${Math.round(netAmount).toLocaleString('en-IN')}`],
-        [`Company Margin (${marginPercent}%):`, `- Rs. ${marginAmount.toLocaleString('en-IN')}`],
-        ['CGST (1.5%):', `Rs. ${cgstAmount.toLocaleString('en-IN')}`],
-        ['SGST (1.5%):', `Rs. ${sgstAmount.toLocaleString('en-IN')}`],
-        ['Bank Release Amount (Paid):', `- Rs. ${Math.round(effectiveReleaseCharge).toLocaleString('en-IN')}`],
-        ['Net Payable to Customer:', `Rs. ${Math.round(payableAmount).toLocaleString('en-IN')}`]
-      ];
-
-      doc.rect(300, currentY, 255, summaryRows.length * 16).fillColor(grayBg).fill().strokeColor(borderColor).lineWidth(0.5).stroke();
-
-      summaryRows.forEach(([lbl, val], idx) => {
-        const rowY = currentY + (idx * 16) + 4;
-        const isTotal = idx === summaryRows.length - 1;
-
-        if (isTotal) {
-          doc.rect(300, rowY - 4, 255, 16).fillColor('#E8D5EC').fill();
-          doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(8.5);
-        } else {
-          doc.fillColor(textColor).font('Helvetica').fontSize(7.5);
-        }
-
-        doc.text(lbl, 308, rowY);
-        doc.text(val, 420, rowY, { width: 125, align: 'right' });
-      });
-
-      // 6. Terms & Customer Declaration & Signatures
-      currentY += (summaryRows.length * 16) + 16;
-
-      doc.rect(40, currentY, 515, 54).fillColor('#FAFAFA').fill().strokeColor(borderColor).lineWidth(0.5).stroke();
-      doc.fillColor('#444444').fontSize(7).font('Helvetica');
-      doc.text('Customer Declaration & Terms:', 48, currentY + 5, { font: 'Helvetica-Bold' });
-      doc.text('1. I hereby confirm that the gold ornaments were lawfully pledged by me and released with my authorization.', 48, currentY + 14);
-      doc.text('2. The bank release amount has been settled and remaining balance is credited to my account / paid as agreed.', 48, currentY + 23);
-      doc.text('3. This buyback transaction is final and binding once completed.', 48, currentY + 32);
-      doc.text('Thank you for choosing MK Gold World! Visit www.mkgold.in | Helpline: 63661 11999', 48, currentY + 43, { align: 'center', width: 499 });
-
-      // Signatures
-      currentY += 68;
-      doc.moveTo(60, currentY).lineTo(200, currentY).strokeColor(borderColor).lineWidth(1).stroke();
-      doc.moveTo(395, currentY).lineTo(535, currentY).strokeColor(borderColor).lineWidth(1).stroke();
-
-      doc.fillColor(textColor).fontSize(7.5).font('Helvetica-Bold');
-      doc.text('Customer Signature', 60, currentY + 4, { width: 140, align: 'center' });
-      doc.text('Authorized Signatory (MK Gold)', 395, currentY + 4, { width: 140, align: 'center' });
-
-      doc.end();
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
-
-/**
- * High-level helper: generates the Physical Invoice PDF and uploads it
- * @param {Object} sale
- * @returns {Promise<{ pdfUrl: String, filename: String }>}
- */
-async function generateAndUploadInvoice(sale) {
-  const buffer = await createInvoicePdfBuffer(sale);
-  const filename = `MKGold_Invoice_${sale.billId || 'BILL'}.pdf`;
-  const pdfUrl = await uploadInvoicePdf(buffer, sale.billId || 'BILL');
   return { pdfUrl, filename };
 }
 
 /**
- * High-level helper: generates the Release Receipt PDF and uploads it
- * @param {Object} sale
- * @returns {Promise<{ pdfUrl: String, filename: String }>}
+ * For release transactions, generates the matching invoice PDF and uploads to Cloudinary
+ * @param {Object} sale - Fully populated sale document
+ * @returns {Promise<{pdfUrl: string, filename: string}>}
  */
 async function generateAndUploadReleaseInvoice(sale) {
-  const buffer = await createReleasePdfBuffer(sale);
-  const filename = `MKGold_ReleaseReceipt_${sale.billId || 'BILL'}.pdf`;
-  const pdfUrl = await uploadInvoicePdf(buffer, sale.billId || 'BILL', filename);
-  return { pdfUrl, filename: 'gold_release_receipt.pdf' };
+  const billId = sale.billId || sale._id.toString();
+  const filename = `MKGold_Release_Invoice_${billId}.pdf`;
+
+  const pdfBuffer = await createInvoicePdfBuffer(sale);
+
+  try {
+    const publicInvoicesDir = path.join(__dirname, '../public/invoices');
+    if (!fs.existsSync(publicInvoicesDir)) {
+      fs.mkdirSync(publicInvoicesDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(publicInvoicesDir, filename), pdfBuffer);
+  } catch (localErr) {
+    console.warn('Failed to save local release invoice copy:', localErr.message);
+  }
+
+  const pdfUrl = await new Promise((resolve) => {
+    try {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'raw',
+          folder: 'mk_gold_invoices',
+          public_id: filename,
+          overwrite: true,
+        },
+        (error, result) => {
+          if (error || !result?.secure_url) {
+            console.warn('Cloudinary upload warning, falling back to local URL:', error?.message || 'No URL');
+            const baseUrl = process.env.PUBLIC_APP_URL || 'https://mkgold.tech';
+            return resolve(`${baseUrl}/invoices/${filename}`);
+          }
+          console.log('Release Invoice PDF uploaded to Cloudinary:', result.secure_url);
+          resolve(result.secure_url);
+        }
+      );
+      uploadStream.end(pdfBuffer);
+    } catch (uploadEx) {
+      console.warn('Cloudinary upload exception:', uploadEx.message);
+      const baseUrl = process.env.PUBLIC_APP_URL || 'https://mkgold.tech';
+      resolve(`${baseUrl}/invoices/${filename}`);
+    }
+  });
+
+  return { pdfUrl, filename };
 }
 
 module.exports = {
   createInvoicePdfBuffer,
-  createReleasePdfBuffer,
-  uploadInvoicePdf,
+  createReleasePdfBuffer: createInvoicePdfBuffer,
   generateAndUploadInvoice,
   generateAndUploadReleaseInvoice,
 };

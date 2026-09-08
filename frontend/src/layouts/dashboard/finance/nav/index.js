@@ -116,7 +116,8 @@ export default function Nav({ openNav, onCloseNav }) {
           }}
           PaperProps={{
             sx: { 
-              width: NAV_WIDTH,
+              width: { xs: 260, sm: NAV_WIDTH },
+              maxWidth: '85vw',
               bgcolor: '#8A1B9F', // Brand Purple
             },
           }}

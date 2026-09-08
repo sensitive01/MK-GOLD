@@ -45,6 +45,13 @@ export default function SalePrint({ id }) {
       }
     });
   }
+  if (data?.ornaments && data.ornaments.length > 0) {
+    data.ornaments.forEach((orn) => {
+      if (orn.ornamentPhoto) {
+        ornamentPhotos.push(orn.ornamentPhoto);
+      }
+    });
+  }
 
   const uniqueOrnamentPhotos = Array.from(new Set(ornamentPhotos));
 

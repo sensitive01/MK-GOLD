@@ -19,6 +19,7 @@ const customerRouter = require("./routes/customer");
 const announcementRouter = require("./routes/announcement");
 const publicRouter = require("./routes/public");
 const campaignRouter = require("./routes/campaign");
+const webhookRouter = require("./routes/webhook");
 
 const app = express();
 
@@ -73,6 +74,7 @@ app.use("/api/v1.0/announcement", announcementRouter);
 app.use("/api/v1.0/public", publicRouter);
 app.use("/api/v1.0/campaign", campaignRouter);
 app.use("/api/v1.0/schedule", require("./routes/schedule"));
+app.use("/api/v1.0/webhook", webhookRouter);
 
 // health check (VERY USEFUL)
 app.get("/", (req, res) => {

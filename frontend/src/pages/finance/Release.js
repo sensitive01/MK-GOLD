@@ -379,17 +379,24 @@ export default function Release() {
           {notify.message}
         </Alert>
       </Snackbar>
-      <Container maxWidth="xl">
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+      <Container maxWidth="xl" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={2}
+          mb={{ xs: 2.5, sm: 5 }}
+        >
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff', fontSize: { xs: '1.5rem', sm: '2rem' }, fontWeight: 700, mb: { xs: 0, sm: 1 } }}>
             Purchase / Release
           </Typography>
-          <Stack direction="row" spacing={2}>
+          <Stack direction="row" spacing={1.5} sx={{ width: { xs: '100%', sm: 'auto' }, flexWrap: 'wrap' }}>
             {(values.fromDate || values.toDate) && (
               <Button
                 variant="contained"
                 color="error"
                 startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                sx={{ flex: { xs: 1, sm: 'none' } }}
                 onClick={() => {
                   setFilterOpen(false);
                   resetForm();
@@ -408,6 +415,7 @@ export default function Release() {
             <Button
               variant="contained"
               startIcon={<Iconify icon="material-symbols:filter-alt" />}
+              sx={{ flex: { xs: 1, sm: 'none' } }}
               onClick={handleFilterOpen}
             >
               Filter

@@ -27,8 +27,28 @@ async function createAddressKYC(payload) {
   }
 }
 
+async function sendOtpKYC(payload) {
+  try {
+    const response = await apiClient().post('/api/v1.0/public/kyc/send-otp', payload);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+async function verifyOtpKYC(payload) {
+  try {
+    const response = await apiClient().post('/api/v1.0/public/kyc/verify-otp', payload);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
 export {
   createCustomerKYC,
   createFileKYC,
   createAddressKYC,
+  sendOtpKYC,
+  verifyOtpKYC,
 };

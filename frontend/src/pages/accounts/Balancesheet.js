@@ -227,14 +227,21 @@ export default function Balancesheet() {
       </Snackbar>
 
       <Container maxWidth="xl">
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={{ xs: 1.5, sm: 2 }}
+          mb={{ xs: 2.5, sm: 4 }}
+        >
+          <Typography variant="h4" gutterBottom sx={{ color: '#fff', mb: { xs: 0, sm: 1 } }}>
             Balancesheet
           </Typography>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+          <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
             {(values.fromDate || values.toDate || values.branch) && (
               <Button
                 variant="contained"
+                size="small"
                 color="error"
                 startIcon={<Iconify icon="eva:trash-2-outline" />}
                 onClick={() => {
@@ -251,6 +258,7 @@ export default function Balancesheet() {
             )}
             <Button
               variant="contained"
+              size="small"
               startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
               onClick={handleFilterOpen}
             >
@@ -272,8 +280,8 @@ export default function Balancesheet() {
         <Card>
           <ListToolbar filterName={filterName} onFilterName={handleFilterByName} />
 
-          <Scrollbar>
-            <TableContainer>
+          <Scrollbar sx={{ width: '100%' }}>
+            <TableContainer sx={{ minWidth: 800 }}>
               <Table sx={{ minWidth: 800 }}>
                 <ListHead order={order} orderBy={orderBy} headLabel={TABLE_HEAD} onRequestSort={handleRequestSort} />
                 <TableBody>
@@ -364,7 +372,7 @@ export default function Balancesheet() {
         </Card>
       </Container>
 
-      <Dialog open={filterOpen} onClose={handleFilterClose}>
+      <Dialog open={filterOpen} onClose={handleFilterClose} fullWidth maxWidth="xs">
         <form
           ref={form}
           onSubmit={(e) => {

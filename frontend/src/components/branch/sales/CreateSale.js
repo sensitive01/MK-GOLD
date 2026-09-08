@@ -620,13 +620,19 @@ function CreateSale(props) {
                   } else {
                     if (values.saleType === 'pledged' && !isReleaseCompleted) {
                       setOpenConfirmModal(true);
+                    } else if (values.saleType === 'physical') {
+                      setStep(4);
                     } else {
                       setStep(step + 1);
                     }
                   }
                 }}
               >
-                {values.saleType === 'pledged' && !isReleaseCompleted ? 'Submit' : 'Proceed to upload documents'}
+                {values.saleType === 'pledged' && !isReleaseCompleted
+                  ? 'Submit'
+                  : values.saleType === 'physical'
+                  ? 'Direct View Summary'
+                  : 'Proceed to upload documents'}
               </LoadingButton>
             </Grid>
           </Grid>
@@ -1009,7 +1015,7 @@ function CreateSale(props) {
                 name="submit"
                 type="button"
                 variant="contained"
-                onClick={() => setStep(step - 1)}
+                onClick={() => setStep(values.saleType === 'physical' ? 2 : step - 1)}
                 sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
                 Prev

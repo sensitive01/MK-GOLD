@@ -21,7 +21,9 @@ import {
   Stack,
   Avatar,
   Chip,
+  InputAdornment,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import Iconify from '../../iconify';
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -45,11 +47,22 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
   const [rejectError, setRejectError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [bullionComment, setBullionComment] = useState('');
+  const [payableAmount, setPayableAmount] = useState('');
 
   const userType = auth.user?.userType?.toLowerCase();
   const isAuthorized = ['bullion_desk', 'admin'].includes(userType);
 
   const handleApprove = async () => {
+    if (payableAmount === '' || isNaN(Number(payableAmount)) || Number(payableAmount) < 0) {
+      if (setNotify) {
+        setNotify({
+          open: true,
+          message: 'Please enter a valid payable amount',
+          severity: 'error',
+        });
+      }
+      return;
+    }
     setActionLoading(true);
     try {
       const payload = {
@@ -58,6 +71,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
         bullionCompletedAt: new Date(),
         bullionComments: bullionComment.trim() || 'Approved by Bullion Desk',
         comments: bullionComment.trim() || 'Approved by Bullion Desk',
+        payableAmount: Number(payableAmount),
       };
       const response = await updateSales(id, payload);
       if (response.status) {
@@ -149,6 +163,11 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
       getSalesById(id).then((data) => {
         if (data.status && data.data) {
           setData(data.data);
+          setPayableAmount(
+            data.data.payableAmount !== undefined && data.data.payableAmount !== null
+              ? Math.round(data.data.payableAmount)
+              : ''
+          );
         }
         setOpenBackdrop(false);
       });
@@ -176,34 +195,88 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
             <TableHead>
               <TableRow>
                 <TableCell align="left">Ornament Type</TableCell>
+                <TableCell align="center">Photo</TableCell>
                 <TableCell align="left">Purity</TableCell>
                 <TableCell align="left">Quantity</TableCell>
                 <TableCell align="left">Stone weight (Grams)</TableCell>
                 <TableCell align="left">Net weight (Grams)</TableCell>
                 <TableCell align="left">Gross weight (Grams)</TableCell>
                 <TableCell align="left">Net amount (INR)</TableCell>
+                <TableCell align="center">Bill</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {data?.ornaments?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
                 <TableRow hover key={index} tabIndex={-1}>
                   <TableCell align="left">{sentenceCase(e.ornamentType || '')}</TableCell>
+                  <TableCell align="center">
+                    {e.ornamentPhoto ? (
+                      <a
+                        href={e.ornamentPhoto.startsWith('http') ? e.ornamentPhoto : `${global.baseURL}/${e.ornamentPhoto}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ display: 'inline-block' }}
+                      >
+                        <Avatar
+                          src={e.ornamentPhoto.startsWith('http') ? e.ornamentPhoto : `${global.baseURL}/${e.ornamentPhoto}`}
+                          variant="rounded"
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            border: '1px solid #e0e0e0',
+                            mx: 'auto',
+                            cursor: 'pointer',
+                            '&:hover': { opacity: 0.8 },
+                          }}
+                        />
+                      </a>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        -
+                      </Typography>
+                    )}
+                  </TableCell>
                   <TableCell align="left">{e.purity}</TableCell>
                   <TableCell align="left">{e.quantity}</TableCell>
                   <TableCell align="left">{e.stoneWeight?.toFixed(2)}</TableCell>
                   <TableCell align="left">{e.netWeight?.toFixed(2)}</TableCell>
                   <TableCell align="left">{e.grossWeight?.toFixed(2)}</TableCell>
                   <TableCell align="left">{Math.round(e.netAmount)}</TableCell>
+                  <TableCell align="center">
+                    {e.hasBill ? (
+                      e.billProof ? (
+                        <a
+                          href={e.billProof.startsWith('http') ? e.billProof : `${global.baseURL}/${e.billProof}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ textDecoration: 'none' }}
+                        >
+                          <Chip
+                            size="small"
+                            color="primary"
+                            label={`Bill: ${e.billDate || 'Yes'}`}
+                            icon={<Iconify icon="eva:external-link-outline" />}
+                            clickable
+                            sx={{ fontWeight: 500 }}
+                          />
+                        </a>
+                      ) : (
+                        <Chip size="small" color="primary" label={`Bill: ${e.billDate || 'Yes'}`} sx={{ fontWeight: 500 }} />
+                      )
+                    ) : (
+                      <Chip size="small" variant="outlined" label="No Bill" sx={{ color: 'text.secondary' }} />
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={7} />
+                  <TableCell colSpan={9} />
                 </TableRow>
               )}
               {data?.ornaments?.length === 0 && (
                 <TableRow>
-                  <TableCell align="center" colSpan={7} sx={{ py: 3 }}>
+                  <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
                     <Paper
                       sx={{
                         textAlign: 'center',
@@ -360,7 +433,29 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
     allProofs.push(...transitProofs);
     allProofs.push(...meltingProofs);
 
-    let fpCount = 0;
+    data?.ornaments?.forEach((orn, idx) => {
+      const typeLabel = orn.ornamentType || `Ornament #${idx + 1}`;
+      if (orn.ornamentPhoto) {
+        allProofs.push({
+          uploadedFile: orn.ornamentPhoto,
+          documentType: `Ornament Photo (${typeLabel})`,
+          displayType: `Ornament Photo (${typeLabel})`,
+          documentNo: 'N/A',
+          _id: `orn_photo_${idx}`,
+        });
+      }
+      if (orn.billProof) {
+        const formattedDate = orn.billDate ? (orn.billDate.split('T')[0] || orn.billDate) : 'N/A';
+        allProofs.push({
+          uploadedFile: orn.billProof,
+          documentType: `Ornament Purchase Bill (${typeLabel})`,
+          displayType: `Ornament Purchase Bill (${typeLabel})`,
+          documentNo: formattedDate,
+          _id: `orn_bill_${idx}`,
+        });
+      }
+    });
+
     allProofs.forEach(e => {
        const releaseDoc = data?.release?.flatMap((r) => r.proofDocuments || [])?.find((doc) => doc.documentFile === e.uploadedFile);
        let docType = e.documentType || releaseDoc?.documentType;
@@ -368,8 +463,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
        
        if (!docType && e.uploadName && e.uploadName !== 'Release Document' && e.uploadName !== 'release') {
          if (e.uploadName === 'finance_proof') {
-           fpCount++;
-           displayType = isPhysical ? 'Finance Proof' : (fpCount > 1 ? 'Sale Finance Proof' : 'Release Finance Proof');
+           displayType = isPhysical ? 'Finance Proof' : 'Release Finance Proof';
          } else if (e.uploadName === 'sale_finance_proof' || e.uploadName === 'sale_proof') {
            displayType = 'Sale Finance Proof';
          } else if (e.uploadName === 'transit_proof') {
@@ -384,19 +478,31 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
            displayType = e.uploadName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
          }
        } else if (docType === 'Release Finance Proof' || docType === 'Finance Proof') {
-           fpCount++;
-           if (fpCount > 1 && docType === 'Release Finance Proof') {
-               displayType = 'Sale Finance Proof';
-           } else {
-               displayType = isPhysical ? 'Finance Proof' : 'Release Finance Proof';
-           }
+           displayType = isPhysical ? 'Finance Proof' : (docType || 'Finance Proof');
        }
 
        if (displayType.toLowerCase() === 'sale finance proof') displayType = 'Sale Finance Proof';
        if (displayType.toLowerCase() === 'release finance proof' || displayType.toLowerCase() === 'release finance document') displayType = 'Release Finance Proof';
        
-       e.displayType = displayType;
+       e.baseDisplayType = displayType;
        e.documentNo = e.documentNo || releaseDoc?.documentNo || 'N/A';
+    });
+
+    const proofTypeTotals = {};
+    allProofs.forEach(e => {
+      const typeKey = e.baseDisplayType || 'Document';
+      proofTypeTotals[typeKey] = (proofTypeTotals[typeKey] || 0) + 1;
+    });
+
+    const proofTypeCounters = {};
+    allProofs.forEach(e => {
+      const typeKey = e.baseDisplayType || 'Document';
+      if (proofTypeTotals[typeKey] > 1 && typeKey.toLowerCase().includes('finance proof')) {
+        proofTypeCounters[typeKey] = (proofTypeCounters[typeKey] || 0) + 1;
+        e.displayType = `${typeKey} ${proofTypeCounters[typeKey]}`;
+      } else {
+        e.displayType = typeKey;
+      }
     });
 
     const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - allProofs.length) : 0;
@@ -697,37 +803,64 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
           <CircularProgress color="inherit" />
         </Backdrop>
       ) : (
-        <Card sx={{ p: 4, my: 4 }}>
-          <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 3 }}>
+        <Card sx={{ p: { xs: 2, sm: 3, md: 4 }, my: { xs: 2, sm: 4 }, borderRadius: 2 }}>
+          <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: { xs: 2, sm: 3 }, fontSize: { xs: '1.5rem', sm: '2rem' }, fontWeight: 700 }}>
             Billing Summary
           </Typography>
-          <Grid container spacing={3}>
+          <Grid container spacing={{ xs: 2, sm: 3 }}>
             <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
+              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                 Customer Detail:
               </Typography>
-              <Box sx={{ p: 3, bgcolor: 'background.neutral', borderRadius: 2 }}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} alignItems="center">
+              <Box sx={{ p: { xs: 2, sm: 3 }, bgcolor: 'background.neutral', borderRadius: 2 }}>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={{ xs: 2, sm: 3 }}
+                  alignItems="center"
+                >
                   <Avatar
                     src={data?.customer?.profileImage?.uploadedFile ? (data.customer.profileImage.uploadedFile.startsWith('http')
                       ? data.customer.profileImage.uploadedFile
                       : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`) : null}
                     alt={data?.customer?.name}
-                    sx={{ width: 100, height: 100 }}
+                    sx={{ width: { xs: 80, sm: 100 }, height: { xs: 80, sm: 100 } }}
                   />
-                  <Stack spacing={1} flexGrow={1}>
-                    <Typography variant="h5">{data?.customer?.name || 'N/A'}</Typography>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', sm: 'center' }} sx={{ color: 'text.secondary' }}>
+                  <Stack
+                    spacing={1}
+                    flexGrow={1}
+                    sx={{
+                      width: '100%',
+                      alignItems: { xs: 'center', sm: 'flex-start' },
+                      textAlign: { xs: 'center', sm: 'left' },
+                    }}
+                  >
+                    <Typography variant="h5" sx={{ fontWeight: 700 }}>{data?.customer?.name || 'N/A'}</Typography>
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={{ xs: 0.75, sm: 2 }}
+                      alignItems="center"
+                      justifyContent={{ xs: 'center', sm: 'flex-start' }}
+                      sx={{ color: 'text.secondary', flexWrap: 'wrap' }}
+                    >
                       <Stack direction="row" spacing={0.5} alignItems="center">
-                        <Iconify icon="eva:email-fill" width={20} />
+                        <Iconify icon="eva:email-fill" width={18} />
                         <Typography variant="body2">{data?.customer?.email || 'N/A'}</Typography>
                       </Stack>
                       <Stack direction="row" spacing={0.5} alignItems="center">
-                        <Iconify icon="eva:phone-fill" width={20} />
+                        <Iconify icon="eva:phone-fill" width={18} />
                         <Typography variant="body2">{global.maskPhoneNumber(data?.customer?.phoneNumber) || 'N/A'}</Typography>
                       </Stack>
                     </Stack>
-                    <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 1 }}>
+                    <Stack
+                      direction="row"
+                      spacing={0.75}
+                      sx={{
+                        mt: 1,
+                        flexWrap: 'wrap',
+                        gap: 0.75,
+                        justifyContent: { xs: 'center', sm: 'flex-start' },
+                      }}
+                    >
                       <Chip size="small" label={`Gender: ${data?.customer?.gender || 'N/A'}`} />
                       <Chip size="small" label={`Marital Status: ${data?.customer?.maritalStatus || 'N/A'}`} />
                       <Chip size="small" label={`Source: ${data?.customer?.source || 'N/A'}`} />
@@ -775,48 +908,50 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                   <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
                     Bank Detail:
                   </Typography>
-                  <TableContainer>
-                    <Table>
-                      <TableBody>
-                        <TableRow tabIndex={-1}>
-                          <TableCell align="left">
-                            Account Holder Name: {sentenceCase(data?.bank?.accountHolderName ?? '')}
-                          </TableCell>
-                          <TableCell align="left">Account No: {data?.bank?.accountNo}</TableCell>
-                          <TableCell align="left">Branch: {data?.bank?.branch}</TableCell>
-                          <TableCell align="left">IFSC Code: {data?.bank?.ifscCode}</TableCell>
-                          {data?.bank?.proof?.uploadedFile && (
+                  <Scrollbar>
+                    <TableContainer sx={{ minWidth: 700 }}>
+                      <Table>
+                        <TableBody>
+                          <TableRow tabIndex={-1}>
                             <TableCell align="left">
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>Bank Proof:</Typography>
-                                {data.bank.proof.uploadedFile.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
-                                  <a
-                                    href={data.bank.proof.uploadedFile.startsWith('http') ? data.bank.proof.uploadedFile : `${global.baseURL}/${data.bank.proof.uploadedFile}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    <img
-                                      src={data.bank.proof.uploadedFile.startsWith('http') ? data.bank.proof.uploadedFile : `${global.baseURL}/${data.bank.proof.uploadedFile}`}
-                                      alt="bank proof"
-                                      style={{ height: '30px', borderRadius: 4 }}
-                                    />
-                                  </a>
-                                ) : (
-                                  <a
-                                    href={data.bank.proof.uploadedFile.startsWith('http') ? data.bank.proof.uploadedFile : `${global.baseURL}/${data.bank.proof.uploadedFile}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    <img src="/assets/doc.svg" alt="bank proof" style={{ height: '30px' }} />
-                                  </a>
-                                )}
-                              </Box>
+                              Account Holder Name: {sentenceCase(data?.bank?.accountHolderName ?? '')}
                             </TableCell>
-                          )}
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
+                            <TableCell align="left">Account No: {data?.bank?.accountNo}</TableCell>
+                            <TableCell align="left">Branch: {data?.bank?.branch}</TableCell>
+                            <TableCell align="left">IFSC Code: {data?.bank?.ifscCode}</TableCell>
+                            {data?.bank?.proof?.uploadedFile && (
+                              <TableCell align="left">
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 600 }}>Bank Proof:</Typography>
+                                  {data.bank.proof.uploadedFile.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
+                                    <a
+                                      href={data.bank.proof.uploadedFile.startsWith('http') ? data.bank.proof.uploadedFile : `${global.baseURL}/${data.bank.proof.uploadedFile}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      <img
+                                        src={data.bank.proof.uploadedFile.startsWith('http') ? data.bank.proof.uploadedFile : `${global.baseURL}/${data.bank.proof.uploadedFile}`}
+                                        alt="bank proof"
+                                        style={{ height: '30px', borderRadius: 4 }}
+                                      />
+                                    </a>
+                                  ) : (
+                                    <a
+                                      href={data.bank.proof.uploadedFile.startsWith('http') ? data.bank.proof.uploadedFile : `${global.baseURL}/${data.bank.proof.uploadedFile}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      <img src="/assets/doc.svg" alt="bank proof" style={{ height: '30px' }} />
+                                    </a>
+                                  )}
+                                </Box>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Scrollbar>
                 </Grid>
               </>
             )}
@@ -832,63 +967,85 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
               <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
                 Bill Detail:
               </Typography>
-              <TableContainer>
-                <Table>
-                  <TableBody>
-                    <TableRow tabIndex={-1}>
-                      <TableCell align="left">Bill Id: {data?.billId}</TableCell>
-                      <TableCell align="left">Branch: {sentenceCase(data.branch?.branchName ?? '')}</TableCell>
-                      <TableCell align="left">Sale Type: {sentenceCase(data.saleType ?? '')}</TableCell>
-                      <TableCell align="left">Ornament Type: {sentenceCase(data.purchaseType ?? '')}</TableCell>
-                    </TableRow>
-                    <TableRow tabIndex={-1}>
-                      <TableCell align="left">DOP: {new Date(data.dop).toUTCString()}</TableCell>
-                      <TableCell align="left">Net Weight: {data.netWeight?.toFixed(2)}</TableCell>
-                      <TableCell align="left">Payment Type: {data.paymentType}</TableCell>
-                      <TableCell align="left">Margin: {data.margin}%</TableCell>
-                    </TableRow>
-                    <TableRow tabIndex={-1}>
-                      <TableCell align="left">Net Amount: {Math.round(data.netAmount)}</TableCell>
-                      <TableCell align="left">
-                        Margin Amount:{' '}
-                        {data.status === 'approved'
-                          ? Math.round(
-                            data.netAmount -
-                            data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0) -
-                            data.payableAmount
-                          )
-                          : Math.round((data.netAmount * data.margin) / 100)}
-                      </TableCell>
-                      <TableCell align="left">
-                        Release Amount:{' '}
-                        {Math.round(data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0)) ?? 0}
-                      </TableCell>
-                      <TableCell align="left">Payable Amount: {Math.abs(Math.round(data.payableAmount || 0))}</TableCell>
-                    </TableRow>
-                    <TableRow tabIndex={-1}>
-                      <TableCell align="left">Status: {sentenceCase(data.status || '')}</TableCell>
-                      {data.actionBy && (
-                        <TableCell align="left">
-                          By: {data.actionBy.name} ({data.actionBy.employeeId})
-                        </TableCell>
-                      )}
-                      {data.actionAt && (
-                        <TableCell align="left">
-                          At: {moment(data.actionAt).format('YYYY-MM-DD HH:mm:ss')}
-                        </TableCell>
-                      )}
-                    </TableRow>
-                    {data.comments && (
+              <Scrollbar>
+                <TableContainer sx={{ minWidth: 700 }}>
+                  <Table>
+                    <TableBody>
                       <TableRow tabIndex={-1}>
-                        <TableCell align="left" colSpan={4}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold', display: 'inline' }}>Comments: </Typography>
-                          {data.comments}
+                        <TableCell align="left">Bill Id: {data?.billId}</TableCell>
+                        <TableCell align="left">Branch: {sentenceCase(data.branch?.branchName ?? '')}</TableCell>
+                        <TableCell align="left">Sale Type: {sentenceCase(data.saleType ?? '')}</TableCell>
+                        <TableCell align="left">Ornament Type: {sentenceCase(data.purchaseType ?? '')}</TableCell>
+                      </TableRow>
+                      <TableRow tabIndex={-1}>
+                        <TableCell align="left">DOP: {new Date(data.dop).toUTCString()}</TableCell>
+                        <TableCell align="left">Net Weight: {data.netWeight?.toFixed(2)}</TableCell>
+                        <TableCell align="left">Payment Type: {data.paymentType}</TableCell>
+                        <TableCell align="left">Margin: {data.margin}%</TableCell>
+                      </TableRow>
+                      <TableRow tabIndex={-1}>
+                        <TableCell align="left">Net Amount: {Math.round(data.netAmount)}</TableCell>
+                        <TableCell align="left">
+                          Margin Amount:{' '}
+                          {data.status === 'approved'
+                            ? Math.round(
+                              data.netAmount -
+                              data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0) -
+                              data.payableAmount
+                            )
+                            : Math.round((data.netAmount * data.margin) / 100)}
+                        </TableCell>
+                        <TableCell align="left">
+                          Release Amount:{' '}
+                          {Math.round(data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0)) ?? 0}
+                        </TableCell>
+                        <TableCell align="left">
+                          {isAuthorized && data.status === 'bullion pending' ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                Payable Amount:
+                              </Typography>
+                              <TextField
+                                size="small"
+                                type="number"
+                                value={payableAmount}
+                                onChange={(e) => setPayableAmount(e.target.value)}
+                                InputProps={{
+                                  startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                                }}
+                                sx={{ width: 140 }}
+                              />
+                            </Box>
+                          ) : (
+                            <>Payable Amount: {Math.abs(Math.round(data.payableAmount || 0))}</>
+                          )}
                         </TableCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                      <TableRow tabIndex={-1}>
+                        <TableCell align="left">Status: {sentenceCase(data.status || '')}</TableCell>
+                        {data.actionBy && (
+                          <TableCell align="left">
+                            By: {data.actionBy.name} ({data.actionBy.employeeId})
+                          </TableCell>
+                        )}
+                        {data.actionAt && (
+                          <TableCell align="left">
+                            At: {moment(data.actionAt).format('YYYY-MM-DD HH:mm:ss')}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                      {data.comments && (
+                        <TableRow tabIndex={-1}>
+                          <TableCell align="left" colSpan={4}>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold', display: 'inline' }}>Comments: </Typography>
+                            {data.comments}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Scrollbar>
             </Grid>
 
             <Grid item xs={12}>
@@ -898,39 +1055,75 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
 
             {isAuthorized && data.status === 'bullion pending' && (
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  label="Comments"
-                  value={bullionComment}
-                  onChange={(e) => setBullionComment(e.target.value)}
-                  placeholder="Type any comments before approving/rejecting (Optional for approval)"
-                  sx={{ mb: 2 }}
-                />
-                <Stack direction="row" spacing={2} justifyContent="flex-end">
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    disabled={actionLoading}
-                    onClick={() => {
-                      if (bullionComment.trim()) {
-                        setRejectReason(bullionComment);
-                      }
-                      setOpenRejectDialog(true);
-                    }}
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 2,
+                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
+                    borderColor: (theme) => alpha(theme.palette.primary.main, 0.2),
+                  }}
+                >
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: 'primary.main' }}>
+                    Bullion Desk Approval & Verification
+                  </Typography>
+
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        fullWidth
+                        type="number"
+                        label="Payable Amount (₹)"
+                        value={payableAmount}
+                        onChange={(e) => setPayableAmount(e.target.value)}
+                        helperText="Review or adjust payable amount before approving"
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={8}>
+                      <TextField
+                        fullWidth
+                        label="Comments"
+                        value={bullionComment}
+                        onChange={(e) => setBullionComment(e.target.value)}
+                        placeholder="Type any comments before approving/rejecting (Optional for approval)"
+                      />
+                    </Grid>
+                  </Grid>
+
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1.5}
+                    justifyContent="flex-end"
+                    sx={{ width: '100%' }}
                   >
-                    Reject Sale
-                  </Button>
-                  <LoadingButton
-                    variant="contained"
-                    color="success"
-                    loading={actionLoading}
-                    onClick={handleApprove}
-                  >
-                    Approve Sale
-                  </LoadingButton>
-                </Stack>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      disabled={actionLoading}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
+                      onClick={() => {
+                        if (bullionComment.trim()) {
+                          setRejectReason(bullionComment);
+                        }
+                        setOpenRejectDialog(true);
+                      }}
+                    >
+                      Reject Sale
+                    </Button>
+                    <LoadingButton
+                      variant="contained"
+                      color="success"
+                      loading={actionLoading}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
+                      onClick={handleApprove}
+                    >
+                      Approve Sale
+                    </LoadingButton>
+                  </Stack>
+                </Paper>
               </Grid>
             )}
           </Grid>

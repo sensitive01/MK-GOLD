@@ -101,7 +101,7 @@ export default function FinanceAttendance() {
   const [stats, setStats] = useState({ total: 0, present: 0, absent: 0 });
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
-  const [currentTab, setCurrentTab] = useState('all_attendance');
+  const [currentTab, setCurrentTab] = useState('my_attendance');
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
 
@@ -441,11 +441,12 @@ export default function FinanceAttendance() {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 400,
+    width: { xs: '90%', sm: 400 },
+    maxWidth: 400,
     bgcolor: 'background.paper',
     borderRadius: 3,
     boxShadow: 24,
-    p: 4,
+    p: { xs: 2.5, sm: 4 },
   };
 
   function AlertComponent(props, ref) {
@@ -472,76 +473,109 @@ export default function FinanceAttendance() {
         </Alert>
       </Snackbar>
 
-      <Box sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
+      <Box sx={{ px: { xs: 1, sm: 2, md: 3 }, display: toggleContainer === true ? 'none' : 'block' }}>
+
+        <Typography variant="h4" sx={{ mb: { xs: 2, sm: 3 }, color: '#fff', fontSize: { xs: '1.5rem', sm: '2rem' }, fontWeight: 700 }}>
+          Attendances
+        </Typography>
 
         {currentTab === 'my_attendance' && (
-          <Grid container spacing={3} mb={5}>
+          <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }} mb={{ xs: 2.5, sm: 4 }}>
             <Grid item xs={12} sm={4}>
-              <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
-                <Typography variant="h6">Total Days (Month)</Typography>
-                <Typography variant="h4">{stats?.total || 0}</Typography>
+              <Card sx={{ p: { xs: 1.5, sm: 3 }, textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
+                <Typography variant="h6" sx={{ fontSize: { xs: '0.85rem', sm: '1.1rem' } }}>Total Days (Month)</Typography>
+                <Typography variant="h4" sx={{ fontSize: { xs: '1.4rem', sm: '2.125rem' } }}>{stats?.total || 0}</Typography>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={4}>
-              <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
-                <Typography variant="h6">Present</Typography>
-                <Typography variant="h4">{stats?.present || 0}</Typography>
+            <Grid item xs={6} sm={4}>
+              <Card sx={{ p: { xs: 1.5, sm: 3 }, textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
+                <Typography variant="h6" sx={{ fontSize: { xs: '0.85rem', sm: '1.1rem' } }}>Present</Typography>
+                <Typography variant="h4" sx={{ fontSize: { xs: '1.4rem', sm: '2.125rem' } }}>{stats?.present || 0}</Typography>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={4}>
-              <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'error.main', color: 'white' }}>
-                <Typography variant="h6">Absent</Typography>
-                <Typography variant="h4">{stats?.absent || 0}</Typography>
+            <Grid item xs={6} sm={4}>
+              <Card sx={{ p: { xs: 1.5, sm: 3 }, textAlign: 'center', bgcolor: 'error.main', color: 'white' }}>
+                <Typography variant="h6" sx={{ fontSize: { xs: '0.85rem', sm: '1.1rem' } }}>Absent</Typography>
+                <Typography variant="h4" sx={{ fontSize: { xs: '1.4rem', sm: '2.125rem' } }}>{stats?.absent || 0}</Typography>
               </Card>
             </Grid>
           </Grid>
         )}
 
-        <Typography variant="h4" sx={{ mb: 5, color: '#fff' }}>
-          Attendances
-        </Typography>
-
         <Card>
           <Box sx={{ width: '100%' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs value={currentTab} onChange={(e, v) => setCurrentTab(v)} aria-label="attendance tabs" variant="scrollable" scrollButtons="auto">
-                <Tab value="all_attendance" label="All Attendance" />
+              <Tabs
+                value={currentTab}
+                onChange={(e, v) => setCurrentTab(v)}
+                aria-label="attendance tabs"
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
+              >
+                {/* <Tab value="all_attendance" label="All Attendance" /> */}
                 <Tab value="my_attendance" label="My Attendance" />
                 <Tab value="consolidated_attendance" label="Consolidated" />
                 <Tab value="adjustments" label="Adjustments" />
               </Tabs>
             </Box>
             
-            <Box sx={{ p: 3 }}>
+            <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
               {currentTab === 'adjustments' ? (
                 <Adjustments />
               ) : (
                 <>
-                  <Button variant="contained" startIcon={<Iconify icon="material-symbols:filter-alt-off" />} onClick={() => setFilterOpen(true)} sx={{ float: 'right', mx: '10px' }}>
-                    Filter
-                  </Button>
-              <Button variant="contained" startIcon={<Iconify icon="carbon:document-export" />} onClick={() => {
-                handleExport(data?.map(e => ({ EmployeeId: e?.employee?.employeeId, EmployeeName: e?.employee?.name, Date: e.createdAt })), 'Attendance');
-              }} sx={{ float: 'right' }}>
-                Export
-              </Button>
-              {(currentTab === 'my_attendance' && !hasMarkedAttendanceToday || currentTab === 'all_attendance') && (
-                <Button
-                  variant="contained"
-                  startIcon={<Iconify icon="eva:plus-fill" />}
-                  onClick={() => {
-                    setToggleContainer(!toggleContainer);
-                    setToggleContainerType('create');
-                  }}
-                  sx={{ float: 'right', mr: '10px' }}
-                >
-                  Mark Attendance
-                </Button>
-              )}
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1}
+                    justifyContent="space-between"
+                    alignItems={{ xs: 'stretch', sm: 'center' }}
+                    sx={{ mb: 2 }}
+                  >
+                    {((currentTab === 'my_attendance' && !hasMarkedAttendanceToday) || currentTab === 'all_attendance') ? (
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<Iconify icon="eva:plus-fill" />}
+                        onClick={() => {
+                          setToggleContainer(!toggleContainer);
+                          setToggleContainerType('create');
+                        }}
+                      >
+                        Mark Attendance
+                      </Button>
+                    ) : (
+                      <Box sx={{ display: { xs: 'none', sm: 'block' } }} />
+                    )}
+                    <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<Iconify icon="carbon:document-export" />}
+                        onClick={() => {
+                          handleExport(data?.map(e => ({ EmployeeId: e?.employee?.employeeId, EmployeeName: e?.employee?.name, Date: e.createdAt })), 'Attendance');
+                        }}
+                        sx={{ flex: { xs: 1, sm: 'none' } }}
+                      >
+                        Export
+                      </Button>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                        onClick={() => setFilterOpen(true)}
+                        sx={{ flex: { xs: 1, sm: 'none' } }}
+                      >
+                        Filter
+                      </Button>
+                    </Stack>
+                  </Stack>
 
-              <p style={{ color: '#fff' }}>
-                From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : ''}, To Date: {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : ''}
-              </p>
+                  {(values.fromDate || values.toDate) && (
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
+                      From Date: {values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : '-'}, To Date: {values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : '-'}
+                    </Typography>
+                  )}
 
               <AttendanceListToolbar
                 numSelected={selected?.length}
@@ -549,9 +583,9 @@ export default function FinanceAttendance() {
                 onFilterName={handleFilterByName}
               />
 
-              <Scrollbar>
-                <TableContainer>
-                  <Table sx={{ minWidth: 800 }}>
+              <Scrollbar sx={{ width: '100%' }}>
+                <TableContainer sx={{ minWidth: currentTab === 'my_attendance' ? '100%' : currentTab === 'consolidated_attendance' ? 950 : 750, overflowX: 'auto' }}>
+                  <Table sx={{ minWidth: currentTab === 'my_attendance' ? '100%' : currentTab === 'consolidated_attendance' ? 950 : 750 }}>
                     <AttendanceListHead
                       order={order}
                       orderBy={orderBy}
@@ -594,19 +628,23 @@ export default function FinanceAttendance() {
                             )}
                             {currentTab === 'all_attendance' && (
                               <>
-                                <TableCell align="left">{employee?.employeeId}</TableCell>
-                                <TableCell align="left">{employee?.name}</TableCell>
+                                <TableCell align="left" sx={{ px: { xs: 1, sm: 2 } }}>{employee?.employeeId}</TableCell>
+                                <TableCell align="left" sx={{ px: { xs: 1, sm: 2 } }}>{employee?.name}</TableCell>
                               </>
                             )}
-                            <TableCell align="left">
+                            <TableCell align="left" sx={{ px: { xs: 1, sm: 2 } }}>
                               {attendance?.uploadedFile ? (
-                                <img src={attendance?.uploadedFile?.startsWith('http') ? attendance.uploadedFile : `${global.baseURL}/${attendance?.uploadedFile}`} alt="attendance" style={{ width: '80px' }} />
+                                <img src={attendance?.uploadedFile?.startsWith('http') ? attendance.uploadedFile : `${global.baseURL}/${attendance?.uploadedFile}`} alt="attendance" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
                               ) : 'No Image'}
                             </TableCell>
-                            <TableCell align="left">{moment(row?.loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}</TableCell>
-                            <TableCell align="left">
+                            <TableCell align="left" sx={{ px: { xs: 1, sm: 2 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                              {moment(row?.loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}
+                            </TableCell>
+                            <TableCell align="left" sx={{ px: { xs: 1, sm: 2 } }}>
                               {row.logoutTime ? (
-                                moment(row.logoutTime).format('DD-MM-YYYY HH:mm:ss')
+                                <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
+                                  {moment(row.logoutTime).format('DD-MM-YYYY HH:mm:ss')}
+                                </Typography>
                               ) : (
                                 currentTab === 'my_attendance' && employee && auth.user.employee &&
                                 (employee?._id?.toString() || employee?.toString()) === (auth.user.employee?._id?.toString() || auth.user.employee?.toString()) ? (
@@ -617,6 +655,8 @@ export default function FinanceAttendance() {
                                     sx={{
                                       color: 'error.main',
                                       borderColor: 'error.main',
+                                      fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+                                      px: { xs: 1, sm: 2 },
                                       '&:hover': {
                                         bgcolor: 'rgba(255, 0, 0, 0.08)',
                                         borderColor: 'error.dark',
@@ -676,10 +716,11 @@ export default function FinanceAttendance() {
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: 400,
+          width: { xs: '90%', sm: 400 },
+          maxWidth: 400,
           bgcolor: '#fff',
           boxShadow: 24,
-          p: 4,
+          p: { xs: 2.5, sm: 4 },
           borderRadius: 3,
         }}>
           <Typography variant="h6" sx={{ color: '#1E293B', fontWeight: 'bold', mb: 2 }}>
@@ -813,37 +854,37 @@ export default function FinanceAttendance() {
           <IconButton onClick={closeModal}><Iconify icon="eva:close-fill" /></IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          <Box sx={{ bgcolor: 'primary.lighter', p: 2, mb: 3, borderRadius: 1 }}>
+          <Box sx={{ bgcolor: 'primary.lighter', p: { xs: 1.5, sm: 2 }, mb: 3, borderRadius: 1 }}>
             <Grid container spacing={2} textAlign="center">
-              <Grid item xs={3}>
+              <Grid item xs={6} sm={3}>
                 <Typography variant="body2" color="textSecondary">Total Days</Typography>
                 <Typography variant="h6" color="primary.main">{selectedEmployee?.workingDays || 0}</Typography>
               </Grid>
-              <Grid item xs={3}>
+              <Grid item xs={6} sm={3}>
                 <Typography variant="body2" color="textSecondary">Present</Typography>
                 <Typography variant="h6" color="success.main">{attendanceSummary.present}</Typography>
               </Grid>
-              <Grid item xs={3}>
+              <Grid item xs={6} sm={3}>
                 <Typography variant="body2" color="textSecondary">Absent</Typography>
                 <Typography variant="h6" color="error.main">{selectedEmployee?.absent || 0}</Typography>
               </Grid>
-              <Grid item xs={3}>
+              <Grid item xs={6} sm={3}>
                 <Typography variant="body2" color="textSecondary">Remaining Days</Typography>
                 <Typography variant="h6" color="warning.main">{attendanceSummary.remainingDays > 0 ? attendanceSummary.remainingDays : 0}</Typography>
               </Grid>
-              <Grid item xs={3}>
+              <Grid item xs={6} sm={3}>
                 <Typography variant="body2" color="textSecondary">Late Days</Typography>
                 <Typography variant="h6">{selectedEmployee?.lateDays || 0}</Typography>
               </Grid>
-              <Grid item xs={3}>
+              <Grid item xs={6} sm={3}>
                 <Typography variant="body2" color="textSecondary">Allowances</Typography>
                 <Typography variant="h6" color="success.main">₹{selectedEmployee?.allowances || 0}</Typography>
               </Grid>
-              <Grid item xs={3}>
+              <Grid item xs={6} sm={3}>
                 <Typography variant="body2" color="textSecondary">Deductions</Typography>
                 <Typography variant="h6" color="error.main">₹{selectedEmployee?.deductions || 0}</Typography>
               </Grid>
-              <Grid item xs={3}>
+              <Grid item xs={6} sm={3}>
                 <Typography variant="body2" color="textSecondary">Advance</Typography>
                 <Typography variant="h6" color="warning.main">₹{selectedEmployee?.advance || 0}</Typography>
               </Grid>
@@ -853,7 +894,7 @@ export default function FinanceAttendance() {
           {modalLoading ? (
             <Box display="flex" justifyContent="center" my={5}><CircularProgress /></Box>
           ) : attendanceDetails.length > 0 ? (
-            <TableContainer component={Paper} variant="outlined">
+            <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow>

@@ -16,6 +16,8 @@ router.get("/qr-enquiry/get-by-enqid/:enqId", qrController.findByEnqIdStrict);
 router.post("/kyc/customer", kycController.createCustomer);
 router.post("/kyc/file-upload", multer.single("uploadedFile"), kycController.createFile);
 router.post("/kyc/address", kycController.createAddress);
+router.post("/kyc/send-otp", kycController.sendOtp);
+router.post("/kyc/verify-otp", kycController.verifyOtp);
 
 // Get branch info anonymously for the public page
 router.get("/branch/:id", async (req, res) => {

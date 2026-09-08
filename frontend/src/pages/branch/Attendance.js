@@ -469,15 +469,22 @@ export default function Attendance() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
-          <Typography variant="h4" sx={{ color: '#fff' }}>
+      <Container maxWidth="xl" sx={{ px: { xs: 1, sm: 2, md: 3 }, display: toggleContainer === true ? 'none' : 'block' }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          justifyContent="space-between"
+          spacing={2}
+          mb={{ xs: 2.5, sm: 3 }}
+        >
+          <Typography variant="h4" sx={{ color: '#fff', fontSize: { xs: '1.5rem', sm: '2rem' }, fontWeight: 700 }}>
             Attendance
           </Typography>
           {currentTab === 'my_attendance' && !hasMarkedAttendanceToday && (
             <Button
               variant="contained"
               startIcon={<Iconify icon="eva:plus-fill" />}
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
               onClick={() => {
                 setToggleContainer(!toggleContainer);
                 setToggleContainerType('create');
@@ -492,6 +499,9 @@ export default function Attendance() {
           <Tabs
             value={currentTab}
             onChange={(event, newValue) => setCurrentTab(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
             sx={{
               '& .MuiTab-root': { color: 'white', opacity: 0.7 },
               '& .Mui-selected': { color: 'white !important', opacity: 1 },
@@ -504,29 +514,29 @@ export default function Attendance() {
           </Tabs>
         </Box>
 
-        <Grid container spacing={3} mb={5}>
+        <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }} mb={{ xs: 3, sm: 5 }}>
           <Grid item xs={12} sm={4}>
-            <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
-              <Typography variant="h6">
+            <Card sx={{ p: { xs: 2, sm: 3 }, textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
+              <Typography variant="h6" sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' } }}>
                 {!(isManager || isHRAdmin) || currentTab === 'my_attendance' ? 'Total Days (Month)' : 'Total Employees'}
               </Typography>
-              <Typography variant="h4">{stats?.total || 0}</Typography>
+              <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>{stats?.total || 0}</Typography>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
-              <Typography variant="h6">
+          <Grid item xs={6} sm={4}>
+            <Card sx={{ p: { xs: 2, sm: 3 }, textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
+              <Typography variant="h6" sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' } }}>
                 {!(isManager || isHRAdmin) || currentTab === 'my_attendance' ? 'Present' : 'Present Today'}
               </Typography>
-              <Typography variant="h4">{stats?.present || 0}</Typography>
+              <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>{stats?.present || 0}</Typography>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ p: 3, textAlign: 'center', bgcolor: 'error.main', color: 'white' }}>
-              <Typography variant="h6">
+          <Grid item xs={6} sm={4}>
+            <Card sx={{ p: { xs: 2, sm: 3 }, textAlign: 'center', bgcolor: 'error.main', color: 'white' }}>
+              <Typography variant="h6" sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' } }}>
                 {!(isManager || isHRAdmin) || currentTab === 'my_attendance' ? 'Absent' : 'Absent Today'}
               </Typography>
-              <Typography variant="h4">{stats?.absent || 0}</Typography>
+              <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>{stats?.absent || 0}</Typography>
             </Card>
           </Grid>
         </Grid>

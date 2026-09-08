@@ -1475,9 +1475,7 @@ async function adminConsolidatedSaleReport(query = {}) {
 
 async function triggerCompletedInvoiceWhatsApp(saleId) {
   try {
-    const sale = await Sales.findById(saleId)
-      .populate('customer branch')
-      .exec();
+    const sale = await findById(saleId);
 
     if (!sale) {
       console.warn(`[WhatsApp Invoice] Sale not found: ${saleId}`);

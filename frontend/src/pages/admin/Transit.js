@@ -366,13 +366,13 @@ export default function Transit() {
       return;
     }
     const proofId = typeof adminProof === 'object' ? adminProof._id : adminProof;
-    const newStatus = deviation === 'yes' ? 'moved' : 'submitted';
+    const newStatus = deviation === 'yes' ? 'submitted' : 'moved';
     updateTransitStatus(openId, { status: newStatus, deviations: deviation, receivedNotes: adminNotes, receivedProof: proofId }).then((data) => {
       handleCloseMenu();
       setViewModalOpen(false);
       if (data.status) {
         fetchData();
-        setNotify({ open: true, message: `Transit status updated to ${newStatus}`, severity: 'success' });
+        setNotify({ open: true, message: deviation === 'yes' ? 'Transit marked with deviations (Status: Submitted)' : 'Transit received successfully (Status: Moved)', severity: deviation === 'yes' ? 'warning' : 'success' });
       } else {
         setNotify({ open: true, message: data.message || 'Error updating status', severity: 'error' });
       }
@@ -509,7 +509,9 @@ export default function Transit() {
                         <TableCell align="left">{totalNetWeight}</TableCell>
                         <TableCell align="left">{sentenceCase(deliveryBy || '')}</TableCell>
                         <TableCell align="left">
-                          <Label color={status === 'received' ? 'success' : 'warning'}>{sentenceCase(status || '')}</Label>
+                          <Label color={status?.toLowerCase() === 'moved' ? 'success' : 'warning'}>
+                            {sentenceCase(status || '')}
+                          </Label>
                         </TableCell>
                         <TableCell align="left">
                           <Typography variant="body2">{moment(createdAt).format('YYYY-MM-DD')}</Typography>
