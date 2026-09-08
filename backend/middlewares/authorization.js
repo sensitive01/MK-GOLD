@@ -1,6 +1,6 @@
 function isAdmin(req, res, next) {
   const userType = req.user?.userType?.toLowerCase();
-  if (userType === "admin" || userType === "subadmin" || userType === "auditor" || userType === "melting") {
+  if (userType === "admin" || userType === "subadmin" || userType === "auditor" || userType === "melting" || userType === "store") {
     return next();
   }
 
@@ -53,7 +53,8 @@ function isBranch(req, res, next) {
     userType === "subadmin" ||
     userType === "hr" ||
     userType === "auditor" ||
-    userType === "melting"
+    userType === "melting" ||
+    userType === "store"
   ) {
     return next();
   }

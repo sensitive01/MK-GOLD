@@ -128,6 +128,7 @@ export default {
     { label: 'Marketing Team', value: 'marketing' },
     { label: 'Admin Desk', value: 'admin_desk' },
     { label: 'Melting', value: 'melting' },
+    { label: 'Store', value: 'store' },
   ],
   employmentTypes: [
     { label: 'Full Time', value: 'full-time' },

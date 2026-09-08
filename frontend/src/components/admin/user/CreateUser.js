@@ -118,6 +118,8 @@ function CreateUser(props) {
     return designation.includes(label) || designation.includes(values.userType.toLowerCase().replace('_', ' '));
   });
 
+  const displayEmployees = (filteredEmployees && filteredEmployees.length > 0) ? filteredEmployees : employees;
+
   return (
     <Card sx={{ p: 4, my: 4 }}>
       <form
@@ -190,7 +192,7 @@ function CreateUser(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                {filteredEmployees?.map((e) => (
+                {displayEmployees?.map((e) => (
                   <MenuItem value={e._id} key={e._id}>
                     {e.employeeId} {e.name}
                   </MenuItem>

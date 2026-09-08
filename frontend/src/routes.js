@@ -133,6 +133,11 @@ import MeltingGoldRate from './pages/melting/GoldRate';
 import MeltingRelease from './pages/melting/Release';
 import MeltingAttendance from './pages/melting/Attendance';
 import MeltingLeave from './pages/melting/Leave';
+
+import StoreDashboardLayout from './layouts/dashboard/store';
+import StoreDashboard from './pages/store/Dashboard';
+import StoreGoldTransit from './pages/store/GoldTransit';
+import StoreTransitOutwards from './pages/store/TransitOutwards';
 // ----------------------------------------------------------------------
 
 function Protected({ children }) {
@@ -452,6 +457,21 @@ export default function Router() {
         { path: 'attendance', element: <AdminDeskAttendance /> },
         { path: 'leave', element: <AdminDeskLeave /> },
         { path: 'expense', element: <AdminDeskExpense /> },
+      ],
+    },
+    {
+      path: '/store',
+      element: (
+        <Protected>
+          <StoreDashboardLayout />
+        </Protected>
+      ),
+      children: [
+        { path: 'profile', element: <Profile /> },
+        { element: <Navigate to="/store/dashboard" />, index: true },
+        { path: 'dashboard', element: <StoreDashboard /> },
+        { path: 'gold-transit', element: <StoreGoldTransit /> },
+        { path: 'transit-outwards', element: <StoreTransitOutwards /> },
       ],
     },
     {

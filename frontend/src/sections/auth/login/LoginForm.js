@@ -85,6 +85,9 @@ export default function LoginForm() {
     if (userType === 'melting') {
       return <Navigate to="/melting/dashboard" />;
     }
+    if (userType === 'store') {
+      return <Navigate to="/store/dashboard" />;
+    }
     return <Navigate to="/404" />;
   }
 

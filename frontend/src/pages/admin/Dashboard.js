@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 // sections
 import { getCount } from '../../apis/admin/dashboard';
 import { AppWidgetSummary } from '../../sections/@dashboard/app';
+import { fShortenNumber } from '../../utils/formatNumber';
 import Iconify from '../../components/iconify';
 
 // ----------------------------------------------------------------------
@@ -84,7 +85,7 @@ export default function DashboardAppPage() {
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                minHeight: 220,
+                minHeight: { xs: 145, sm: 180, md: 220 },
                 transition: (theme) => 
                   theme.transitions.create(['transform', 'box-shadow', 'background-color'], {
                     duration: theme.transitions.duration.shorter,
@@ -106,7 +107,7 @@ export default function DashboardAppPage() {
               </Box>
               
               <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography variant="h3">
+                <Typography variant="h3" sx={{ fontSize: { xs: '1.25rem', sm: '1.75rem', md: '2.125rem' }, fontWeight: 700 }}>
                   {count?.todayBills || 0}
                 </Typography>
               </Box>
@@ -116,7 +117,7 @@ export default function DashboardAppPage() {
                   <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
                     Physical
                   </Typography>
-                  <Typography variant="subtitle1">
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                     {count?.todayPhysicalBills || 0}
                   </Typography>
                 </Box>
@@ -124,37 +125,13 @@ export default function DashboardAppPage() {
                   <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
                     Release
                   </Typography>
-                  <Typography variant="subtitle1">
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                     {count?.todayPledgeBills || 0}
                   </Typography>
                 </Box>
               </Box>
             </Card>
           </Grid>
-          <Grid item xs={6} sm={6} md={2}>
-            <AppWidgetSummary
-              title="Physical"
-              total={count?.todayPhysicalBills}
-              icon={'mdi:printer-pos'}
-              bgColor="#fff"
-              iconColor="#8A1B9F"
-              textColor="#000"
-              onClick={() => navigate('/admin/sale')}
-            />
-          </Grid>
-          <Grid item xs={6} sm={6} md={2}>
-            <AppWidgetSummary
-              title="Pledged"
-              total={count?.todayPledgeBills}
-              icon={'mdi:handshake'}
-              bgColor="#FFD700"
-              iconColor="#8A1B9F"
-              textColor="#000"
-              onClick={() => navigate('/admin/release')}
-            />
-          </Grid>
-
-          {/* Row 2 */}
           <Grid item xs={6} sm={6} md={2}>
             <AppWidgetSummary
               title="Pending Release"
@@ -177,6 +154,8 @@ export default function DashboardAppPage() {
               onClick={() => navigate('/admin/sale')}
             />
           </Grid>
+
+          {/* Row 2 */}
           <Grid item xs={6} sm={6} md={2}>
             <AppWidgetSummary
               title="Overall Net Amount Transferred"
@@ -210,19 +189,65 @@ export default function DashboardAppPage() {
               onClick={() => navigate('/admin/fund')}
             />
           </Grid>
-          {/* Empty slot for the 6th tile in Row 2 to align properly, or we can just leave it as 5 items in a 6-item grid which will just leave a space at the end. I will leave it empty. */}
-
-          {/* Row 3 */}
           <Grid item xs={6} sm={6} md={2}>
-            <AppWidgetSummary
-              title="Expenses"
-              total={count?.totalExpenses}
-              icon={'mdi:wallet'}
-              bgColor="#FFD700"
-              iconColor="#8A1B9F"
-              textColor="#000"
+            <Card
+              sx={{
+                p: 2,
+                boxShadow: (theme) => theme.customShadows.z8,
+                textAlign: 'center',
+                color: '#000',
+                bgcolor: '#FFD700',
+                borderRadius: 2,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minHeight: { xs: 145, sm: 180, md: 220 },
+                transition: (theme) => 
+                  theme.transitions.create(['transform', 'box-shadow', 'background-color'], {
+                    duration: theme.transitions.duration.shorter,
+                  }),
+                '&:hover': {
+                  transform: 'translateY(-8px) scale(1.02)',
+                  boxShadow: (theme) => theme.customShadows.z24,
+                  filter: 'brightness(1.1)',
+                  cursor: 'pointer',
+                },
+              }}
               onClick={() => navigate('/admin/expense')}
-            />
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>
+                  Fund Outwards
+                </Typography>
+                <Iconify icon={'mdi:bank-transfer-out'} width={24} height={24} sx={{ color: '#8A1B9F' }} />
+              </Box>
+              
+              <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography variant="h3" sx={{ fontSize: { xs: '1.25rem', sm: '1.75rem', md: '2.125rem' }, fontWeight: 700 }}>
+                  {fShortenNumber((count?.totalExpenses || 0) + (count?.salaryAdvance || 0))}
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, pt: 2, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
+                <Box sx={{ textAlign: 'center', width: '50%' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+                    Expenses
+                  </Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                    {fShortenNumber(count?.totalExpenses || 0)}
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'center', width: '50%' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+                    Advance
+                  </Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                    {fShortenNumber(count?.salaryAdvance || 0)}
+                  </Typography>
+                </Box>
+              </Box>
+            </Card>
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
             <AppWidgetSummary
@@ -236,48 +261,64 @@ export default function DashboardAppPage() {
             />
           </Grid>
           <Grid item xs={6} sm={6} md={2}>
-            <AppWidgetSummary
-              title="Present"
-              total={count?.presentCount}
-              icon={'mdi:account-check'}
-              bgColor="#FFD700"
-              iconColor="#8A1B9F"
-              textColor="#000"
+            <Card
+              sx={{
+                p: 2,
+                boxShadow: (theme) => theme.customShadows.z8,
+                textAlign: 'center',
+                color: '#000',
+                bgcolor: '#FFD700',
+                borderRadius: 2,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minHeight: { xs: 145, sm: 180, md: 220 },
+                transition: (theme) => 
+                  theme.transitions.create(['transform', 'box-shadow', 'background-color'], {
+                    duration: theme.transitions.duration.shorter,
+                  }),
+                '&:hover': {
+                  transform: 'translateY(-8px) scale(1.02)',
+                  boxShadow: (theme) => theme.customShadows.z24,
+                  filter: 'brightness(1.1)',
+                  cursor: 'pointer',
+                },
+              }}
               onClick={() => navigate('/admin/employee/attendance')}
-            />
-          </Grid>
-          <Grid item xs={6} sm={6} md={2}>
-            <AppWidgetSummary
-              title="Absent"
-              total={count?.absentCount}
-              icon={'mdi:account-remove'}
-              bgColor="#fff"
-              iconColor="#8A1B9F"
-              textColor="#000"
-              onClick={() => navigate('/admin/employee/attendance')}
-            />
-          </Grid>
-          <Grid item xs={6} sm={6} md={2}>
-            <AppWidgetSummary
-              title="Late"
-              total={count?.lateCount}
-              icon={'mdi:account-clock'}
-              bgColor="#FFD700"
-              iconColor="#8A1B9F"
-              textColor="#000"
-              onClick={() => navigate('/admin/employee/attendance')}
-            />
-          </Grid>
-          <Grid item xs={6} sm={6} md={2}>
-            <AppWidgetSummary
-              title="Salary Advance"
-              total={count?.salaryAdvance}
-              icon={'mdi:cash-fast'}
-              bgColor="#fff"
-              iconColor="#8A1B9F"
-              textColor="#000"
-              onClick={() => navigate('/admin/employee/details')}
-            />
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', textTransform: 'uppercase' }}>
+                  Present
+                </Typography>
+                <Iconify icon={'mdi:account-check'} width={24} height={24} sx={{ color: '#8A1B9F' }} />
+              </Box>
+              
+              <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography variant="h3" sx={{ fontSize: { xs: '1.25rem', sm: '1.75rem', md: '2.125rem' }, fontWeight: 700 }}>
+                  {count?.presentCount || 0}
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, pt: 2, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
+                <Box sx={{ textAlign: 'center', width: '50%' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+                    Absent
+                  </Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                    {count?.absentCount || 0}
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'center', width: '50%' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+                    Late
+                  </Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                    {count?.lateCount || 0}
+                  </Typography>
+                </Box>
+              </Box>
+            </Card>
           </Grid>
         </Grid>
       </Container>
