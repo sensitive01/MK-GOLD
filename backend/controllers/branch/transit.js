@@ -49,12 +49,44 @@ exports.findTransitData = async (req,res)=>{
             query.branch = req.user.branch._id;
         }
         console.log("Transit Query:", query);
-        const findData = await transitModel.find(query).sort({ createdAt: -1 });
+        const findData = await transitModel.find(query)
+            .populate('branch', 'branchName branchId')
+            .populate({
+                path: 'saleIds',
+                select: 'ornaments billId'
+            })
+            .sort({ createdAt: -1 });
         console.log("Transit FindData Length:", findData.length);
+
+        const formattedData = findData.map(item => {
+            const doc = item.toObject();
+            let totalOrns = 0;
+            let meltedOrns = 0;
+            if (doc.saleIds && Array.isArray(doc.saleIds)) {
+                doc.saleIds.forEach(sale => {
+                    if (sale && sale.ornaments && Array.isArray(sale.ornaments)) {
+                        totalOrns += sale.ornaments.length;
+                        meltedOrns += sale.ornaments.filter(o => o.status === 'melted').length;
+                    }
+                });
+            }
+            if (doc.status === 'melted' || (totalOrns > 0 && meltedOrns === totalOrns)) {
+                doc.isMelted = true;
+                doc.meltingStatus = 'melted';
+            } else if (meltedOrns > 0) {
+                doc.isMelted = false;
+                doc.meltingStatus = 'partial';
+            } else {
+                doc.isMelted = false;
+                doc.meltingStatus = 'unmelted';
+            }
+            return doc;
+        });
+
         res.json({
             status:true,
             message:"",
-            data:findData
+            data:formattedData
         })
     }catch(err){
         res.status(500).json({

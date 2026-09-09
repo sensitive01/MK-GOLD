@@ -17,6 +17,7 @@ import {
   TableContainer,
   TablePagination,
   TableHead,
+  TableFooter,
   Modal,
   Paper,
   Checkbox,
@@ -31,6 +32,7 @@ import {
   IconButton,
   InputAdornment,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { LoadingButton } from '@mui/lab';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -373,6 +375,44 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                   </TableRow>
                 )}
               </TableBody>
+              {ornaments?.length > 0 && (
+                <TableFooter>
+                  <TableRow
+                    sx={{
+                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                      borderTop: '2px solid',
+                      borderColor: 'divider',
+                      '& .MuiTableCell-root': {
+                        fontWeight: 700,
+                        fontSize: '0.875rem',
+                        color: 'text.primary',
+                        py: 1.5,
+                      },
+                    }}
+                  >
+                    <TableCell colSpan={3} align="left">
+                      Total
+                    </TableCell>
+                    <TableCell align="left">
+                      {ornaments.reduce((prev, cur) => prev + (+cur.quantity || 0), 0)}
+                    </TableCell>
+                    <TableCell align="left">
+                      {ornaments.reduce((prev, cur) => prev + (+cur.stoneWeight || 0), 0).toFixed(2)}
+                    </TableCell>
+                    <TableCell align="left">
+                      {ornaments.reduce((prev, cur) => prev + (+cur.netWeight || 0), 0).toFixed(2)}
+                    </TableCell>
+                    <TableCell align="left">
+                      {ornaments.reduce((prev, cur) => prev + (+cur.grossWeight || 0), 0).toFixed(2)}
+                    </TableCell>
+                    <TableCell align="left">
+                      ₹{Math.round(ornaments.reduce((prev, cur) => prev + (+cur.netAmount || 0), 0)).toLocaleString('en-IN')}
+                    </TableCell>
+                    <TableCell align="center">-</TableCell>
+                    <TableCell align="left">-</TableCell>
+                  </TableRow>
+                </TableFooter>
+              )}
             </Table>
           </TableContainer>
 

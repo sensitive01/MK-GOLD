@@ -120,6 +120,13 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
       },
     });
 
+  useEffect(() => {
+    if (bankModal) {
+      resetForm();
+      setBankProofPreview(null);
+    }
+  }, [bankModal, resetForm]);
+
   const handleVerifyAccount = useCallback(() => {
     if (!values.ifscCode || values.ifscCode.length !== 11) {
       setNotify({ open: true, message: 'Please enter a valid 11-digit IFSC code', severity: 'warning' });
@@ -142,24 +149,14 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
           setFieldValue('bankName', data.BANK);
           setFieldValue('branch', data.BRANCH);
         }
-        
-        // Simulate Bank Verification API (Penny Drop)
-        setTimeout(() => {
-          setIsVerifying(false);
-          // Mocking a successful name fetch for the test account
-          let mockName = selectedUser?.name || 'Customer Name';
-          if (values.accountNo === '10710100283243') {
-            mockName = 'ASWINRAJ';
-          }
-          setFieldValue('accountHolderName', mockName);
-          setNotify({ open: true, message: 'Account details verified successfully', severity: 'success' });
-        }, 1500);
+        setIsVerifying(false);
+        setNotify({ open: true, message: 'Bank details verified successfully', severity: 'success' });
       })
       .catch(() => {
         setIsVerifying(false);
         setNotify({ open: true, message: 'Incorrect IFSC code', severity: 'error' });
       });
-  }, [values.accountNo, values.ifscCode, selectedUser, setFieldValue, setNotify]);
+  }, [values.accountNo, values.ifscCode, setFieldValue, setNotify]);
 
   // Auto-fetch Bank Name and Branch from IFSC
   useEffect(() => {
@@ -176,7 +173,6 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
           }
         })
         .catch(() => {
-          // Toast is handled by handleVerifyAccount if both trigger, but if only IFSC is entered, we still want a toast
           if (!values.accountNo || values.accountNo.length < 9) {
             setNotify({ open: true, message: 'Incorrect IFSC code', severity: 'error' });
           }
@@ -185,13 +181,6 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
         });
     }
   }, [values.ifscCode, values.accountNo, setFieldValue, setNotify]);
-
-  // Auto-verify Account Holder Name when Account No and IFSC are filled
-  useEffect(() => {
-    if (values.accountNo?.length >= 9 && values.ifscCode?.length === 11 && !values.accountHolderName && !isVerifying) {
-      handleVerifyAccount();
-    }
-  }, [values.accountNo, values.ifscCode, values.accountHolderName, isVerifying, handleVerifyAccount]);
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];

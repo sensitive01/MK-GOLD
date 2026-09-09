@@ -40,10 +40,12 @@ import { useSelector } from 'react-redux';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
+import { getTransitMeltingStatus } from '../../utils/transit';
 import { TransitListHead, TransitListToolbar } from '../../sections/@dashboard/transit';
 import { findTransit, updateTransitStatus, deleteTransitById } from '../../apis/admin/transit';
 import { createTransit } from '../../apis/branch/transit';
 import { createFile } from '../../apis/branch/fileupload';
+import TransitPrint from '../../components/branch/transit/TransitPrint';
 import { findSales } from '../../apis/admin/sales';
 import global from '../../utils/global';
 import { useFormik } from 'formik';
@@ -100,7 +102,13 @@ function applySortFilter(array, comparator, query, filters) {
 
   if (filters) {
     if (filters.status && filters.status !== 'all') {
-      filteredData = filteredData.filter(row => row.status?.toLowerCase() === filters.status.toLowerCase());
+      if (filters.status.toLowerCase() === 'melted') {
+        filteredData = filteredData.filter(row => getTransitMeltingStatus(row) === 'melted');
+      } else if (filters.status.toLowerCase() === 'moved') {
+        filteredData = filteredData.filter(row => row.status?.toLowerCase() === 'moved' && getTransitMeltingStatus(row) !== 'melted');
+      } else {
+        filteredData = filteredData.filter(row => row.status?.toLowerCase() === filters.status.toLowerCase());
+      }
     }
     if (filters.branch && filters.branch !== 'all') {
       filteredData = filteredData.filter(row => row.branch?.branchName === filters.branch);
@@ -135,6 +143,7 @@ export default function Transit() {
   const [adminProof, setAdminProof] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [verifyTransitId, setVerifyTransitId] = useState(null);
   const fileInputRef = useRef();
 
   const [filterOpen, setFilterOpen] = useState(false);
@@ -449,8 +458,16 @@ export default function Transit() {
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
-                      <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
+                      <TableRow
+                        hover
+                        key={_id}
+                        tabIndex={-1}
+                        role="checkbox"
+                        selected={selectedData}
+                        sx={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/${userType}/transit-sales/${_id}`)}
+                      >
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
                         <TableCell align="left">{branch?.branchName || 'N/A'}</TableCell>
@@ -461,16 +478,23 @@ export default function Transit() {
                         <TableCell align="left">{totalNetWeight}</TableCell>
                         <TableCell align="left">{sentenceCase(deliveryBy || '')}</TableCell>
                         <TableCell align="left">
-                          <Label color={status?.toLowerCase() === 'moved' ? 'success' : 'warning'}>
-                            {sentenceCase(status || '')}
-                          </Label>
+                          {getTransitMeltingStatus(row) === 'melted' ? (
+                            <Label sx={{ bgcolor: '#7b1fa2', color: '#fff', fontWeight: 600 }}>Melted</Label>
+                          ) : getTransitMeltingStatus(row) === 'partial' ? (
+                            <Label color="info">Partially Melted</Label>
+                          ) : (
+                            <Label color={status?.toLowerCase() === 'moved' ? 'success' : 'warning'}>
+                              {sentenceCase(status || '')}
+                            </Label>
+                          )}
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD')}</TableCell>
-                        <TableCell align="right">
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton
                             size="large"
                             color="inherit"
                             onClick={(e) => {
+                              e.stopPropagation();
                               setOpenId(_id);
                               handleOpenMenu(e);
                             }}
@@ -538,20 +562,27 @@ export default function Transit() {
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         PaperProps={{
-          sx: { p: 1, width: 140, '& .MuiMenuItem-root': { px: 1, typography: 'body2', borderRadius: 0.75 } },
+          sx: { p: 1, width: 160, '& .MuiMenuItem-root': { px: 1, typography: 'body2', borderRadius: 0.75 } },
         }}
       >
         <MenuItem
           onClick={() => {
             handleCloseMenu();
-            setDeviation(selectedTransitObj?.deviations || 'no');
-            setAdminNotes(selectedTransitObj?.receivedNotes || '');
-            setAdminProof(selectedTransitObj?.receivedProof || '');
-            setViewModalOpen(true);
+            navigate(`/${userType}/transit-sales/${openId}`);
           }}
         >
           <Iconify icon={'carbon:view-filled'} sx={{ mr: 2 }} />
-          View Sale
+          View Transit
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            handleCloseMenu();
+            setVerifyTransitId(openId);
+          }}
+        >
+          <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
+          Print Voucher
         </MenuItem>
 
         {/* <MenuItem sx={{ color: 'error.main' }} onClick={() => { handleCloseMenu(); setDeleteType('single'); setOpenDeleteModal(true); }}>
@@ -658,6 +689,15 @@ export default function Transit() {
           </Stack>
         </Box>
       </Modal>
+
+      {/* Printable Transit Voucher */}
+      {verifyTransitId && (
+        <TransitPrint
+          id={verifyTransitId}
+          open={Boolean(verifyTransitId)}
+          onClose={() => setVerifyTransitId(null)}
+        />
+      )}
 
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />

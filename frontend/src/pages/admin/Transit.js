@@ -40,11 +40,13 @@ import { useSelector } from 'react-redux';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
+import { getTransitMeltingStatus } from '../../utils/transit';
 import { TransitListHead, TransitListToolbar } from '../../sections/@dashboard/transit';
 import { findTransit, updateTransitStatus, deleteTransitById } from '../../apis/admin/transit';
 import { createTransit } from '../../apis/branch/transit';
 import { createFile } from '../../apis/branch/fileupload';
 import { findSales } from '../../apis/admin/sales';
+import TransitPrint from '../../components/branch/transit/TransitPrint';
 import global from '../../utils/global';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -102,7 +104,13 @@ function applySortFilter(array, comparator, query, filters) {
   
   if (filters) {
     if (filters.status && filters.status !== 'all') {
-      filteredData = filteredData.filter(row => row.status?.toLowerCase() === filters.status.toLowerCase());
+      if (filters.status.toLowerCase() === 'melted') {
+        filteredData = filteredData.filter(row => getTransitMeltingStatus(row) === 'melted');
+      } else if (filters.status.toLowerCase() === 'moved') {
+        filteredData = filteredData.filter(row => row.status?.toLowerCase() === 'moved' && getTransitMeltingStatus(row) !== 'melted');
+      } else {
+        filteredData = filteredData.filter(row => row.status?.toLowerCase() === filters.status.toLowerCase());
+      }
     }
     if (filters.branch && filters.branch !== 'all') {
       filteredData = filteredData.filter(row => row.branch?.branchName === filters.branch);
@@ -138,6 +146,7 @@ export default function Transit() {
   const [adminProofName, setAdminProofName] = useState('');
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [verifyTransitId, setVerifyTransitId] = useState(null);
   const fileInputRef = useRef();
 
   const [filterOpen, setFilterOpen] = useState(false);
@@ -361,18 +370,28 @@ export default function Transit() {
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleUpdateStatus = () => {
-    if (!adminProof) {
-      setNotify({ open: true, message: 'Proof is required to receive transit', severity: 'error' });
-      return;
-    }
-    const proofId = typeof adminProof === 'object' ? adminProof._id : adminProof;
+    const proofId = typeof adminProof === 'object' ? adminProof?._id : adminProof;
     const newStatus = deviation === 'yes' ? 'submitted' : 'moved';
-    updateTransitStatus(openId, { status: newStatus, deviations: deviation, receivedNotes: adminNotes, receivedProof: proofId }).then((data) => {
+    updateTransitStatus(openId, {
+      action: 'admin_resolve',
+      adminResolve: true,
+      status: newStatus,
+      deviations: deviation,
+      adminNotes,
+      adminProof: proofId || null,
+    }).then((data) => {
       handleCloseMenu();
       setViewModalOpen(false);
       if (data.status) {
         fetchData();
-        setNotify({ open: true, message: deviation === 'yes' ? 'Transit marked with deviations (Status: Submitted)' : 'Transit received successfully (Status: Moved)', severity: deviation === 'yes' ? 'warning' : 'success' });
+        setNotify({
+          open: true,
+          message:
+            deviation === 'yes'
+              ? 'Transit marked with deviations (Status: Submitted)'
+              : 'Deviation resolved to No and transit approved (Status: Moved)',
+          severity: deviation === 'yes' ? 'warning' : 'success',
+        });
       } else {
         setNotify({ open: true, message: data.message || 'Error updating status', severity: 'error' });
       }
@@ -495,8 +514,16 @@ export default function Transit() {
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
-                      <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
-                        <TableCell padding="checkbox">
+                      <TableRow
+                        hover
+                        key={_id}
+                        tabIndex={-1}
+                        role="checkbox"
+                        selected={selectedData}
+                        sx={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/${userType}/transit-sales/${_id}`)}
+                      >
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
                         <TableCell align="left">{branch?.branchName || 'N/A'}</TableCell>
@@ -509,19 +536,30 @@ export default function Transit() {
                         <TableCell align="left">{totalNetWeight}</TableCell>
                         <TableCell align="left">{sentenceCase(deliveryBy || '')}</TableCell>
                         <TableCell align="left">
-                          <Label color={status?.toLowerCase() === 'moved' ? 'success' : 'warning'}>
-                            {sentenceCase(status || '')}
-                          </Label>
+                          {getTransitMeltingStatus(row) === 'melted' ? (
+                            <Label sx={{ bgcolor: '#7b1fa2', color: '#fff', fontWeight: 600 }}>Melted</Label>
+                          ) : getTransitMeltingStatus(row) === 'partial' ? (
+                            <Label color="info">Partially Melted</Label>
+                          ) : status?.toLowerCase() === 'moved' ? (
+                            <Label color="success">Moved</Label>
+                          ) : (row.deviations === 'yes' || status?.toLowerCase() === 'submitted') ? (
+                            <Label color="error">Deviation Flagged</Label>
+                          ) : !row.storeReceived ? (
+                            <Label color="warning">Pending Store Receipt</Label>
+                          ) : (
+                            <Label color="info">{sentenceCase(status || '')}</Label>
+                          )}
                         </TableCell>
                         <TableCell align="left">
                           <Typography variant="body2">{moment(createdAt).format('YYYY-MM-DD')}</Typography>
                           <Typography variant="caption" sx={{ color: 'text.secondary' }}>{moment(createdAt).format('hh:mm A')}</Typography>
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton
                             size="large"
                             color="inherit"
                             onClick={(e) => {
+                              e.stopPropagation();
                               setOpenId(_id);
                               handleOpenMenu(e);
                             }}
@@ -592,19 +630,27 @@ export default function Transit() {
           sx: { p: 1, width: 180, '& .MuiMenuItem-root': { px: 1, typography: 'body2', borderRadius: 0.75 } },
         }}
       >
-        {selectedTransitObj?.status?.toLowerCase() !== 'moved' && (
+        {(selectedTransitObj?.deviations === 'yes' || selectedTransitObj?.status?.toLowerCase() === 'submitted') && (
           <MenuItem
             onClick={() => {
               handleCloseMenu();
-              setDeviation(selectedTransitObj?.deviations || 'no');
-              setAdminNotes(selectedTransitObj?.receivedNotes || '');
-              setAdminProof(selectedTransitObj?.receivedProof || '');
+              setDeviation('no');
+              setAdminNotes(selectedTransitObj?.adminNotes || '');
+              setAdminProof(selectedTransitObj?.adminProof || '');
               setAdminProofName('');
               setViewModalOpen(true);
             }}
+            sx={{ color: 'warning.main', fontWeight: 600 }}
           >
-            <Iconify icon={'eva:checkmark-circle-2-fill'} sx={{ mr: 2 }} />
-            Receive Transit
+            <Iconify icon={'eva:shield-fill'} sx={{ mr: 2 }} />
+            Resolve Deviation
+          </MenuItem>
+        )}
+
+        {!selectedTransitObj?.storeReceived && selectedTransitObj?.status?.toLowerCase() === 'intransit' && (
+          <MenuItem disabled sx={{ typography: 'caption', color: 'text.secondary' }}>
+            <Iconify icon={'eva:clock-outline'} sx={{ mr: 2 }} />
+            Pending Store Receipt
           </MenuItem>
         )}
 
@@ -618,6 +664,16 @@ export default function Transit() {
           View Sale
         </MenuItem>
 
+        <MenuItem
+          onClick={() => {
+            handleCloseMenu();
+            setVerifyTransitId(openId);
+          }}
+        >
+          <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
+          Print Voucher
+        </MenuItem>
+
         <MenuItem sx={{ color: 'error.main' }} onClick={() => { handleCloseMenu(); setDeleteType('single'); setOpenDeleteModal(true); }}>
           <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
           Delete
@@ -625,48 +681,86 @@ export default function Transit() {
       </Popover>
 
       <Dialog open={viewModalOpen} onClose={() => setViewModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Receive Transit</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              Notes:
+        <DialogTitle sx={{ color: 'warning.main' }}>Resolve Transit Deviation (Admin Verification)</DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ mt: 1 }}>
+            {/* Store Information */}
+            <Typography variant="subtitle2" sx={{ color: 'text.primary', fontWeight: 700 }}>
+              Store Receiving & Discrepancy Information:
             </Typography>
-            <Typography variant="body2" sx={{ mb: 3 }}>
-              {selectedTransitObj?.notes || 'No notes provided.'}
+            <Typography variant="body2" sx={{ mt: 0.5, mb: 1 }}>
+              <strong>Store Remarks:</strong> {selectedTransitObj?.storeNotes || selectedTransitObj?.receivedNotes || 'No notes provided by Store.'}
             </Typography>
-            <Typography variant="subtitle1" gutterBottom>
-              Proof:
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              <strong>Store Deviation Status:</strong> {selectedTransitObj?.deviations === 'yes' ? 'Deviation Flagged by Store' : 'No Deviation'}
             </Typography>
-            {selectedTransitObj?.proof?.uploadedFile ? (
-              selectedTransitObj.proof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
-                <Box component="iframe" src={selectedTransitObj.proof.uploadedFile.startsWith('http') ? selectedTransitObj.proof.uploadedFile : `${global.BASE_URL}/${selectedTransitObj.proof.uploadedFile}`} title="proof" sx={{ width: '100%', height: 400, border: 'none', mb: 3 }} />
-              ) : (
-                <Box component="img" src={selectedTransitObj.proof.uploadedFile.startsWith('http') ? selectedTransitObj.proof.uploadedFile : `${global.BASE_URL}/${selectedTransitObj.proof.uploadedFile}`} alt="proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain', mb: 3 }} />
-              )
+
+            <Typography variant="subtitle2" gutterBottom>
+              Store Proof Attachment:
+            </Typography>
+            {selectedTransitObj?.storeProof?.uploadedFile || selectedTransitObj?.receivedProof?.uploadedFile ? (
+              (() => {
+                const proofUrl = selectedTransitObj.storeProof?.uploadedFile || selectedTransitObj.receivedProof?.uploadedFile;
+                return proofUrl.toLowerCase().endsWith('.pdf') ? (
+                  <Box component="iframe" src={proofUrl.startsWith('http') ? proofUrl : `${global.BASE_URL}/${proofUrl}`} title="store-proof" sx={{ width: '100%', height: 260, border: 'none', mb: 2 }} />
+                ) : (
+                  <Box component="img" src={proofUrl.startsWith('http') ? proofUrl : `${global.BASE_URL}/${proofUrl}`} alt="store-proof" sx={{ width: '100%', maxHeight: 260, objectFit: 'contain', mb: 2 }} />
+                );
+              })()
             ) : (
-              <Typography variant="body2" sx={{ mb: 3 }}>
-                No proof uploaded.
+              <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+                No store proof attached.
               </Typography>
             )}
-            <Typography variant="h6" gutterBottom sx={{ mt: 3, borderTop: '1px solid #ccc', pt: 2 }}>
-              Received Details
+
+            {/* Origin Branch Proof & Details */}
+            <Typography variant="subtitle2" sx={{ borderTop: '1px solid #eee', pt: 1.5, color: 'text.primary', fontWeight: 700 }}>
+              Origin Branch Details:
             </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              <strong>Branch:</strong> {selectedTransitObj?.branch?.branchName || 'N/A'} ({selectedTransitObj?.branch?.branchId || ''})
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              <strong>Branch Dispatch Notes:</strong> {selectedTransitObj?.notes || 'No dispatch notes.'}
+            </Typography>
+
+            {/* Admin Resolution */}
+            <Typography variant="h6" gutterBottom sx={{ mt: 2, borderTop: '2px solid #ccc', pt: 2, color: 'primary.main' }}>
+              Admin Resolution
+            </Typography>
+
+            <FormControl fullWidth sx={{ mt: 1.5 }}>
+              <InputLabel id="deviations-label">Deviation Resolution</InputLabel>
+              <Select
+                labelId="deviations-label"
+                value={deviation}
+                label="Deviation Resolution"
+                onChange={(e) => setDeviation(e.target.value)}
+              >
+                <MenuItem value="no">No (Resolve Deviation & Approve to Moved)</MenuItem>
+                <MenuItem value="yes">Yes (Keep Deviation Active - Remains Submitted)</MenuItem>
+              </Select>
+            </FormControl>
+
             <TextField
               fullWidth
               multiline
               rows={3}
-              label="Admin Notes"
+              label="Admin Resolution Remarks"
+              placeholder="Detail the verification or resolution steps taken..."
               value={adminNotes}
               onChange={(e) => setAdminNotes(e.target.value)}
               sx={{ mt: 2 }}
             />
+
             <Button
-              variant="contained"
+              variant="outlined"
               component="label"
               sx={{ mt: 2, mb: 1 }}
               disabled={uploadLoading}
+              startIcon={<Iconify icon="eva:upload-fill" />}
             >
-              {uploadLoading ? 'Uploading...' : 'Upload Proof'}
+              {uploadLoading ? 'Uploading...' : 'Upload Admin Verification Proof (Optional)'}
               <input
                 type="file"
                 hidden
@@ -675,9 +769,9 @@ export default function Transit() {
             </Button>
             {adminProof && typeof adminProof === 'object' && adminProof.uploadedFile ? (
               adminProof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
-                <Box component="iframe" src={adminProof.uploadedFile.startsWith('http') ? adminProof.uploadedFile : `${global.BASE_URL}/${adminProof.uploadedFile}`} title="Admin proof" sx={{ width: '100%', height: 400, border: 'none', mb: 3, mt: 2 }} />
+                <Box component="iframe" src={adminProof.uploadedFile.startsWith('http') ? adminProof.uploadedFile : `${global.BASE_URL}/${adminProof.uploadedFile}`} title="Admin proof" sx={{ width: '100%', height: 260, border: 'none', mb: 2, mt: 1 }} />
               ) : (
-                <Box component="img" src={adminProof.uploadedFile.startsWith('http') ? adminProof.uploadedFile : `${global.BASE_URL}/${adminProof.uploadedFile}`} alt="Admin proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain', mb: 3, mt: 2 }} />
+                <Box component="img" src={adminProof.uploadedFile.startsWith('http') ? adminProof.uploadedFile : `${global.BASE_URL}/${adminProof.uploadedFile}`} alt="Admin proof" sx={{ width: '100%', maxHeight: 260, objectFit: 'contain', mb: 2, mt: 1 }} />
               )
             ) : adminProof ? (
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 2 }}>
@@ -689,27 +783,14 @@ export default function Transit() {
                 </IconButton>
               </Stack>
             ) : null}
-
-            <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel id="deviations-label">Deviations</InputLabel>
-              <Select
-                labelId="deviations-label"
-                value={deviation}
-                label="Deviations"
-                onChange={(e) => setDeviation(e.target.value)}
-              >
-                <MenuItem value="yes">Yes</MenuItem>
-                <MenuItem value="no">No</MenuItem>
-              </Select>
-            </FormControl>
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setViewModalOpen(false)} color="inherit">
             Cancel
           </Button>
-          <Button onClick={handleUpdateStatus} variant="contained" color="primary">
-            Received
+          <Button onClick={handleUpdateStatus} variant="contained" color={deviation === 'no' ? 'primary' : 'warning'}>
+            {deviation === 'no' ? 'Resolve & Approve (Moved)' : 'Save Deviation Status'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -735,6 +816,14 @@ export default function Transit() {
           </Stack>
         </Box>
       </Modal>
+
+      {verifyTransitId && (
+        <TransitPrint 
+          id={verifyTransitId} 
+          open={Boolean(verifyTransitId)} 
+          onClose={() => setVerifyTransitId(null)} 
+        />
+      )}
 
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
@@ -786,7 +875,8 @@ export default function Transit() {
                 >
                   <MenuItem value="all">All</MenuItem>
                   <MenuItem value="intransit">In-Transit</MenuItem>
-                  <MenuItem value="moved">Moved</MenuItem>
+                  <MenuItem value="moved">Moved (Unmelted)</MenuItem>
+                  <MenuItem value="melted">Melted</MenuItem>
                   <MenuItem value="received">Received</MenuItem>
                 </Select>
               </FormControl>

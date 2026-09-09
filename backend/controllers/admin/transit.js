@@ -8,6 +8,10 @@ exports.findTransitData = async (req, res) => {
             .populate('branch', 'branchName branchId address city state')
             .populate('proof')
             .populate('receivedProof')
+            .populate('storeProof')
+            .populate('adminProof')
+            .populate('storeReceivedBy', 'username')
+            .populate('adminReceivedBy', 'username')
             .populate({
                 path: 'saleIds',
                 populate: [
@@ -16,10 +20,35 @@ exports.findTransitData = async (req, res) => {
                 ]
             })
             .sort({ createdAt: -1 });
+        const formattedData = findData.map(item => {
+            const doc = item.toObject();
+            let totalOrns = 0;
+            let meltedOrns = 0;
+            if (doc.saleIds && Array.isArray(doc.saleIds)) {
+                doc.saleIds.forEach(sale => {
+                    if (sale && sale.ornaments && Array.isArray(sale.ornaments)) {
+                        totalOrns += sale.ornaments.length;
+                        meltedOrns += sale.ornaments.filter(o => o.status === 'melted').length;
+                    }
+                });
+            }
+            if (doc.status === 'melted' || (totalOrns > 0 && meltedOrns === totalOrns)) {
+                doc.isMelted = true;
+                doc.meltingStatus = 'melted';
+            } else if (meltedOrns > 0) {
+                doc.isMelted = false;
+                doc.meltingStatus = 'partial';
+            } else {
+                doc.isMelted = false;
+                doc.meltingStatus = 'unmelted';
+            }
+            return doc;
+        });
+
         res.json({
             status: true,
             message: "",
-            data: findData
+            data: formattedData
         });
     } catch (err) {
         res.json({
@@ -32,8 +61,127 @@ exports.findTransitData = async (req, res) => {
 
 exports.updateTransitStatus = async (req, res) => {
     try {
-        const { status, deviations, receivedNotes, receivedProof } = req.body;
-        const updatePayload = { status };
+        const {
+            status,
+            deviations,
+            receivedNotes,
+            receivedProof,
+            action,
+            storeNotes,
+            storeProof,
+            adminNotes,
+            adminProof
+        } = req.body;
+
+        const updatePayload = {};
+        const userType = req.user?.userType?.toLowerCase();
+
+        if (action === 'store_receive' || userType === 'store') {
+            // Store receipt flow
+            const finalDeviations = deviations || 'no';
+            const finalStatus = finalDeviations === 'yes' ? 'submitted' : 'moved';
+            const proofId = storeProof || receivedProof;
+            const notes = storeNotes || receivedNotes || "";
+
+            updatePayload.status = finalStatus;
+            updatePayload.deviations = finalDeviations;
+            updatePayload.storeDeviations = finalDeviations;
+            updatePayload.storeReceived = true;
+            updatePayload.storeReceivedAt = new Date();
+            updatePayload.storeReceivedBy = req.user?._id;
+            updatePayload.storeNotes = notes;
+            updatePayload.receivedNotes = notes;
+            if (proofId) {
+                updatePayload.storeProof = proofId;
+                updatePayload.receivedProof = proofId;
+            }
+
+            const storeLogEntry = {
+                actionBy: req.user?._id,
+                userType: 'store',
+                action: 'store_receive',
+                deviation: finalDeviations,
+                status: finalStatus,
+                notes: notes || '',
+                proof: proofId || null,
+                createdAt: new Date()
+            };
+
+            const updateData = await transitModel.findByIdAndUpdate(
+                req.params.id,
+                {
+                    $set: updatePayload,
+                    $push: { deviationLogs: storeLogEntry }
+                },
+                { new: true }
+            );
+
+            // If deviations is 'no', sales are immediately moved
+            if (finalStatus === 'moved') {
+                await salesModel.updateMany(
+                    { _id: { $in: updateData.saleIds } },
+                    { status: 'moved' }
+                );
+            }
+
+            return res.json({
+                status: true,
+                message: finalDeviations === 'yes' 
+                    ? "Transit received in store with deviation flagged (Pending Admin review)" 
+                    : "Transit received and moved into store successfully",
+                data: updateData
+            });
+        } else if (action === 'admin_resolve' || (userType === 'admin' && req.body.adminResolve)) {
+            // Admin deviation review flow
+            const finalDeviations = req.body.deviations || deviations || 'no';
+            const finalStatus = finalDeviations === 'yes' ? 'submitted' : 'moved';
+
+            updatePayload.status = finalStatus;
+            updatePayload.deviations = finalDeviations;
+            updatePayload.adminReceivedAt = new Date();
+            updatePayload.adminReceivedBy = req.user?._id;
+            if (adminNotes) updatePayload.adminNotes = adminNotes;
+            if (adminProof) updatePayload.adminProof = adminProof;
+
+            const adminLogEntry = {
+                actionBy: req.user?._id,
+                userType: 'admin',
+                action: 'admin_review',
+                deviation: finalDeviations,
+                status: finalStatus,
+                notes: adminNotes || '',
+                proof: adminProof || null,
+                createdAt: new Date()
+            };
+
+            const updateData = await transitModel.findByIdAndUpdate(
+                req.params.id,
+                {
+                    $set: updatePayload,
+                    $push: { deviationLogs: adminLogEntry }
+                },
+                { new: true }
+            );
+
+            // Only when deviation is cleared (No) does transit sales status move to 'moved'
+            if (finalStatus === 'moved') {
+                await salesModel.updateMany(
+                    { _id: { $in: updateData.saleIds } },
+                    { status: 'moved' }
+                );
+            }
+
+            return res.json({
+                status: true,
+                message: finalDeviations === 'yes'
+                    ? "Transit kept as active deviation (Pending resolution)"
+                    : "Deviation resolved to 'No' and transit approved into store successfully",
+                data: updateData
+            });
+        }
+
+        // Generic update fallback
+        if (status) updatePayload.status = status;
         if (deviations) updatePayload.deviations = deviations;
         if (receivedNotes) updatePayload.receivedNotes = receivedNotes;
         if (receivedProof) updatePayload.receivedProof = receivedProof;
@@ -44,7 +192,6 @@ exports.updateTransitStatus = async (req, res) => {
             { new: true }
         );
         
-        // Update the sales status to 'moved' only when transit is moved without deviations
         if (status === 'moved') {
             await salesModel.updateMany(
                 { _id: { $in: updateData.saleIds } },
@@ -90,6 +237,18 @@ exports.deleteTransitData = async (req, res) => {
 exports.getTransitSales = async (req, res) => {
     try {
         const transit = await transitModel.findById(req.params.id)
+            .populate('branch', 'branchName branchId address city state')
+            .populate('proof')
+            .populate('storeProof')
+            .populate('adminProof')
+            .populate('storeReceivedBy', 'username')
+            .populate('adminReceivedBy', 'username')
+            .populate({
+                path: 'deviationLogs.actionBy',
+                select: 'username employee',
+                populate: { path: 'employee', select: 'firstName lastName employeeId' }
+            })
+            .populate('deviationLogs.proof')
             .populate({
                 path: 'saleIds',
                 populate: [
@@ -100,19 +259,43 @@ exports.getTransitSales = async (req, res) => {
             });
             
         if (!transit) {
-            return res.json({ status: false, message: "Transit not found", data: [] });
+            return res.json({ status: false, message: "Transit not found", data: [], transit: null });
+        }
+
+        const transitDoc = transit.toObject();
+        let totalOrns = 0;
+        let meltedOrns = 0;
+        if (transitDoc.saleIds && Array.isArray(transitDoc.saleIds)) {
+            transitDoc.saleIds.forEach(sale => {
+                if (sale && sale.ornaments && Array.isArray(sale.ornaments)) {
+                    totalOrns += sale.ornaments.length;
+                    meltedOrns += sale.ornaments.filter(o => o.status === 'melted').length;
+                }
+            });
+        }
+        if (transitDoc.status === 'melted' || (totalOrns > 0 && meltedOrns === totalOrns)) {
+            transitDoc.isMelted = true;
+            transitDoc.meltingStatus = 'melted';
+        } else if (meltedOrns > 0) {
+            transitDoc.isMelted = false;
+            transitDoc.meltingStatus = 'partial';
+        } else {
+            transitDoc.isMelted = false;
+            transitDoc.meltingStatus = 'unmelted';
         }
 
         res.json({
             status: true,
             message: "Sales fetched successfully",
-            data: transit.saleIds || []
+            data: transit.saleIds || [],
+            transit: transitDoc
         });
     } catch (err) {
         res.json({
             status: false,
             message: err.message,
-            data: []
+            data: [],
+            transit: null
         });
     }
 };

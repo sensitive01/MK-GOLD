@@ -260,6 +260,7 @@ async function find(query = {}) {
                 input: {
                   $concatArrays: [
                     { $map: { input: "$meltings", as: "m", in: "$$m.meltProof" } },
+                    { $map: { input: "$meltings", as: "m", in: "$$m.preMeltProof" } },
                     { $map: { input: "$meltings", as: "m", in: "$$m.afterMeltProof" } }
                   ]
                 },
@@ -740,6 +741,7 @@ async function findById(id) {
                 input: {
                   $concatArrays: [
                     { $map: { input: "$meltings", as: "m", in: "$$m.meltProof" } },
+                    { $map: { input: "$meltings", as: "m", in: "$$m.preMeltProof" } },
                     { $map: { input: "$meltings", as: "m", in: "$$m.afterMeltProof" } }
                   ]
                 },
@@ -1158,9 +1160,44 @@ async function update(id, payload) {
       payload.release = releases;
     }
 
-    const updatedSale = await Sales.findByIdAndUpdate(id, payload, {
+    const pushOps = {};
+    if (payload.newFinancePayment) {
+      pushOps.financePayments = payload.newFinancePayment;
+      delete payload.newFinancePayment;
+    }
+
+    const updateQuery = { $set: payload };
+    if (Object.keys(pushOps).length > 0) {
+      updateQuery.$push = pushOps;
+    }
+
+    const updatedSale = await Sales.findByIdAndUpdate(id, updateQuery, {
       returnDocument: "after",
     }).exec();
+
+    if (pushOps.financePayments && pushOps.financePayments.proof) {
+      try {
+        const fileUploadModel = require("../models/fileupload");
+        const bankInfo = pushOps.financePayments.bank;
+        const bankDesc = bankInfo?.bankName && bankInfo?.accountNo 
+          ? `${bankInfo.bankName} - ${bankInfo.accountNo}` 
+          : (bankInfo?.bankName || '');
+        const amountStr = pushOps.financePayments.amount 
+          ? `₹${Number(pushOps.financePayments.amount).toLocaleString('en-IN')}` 
+          : '';
+        await fileUploadModel.findOneAndUpdate(
+          { uploadedFile: pushOps.financePayments.proof, uploadId: id },
+          {
+            $set: {
+              documentType: 'Finance Proof',
+              documentNo: bankDesc ? `${bankDesc}${amountStr ? ` | ${amountStr}` : ''}` : (amountStr || 'Finance Payment'),
+            }
+          }
+        ).exec();
+      } catch (err) {
+        console.error("Error updating fileupload for finance proof:", err);
+      }
+    }
 
     // Bidirectional synchronization to Release
     if (updatedSale && updatedSale.release && updatedSale.release.length > 0) {
@@ -1217,17 +1254,48 @@ async function updateWithLog(id, setData, logEntry) {
       timelineEntry.timeTaken = Math.floor((new Date(logEntry.performedAt) - new Date(lastTimeline.performedAt)) / 1000);
     }
 
+    const pushOps = { 
+      actionLog: logEntry,
+      timeline: timelineEntry
+    };
+
+    if (setData.newFinancePayment) {
+      pushOps.financePayments = setData.newFinancePayment;
+      delete setData.newFinancePayment;
+    }
+
     const updatedSale = await Sales.findByIdAndUpdate(
       id,
       {
         $set: setData,
-        $push: { 
-          actionLog: logEntry,
-          timeline: timelineEntry
-        },
+        $push: pushOps,
       },
       { returnDocument: "after" }
     ).exec();
+
+    if (pushOps.financePayments && pushOps.financePayments.proof) {
+      try {
+        const fileUploadModel = require("../models/fileupload");
+        const bankInfo = pushOps.financePayments.bank;
+        const bankDesc = bankInfo?.bankName && bankInfo?.accountNo 
+          ? `${bankInfo.bankName} - ${bankInfo.accountNo}` 
+          : (bankInfo?.bankName || '');
+        const amountStr = pushOps.financePayments.amount 
+          ? `₹${Number(pushOps.financePayments.amount).toLocaleString('en-IN')}` 
+          : '';
+        await fileUploadModel.findOneAndUpdate(
+          { uploadedFile: pushOps.financePayments.proof, uploadId: id },
+          {
+            $set: {
+              documentType: 'Finance Proof',
+              documentNo: bankDesc ? `${bankDesc}${amountStr ? ` | ${amountStr}` : ''}` : (amountStr || 'Finance Payment'),
+            }
+          }
+        ).exec();
+      } catch (err) {
+        console.error("Error updating fileupload for finance proof in updateWithLog:", err);
+      }
+    }
 
     // Synchronize linked releases if status or completion flags are updated
     if (updatedSale.release && updatedSale.release.length > 0) {

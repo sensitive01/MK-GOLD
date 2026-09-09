@@ -32,6 +32,7 @@ import { useSelector } from 'react-redux';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
+import { getTransitMeltingStatus } from '../../utils/transit';
 import { TransitListHead, TransitListToolbar } from '../../sections/@dashboard/transit';
 import { deleteTransitById, findTransit, createTransit, updateTransit } from '../../apis/branch/transit';
 import TransitPrint from '../../components/branch/transit/TransitPrint';
@@ -100,7 +101,13 @@ function applySortFilter(array, comparator, query, filters) {
 
   if (filters) {
     if (filters.status && filters.status !== 'all') {
-      filteredData = filteredData.filter(row => row.status?.toLowerCase() === filters.status.toLowerCase());
+      if (filters.status.toLowerCase() === 'melted') {
+        filteredData = filteredData.filter(row => getTransitMeltingStatus(row) === 'melted');
+      } else if (filters.status.toLowerCase() === 'moved') {
+        filteredData = filteredData.filter(row => row.status?.toLowerCase() === 'moved' && getTransitMeltingStatus(row) !== 'melted');
+      } else {
+        filteredData = filteredData.filter(row => row.status?.toLowerCase() === filters.status.toLowerCase());
+      }
     }
     if (filters.fromDate) {
       filteredData = filteredData.filter(row => moment(row.createdAt).isSameOrAfter(moment(filters.fromDate), 'day'));
@@ -437,9 +444,17 @@ export default function Transit() {
                     const selectedData = selected.indexOf(_id) !== -1;
 
                     return (
-                      <TableRow hover key={_id} tabIndex={-1} role="checkbox" selected={selectedData}>
+                      <TableRow
+                        hover
+                        key={_id}
+                        tabIndex={-1}
+                        role="checkbox"
+                        selected={selectedData}
+                        sx={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/branch/transit-sales/${_id}`)}
+                      >
                         {false && (
-                          <TableCell padding="checkbox">
+                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
                         )}
@@ -450,14 +465,21 @@ export default function Transit() {
                         <TableCell align="left">{totalNetWeight}</TableCell>
                         <TableCell align="left">{sentenceCase(deliveryBy || '')}</TableCell>
                         <TableCell align="left">
-                          <Label color={status === 'moved' ? 'success' : 'warning'}>{sentenceCase(status || '')}</Label>
+                          {getTransitMeltingStatus(row) === 'melted' ? (
+                            <Label sx={{ bgcolor: '#7b1fa2', color: '#fff', fontWeight: 600 }}>Melted</Label>
+                          ) : getTransitMeltingStatus(row) === 'partial' ? (
+                            <Label color="info">Partially Melted</Label>
+                          ) : (
+                            <Label color={status === 'moved' ? 'success' : 'warning'}>{sentenceCase(status || '')}</Label>
+                          )}
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD')}</TableCell>
-                        <TableCell align="right">
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                           <IconButton
                             size="large"
                             color="inherit"
                             onClick={(e) => {
+                              e.stopPropagation();
                               setOpenId(_id);
                               handleOpenMenu(e);
                             }}
@@ -528,6 +550,15 @@ export default function Transit() {
           sx: { p: 1, width: 140, '& .MuiMenuItem-root': { px: 1, typography: 'body2', borderRadius: 0.75 } },
         }}
       >
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
+            navigate(`/branch/transit-sales/${openId}`);
+          }}
+        >
+          <Iconify icon={'carbon:view-filled'} sx={{ mr: 2 }} />
+          View Transit
+        </MenuItem>
         <MenuItem
           disabled={['moved', 'melted'].includes(selectedTransitObj?.status)}
           onClick={() => {

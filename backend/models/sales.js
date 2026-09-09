@@ -172,6 +172,19 @@ const Sales = mongoose.model(
       financeCompletedAt: {
         type: Date,
       },
+      financePayments: [
+        {
+          amount: { type: Number },
+          bank: {
+            bankId: { type: mongoose.Schema.Types.ObjectId },
+            bankName: { type: String },
+            accountNo: { type: String },
+          },
+          proof: { type: String },
+          comments: { type: String },
+          createdAt: { type: Date, default: Date.now },
+        },
+      ],
       // Fund Transfer Step (After Admin Approval)
       fundTransferAmount: {
         type: Number,

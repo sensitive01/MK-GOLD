@@ -56,6 +56,7 @@ import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 import global from '../../utils/global';
+import { getTransitMeltingStatus } from '../../utils/transit';
 import TimelineView from '../../components/TimelineView';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 // sections
@@ -66,6 +67,7 @@ import { deleteSalesById, updateSales, getSalesById } from '../../apis/admin/sal
 import { getTransitSales } from '../../apis/admin/transit';
 import { createFile } from '../../apis/branch/fileupload';
 import { useParams } from 'react-router-dom';
+import TransitPrint from '../../components/branch/transit/TransitPrint';
 
 // ----------------------------------------------------------------------
 
@@ -130,6 +132,8 @@ export default function TransitSales() {
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
+  const [transitDetails, setTransitDetails] = useState(null);
+  const [verifyTransitId, setVerifyTransitId] = useState(null);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
@@ -171,8 +175,9 @@ export default function TransitSales() {
       }
 
       // filtering is local or not supported for transit sales easily, so we just refetch
-      getTransitSales(transitId).then((data) => {
-        let filtered = data.data;
+      getTransitSales(transitId).then((res) => {
+        let filtered = res.data || [];
+        if (res.transit) setTransitDetails(res.transit);
         if (values.branch) filtered = filtered.filter(s => s.branch?._id === values.branch);
         if (values.phoneNumber) filtered = filtered.filter(s => s.customer?.phoneNumber?.includes(values.phoneNumber));
         setData(filtered);
@@ -191,8 +196,11 @@ export default function TransitSales() {
   const fetchData = useCallback(
     () => {
       if (transitId) {
-        getTransitSales(transitId).then((data) => {
-          setData(data.data || []);
+        getTransitSales(transitId).then((res) => {
+          setData(res.data || []);
+          if (res.transit) {
+            setTransitDetails(res.transit);
+          }
           setOpenBackdrop(false);
         });
       }
@@ -359,11 +367,16 @@ export default function TransitSales() {
       </Snackbar>
 
       <Container maxWidth={false} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Purchases
-          </Typography>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" mb={3} spacing={2}>
+          <div>
+            <Typography variant="h4" sx={{ color: '#fff' }}>
+              Transit Details & Sales
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5 }}>
+              {transitDetails?.transitId ? `Transit ID: ${transitDetails.transitId} • Branch: ${transitDetails.branch?.branchName || 'N/A'}` : 'Transit overview and enclosed sale packets'}
+            </Typography>
+          </div>
+          <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap">
             <Button
               variant="contained"
               startIcon={<Iconify icon="mdi:arrow-left" />}
@@ -371,17 +384,14 @@ export default function TransitSales() {
             >
               Back
             </Button>
-            {isSelectForTransit && (
-              <Button
-                variant="contained"
-                disabled={selected.length === 0}
-                onClick={() => {
-                  navigate(`/melting/transit?createTransit=true&saleIds=${selected.join(',')}`);
-                }}
-              >
-                Next
-              </Button>
-            )}
+            <Button
+              variant="contained"
+              color="inherit"
+              startIcon={<Iconify icon="material-symbols:print" />}
+              onClick={() => setVerifyTransitId(transitId)}
+            >
+              Print Transit Voucher
+            </Button>
             {(values.fromDate || values.toDate || values.branch || values.phoneNumber) && (
               <Button
                 variant="contained"
@@ -389,12 +399,7 @@ export default function TransitSales() {
                 startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
                 onClick={() => {
                   resetForm();
-                  fetchData({
-                    createdAt: {
-                      $gte: moment()?.format("YYYY-MM-DD"),
-                      $lte: moment()?.format("YYYY-MM-DD"),
-                    },
-                  });
+                  fetchData();
                 }}
               >
                 Clear Filter
@@ -412,26 +417,256 @@ export default function TransitSales() {
               startIcon={<Iconify icon="carbon:document-export" />}
               onClick={() => {
                 handleExport(
-                  data?.map((e) => {
-                    console.log(e);
-                    return {
-                      BillId: e.billId,
-                      SaleType: e.saleType,
-                      NetAmount: e.netAmount,
-                      BranchId: e.branch?.branchId,
-                      BranchName: e.branch?.branchName,
-                      OrnamentType: e.purchaseType,
-                      status: e.status,
-                    };
-                  }),
+                  data?.map((e) => ({
+                    BillId: e.billId,
+                    SaleType: e.saleType,
+                    NetAmount: e.netAmount,
+                    BranchId: e.branch?.branchId,
+                    BranchName: e.branch?.branchName,
+                    OrnamentType: e.purchaseType,
+                    status: e.status,
+                  })),
                   'Sales'
                 );
               }}
             >
               Export
             </Button>
+            {isSelectForTransit && (
+              <Button
+                variant="contained"
+                disabled={selected.length === 0}
+                onClick={() => {
+                  navigate(`/melting/transit?createTransit=true&saleIds=${selected.join(',')}`);
+                }}
+              >
+                Next
+              </Button>
+            )}
           </Stack>
         </Stack>
+
+        {/* Transit Overview Card */}
+        {transitDetails && (
+          <Card sx={{ p: 3, mb: 4, borderRadius: 2, boxShadow: 3 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={2.5} spacing={1}>
+              <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap">
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                  Transit: {transitDetails.transitId}
+                </Typography>
+                {getTransitMeltingStatus(transitDetails) === 'melted' ? (
+                  <Label sx={{ bgcolor: '#7b1fa2', color: '#fff', fontWeight: 600 }}>Melted</Label>
+                ) : getTransitMeltingStatus(transitDetails) === 'partial' ? (
+                  <Label color="info">Partially Melted</Label>
+                ) : transitDetails.status === 'moved' ? (
+                  <Label color="success">Moved in Store</Label>
+                ) : (transitDetails.deviations === 'yes' || transitDetails.status === 'submitted') ? (
+                  <Label color="error">Deviation Flagged</Label>
+                ) : !transitDetails.storeReceived ? (
+                  <Label color="warning">Pending Store Receipt</Label>
+                ) : (
+                  <Label color="info">{sentenceCase(transitDetails.status || '')}</Label>
+                )}
+              </Stack>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                Dispatched: {moment(transitDetails.createdAt).format('DD MMM YYYY, hh:mm A')}
+              </Typography>
+            </Stack>
+
+            <Divider sx={{ mb: 2.5 }} />
+
+            {/* Transit Metrics */}
+            <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Origin Branch
+                </Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  {transitDetails.branch?.branchName || 'N/A'}
+                </Typography>
+                {transitDetails.branch?.branchId && (
+                  <Typography variant="caption" color="text.secondary">
+                    Code: {transitDetails.branch.branchId}
+                  </Typography>
+                )}
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Total Weight (Net / Gross)
+                </Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                  {transitDetails.totalNetWeight}g Net
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Gross Weight: {transitDetails.totalGrossWeight}g
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Packets & Ornaments
+                </Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  {transitDetails.numberOfPackets} Packets ({transitDetails.physical || 0} Physical, {transitDetails.released || 0} Released)
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Ornaments Count: {transitDetails.numberOfOrnaments}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Logistics & Transport
+                </Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  {transitDetails.deliveryBy || 'N/A'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Mode: {sentenceCase(transitDetails.transitMovedThrough || 'N/A')}
+                </Typography>
+              </Grid>
+            </Grid>
+
+            {/* Details Panes: Dispatch, Store Receiving & Admin Verification */}
+            <Grid container spacing={2}>
+              {/* Branch Dispatch Info */}
+              <Grid item xs={12} md={4}>
+                <Box sx={{ p: 2, borderRadius: 1.5, bgcolor: 'background.neutral', height: '100%' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Iconify icon="carbon:delivery-parcel" width={18} />
+                    Branch Dispatch Details
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
+                    <strong>Notes:</strong> {transitDetails.notes || 'No notes provided by branch.'}
+                  </Typography>
+                  {transitDetails.proof?.uploadedFile ? (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<Iconify icon="eva:external-link-fill" />}
+                      onClick={() =>
+                        window.open(
+                          transitDetails.proof.uploadedFile.startsWith('http')
+                            ? transitDetails.proof.uploadedFile
+                            : `${global.BASE_URL}/${transitDetails.proof.uploadedFile}`,
+                          '_blank'
+                        )
+                      }
+                    >
+                      View Dispatch Proof
+                    </Button>
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">
+                      No dispatch proof attached
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
+
+              {/* Store Receiving Info */}
+              <Grid item xs={12} md={4}>
+                <Box sx={{ p: 2, borderRadius: 1.5, bgcolor: 'background.neutral', height: '100%' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Iconify icon="eva:checkmark-circle-2-fill" width={18} />
+                    Store Receiving Details
+                  </Typography>
+                  {transitDetails.storeReceived ? (
+                    <>
+                      <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                        <strong>Received At:</strong> {moment(transitDetails.storeReceivedAt).format('DD MMM YYYY, hh:mm A')}
+                      </Typography>
+                      {transitDetails.storeReceivedBy && (
+                        <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                          <strong>Received By:</strong> {transitDetails.storeReceivedBy?.username || 'Store Staff'}
+                        </Typography>
+                      )}
+                      <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                        <strong>Deviations:</strong>{' '}
+                        <Label color={transitDetails.deviations === 'yes' ? 'error' : 'success'}>
+                          {transitDetails.deviations === 'yes' ? 'Deviation Flagged' : 'No Deviation'}
+                        </Label>
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 0.5, mb: 1, fontSize: '0.85rem' }}>
+                        <strong>Store Remarks:</strong> {transitDetails.storeNotes || transitDetails.receivedNotes || 'None'}
+                      </Typography>
+                      {(transitDetails.storeProof?.uploadedFile || transitDetails.receivedProof?.uploadedFile) && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<Iconify icon="eva:external-link-fill" />}
+                          onClick={() => {
+                            const proofUrl = transitDetails.storeProof?.uploadedFile || transitDetails.receivedProof?.uploadedFile;
+                            window.open(
+                              proofUrl.startsWith('http') ? proofUrl : `${global.BASE_URL}/${proofUrl}`,
+                              '_blank'
+                            );
+                          }}
+                        >
+                          View Store Proof
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mt: 1 }}>
+                      Pending Store receipt verification
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
+
+              {/* Admin Verification Info */}
+              <Grid item xs={12} md={4}>
+                <Box sx={{ p: 2, borderRadius: 1.5, bgcolor: 'background.neutral', height: '100%' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Iconify icon="eva:shield-fill" width={18} />
+                    Admin Verification / Resolution
+                  </Typography>
+                  {transitDetails.adminReceivedAt ? (
+                    <>
+                      <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                        <strong>Resolved At:</strong> {moment(transitDetails.adminReceivedAt).format('DD MMM YYYY, hh:mm A')}
+                      </Typography>
+                      {transitDetails.adminReceivedBy && (
+                        <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                          <strong>Resolved By:</strong> {transitDetails.adminReceivedBy?.username || 'Admin'}
+                        </Typography>
+                      )}
+                      <Typography variant="body2" sx={{ mt: 0.5, mb: 1, fontSize: '0.85rem' }}>
+                        <strong>Admin Remarks:</strong> {transitDetails.adminNotes || 'Deviation resolved and approved'}
+                      </Typography>
+                      {transitDetails.adminProof?.uploadedFile && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<Iconify icon="eva:external-link-fill" />}
+                          onClick={() =>
+                            window.open(
+                              transitDetails.adminProof.uploadedFile.startsWith('http')
+                                ? transitDetails.adminProof.uploadedFile
+                                : `${global.BASE_URL}/${transitDetails.adminProof.uploadedFile}`,
+                              '_blank'
+                            )
+                          }
+                        >
+                          View Admin Proof
+                        </Button>
+                      )}
+                    </>
+                  ) : transitDetails.deviations === 'yes' ? (
+                    <Typography variant="body2" color="error.main" sx={{ fontWeight: 600, mt: 1 }}>
+                      Pending Admin review of Store deviation
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mt: 1 }}>
+                      {transitDetails.status === 'moved' ? 'No deviation; automatically moved' : 'N/A'}
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
+          </Card>
+        )}
 
         {(values.fromDate || values.toDate || values.branch || values.phoneNumber) && (
           <p style={{ color: '#fff' }}>
@@ -600,6 +835,147 @@ export default function TransitSales() {
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
         </Card>
+
+        {/* Admin Deviation Review History Card */}
+        {transitDetails && (() => {
+          const adminReviews = (transitDetails.deviationLogs || []).filter(
+            (log) => log.userType === 'admin' || log.action === 'admin_review'
+          );
+          const displayLogs =
+            adminReviews.length > 0
+              ? adminReviews
+              : transitDetails.adminReceivedAt
+              ? [
+                  {
+                    _id: 'legacy-1',
+                    createdAt: transitDetails.adminReceivedAt,
+                    actionBy: transitDetails.adminReceivedBy,
+                    deviation: transitDetails.deviations || 'no',
+                    status: transitDetails.status,
+                    notes: transitDetails.adminNotes,
+                    proof: transitDetails.adminProof,
+                  },
+                ]
+              : [];
+
+          return (
+            <Card sx={{ p: 3, mt: 4, mb: 4, borderRadius: 2, boxShadow: 3 }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2} flexWrap="wrap" gap={1}>
+                <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Admin Deviation Review History
+                  </Typography>
+                  <Label color={displayLogs.length > 0 ? 'info' : 'default'}>
+                    {displayLogs.length} Review{displayLogs.length === 1 ? '' : 's'} Recorded
+                  </Label>
+                </Stack>
+                {transitDetails.deviations === 'yes' ? (
+                  <Label color="error" variant="filled">
+                    Deviation Currently Active
+                  </Label>
+                ) : transitDetails.status === 'moved' && displayLogs.length > 0 ? (
+                  <Label color="success" variant="filled">
+                    Deviation Resolved
+                  </Label>
+                ) : null}
+              </Stack>
+
+              {displayLogs.length === 0 ? (
+                <Paper sx={{ p: 3, textAlign: 'center', bgcolor: 'background.neutral', borderRadius: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {transitDetails.deviations === 'yes'
+                      ? 'Deviation flagged by store. No admin reviews recorded yet.'
+                      : 'No deviations flagged on this transit.'}
+                  </Typography>
+                </Paper>
+              ) : (
+                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1 }}>
+                  <Table size="small">
+                    <TableHead sx={{ bgcolor: 'background.neutral' }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 700, width: 80 }}># Attempt</TableCell>
+                        <TableCell sx={{ fontWeight: 700, width: 180 }}>Date & Time</TableCell>
+                        <TableCell sx={{ fontWeight: 700, width: 160 }}>Reviewed By</TableCell>
+                        <TableCell sx={{ fontWeight: 700, width: 160 }}>Deviation Marked</TableCell>
+                        <TableCell sx={{ fontWeight: 700, width: 130 }}>Status Result</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Admin Remarks</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, width: 160 }}>Proof Attachment</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {displayLogs.map((log, index) => {
+                        const proofUrl = log.proof?.uploadedFile;
+                        const reviewerName =
+                          log.actionBy?.employee
+                            ? `${log.actionBy.employee.firstName || ''} ${log.actionBy.employee.lastName || ''}`.trim()
+                            : log.actionBy?.username || 'Admin';
+
+                        return (
+                          <TableRow key={log._id || index} hover>
+                            <TableCell>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                #{index + 1}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {moment(log.createdAt).format('YYYY-MM-DD')}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {moment(log.createdAt).format('hh:mm A')}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {reviewerName}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Label color={log.deviation === 'yes' ? 'error' : 'success'}>
+                                {log.deviation === 'yes' ? 'Yes (Kept Active)' : 'No (Resolved)'}
+                              </Label>
+                            </TableCell>
+                            <TableCell>
+                              <Label color={log.status === 'moved' ? 'success' : log.status === 'submitted' ? 'error' : 'warning'}>
+                                {sentenceCase(log.status || '')}
+                              </Label>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                {log.notes || 'No remarks provided.'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              {proofUrl ? (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<Iconify icon="eva:external-link-fill" />}
+                                  onClick={() => {
+                                    const fullUrl = proofUrl.startsWith('http')
+                                      ? proofUrl
+                                      : `${global.BASE_URL}/${proofUrl}`;
+                                    window.open(fullUrl, '_blank');
+                                  }}
+                                >
+                                  View Proof
+                                </Button>
+                              ) : (
+                                <Typography variant="caption" color="text.secondary">
+                                  No proof attached
+                                </Typography>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Card>
+          );
+        })()}
       </Container>
 
       <Container
@@ -958,6 +1334,13 @@ export default function TransitSales() {
           <Button onClick={handleCloseLogModal}>Close</Button>
         </DialogActions>
       </Dialog>
+      {verifyTransitId && (
+        <TransitPrint
+          id={verifyTransitId}
+          open={Boolean(verifyTransitId)}
+          onClose={() => setVerifyTransitId(null)}
+        />
+      )}
     </>
   );
 }
@@ -1082,6 +1465,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
 
   // Admin read-only review states
   const [saleDetails, setSaleDetails] = useState(null);
+  const [selectedBank, setSelectedBank] = useState(null);
   const [adminComments, setAdminComments] = useState('');
 
   const [ornamentValues, setOrnamentValues] = useState({
@@ -1105,10 +1489,14 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           if (res.data.ornaments) {
             setOrnaments(res.data.ornaments);
           }
+          if (type === 'finance' && res.data.payableAmount !== undefined && res.data.payableAmount !== null) {
+            setFieldValue('amount', Math.round(res.data.payableAmount));
+          }
         }
       });
     } else {
       setSaleDetails(null);
+      setSelectedBank(null);
       setOrnaments([]);
       setAdminComments('');
       setPreview(null);
@@ -1124,6 +1512,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
   const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue } = useFormik({
     initialValues: {
       amount: '',
+      bankId: '',
       comments: '',
       proof: '',
       isCompleted: false,
@@ -1140,9 +1529,21 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
 
       const payload = {};
       if (type === 'finance') {
-        payload.financeAmount = values.amount;
+        payload.financeAmount = values.amount !== '' ? Number(values.amount) : undefined;
+        payload.payableAmount = values.amount !== '' ? Number(values.amount) : saleDetails?.payableAmount;
         payload.financeComments = values.comments;
         payload.financeProof = values.proof;
+        payload.newFinancePayment = {
+          amount: values.amount !== '' ? Number(values.amount) : 0,
+          bank: selectedBank ? {
+            bankId: selectedBank._id,
+            bankName: selectedBank.bankName,
+            accountNo: selectedBank.accountNo,
+          } : null,
+          proof: values.proof,
+          comments: values.comments,
+          createdAt: new Date(),
+        };
         if (values.isCompleted) {
           payload.financeCompleted = true;
           payload.financeCompletedAt = new Date();
@@ -1326,6 +1727,37 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
         <DialogContent sx={{ mt: 1, pt: 2 }}>
           <Grid container spacing={3}>
+            {type === 'finance' && saleDetails?.paymentType !== 'cash' && (
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel id="choose-bank-label">Choose Bank</InputLabel>
+                  <Select
+                    labelId="choose-bank-label"
+                    id="choose-bank-select"
+                    name="bankId"
+                    value={values.bankId || ''}
+                    label="Choose Bank"
+                    onChange={(e) => {
+                      handleChange(e);
+                      const banks = saleDetails?.customer?.bank || [];
+                      const found = banks.find((b) => (b._id?.toString() || b.accountNo) === e.target.value);
+                      setSelectedBank(found || null);
+                    }}
+                  >
+                    {(saleDetails?.customer?.bank || []).map((b) => (
+                      <MenuItem key={b._id || b.accountNo} value={b._id?.toString() || b.accountNo}>
+                        {b.bankName} - {b.accountNo}
+                      </MenuItem>
+                    ))}
+                    {(!saleDetails?.customer?.bank || saleDetails?.customer?.bank.length === 0) && (
+                      <MenuItem value="" disabled>
+                        No bank added for this customer
+                      </MenuItem>
+                    )}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
             <Grid item xs={12}>
               <TextField
                 sx={{ mt: 1 }}

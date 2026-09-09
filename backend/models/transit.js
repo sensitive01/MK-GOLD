@@ -82,6 +82,82 @@ const transitSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'fileuploads'
     },
+    storeReceived: {
+        type: Boolean,
+        default: false
+    },
+    storeReceivedAt: {
+        type: Date
+    },
+    storeReceivedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'users'
+    },
+    storeProof: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'fileuploads'
+    },
+    storeNotes: {
+        type: String,
+        default: ""
+    },
+    storeDeviations: {
+        type: String,
+        enum: ['yes', 'no'],
+        default: 'no'
+    },
+    adminReceivedAt: {
+        type: Date
+    },
+    adminReceivedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'users'
+    },
+    adminNotes: {
+        type: String,
+        default: ""
+    },
+    adminProof: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'fileuploads'
+    },
+    deviationLogs: [
+        {
+            actionBy: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'users'
+            },
+            userType: {
+                type: String,
+                default: 'admin'
+            },
+            action: {
+                type: String,
+                default: 'admin_review'
+            },
+            deviation: {
+                type: String,
+                enum: ['yes', 'no'],
+                required: true
+            },
+            status: {
+                type: String,
+                required: true
+            },
+            notes: {
+                type: String,
+                default: ""
+            },
+            proof: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'fileuploads'
+            },
+            createdAt: {
+                type: Date,
+                default: Date.now
+            }
+        }
+    ],
     status :{
         type:String,
         required:true

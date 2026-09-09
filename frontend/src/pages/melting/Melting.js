@@ -42,10 +42,18 @@ export default function Melting() {
   // Melt Update state
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
   const [selectedMelting, setSelectedMelting] = useState(null);
+  const [actualGrossWeight, setActualGrossWeight] = useState('');
+  const [actualNetWeight, setActualNetWeight] = useState('');
+  const [actualStoneWastage, setActualStoneWastage] = useState('');
+  const [preMeltProof, setPreMeltProof] = useState(null);
+  const [preMeltProofName, setPreMeltProofName] = useState('');
+  const [isPreMeltCompleted, setIsPreMeltCompleted] = useState(false);
   const [barWeight, setBarWeight] = useState('');
   const [barPurity, setBarPurity] = useState('');
   const [meltUpdateNotes, setMeltUpdateNotes] = useState('');
   const [meltProof, setMeltProof] = useState(null);
+  const [afterMeltProof, setAfterMeltProof] = useState(null);
+  const [afterMeltProofName, setAfterMeltProofName] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
 
   // Sell Bar state
@@ -221,11 +229,66 @@ export default function Melting() {
 
   const handleOpenUpdateDialog = (row) => {
     setSelectedMelting(row);
+    const isCompleted = Boolean(row.isPreMeltCompleted);
+    setIsPreMeltCompleted(isCompleted);
+    setActualGrossWeight(row.actualGrossWeight !== undefined && row.actualGrossWeight !== null ? row.actualGrossWeight : '');
+    setActualNetWeight(row.actualNetWeight !== undefined && row.actualNetWeight !== null ? row.actualNetWeight : '');
+    const stoneW = (row.actualGrossWeight !== undefined && row.actualGrossWeight !== null && row.actualNetWeight !== undefined && row.actualNetWeight !== null)
+      ? (Number(row.actualGrossWeight) - Number(row.actualNetWeight)).toFixed(2)
+      : (row.actualStoneWastage !== undefined && row.actualStoneWastage !== null ? row.actualStoneWastage : '');
+    setActualStoneWastage(stoneW);
+    setPreMeltProof(row.preMeltProof || null);
+    setPreMeltProofName('');
     setBarWeight(row.barWeight || '');
     setBarPurity(row.barPurity || '');
     setMeltUpdateNotes(row.meltUpdateNotes || '');
-    setMeltProof(row.meltProof || null);
+    setAfterMeltProof(row.afterMeltProof || null);
+    setAfterMeltProofName('');
     setOpenUpdateDialog(true);
+  };
+
+  const onActualGrossChange = (val) => {
+    setActualGrossWeight(val);
+    if (val !== '' && actualNetWeight !== '') {
+      setActualStoneWastage((Number(val) - Number(actualNetWeight)).toFixed(2));
+    } else {
+      setActualStoneWastage('');
+    }
+  };
+
+  const onActualNetChange = (val) => {
+    setActualNetWeight(val);
+    if (actualGrossWeight !== '' && val !== '') {
+      setActualStoneWastage((Number(actualGrossWeight) - Number(val)).toFixed(2));
+    } else {
+      setActualStoneWastage('');
+    }
+  };
+
+  const handleProceedToMeltSubmit = async () => {
+    if (!actualGrossWeight || !actualNetWeight) {
+      setNotify({ open: true, message: 'Please enter Actual Gross Weight and Actual Net Weight', severity: 'warning' });
+      return;
+    }
+    const wastage = Number(actualGrossWeight) - Number(actualNetWeight);
+    const payload = {
+      actualGrossWeight: Number(actualGrossWeight),
+      actualNetWeight: Number(actualNetWeight),
+      actualStoneWastage: Number(wastage.toFixed(2)),
+      isPreMeltCompleted: true,
+      status: 'in_melt'
+    };
+    if (preMeltProof) {
+      payload.preMeltProof = typeof preMeltProof === 'object' ? preMeltProof._id : preMeltProof;
+    }
+    const res = await updateMelting(selectedMelting._id, payload);
+    if (res.status) {
+      setNotify({ open: true, message: 'Pre-melt details saved. Ready for melting!', severity: 'success' });
+      handleCloseUpdateDialog();
+      fetchMeltings();
+    } else {
+      setNotify({ open: true, message: res.message || 'Error saving pre-melt details', severity: 'error' });
+    }
   };
 
   const handleCloseUpdateDialog = () => {
@@ -280,7 +343,11 @@ export default function Melting() {
   };
 
   // Calculations for display
-  const totalNetBefore = selectedMelting ? selectedMelting.totalNetWeight : 0;
+  const baseNetWeight = (selectedMelting && selectedMelting.actualNetWeight)
+    ? Number(selectedMelting.actualNetWeight)
+    : (selectedMelting ? Number(selectedMelting.totalNetWeight) : 0);
+
+  const totalNetBefore = selectedMelting ? Number(selectedMelting.totalNetWeight) : 0;
   let totalFineBefore = 0;
   if (selectedMelting && selectedMelting.ornaments) {
     selectedMelting.ornaments.forEach(orn => {
@@ -290,13 +357,16 @@ export default function Melting() {
 
   const currentBarWeight = Number(barWeight) || 0;
   const currentBarPurity = Number(barPurity) || 0;
-  const weightDiff = currentBarWeight - totalNetBefore;
+  // Weight difference compared against Actual Net Weight
+  const weightDiff = currentBarWeight - baseNetWeight;
   
   const avgPurityBefore = totalNetBefore ? (totalFineBefore / totalNetBefore) * 100 : 0;
   const purityDiff = currentBarPurity - avgPurityBefore;
 
+  // Fine gold calculated using baseNetWeight
+  const fineGoldBefore = baseNetWeight * (avgPurityBefore / 100);
   const currentFineAfter = currentBarWeight * (currentBarPurity / 100);
-  const fineGoldDiff = currentFineAfter - totalFineBefore;
+  const fineGoldDiff = currentFineAfter - fineGoldBefore;
 
   const handleUpdateMelting = async () => {
     const payload = {
@@ -310,8 +380,8 @@ export default function Melting() {
       status: 'melt_updated'
     };
     
-    if (meltProof) {
-      payload.meltProof = typeof meltProof === 'object' ? meltProof._id : meltProof;
+    if (afterMeltProof) {
+      payload.afterMeltProof = typeof afterMeltProof === 'object' ? afterMeltProof._id : afterMeltProof;
     }
     
     const res = await updateMelting(selectedMelting._id, payload);
@@ -352,6 +422,46 @@ export default function Melting() {
       if (response.status) {
         setMeltProof(response.data?._id);
         setNotify({ open: true, message: 'Proof uploaded successfully', severity: 'success' });
+      } else {
+        setNotify({ open: true, message: 'File upload failed', severity: 'error' });
+      }
+    }
+  };
+
+  const handlePreFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setUploadLoading(true);
+      const formData = new FormData();
+      formData.append('uploadedFile', file);
+      formData.append('uploadName', 'pre_melt_proof');
+      formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
+      const response = await createFile(formData);
+      setUploadLoading(false);
+      if (response.status) {
+        setPreMeltProof(response.data);
+        setPreMeltProofName(file.name);
+        setNotify({ open: true, message: 'Pre-melt proof uploaded successfully', severity: 'success' });
+      } else {
+        setNotify({ open: true, message: 'File upload failed', severity: 'error' });
+      }
+    }
+  };
+
+  const handleAfterFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setUploadLoading(true);
+      const formData = new FormData();
+      formData.append('uploadedFile', file);
+      formData.append('uploadName', 'after_melt_proof');
+      formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
+      const response = await createFile(formData);
+      setUploadLoading(false);
+      if (response.status) {
+        setAfterMeltProof(response.data);
+        setAfterMeltProofName(file.name);
+        setNotify({ open: true, message: 'After Melt Proof uploaded successfully', severity: 'success' });
       } else {
         setNotify({ open: true, message: 'File upload failed', severity: 'error' });
       }
@@ -722,84 +832,272 @@ export default function Melting() {
       </Dialog>
 
       {/* Melt Update Dialog */}
-      <Dialog open={openUpdateDialog} onClose={handleCloseUpdateDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>Update Melt Results</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" color="textSecondary" gutterBottom>
-              Total Net Weight Before: <strong>{totalNetBefore.toFixed(2)} g</strong>
-            </Typography>
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-              Avg Purity Before: <strong>{avgPurityBefore.toFixed(2)}%</strong>
-            </Typography>
-
-            <Stack spacing={3}>
-              <TextField
-                label="Final Bar Weight (g)"
-                type="number"
-                value={barWeight}
-                onChange={(e) => setBarWeight(e.target.value)}
-                fullWidth
-              />
-              <TextField
-                label="Final Bar Purity (%)"
-                type="number"
-                value={barPurity}
-                onChange={(e) => setBarPurity(e.target.value)}
-                fullWidth
-              />
-
-              {(barWeight !== '' && barPurity !== '') && (
-                <Card sx={{ p: 2, bgcolor: 'background.neutral' }}>
-                  <Typography variant="body1">
-                    Weight Diff: <strong style={{ color: weightDiff < 0 ? 'red' : 'green' }}>{weightDiff > 0 ? '+' : ''}{weightDiff.toFixed(2)} g</strong>
-                  </Typography>
-                  <Typography variant="body1">
-                    Purity Diff: <strong style={{ color: purityDiff < 0 ? 'red' : 'green' }}>{purityDiff > 0 ? '+' : ''}{purityDiff.toFixed(2)}%</strong>
-                  </Typography>
-                  <Typography variant="body1">
-                    Fine Gold Profit/Loss: <strong style={{ color: fineGoldDiff < 0 ? 'red' : 'green' }}>{fineGoldDiff > 0 ? '+' : ''}{fineGoldDiff.toFixed(3)} g</strong>
-                  </Typography>
-                </Card>
-              )}
-
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Update Notes"
-                value={meltUpdateNotes}
-                onChange={(e) => setMeltUpdateNotes(e.target.value)}
-              />
-
-              <Button
-                variant="contained"
-                component="label"
-                disabled={uploadLoading}
-              >
-                {uploadLoading ? 'Uploading...' : 'Upload Proof'}
-                <input
-                  type="file"
-                  hidden
-                  onChange={handleFileUpload}
-                />
-              </Button>
-              {meltProof && typeof meltProof === 'object' && meltProof.uploadedFile ? (
-                <Box component="img" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} alt="Proof" sx={{ width: '100%', maxHeight: 200, objectFit: 'contain' }} />
-              ) : meltProof ? (
-                <Typography variant="body2" sx={{ color: 'success.main' }}>
-                  Proof uploaded successfully!
-                </Typography>
-              ) : null}
-
+      <Dialog open={openUpdateDialog} onClose={handleCloseUpdateDialog} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, color: '#1a237e', pb: 1 }}>Update Melt Results</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Box sx={{ mt: 1 }}>
+            {/* Top Stats Row */}
+            <Stack direction="row" spacing={3} sx={{ mb: 2.5, flexWrap: 'wrap', color: 'text.secondary', fontWeight: 500 }}>
+              <Typography variant="body2">
+                Total Gross Weight : <strong>{(Number(selectedMelting?.totalGrossWeight) || 0).toFixed(2)} g</strong>
+              </Typography>
+              <Typography variant="body2">
+                Total Net Weight : <strong>{(Number(selectedMelting?.totalNetWeight) || 0).toFixed(2)} g</strong>
+              </Typography>
+              <Typography variant="body2">
+                Stone / Wastage: <strong>{((Number(selectedMelting?.totalGrossWeight) || 0) - (Number(selectedMelting?.totalNetWeight) || 0)).toFixed(2)} g</strong>
+              </Typography>
             </Stack>
+
+            {/* Pre-Melt Section (Image 1 & Top of Image 2) */}
+            <Grid container spacing={2} alignItems="stretch">
+              {/* Left Column: Actual Gross Weight & Actual Net Weight */}
+              <Grid item xs={12} sm={4}>
+                <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
+                  <TextField
+                    label="Actual Gross Weight"
+                    type="number"
+                    value={actualGrossWeight}
+                    onChange={(e) => onActualGrossChange(e.target.value)}
+                    InputProps={{ readOnly: isPreMeltCompleted }}
+                    fullWidth
+                  />
+                  <TextField
+                    label="Actual Net Weight"
+                    type="number"
+                    value={actualNetWeight}
+                    onChange={(e) => onActualNetChange(e.target.value)}
+                    InputProps={{ readOnly: isPreMeltCompleted }}
+                    fullWidth
+                  />
+                </Stack>
+              </Grid>
+
+              {/* Center Column: Upload Proof Square Box */}
+              <Grid item xs={12} sm={4}>
+                <Box
+                  component={isPreMeltCompleted ? 'div' : 'label'}
+                  sx={{
+                    border: '1px solid #c4c4c4',
+                    borderRadius: 1,
+                    height: '100%',
+                    minHeight: 120,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: isPreMeltCompleted ? 'default' : 'pointer',
+                    p: 1.5,
+                    textAlign: 'center',
+                    bgcolor: 'background.paper',
+                    '&:hover': { borderColor: isPreMeltCompleted ? '#c4c4c4' : 'primary.main' },
+                    position: 'relative',
+                  }}
+                >
+                  {!isPreMeltCompleted && (
+                    <input type="file" hidden onChange={handlePreFileUpload} disabled={uploadLoading} />
+                  )}
+
+                  {preMeltProof && typeof preMeltProof === 'object' && preMeltProof.uploadedFile ? (
+                    preMeltProof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
+                      <Stack alignItems="center" spacing={0.5}>
+                        <Iconify icon="mdi:file-pdf-box" width={40} sx={{ color: 'error.main' }} />
+                        <Typography variant="caption" noWrap sx={{ maxWidth: 160 }}>
+                          {preMeltProofName || 'Proof PDF'}
+                        </Typography>
+                        {!isPreMeltCompleted && (
+                          <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>Click to change</Typography>
+                        )}
+                      </Stack>
+                    ) : (
+                      <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                        <Box
+                          component="img"
+                          src={preMeltProof.uploadedFile.startsWith('http') ? preMeltProof.uploadedFile : `${global.BASE_URL}/${preMeltProof.uploadedFile}`}
+                          alt="Proof"
+                          sx={{ maxHeight: 90, maxWidth: '100%', objectFit: 'contain', borderRadius: 0.5 }}
+                        />
+                        {!isPreMeltCompleted && (
+                          <Typography variant="caption" sx={{ color: 'primary.main', mt: 0.5, fontWeight: 600 }}>Click to change</Typography>
+                        )}
+                      </Box>
+                    )
+                  ) : preMeltProof ? (
+                    <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 600 }}>
+                      {preMeltProofName || 'Proof Uploaded'}
+                    </Typography>
+                  ) : (
+                    <Stack alignItems="center" spacing={0.5}>
+                      <Iconify icon="eva:cloud-upload-outline" width={28} sx={{ color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary">
+                        {uploadLoading ? 'Uploading...' : 'Upload Proof'}
+                      </Typography>
+                    </Stack>
+                  )}
+                </Box>
+              </Grid>
+
+              {/* Right Column: Actual Stone / Wastage & Proceed to Melt Button (if not completed) */}
+              <Grid item xs={12} sm={4}>
+                <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
+                  <TextField
+                    label="Actual Stone / Wastage"
+                    type="number"
+                    value={actualStoneWastage}
+                    InputProps={{ readOnly: true }}
+                    fullWidth
+                  />
+                  {!isPreMeltCompleted ? (
+                    <Button
+                      variant="contained"
+                      onClick={handleProceedToMeltSubmit}
+                      disabled={!actualGrossWeight || !actualNetWeight || uploadLoading}
+                      sx={{
+                        bgcolor: '#7b1fa2',
+                        color: '#fff',
+                        fontWeight: 700,
+                        height: 54,
+                        '&:hover': { bgcolor: '#6a1b9a' },
+                      }}
+                      fullWidth
+                    >
+                      Proceed to Melt
+                    </Button>
+                  ) : (
+                    <TextField
+                      label="Avg Purity Before"
+                      value={`${avgPurityBefore.toFixed(2)}%`}
+                      InputProps={{ readOnly: true }}
+                      fullWidth
+                    />
+                  )}
+                </Stack>
+              </Grid>
+            </Grid>
+
+            {/* Stage 2 (Bottom Section: Final Bar Details) - Active only after Proceed to Melt */}
+            {isPreMeltCompleted && (
+              <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px dashed #e0e0e0' }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Final Bar Weight (g)"
+                      type="number"
+                      value={barWeight}
+                      onChange={(e) => setBarWeight(e.target.value)}
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Final Bar Purity (%)"
+                      type="number"
+                      value={barPurity}
+                      onChange={(e) => setBarPurity(e.target.value)}
+                      fullWidth
+                    />
+                  </Grid>
+
+                  {barWeight !== '' && barPurity !== '' && (
+                    <Grid item xs={12}>
+                      <Card sx={{ p: 2, bgcolor: 'background.neutral' }}>
+                        <Typography variant="body2">
+                          Weight Diff (vs Actual Net Wt):{' '}
+                          <strong style={{ color: weightDiff < 0 ? 'red' : 'green' }}>
+                            {weightDiff > 0 ? '+' : ''}{weightDiff.toFixed(2)} g
+                          </strong>
+                        </Typography>
+                        <Typography variant="body2">
+                          Purity Diff:{' '}
+                          <strong style={{ color: purityDiff < 0 ? 'red' : 'green' }}>
+                            {purityDiff > 0 ? '+' : ''}{purityDiff.toFixed(2)}%
+                          </strong>
+                        </Typography>
+                        <Typography variant="body2">
+                          Fine Gold Profit/Loss:{' '}
+                          <strong style={{ color: fineGoldDiff < 0 ? 'red' : 'green' }}>
+                            {fineGoldDiff > 0 ? '+' : ''}{fineGoldDiff.toFixed(3)} g
+                          </strong>
+                        </Typography>
+                      </Card>
+                    </Grid>
+                  )}
+
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="Update Notes"
+                      value={meltUpdateNotes}
+                      onChange={(e) => setMeltUpdateNotes(e.target.value)}
+                    />
+                  </Grid>
+
+                  {/* Big Yellow Button: Upload After Melt Proof */}
+                  <Grid item xs={12}>
+                    <Button
+                      variant="contained"
+                      component="label"
+                      disabled={uploadLoading}
+                      sx={{
+                        bgcolor: '#ffb300',
+                        color: '#000',
+                        fontWeight: 700,
+                        height: 48,
+                        '&:hover': { bgcolor: '#ffa000' },
+                      }}
+                      fullWidth
+                    >
+                      {uploadLoading ? 'Uploading...' : 'Upload After Melt Proof'}
+                      <input type="file" hidden onChange={handleAfterFileUpload} />
+                    </Button>
+                  </Grid>
+
+                  {afterMeltProof && typeof afterMeltProof === 'object' && afterMeltProof.uploadedFile ? (
+                    <Grid item xs={12}>
+                      {afterMeltProof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
+                        <Box
+                          component="iframe"
+                          src={afterMeltProof.uploadedFile.startsWith('http') ? afterMeltProof.uploadedFile : `${global.BASE_URL}/${afterMeltProof.uploadedFile}`}
+                          title="Proof"
+                          sx={{ width: '100%', height: 180, border: 'none' }}
+                        />
+                      ) : (
+                        <Box
+                          component="img"
+                          src={afterMeltProof.uploadedFile.startsWith('http') ? afterMeltProof.uploadedFile : `${global.BASE_URL}/${afterMeltProof.uploadedFile}`}
+                          alt="Proof"
+                          sx={{ width: '100%', maxHeight: 180, objectFit: 'contain' }}
+                        />
+                      )}
+                    </Grid>
+                  ) : afterMeltProof ? (
+                    <Grid item xs={12}>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Typography variant="body2" sx={{ color: 'success.main' }}>
+                          {afterMeltProofName || 'After Melt Proof uploaded successfully!'}
+                        </Typography>
+                        <IconButton size="small" onClick={() => { setAfterMeltProof(null); setAfterMeltProofName(''); }} sx={{ color: 'error.main' }}>
+                          <Iconify icon="eva:close-fill" />
+                        </IconButton>
+                      </Stack>
+                    </Grid>
+                  ) : null}
+                </Grid>
+              </Box>
+            )}
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseUpdateDialog} color="inherit">Cancel</Button>
-          <Button variant="contained" onClick={handleUpdateMelting} disabled={!barWeight || !barPurity}>
-            Save Update
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={handleCloseUpdateDialog} color="inherit">
+            Cancel
           </Button>
+          {isPreMeltCompleted && (
+            <Button variant="contained" onClick={handleUpdateMelting} disabled={!barWeight || !barPurity || uploadLoading}>
+              Save Update
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 

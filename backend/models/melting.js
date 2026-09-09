@@ -48,6 +48,23 @@ const meltingSchema = new mongoose.Schema({
         type: String,
         default: 'melted'
     },
+    actualGrossWeight: {
+        type: Number
+    },
+    actualNetWeight: {
+        type: Number
+    },
+    actualStoneWastage: {
+        type: Number
+    },
+    preMeltProof: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'fileuploads'
+    },
+    isPreMeltCompleted: {
+        type: Boolean,
+        default: false
+    },
     barWeight: {
         type: Number
     },

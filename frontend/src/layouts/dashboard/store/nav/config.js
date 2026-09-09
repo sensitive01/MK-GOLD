@@ -13,7 +13,7 @@ const navConfig = [
     icon: icon('ic_analytics'),
   },
   {
-    title: 'Gold Transit',
+    title: 'Transit',
     path: '/store/gold-transit',
     icon: <LocalShippingIcon sx={{ width: 1, height: 1 }} />,
   },

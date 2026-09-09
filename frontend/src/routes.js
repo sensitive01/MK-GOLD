@@ -271,6 +271,7 @@ export default function Router() {
         { path: 'employee', element: <BranchEmployee /> },
         { path: 'qr-enquiry', element: <BranchQREnquiry /> },
         { path: 'transit', element: <BranchTransit /> },
+        { path: 'transit-sales/:id', element: <AdminTransitSales /> },
       ],
     },
     {
@@ -319,6 +320,8 @@ export default function Router() {
         { path: 'expense', element: <AuditorExpense /> },
         { path: 'fund', element: <AuditorFund /> },
         { path: 'sale', element: <AuditorSale /> },
+        { path: 'transit', element: <AdminTransit /> },
+        { path: 'transit-sales/:id', element: <AdminTransitSales /> },
         { path: 'melting', element: <AuditorMelting /> },
         { path: 'sell-gold', element: <AuditorSellGold /> },
         { path: 'leave', element: <BranchLeave /> },
@@ -352,6 +355,7 @@ export default function Router() {
         { element: <Navigate to="/melting/dashboard" />, index: true },
         { path: 'dashboard', element: <MeltingDashboard /> },
         { path: 'transit', element: <MeltingTransit /> },
+        { path: 'transit-sales/:id', element: <AdminTransitSales /> },
         { path: 'melting', element: <MeltingMelting /> },
         { path: 'sell-gold', element: <MeltingSellGold /> },
         { path: 'vendor', element: <MeltingVendor /> },
@@ -472,6 +476,7 @@ export default function Router() {
         { path: 'dashboard', element: <StoreDashboard /> },
         { path: 'gold-transit', element: <StoreGoldTransit /> },
         { path: 'transit-outwards', element: <StoreTransitOutwards /> },
+        { path: 'transit-sales/:id', element: <AdminTransitSales /> },
       ],
     },
     {

@@ -1073,6 +1073,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
 
   // Admin read-only review states
   const [saleDetails, setSaleDetails] = useState(null);
+  const [selectedBank, setSelectedBank] = useState(null);
   const [adminComments, setAdminComments] = useState('');
 
   const [ornamentValues, setOrnamentValues] = useState({
@@ -1096,10 +1097,14 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           if (res.data.ornaments) {
             setOrnaments(res.data.ornaments);
           }
+          if (type === 'finance' && res.data.payableAmount !== undefined && res.data.payableAmount !== null) {
+            setFieldValue('amount', Math.round(res.data.payableAmount));
+          }
         }
       });
     } else {
       setSaleDetails(null);
+      setSelectedBank(null);
       setOrnaments([]);
       setAdminComments('');
       setPreview(null);
@@ -1115,6 +1120,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
   const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue } = useFormik({
     initialValues: {
       amount: '',
+      bankId: '',
       comments: '',
       proof: '',
       isCompleted: false,
@@ -1131,9 +1137,21 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
 
       const payload = {};
       if (type === 'finance') {
-        payload.financeAmount = values.amount;
+        payload.financeAmount = values.amount !== '' ? Number(values.amount) : undefined;
+        payload.payableAmount = values.amount !== '' ? Number(values.amount) : saleDetails?.payableAmount;
         payload.financeComments = values.comments;
         payload.financeProof = values.proof;
+        payload.newFinancePayment = {
+          amount: values.amount !== '' ? Number(values.amount) : 0,
+          bank: selectedBank ? {
+            bankId: selectedBank._id,
+            bankName: selectedBank.bankName,
+            accountNo: selectedBank.accountNo,
+          } : null,
+          proof: values.proof,
+          comments: values.comments,
+          createdAt: new Date(),
+        };
         if (values.isCompleted) {
           payload.financeCompleted = true;
           payload.financeCompletedAt = new Date();
@@ -1317,6 +1335,37 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
         <DialogContent sx={{ mt: 1, pt: 2 }}>
           <Grid container spacing={3}>
+            {type === 'finance' && saleDetails?.paymentType !== 'cash' && (
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel id="choose-bank-label">Choose Bank</InputLabel>
+                  <Select
+                    labelId="choose-bank-label"
+                    id="choose-bank-select"
+                    name="bankId"
+                    value={values.bankId || ''}
+                    label="Choose Bank"
+                    onChange={(e) => {
+                      handleChange(e);
+                      const banks = saleDetails?.customer?.bank || [];
+                      const found = banks.find((b) => (b._id?.toString() || b.accountNo) === e.target.value);
+                      setSelectedBank(found || null);
+                    }}
+                  >
+                    {(saleDetails?.customer?.bank || []).map((b) => (
+                      <MenuItem key={b._id || b.accountNo} value={b._id?.toString() || b.accountNo}>
+                        {b.bankName} - {b.accountNo}
+                      </MenuItem>
+                    ))}
+                    {(!saleDetails?.customer?.bank || saleDetails?.customer?.bank.length === 0) && (
+                      <MenuItem value="" disabled>
+                        No bank added for this customer
+                      </MenuItem>
+                    )}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
             <Grid item xs={12}>
               <TextField
                 sx={{ mt: 1 }}

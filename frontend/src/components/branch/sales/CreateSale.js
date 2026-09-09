@@ -16,6 +16,7 @@ import {
   TableContainer,
   TablePagination,
   TableHead,
+  TableFooter,
   Paper,
   Dialog,
   DialogTitle,
@@ -24,6 +25,7 @@ import {
   IconButton,
   Stack,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
@@ -631,7 +633,7 @@ function CreateSale(props) {
                 {values.saleType === 'pledged' && !isReleaseCompleted
                   ? 'Submit'
                   : values.saleType === 'physical'
-                  ? 'Direct View Summary'
+                  ? 'View Summary'
                   : 'Proceed to upload documents'}
               </LoadingButton>
             </Grid>
@@ -792,6 +794,40 @@ function CreateSale(props) {
                         </TableRow>
                       )}
                     </TableBody>
+                    {ornaments?.length > 0 && (
+                      <TableFooter>
+                        <TableRow
+                          sx={{
+                            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                            borderTop: '2px solid',
+                            borderColor: 'divider',
+                            '& .MuiTableCell-root': {
+                              fontWeight: 700,
+                              fontSize: '0.875rem',
+                              color: 'text.primary',
+                              py: 1.5,
+                            },
+                          }}
+                        >
+                          <TableCell align="left">Total</TableCell>
+                          <TableCell align="left">
+                            {ornaments.reduce((prev, cur) => prev + (+cur.quantity || 0), 0)}
+                          </TableCell>
+                          <TableCell align="left">
+                            {ornaments.reduce((prev, cur) => prev + (+cur.stoneWeight || 0), 0).toFixed(2)}
+                          </TableCell>
+                          <TableCell align="left">
+                            {ornaments.reduce((prev, cur) => prev + (+cur.netWeight || 0), 0).toFixed(2)}
+                          </TableCell>
+                          <TableCell align="left">
+                            {ornaments.reduce((prev, cur) => prev + (+cur.grossWeight || 0), 0).toFixed(2)}
+                          </TableCell>
+                          <TableCell align="left">
+                            ₹{Math.round(ornaments.reduce((prev, cur) => prev + (+cur.netAmount || 0), 0)).toLocaleString('en-IN')}
+                          </TableCell>
+                        </TableRow>
+                      </TableFooter>
+                    )}
                   </Table>
                 </TableContainer>
 

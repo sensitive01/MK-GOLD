@@ -4,6 +4,13 @@ function isAdmin(req, res, next) {
     return next();
   }
 
+  if (
+    (userType === "branch" || userType === "assistant_branch_manager" || userType === "branch_executive") &&
+    (req.path.includes("transit-sales") || req.path.includes("branch/get") || req.path.includes("transit/get"))
+  ) {
+    return next();
+  }
+
   return res.status(401).json({
     status: false,
     message: "Unauthorized",
