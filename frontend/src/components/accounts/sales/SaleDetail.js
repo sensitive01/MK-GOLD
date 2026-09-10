@@ -99,13 +99,13 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
             <TableHead>
               <TableRow>
                 <TableCell align="left">Ornament Type</TableCell>
-                <TableCell align="center">Photo</TableCell>
-                <TableCell align="left">Purity</TableCell>
                 <TableCell align="left">Quantity</TableCell>
-                <TableCell align="left">Stone weight (Grams)</TableCell>
-                <TableCell align="left">Net weight (Grams)</TableCell>
-                <TableCell align="left">Gross weight (Grams)</TableCell>
-                <TableCell align="left">Net amount (INR)</TableCell>
+                <TableCell align="center">Photo</TableCell>
+                <TableCell align="left">Gross Weight</TableCell>
+                <TableCell align="left">Stone / Wastage</TableCell>
+                <TableCell align="left">Net Weight</TableCell>
+                <TableCell align="left">Purity</TableCell>
+                <TableCell align="left">Net Amount</TableCell>
                 <TableCell align="center">Bill</TableCell>
               </TableRow>
             </TableHead>
@@ -113,6 +113,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
               {data?.ornaments?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
                 <TableRow hover key={index} tabIndex={-1}>
                   <TableCell align="left">{sentenceCase(e.ornamentType || '')}</TableCell>
+                  <TableCell align="left">{e.quantity}</TableCell>
                   <TableCell align="center">
                     {e.ornamentPhoto ? (
                       <a
@@ -140,11 +141,10 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell align="left">{e.purity}</TableCell>
-                  <TableCell align="left">{e.quantity}</TableCell>
+                  <TableCell align="left">{e.grossWeight?.toFixed(2)}</TableCell>
                   <TableCell align="left">{e.stoneWeight?.toFixed(2)}</TableCell>
                   <TableCell align="left">{e.netWeight?.toFixed(2)}</TableCell>
-                  <TableCell align="left">{e.grossWeight?.toFixed(2)}</TableCell>
+                  <TableCell align="left">{e.purity}</TableCell>
                   <TableCell align="left">{Math.round(e.netAmount)}</TableCell>
                   <TableCell align="center">
                     {e.hasBill ? (
@@ -207,11 +207,15 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                     },
                   }}
                 >
-                  <TableCell colSpan={3} align="left">
+                  <TableCell align="left">
                     Total
                   </TableCell>
                   <TableCell align="left">
                     {data.ornaments.reduce((prev, cur) => prev + (+cur.quantity || 0), 0)}
+                  </TableCell>
+                  <TableCell align="center">-</TableCell>
+                  <TableCell align="left">
+                    {data.ornaments.reduce((prev, cur) => prev + (+cur.grossWeight || 0), 0).toFixed(2)}
                   </TableCell>
                   <TableCell align="left">
                     {data.ornaments.reduce((prev, cur) => prev + (+cur.stoneWeight || 0), 0).toFixed(2)}
@@ -219,9 +223,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                   <TableCell align="left">
                     {data.ornaments.reduce((prev, cur) => prev + (+cur.netWeight || 0), 0).toFixed(2)}
                   </TableCell>
-                  <TableCell align="left">
-                    {data.ornaments.reduce((prev, cur) => prev + (+cur.grossWeight || 0), 0).toFixed(2)}
-                  </TableCell>
+                  <TableCell align="left">-</TableCell>
                   <TableCell align="left">
                     ₹{Math.round(data.ornaments.reduce((prev, cur) => prev + (+cur.netAmount || 0), 0)).toLocaleString('en-IN')}
                   </TableCell>

@@ -61,6 +61,10 @@ const meltingSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'fileuploads'
     },
+    preMeltNotes: {
+        type: String,
+        default: ""
+    },
     isPreMeltCompleted: {
         type: Boolean,
         default: false

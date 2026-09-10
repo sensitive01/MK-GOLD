@@ -121,6 +121,7 @@ export default function Melting() {
   const [actualStoneWastage, setActualStoneWastage] = useState('');
   const [preMeltProof, setPreMeltProof] = useState(null);
   const [preMeltProofName, setPreMeltProofName] = useState('');
+  const [preMeltNotes, setPreMeltNotes] = useState('');
   const [isPreMeltCompleted, setIsPreMeltCompleted] = useState(false);
   const [barWeight, setBarWeight] = useState('');
   const [barPurity, setBarPurity] = useState('');
@@ -356,6 +357,7 @@ export default function Melting() {
     setActualStoneWastage(stoneW);
     setPreMeltProof(row.preMeltProof || null);
     setPreMeltProofName('');
+    setPreMeltNotes(row.preMeltNotes || row.notes || '');
     setBarWeight(row.barWeight || '');
     setBarPurity(row.barPurity || '');
     setMeltUpdateNotes(row.meltUpdateNotes || '');
@@ -393,7 +395,9 @@ export default function Melting() {
       actualNetWeight: Number(actualNetWeight),
       actualStoneWastage: Number(wastage.toFixed(2)),
       isPreMeltCompleted: true,
-      status: 'in_melt'
+      status: 'in_melt',
+      preMeltNotes,
+      notes: preMeltNotes || selectedMelting?.notes || ''
     };
     if (preMeltProof) {
       payload.preMeltProof = typeof preMeltProof === 'object' ? preMeltProof._id : preMeltProof;
@@ -411,6 +415,7 @@ export default function Melting() {
   const handleCloseUpdateDialog = () => {
     setOpenUpdateDialog(false);
     setSelectedMelting(null);
+    setPreMeltNotes('');
   };
 
   const handleOpenSellDialog = (row) => {
@@ -1147,6 +1152,20 @@ export default function Melting() {
                   )}
                 </Stack>
               </Grid>
+
+              {/* Notes */}
+              <Grid item xs={12}>
+                <TextField
+                  label="Notes"
+                  multiline
+                  rows={2}
+                  value={preMeltNotes}
+                  onChange={(e) => setPreMeltNotes(e.target.value)}
+                  placeholder="Enter notes or remarks..."
+                  fullWidth
+                  InputProps={{ readOnly: isPreMeltCompleted }}
+                />
+              </Grid>
             </Grid>
 
             {/* Stage 2 (Bottom Section: Final Bar Details) - Active only after Proceed to Melt */}
@@ -1553,6 +1572,12 @@ export default function Melting() {
                       <Typography variant="subtitle2">Stone / Wastage (g)</Typography>
                       <Typography variant="body2" gutterBottom>{rowToView.actualStoneWastage ?? 'N/A'}</Typography>
                     </Grid>
+                    {(rowToView.preMeltNotes || (!rowToView.isPreMeltCompleted && rowToView.notes)) && (
+                      <Grid item xs={12}>
+                        <Typography variant="subtitle2">Pre-Melt Notes</Typography>
+                        <Typography variant="body2">{rowToView.preMeltNotes || rowToView.notes}</Typography>
+                      </Grid>
+                    )}
                   </>
                 )}
 

@@ -11,13 +11,15 @@ const { cloudinary } = require('../config/cloudinary');
  */
 function getBrowserExecutablePath() {
   const candidates = [
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/snap/bin/chromium',
     'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
     'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium-browser',
-    '/usr/bin/chromium',
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
   ];
   for (const candidate of candidates) {
@@ -519,6 +521,9 @@ async function printHtmlToPdf(html) {
   return new Promise((resolve, reject) => {
     const args = [
       '--headless',
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
       '--disable-gpu',
       '--no-pdf-header-footer',
       '--run-all-compositor-stages-before-draw',

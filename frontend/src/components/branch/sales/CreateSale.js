@@ -24,6 +24,8 @@ import {
   DialogActions,
   IconButton,
   Stack,
+  Avatar,
+  Chip,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -54,6 +56,15 @@ import global from '../../../utils/global';
 import { getAddressById, createAddress } from '../../../apis/branch/customer-address';
 import Iconify from '../../iconify';
 import { pinToAddress } from 'india-pincode-finder';
+
+const getFileUrl = (url) => {
+  if (!url) return '';
+  if (typeof url !== 'string') return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) return url;
+  const base = (global.baseURL || '').replace(/\/+$/, '');
+  const path = url.replace(/^\/+/, '');
+  return `${base}/${path}`;
+};
 
 
 function CreateSale(props) {
@@ -481,8 +492,15 @@ function CreateSale(props) {
                   fullWidth
                   onBlur={handleBlur}
                   onChange={(e) => {
-                    setValues({ ...values, bankAmount: payload.payableAmount - values.cashAmount });
-                    handleChange(e);
+                    const enteredCash = e.target.value;
+                    const cashNum = enteredCash === '' ? 0 : Number(enteredCash);
+                    const totalPayable = payload.payableAmount || 0;
+                    const autoBank = enteredCash === '' ? '' : Math.max(0, totalPayable - cashNum);
+                    setValues({
+                      ...values,
+                      cashAmount: enteredCash,
+                      bankAmount: autoBank,
+                    });
                   }}
                 />
               </Grid>
@@ -497,7 +515,17 @@ function CreateSale(props) {
                   label={touched.bankAmount && errors.bankAmount ? errors.bankAmount : 'Bank Amount'}
                   fullWidth
                   onBlur={handleBlur}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const enteredBank = e.target.value;
+                    const bankNum = enteredBank === '' ? 0 : Number(enteredBank);
+                    const totalPayable = payload.payableAmount || 0;
+                    const autoCash = enteredBank === '' ? '' : Math.max(0, totalPayable - bankNum);
+                    setValues({
+                      ...values,
+                      bankAmount: enteredBank,
+                      cashAmount: autoCash,
+                    });
+                  }}
                 />
               </Grid>
             )}
@@ -756,33 +784,55 @@ function CreateSale(props) {
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell align="left">Purity</TableCell>
+                        <TableCell align="left">Ornament Type</TableCell>
                         <TableCell align="left">Quantity</TableCell>
-                        <TableCell align="left">Stone weight (Grams)</TableCell>
-                        <TableCell align="left">Net weight (Grams)</TableCell>
-                        <TableCell align="left">Gross weight (Grams)</TableCell>
-                        <TableCell align="left">Net amount (INR)</TableCell>
+                        <TableCell align="center">Photo</TableCell>
+                        <TableCell align="left">Gross Weight</TableCell>
+                        <TableCell align="left">Stone / Wastage</TableCell>
+                        <TableCell align="left">Net Weight</TableCell>
+                        <TableCell align="left">Purity</TableCell>
+                        <TableCell align="left">Net Amount</TableCell>
+                        <TableCell align="center">Bill</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {ornaments?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
                         <TableRow hover key={index} tabIndex={-1}>
-                          <TableCell align="left">{e.purity}</TableCell>
+                          <TableCell align="left">{sentenceCase(e.ornamentType || '')}</TableCell>
                           <TableCell align="left">{e.quantity}</TableCell>
+                          <TableCell align="center">
+                            {e.ornamentPhoto ? (
+                              <Avatar
+                                src={getFileUrl(e.ornamentPhoto)}
+                                variant="rounded"
+                                sx={{ width: 36, height: 36, mx: 'auto', border: '1px solid #e0e0e0' }}
+                              />
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">-</Typography>
+                            )}
+                          </TableCell>
+                          <TableCell align="left">{e.grossWeight}</TableCell>
                           <TableCell align="left">{e.stoneWeight}</TableCell>
                           <TableCell align="left">{e.netWeight}</TableCell>
-                          <TableCell align="left">{e.grossWeight}</TableCell>
+                          <TableCell align="left">{e.purity}</TableCell>
                           <TableCell align="left">{e.netAmount}</TableCell>
+                          <TableCell align="center">
+                            {e.hasBill ? (
+                              <Chip size="small" color="primary" label={`Bill: ${e.billDate || 'Yes'}`} />
+                            ) : (
+                              <Chip size="small" variant="outlined" label="No Bill" sx={{ color: 'text.secondary' }} />
+                            )}
+                          </TableCell>
                         </TableRow>
                       ))}
                       {emptyRows > 0 && (
                         <TableRow style={{ height: 53 * emptyRows }}>
-                          <TableCell colSpan={6} />
+                          <TableCell colSpan={9} />
                         </TableRow>
                       )}
                       {ornaments?.length === 0 && (
                         <TableRow>
-                          <TableCell align="center" colSpan={7} sx={{ py: 3 }}>
+                          <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
                             <Paper
                               sx={{
                                 textAlign: 'center',
@@ -813,18 +863,21 @@ function CreateSale(props) {
                           <TableCell align="left">
                             {ornaments.reduce((prev, cur) => prev + (+cur.quantity || 0), 0)}
                           </TableCell>
+                          <TableCell align="center">-</TableCell>
+                          <TableCell align="left">
+                            {ornaments.reduce((prev, cur) => prev + (+cur.grossWeight || 0), 0).toFixed(2)}
+                          </TableCell>
                           <TableCell align="left">
                             {ornaments.reduce((prev, cur) => prev + (+cur.stoneWeight || 0), 0).toFixed(2)}
                           </TableCell>
                           <TableCell align="left">
                             {ornaments.reduce((prev, cur) => prev + (+cur.netWeight || 0), 0).toFixed(2)}
                           </TableCell>
-                          <TableCell align="left">
-                            {ornaments.reduce((prev, cur) => prev + (+cur.grossWeight || 0), 0).toFixed(2)}
-                          </TableCell>
+                          <TableCell align="left">-</TableCell>
                           <TableCell align="left">
                             ₹{Math.round(ornaments.reduce((prev, cur) => prev + (+cur.netAmount || 0), 0)).toLocaleString('en-IN')}
                           </TableCell>
+                          <TableCell align="center">-</TableCell>
                         </TableRow>
                       </TableFooter>
                     )}

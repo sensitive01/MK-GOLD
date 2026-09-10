@@ -52,6 +52,7 @@ export default function AuditorMelting() {
   const [actualStoneWastage, setActualStoneWastage] = useState('');
   const [preMeltProof, setPreMeltProof] = useState(null);
   const [preMeltProofName, setPreMeltProofName] = useState('');
+  const [preMeltNotes, setPreMeltNotes] = useState('');
   const [isPreMeltCompleted, setIsPreMeltCompleted] = useState(false);
   const [barWeight, setBarWeight] = useState('');
   const [barPurity, setBarPurity] = useState('');
@@ -284,6 +285,7 @@ export default function AuditorMelting() {
     setActualStoneWastage(stoneW);
     setPreMeltProof(row.preMeltProof || null);
     setPreMeltProofName('');
+    setPreMeltNotes(row.preMeltNotes || row.notes || '');
     setBarWeight(row.barWeight || '');
     setBarPurity(row.barPurity || '');
     setMeltUpdateNotes(row.meltUpdateNotes || '');
@@ -321,7 +323,9 @@ export default function AuditorMelting() {
       actualNetWeight: Number(actualNetWeight),
       actualStoneWastage: Number(wastage.toFixed(2)),
       isPreMeltCompleted: true,
-      status: 'in_melt'
+      status: 'in_melt',
+      preMeltNotes,
+      notes: preMeltNotes || selectedMelting?.notes || ''
     };
     if (preMeltProof) {
       payload.preMeltProof = typeof preMeltProof === 'object' ? preMeltProof._id : preMeltProof;
@@ -339,6 +343,7 @@ export default function AuditorMelting() {
   const handleCloseUpdateDialog = () => {
     setOpenUpdateDialog(false);
     setSelectedMelting(null);
+    setPreMeltNotes('');
   };
 
   const handleOpenSellDialog = (row) => {
@@ -1023,6 +1028,20 @@ export default function AuditorMelting() {
                     />
                   )}
                 </Stack>
+              </Grid>
+
+              {/* Notes */}
+              <Grid item xs={12}>
+                <TextField
+                  label="Notes"
+                  multiline
+                  rows={2}
+                  value={preMeltNotes}
+                  onChange={(e) => setPreMeltNotes(e.target.value)}
+                  placeholder="Enter notes or remarks..."
+                  fullWidth
+                  InputProps={{ readOnly: isPreMeltCompleted }}
+                />
               </Grid>
             </Grid>
 
