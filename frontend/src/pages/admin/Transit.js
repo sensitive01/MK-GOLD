@@ -671,7 +671,7 @@ export default function Transit() {
           }}
         >
           <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
-          Print Voucher
+          Print Transit
         </MenuItem>
 
         <MenuItem sx={{ color: 'error.main' }} onClick={() => { handleCloseMenu(); setDeleteType('single'); setOpenDeleteModal(true); }}>

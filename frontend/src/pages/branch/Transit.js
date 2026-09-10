@@ -576,7 +576,7 @@ export default function Transit() {
           }}
         >
           <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
-          Print
+          Print Transit
         </MenuItem>
         {/* global.canDelete(userType) && (
           <MenuItem

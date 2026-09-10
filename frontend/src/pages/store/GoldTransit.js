@@ -710,7 +710,7 @@ export default function StoreGoldTransit() {
           }}
         >
           <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
-          Print Voucher
+          Print Transit
         </MenuItem>
       </Popover>
 

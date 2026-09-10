@@ -390,7 +390,7 @@ export default function TransitSales() {
               startIcon={<Iconify icon="material-symbols:print" />}
               onClick={() => setVerifyTransitId(transitId)}
             >
-              Print Transit Voucher
+              Print Transit
             </Button>
             {(values.fromDate || values.toDate || values.branch || values.phoneNumber) && (
               <Button
