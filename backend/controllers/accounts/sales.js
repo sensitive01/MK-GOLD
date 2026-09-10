@@ -86,4 +86,26 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { find, findById, update, remove };
+async function verifyFinancePayment(req, res) {
+  try {
+    const result = await salesService.verifyFinancePayment(
+      req.params.id,
+      req.params.paymentId,
+      req.body,
+      req.user
+    );
+    res.json({
+      status: true,
+      message: "Bank payment verified successfully",
+      data: result,
+    });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: err.errors ?? err.message,
+      data: {},
+    });
+  }
+}
+
+module.exports = { find, findById, update, remove, verifyFinancePayment };

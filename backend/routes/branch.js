@@ -63,6 +63,7 @@ branchRouter.post("/sales/get", sales.find);
 branchRouter.get("/sales/get/:id", sales.findById);
 branchRouter.post("/sales/create", sales.create);
 branchRouter.post("/sales/update/:id", sales.update);
+branchRouter.post("/sales/verify-finance-payment/:id/:paymentId", sales.verifyFinancePayment);
 // branchRouter.post("/sales/delete/:id", sales.remove);
 
 branchRouter.get("/ornament/get", ornament.find);

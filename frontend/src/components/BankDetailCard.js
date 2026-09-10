@@ -21,7 +21,15 @@ import { sentenceCase } from 'change-case';
 import Iconify from './iconify';
 import global from '../utils/global';
 
-export default function BankDetailCard({ bank, paymentType }) {
+export default function BankDetailCard({
+  bank,
+  paymentType,
+  amount,
+  isVerified,
+  verifiedAmount,
+  verifiedProof,
+  onVerifyClick,
+}) {
   const theme = useTheme();
   const [copiedField, setCopiedField] = useState(null);
   const [openPreview, setOpenPreview] = useState(false);
@@ -39,7 +47,7 @@ export default function BankDetailCard({ bank, paymentType }) {
     }, 2000);
   };
 
-  const rawProofUrl = bank?.proof?.uploadedFile || '';
+  const rawProofUrl = bank?.proof?.uploadedFile || verifiedProof || '';
   const isHttpUrl = rawProofUrl.startsWith('http');
   const proofUrl = rawProofUrl ? (isHttpUrl ? rawProofUrl : `${global.baseURL}/${rawProofUrl}`) : '';
   const isImageProof = Boolean(rawProofUrl && rawProofUrl.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i));
@@ -141,18 +149,64 @@ export default function BankDetailCard({ bank, paymentType }) {
                     </Box>
                   </Stack>
 
-                  <Chip
-                    icon={<Iconify icon="eva:checkmark-circle-2-fill" width={16} />}
-                    label="Bank Transfer"
-                    size="small"
-                    sx={{
-                      fontWeight: 700,
-                      fontSize: '0.75rem',
-                      bgcolor: alpha(theme.palette.success.main, 0.12),
-                      color: 'success.dark',
-                      border: `1px solid ${alpha(theme.palette.success.main, 0.24)}`,
-                    }}
-                  />
+                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                    {amount !== undefined && amount !== null && amount !== '' && (
+                      <Chip
+                        label={`Paid: ₹${Number(amount).toLocaleString('en-IN')}`}
+                        size="small"
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          bgcolor: alpha(theme.palette.primary.main, 0.1),
+                          color: 'primary.dark',
+                          border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                        }}
+                      />
+                    )}
+
+                    {isVerified ? (
+                      <Chip
+                        icon={<Iconify icon="eva:checkmark-circle-2-fill" width={16} />}
+                        label="Payment Processed"
+                        size="small"
+                        color="success"
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                        }}
+                      />
+                    ) : onVerifyClick ? (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        size="small"
+                        startIcon={<Iconify icon="mdi:bank-check" width={16} />}
+                        onClick={onVerifyClick}
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          py: 0.5,
+                          px: 1.5,
+                          borderRadius: 1,
+                        }}
+                      >
+                        Verify Bank
+                      </Button>
+                    ) : (
+                      <Chip
+                        icon={<Iconify icon="eva:checkmark-circle-2-fill" width={16} />}
+                        label="Bank Transfer"
+                        size="small"
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          bgcolor: alpha(theme.palette.success.main, 0.12),
+                          color: 'success.dark',
+                          border: `1px solid ${alpha(theme.palette.success.main, 0.24)}`,
+                        }}
+                      />
+                    )}
+                  </Stack>
                 </Box>
 
                 {/* 2x2 Details Grid */}
@@ -275,7 +329,7 @@ export default function BankDetailCard({ bank, paymentType }) {
                       </Typography>
                       <Chip
                         size="small"
-                        label="Passbook / Cheque"
+                        label={bank?.proof?.documentType || (verifiedProof && !bank?.proof?.uploadedFile ? 'Verified Receipt' : 'Passbook / Cheque')}
                         sx={{
                           height: 20,
                           fontSize: '0.65rem',
@@ -490,4 +544,9 @@ export default function BankDetailCard({ bank, paymentType }) {
 BankDetailCard.propTypes = {
   bank: PropTypes.object,
   paymentType: PropTypes.string,
+  amount: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  isVerified: PropTypes.bool,
+  verifiedAmount: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  verifiedProof: PropTypes.string,
+  onVerifyClick: PropTypes.func,
 };

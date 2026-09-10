@@ -82,6 +82,26 @@ function getComparator(order, orderBy) {
     : (a, b) => -descendingComparator(a, b, orderBy);
 }
 
+function getMeltingStageInfo(row) {
+  const melt = row?.meltRecord;
+  if (!melt) {
+    if (getTransitMeltingStatus(row) === 'melted') {
+      return { stage: 'completed', label: 'Melt Completed', color: '#7b1fa2' };
+    }
+    return null;
+  }
+  if (melt.status === 'sold') {
+    return { stage: 'sold', label: 'Bar Sold', color: 'success' };
+  }
+  if (melt.status === 'melt_updated') {
+    return { stage: 'completed', label: 'Melt Completed', color: '#7b1fa2' };
+  }
+  if (melt.status === 'in_melt' || melt.isPreMeltCompleted) {
+    return { stage: 'in_melt', label: 'In Melting', color: '#ed6c02' };
+  }
+  return { stage: 'added', label: 'Added to Melt', color: 'info' };
+}
+
 function applySortFilter(array, comparator, query, filters) {
   const stabilizedThis = array?.map((el, index) => [el, index]) || [];
   stabilizedThis.sort((a, b) => {
@@ -529,10 +549,11 @@ export default function StoreGoldTransit() {
 
                       // Determine store status badge
                       let statusBadge = null;
-                      if (getTransitMeltingStatus(row) === 'melted') {
-                        statusBadge = <Label sx={{ bgcolor: '#7b1fa2', color: '#fff', fontWeight: 600 }}>Melted</Label>;
-                      } else if (getTransitMeltingStatus(row) === 'partial') {
-                        statusBadge = <Label color="info">Partially Melted</Label>;
+                      const meltStageInfo = getMeltingStageInfo(row);
+                      if (meltStageInfo) {
+                        statusBadge = typeof meltStageInfo.color === 'string' && meltStageInfo.color.startsWith('#')
+                          ? <Label sx={{ bgcolor: meltStageInfo.color, color: '#fff', fontWeight: 600 }}>{meltStageInfo.label}</Label>
+                          : <Label color={meltStageInfo.color}>{meltStageInfo.label}</Label>;
                       } else if (!storeReceived && status === 'intransit') {
                         statusBadge = <Label color="warning">Pending Receipt</Label>;
                       } else if (deviations === 'yes' || status === 'submitted') {

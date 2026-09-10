@@ -166,9 +166,50 @@ async function find(query = {}) {
               },
             },
             {
+              $lookup: {
+                from: "fileuploads",
+                let: { bankIds: { $ifNull: ["$bank._id", []] } },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $in: ["$uploadId", "$$bankIds"] },
+                          { $eq: ["$uploadName", "customer_bank"] }
+                        ]
+                      }
+                    }
+                  }
+                ],
+                as: "bankProofs",
+              },
+            },
+            {
               $addFields: {
                 profileImage: { $first: "$profileImage" },
                 signatureImage: { $first: "$signatureImage" },
+                bank: {
+                  $map: {
+                    input: { $ifNull: ["$bank", []] },
+                    as: "b",
+                    in: {
+                      $mergeObjects: [
+                        "$$b",
+                        {
+                          proof: {
+                            $first: {
+                              $filter: {
+                                input: "$bankProofs",
+                                as: "bp",
+                                cond: { $eq: [{ $toString: "$$bp.uploadId" }, { $toString: "$$b._id" }] }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
               },
             },
           ],
@@ -647,9 +688,50 @@ async function findById(id) {
               },
             },
             {
+              $lookup: {
+                from: "fileuploads",
+                let: { bankIds: { $ifNull: ["$bank._id", []] } },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $in: ["$uploadId", "$$bankIds"] },
+                          { $eq: ["$uploadName", "customer_bank"] }
+                        ]
+                      }
+                    }
+                  }
+                ],
+                as: "bankProofs",
+              },
+            },
+            {
               $addFields: {
                 profileImage: { $first: "$profileImage" },
                 signatureImage: { $first: "$signatureImage" },
+                bank: {
+                  $map: {
+                    input: { $ifNull: ["$bank", []] },
+                    as: "b",
+                    in: {
+                      $mergeObjects: [
+                        "$$b",
+                        {
+                          proof: {
+                            $first: {
+                              $filter: {
+                                input: "$bankProofs",
+                                as: "bp",
+                                cond: { $eq: [{ $toString: "$$bp.uploadId" }, { $toString: "$$b._id" }] }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
               },
             },
           ],
@@ -1162,8 +1244,33 @@ async function update(id, payload) {
 
     const pushOps = {};
     if (payload.newFinancePayment) {
-      pushOps.financePayments = payload.newFinancePayment;
+      const newFp = payload.newFinancePayment;
       delete payload.newFinancePayment;
+
+      // Stamp the stage at the time of payment
+      const isPledgedReleaseStage = sale.saleType === 'pledged' && !sale.assigneeCompleted;
+      newFp.stage = isPledgedReleaseStage ? 'release' : 'sale';
+
+      let existingIdx = -1;
+      if (sale.financePayments && sale.financePayments.length > 0 && newFp.bank) {
+        existingIdx = sale.financePayments.findIndex(
+          (fp) =>
+            !fp.isVerified &&
+            ((fp.bank?.accountNo && newFp.bank?.accountNo && String(fp.bank.accountNo) === String(newFp.bank.accountNo)) ||
+             (fp.bank?.bankId && newFp.bank?.bankId && String(fp.bank.bankId) === String(newFp.bank.bankId)))
+        );
+      }
+
+      if (existingIdx >= 0) {
+        sale.financePayments[existingIdx].amount = newFp.amount;
+        sale.financePayments[existingIdx].proof = newFp.proof || sale.financePayments[existingIdx].proof;
+        sale.financePayments[existingIdx].comments = newFp.comments || sale.financePayments[existingIdx].comments;
+        sale.financePayments[existingIdx].bank = newFp.bank;
+        sale.financePayments[existingIdx].stage = newFp.stage;
+        payload.financePayments = sale.financePayments;
+      } else {
+        pushOps.financePayments = newFp;
+      }
     }
 
     const updateQuery = { $set: payload };
@@ -1260,8 +1367,33 @@ async function updateWithLog(id, setData, logEntry) {
     };
 
     if (setData.newFinancePayment) {
-      pushOps.financePayments = setData.newFinancePayment;
+      const newFp = setData.newFinancePayment;
       delete setData.newFinancePayment;
+
+      // Stamp the stage at the time of payment
+      const isPledgedReleaseStage = sale.saleType === 'pledged' && !sale.assigneeCompleted;
+      newFp.stage = isPledgedReleaseStage ? 'release' : 'sale';
+
+      let existingIdx = -1;
+      if (sale.financePayments && sale.financePayments.length > 0 && newFp.bank) {
+        existingIdx = sale.financePayments.findIndex(
+          (fp) =>
+            !fp.isVerified &&
+            ((fp.bank?.accountNo && newFp.bank?.accountNo && String(fp.bank.accountNo) === String(newFp.bank.accountNo)) ||
+             (fp.bank?.bankId && newFp.bank?.bankId && String(fp.bank.bankId) === String(newFp.bank.bankId)))
+        );
+      }
+
+      if (existingIdx >= 0) {
+        sale.financePayments[existingIdx].amount = newFp.amount;
+        sale.financePayments[existingIdx].proof = newFp.proof || sale.financePayments[existingIdx].proof;
+        sale.financePayments[existingIdx].comments = newFp.comments || sale.financePayments[existingIdx].comments;
+        sale.financePayments[existingIdx].bank = newFp.bank;
+        sale.financePayments[existingIdx].stage = newFp.stage;
+        setData.financePayments = sale.financePayments;
+      } else {
+        pushOps.financePayments = newFp;
+      }
     }
 
     const updatedSale = await Sales.findByIdAndUpdate(
@@ -1665,6 +1797,78 @@ async function triggerCompletedInvoiceWhatsApp(saleId) {
   }
 }
 
+async function verifyFinancePayment(saleId, paymentId, payload, user) {
+  try {
+    const sale = await Sales.findById(saleId).exec();
+    if (!sale) throw new Error("Sale not found");
+
+    const performerId = user?.employee || user?._id;
+    const verifiedAmount = Number(payload.amount) || 0;
+    const verifiedProof = payload.proof || "";
+
+    let paymentFound = false;
+    if (sale.financePayments && sale.financePayments.length > 0) {
+      for (let i = 0; i < sale.financePayments.length; i++) {
+        const fp = sale.financePayments[i];
+        if ((fp._id && String(fp._id) === String(paymentId)) || String(i) === String(paymentId)) {
+          fp.isVerified = true;
+          fp.verifiedAmount = verifiedAmount;
+          fp.verifiedProof = verifiedProof;
+          fp.verifiedAt = new Date();
+          paymentFound = true;
+          break;
+        }
+      }
+    }
+
+    if (!paymentFound) {
+      sale.financePayments.push({
+        amount: verifiedAmount,
+        proof: verifiedProof,
+        isVerified: true,
+        verifiedAmount: verifiedAmount,
+        verifiedProof: verifiedProof,
+        verifiedAt: new Date(),
+      });
+    }
+
+    if (sale.timeline) {
+      sale.timeline.push({
+        event: "Payment Processed",
+        performedBy: performerId,
+        performedAt: new Date(),
+        details: `Bank payment of ₹${Number(verifiedAmount).toLocaleString('en-IN')} verified and processed`,
+        proof: verifiedProof || null,
+      });
+    }
+
+    sale.markModified('financePayments');
+    sale.markModified('timeline');
+    await sale.save();
+
+    if (verifiedProof) {
+      try {
+        const fileUploadModel = require("../models/fileupload");
+        await fileUploadModel.findOneAndUpdate(
+          { uploadedFile: verifiedProof, uploadId: saleId },
+          {
+            $set: {
+              documentType: 'Verified Bank Payment Proof',
+              documentNo: `₹${Number(verifiedAmount).toLocaleString('en-IN')}`,
+            }
+          }
+        ).exec();
+      } catch (e) {
+        console.error("Error updating fileupload for verified payment:", e);
+      }
+    }
+
+    return await findById(saleId);
+  } catch (err) {
+    throw err;
+  }
+}
+
 module.exports = {
   find,
   findById,
@@ -1673,6 +1877,7 @@ module.exports = {
   create,
   update,
   updateWithLog,
+  verifyFinancePayment,
   remove,
   branchConsolidatedSaleReport,
   adminConsolidatedSaleReport,

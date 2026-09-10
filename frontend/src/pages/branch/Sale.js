@@ -1079,8 +1079,36 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               setFieldValue('comments', res.data.bullionComments);
             }
           } else if (type === 'finance') {
-            if (res.data.payableAmount !== undefined && res.data.payableAmount !== null) {
-              setFieldValue('amount', Math.round(res.data.payableAmount));
+            const isPledgedStage = res.data.saleType === 'pledged' && !res.data.assigneeCompleted;
+            if (isPledgedStage) {
+              const bReleases = (res.data.release || []).filter((r) => r.paymentType === 'bank');
+              if (bReleases.length > 0) {
+                const totalReleaseBankAmt = bReleases.reduce((sum, r) => sum + (+r.payableAmount || 0), 0);
+                setFieldValue('amount', Math.round(totalReleaseBankAmt));
+                const targetBankId = bReleases[0]?.bank?._id || bReleases[0]?.bank;
+                const foundBank = (res.data.customer?.bank || []).find(
+                  (b) => String(b._id) === String(targetBankId) || b.accountNo === bReleases[0]?.bank?.accountNo
+                );
+                if (foundBank) {
+                  setSelectedBank(foundBank);
+                  setFieldValue('bankId', foundBank._id?.toString() || foundBank.accountNo);
+                }
+              } else {
+                const totalReleaseAmt = (res.data.release || []).reduce((sum, r) => sum + (+r.payableAmount || 0), 0);
+                setFieldValue('amount', Math.round(totalReleaseAmt));
+              }
+            } else {
+              if (res.data.payableAmount !== undefined && res.data.payableAmount !== null) {
+                setFieldValue('amount', Math.round(res.data.payableAmount));
+              }
+              if (res.data.bank) {
+                const saleBankId = res.data.bank._id || res.data.bank;
+                const found = (res.data.customer?.bank || []).find((b) => String(b._id) === String(saleBankId));
+                if (found) {
+                  setSelectedBank(found);
+                  setFieldValue('bankId', found._id?.toString() || found.accountNo);
+                }
+              }
             }
           }
         }
@@ -1125,22 +1153,33 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     }
   };
 
+  const isPledgedReleaseStage = saleDetails?.saleType === 'pledged' && !saleDetails?.assigneeCompleted;
+  const bankReleases = isPledgedReleaseStage
+    ? (saleDetails?.release || []).filter((r) => r.paymentType === 'bank')
+    : [];
+  const hasBankRelease = bankReleases.length > 0;
+  const showBankDropdown = type === 'finance' && (
+    isPledgedReleaseStage ? hasBankRelease : saleDetails?.paymentType !== 'cash'
+  );
+
   return (
     <Dialog open={open} onClose={handleModalClose} maxWidth="lg" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
         <DialogContent sx={{ mt: 1, pt: 2 }}>
           <Grid container spacing={3}>
-            {type === 'finance' && saleDetails?.paymentType !== 'cash' && (
+            {showBankDropdown && (
               <Grid item xs={12}>
                 <FormControl fullWidth>
-                  <InputLabel id="choose-bank-label">Choose Bank</InputLabel>
+                  <InputLabel id="choose-bank-label">
+                    {isPledgedReleaseStage ? 'Choose Release Bank' : 'Choose Bank'}
+                  </InputLabel>
                   <Select
                     labelId="choose-bank-label"
                     id="choose-bank-select"
                     name="bankId"
                     value={values.bankId || ''}
-                    label="Choose Bank"
+                    label={isPledgedReleaseStage ? 'Choose Release Bank' : 'Choose Bank'}
                     onChange={(e) => {
                       handleChange(e);
                       const banks = saleDetails?.customer?.bank || [];
@@ -1148,11 +1187,16 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                       setSelectedBank(found || null);
                     }}
                   >
-                    {(saleDetails?.customer?.bank || []).map((b) => (
-                      <MenuItem key={b._id || b.accountNo} value={b._id?.toString() || b.accountNo}>
-                        {b.bankName} - {b.accountNo}
-                      </MenuItem>
-                    ))}
+                    {(saleDetails?.customer?.bank || []).map((b) => {
+                      const isRelBank = (saleDetails?.release || []).some(
+                        (r) => String(r.bank?._id || r.bank) === String(b._id) || r.bank?.accountNo === b.accountNo
+                      );
+                      return (
+                        <MenuItem key={b._id || b.accountNo} value={b._id?.toString() || b.accountNo}>
+                          {b.bankName} - {b.accountNo} {isRelBank ? '(Release Bank)' : ''}
+                        </MenuItem>
+                      );
+                    })}
                     {(!saleDetails?.customer?.bank || saleDetails?.customer?.bank.length === 0) && (
                       <MenuItem value="" disabled>
                         No bank added for this customer

@@ -1084,6 +1084,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           if (type === 'finance' && res.data.payableAmount !== undefined && res.data.payableAmount !== null) {
             setFieldValue('amount', Math.round(res.data.payableAmount));
           }
+
         }
       });
     } else {

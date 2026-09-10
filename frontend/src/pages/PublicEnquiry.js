@@ -75,6 +75,7 @@ const translations = {
     name: 'Full Name',
     phone: 'Phone Number',
     email: 'Email ID',
+    optional: 'Optional',
     submit: 'Submit Enquiry',
     type: 'Gold Type',
     physical: 'Physical Gold',
@@ -106,6 +107,7 @@ const translations = {
     name: 'ಪೂರ್ಣ ಹೆಸರು',
     phone: 'ಫೋನ್ ಸಂಖ್ಯೆ',
     email: 'ಇಮೇಲ್ ಐಡಿ',
+    optional: 'ಐಚ್ಛಿಕ (Optional)',
     submit: 'ವಿಚಾರಣೆ ಸಲ್ಲಿಸಿ',
     type: 'ಚಿನ್ನದ ವಿಧ',
     physical: 'ಭೌತಿಕ ಚಿನ್ನ',
@@ -440,6 +442,7 @@ export default function PublicEnquiry() {
                     <TextField
                         fullWidth
                         label={t.email}
+                        placeholder={t.optional || 'Optional'}
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         type="email"

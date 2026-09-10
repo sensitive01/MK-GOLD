@@ -60,6 +60,7 @@ accountsRouter.get("/sales/get", sales.find);
 accountsRouter.post("/sales/get", sales.find);
 accountsRouter.get("/sales/get/:id", sales.findById);
 accountsRouter.post("/sales/update/:id", sales.update);
+accountsRouter.post("/sales/verify-finance-payment/:id/:paymentId", sales.verifyFinancePayment);
 accountsRouter.post("/sales/delete/:id", sales.remove);
 
 accountsRouter.get("/ornament/get", ornament.find);

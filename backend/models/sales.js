@@ -182,7 +182,12 @@ const Sales = mongoose.model(
           },
           proof: { type: String },
           comments: { type: String },
+          stage: { type: String, enum: ['release', 'sale'], default: 'sale' },
           createdAt: { type: Date, default: Date.now },
+          isVerified: { type: Boolean, default: false },
+          verifiedAmount: { type: Number },
+          verifiedProof: { type: String },
+          verifiedAt: { type: Date },
         },
       ],
       // Fund Transfer Step (After Admin Approval)

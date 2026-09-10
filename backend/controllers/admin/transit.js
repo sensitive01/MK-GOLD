@@ -20,8 +20,24 @@ exports.findTransitData = async (req, res) => {
                 ]
             })
             .sort({ createdAt: -1 });
+        const transitIds = findData.map(t => t._id);
+        const meltingModel = require('../../models/melting');
+        const meltBatches = await meltingModel.find({ transitIds: { $in: transitIds } }).lean().exec();
+        const meltBatchMap = {};
+        meltBatches.forEach(mb => {
+            (mb.transitIds || []).forEach(tid => {
+                const key = String(tid);
+                if (!meltBatchMap[key] || ['melt_updated', 'sold'].includes(mb.status)) {
+                    meltBatchMap[key] = mb;
+                }
+            });
+        });
+
         const formattedData = findData.map(item => {
             const doc = item.toObject();
+            const meltBatch = meltBatchMap[String(doc._id)];
+            const meltBatchCompleted = meltBatch && (meltBatch.status === 'melt_updated' || meltBatch.status === 'sold');
+
             let totalOrns = 0;
             let meltedOrns = 0;
             if (doc.saleIds && Array.isArray(doc.saleIds)) {
@@ -32,7 +48,8 @@ exports.findTransitData = async (req, res) => {
                     }
                 });
             }
-            if (doc.status === 'melted' || (totalOrns > 0 && meltedOrns === totalOrns)) {
+            // Only mark melted if melt batch is actually completed
+            if (doc.status === 'melted' || (meltBatchCompleted && totalOrns > 0 && meltedOrns === totalOrns)) {
                 doc.isMelted = true;
                 doc.meltingStatus = 'melted';
             } else if (meltedOrns > 0) {
@@ -42,6 +59,7 @@ exports.findTransitData = async (req, res) => {
                 doc.isMelted = false;
                 doc.meltingStatus = 'unmelted';
             }
+            doc.meltRecord = meltBatch || null;
             return doc;
         });
 

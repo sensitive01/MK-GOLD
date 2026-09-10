@@ -24,6 +24,10 @@ import {
   IconButton,
   Avatar,
   Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import Backdrop from '@mui/material/Backdrop';
@@ -36,18 +40,21 @@ import { useSelector } from 'react-redux';
 import { LoadingButton } from '@mui/lab';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import Scrollbar from '../../scrollbar';
-import { getSalesById, updateSales } from '../../../apis/accounts/sales';
+import { getSalesById, updateSales, verifyFinancePayment } from '../../../apis/accounts/sales';
 import { createFile } from '../../../apis/branch/fileupload';
 import global from '../../../utils/global';
 import TimelineView from '../../TimelineView';
+import Scrollbar from '../../scrollbar';
 import Iconify from '../../iconify';
 import BankDetailCard from '../../BankDetailCard';
+import VerifyBankPaymentModal from '../../VerifyBankPaymentModal';
 
 export default function SaleDetail({ id, setNotify, onActionComplete }) {
   const auth = useSelector((state) => state.auth);
   const [data, setData] = useState({});
   const [openBackdrop, setOpenBackdrop] = useState(true);
+  const [openVerifyBankModal, setOpenVerifyBankModal] = useState(false);
+  const [selectedVerifyTarget, setSelectedVerifyTarget] = useState(null);
 
   const [openVerifyModal, setOpenVerifyModal] = useState(false);
   const [verifyType, setVerifyType] = useState('');
@@ -379,16 +386,20 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
     const allProofs = [...baseProofs];
 
     const isPhysical = data?.saleType === 'physical';
+    const isPledgedReleaseStage = data?.saleType === 'pledged' && !data?.assigneeCompleted;
     if (data?.financePayments && data.financePayments.length > 0) {
       data.financePayments.forEach((fp, idx) => {
         if (fp.proof) {
           const bankDesc = fp.bank?.bankName && fp.bank?.accountNo 
             ? `${fp.bank.bankName} - ${fp.bank.accountNo}` 
             : (fp.bank?.bankName || '');
+          // Use stored stage if available, else fall back to current stage
+          const fpStage = fp.stage || (isPledgedReleaseStage ? 'release' : 'sale');
+          const proofLabel = isPhysical ? 'Finance Proof' : (fpStage === 'release' ? 'Release Finance Proof' : 'Sale Finance Proof');
           allProofs.push({
             uploadedFile: fp.proof,
-            documentType: isPhysical ? 'Finance Proof' : 'Release Finance Proof',
-            displayType: isPhysical ? 'Finance Proof' : 'Release Finance Proof',
+            documentType: proofLabel,
+            displayType: proofLabel,
             bankDetails: bankDesc || '-',
             amount: fp.amount,
             documentNo: bankDesc || 'N/A',
@@ -401,10 +412,11 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
       const bankDesc = data.bank?.accountNo 
         ? `${data.bank.bankName} - ${data.bank.accountNo}` 
         : (data.bank?.bankName || '');
+      const proofLabel = isPhysical ? 'Finance Proof' : (isPledgedReleaseStage ? 'Release Finance Proof' : 'Sale Finance Proof');
       allProofs.push({
         uploadedFile: data.financeProof,
-        documentType: isPhysical ? 'Finance Proof' : 'Release Finance Proof',
-        displayType: isPhysical ? 'Finance Proof' : 'Release Finance Proof',
+        documentType: proofLabel,
+        displayType: proofLabel,
         bankDetails: bankDesc || '-',
         amount: data.financeAmount || (data.paymentType !== 'cash' ? data.payableAmount : 0),
         documentNo: bankDesc || 'N/A',
@@ -432,6 +444,25 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
 
     allProofs.push(...transitProofs);
     allProofs.push(...meltingProofs);
+
+    (data?.customer?.bank || []).forEach((b, idx) => {
+      if (b.proof?.uploadedFile) {
+        const bankDesc = b.bankName && b.accountNo ? `${b.bankName} - ${b.accountNo}` : (b.bankName || 'Bank Account');
+        const docType = b.proof.documentType || 'Bank Proof';
+        allProofs.push({
+          uploadedFile: b.proof.uploadedFile,
+          documentType: docType,
+          displayType: docType,
+          baseDisplayType: docType,
+          bankDetails: bankDesc,
+          documentNo: bankDesc,
+          _id: `cust_bank_proof_${b._id || idx}`,
+          createdAt: b.proof.createdAt || b.createdAt,
+          categoryRank: 2,
+          categoryLabel: 'Sale',
+        });
+      }
+    });
 
     data?.ornaments?.forEach((orn, idx) => {
       const typeLabel = orn.ornamentType || `Ornament #${idx + 1}`;
@@ -463,7 +494,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
        
        if (!docType && e.uploadName && e.uploadName !== 'Release Document' && e.uploadName !== 'release') {
          if (e.uploadName === 'finance_proof') {
-           displayType = isPhysical ? 'Finance Proof' : 'Release Finance Proof';
+           displayType = isPhysical ? 'Finance Proof' : 'Sale Finance Proof';
          } else if (e.uploadName === 'sale_finance_proof' || e.uploadName === 'sale_proof') {
            displayType = 'Sale Finance Proof';
          } else if (e.uploadName === 'transit_proof') {
@@ -480,7 +511,9 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
            displayType = e.uploadName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
          }
        } else if (docType === 'Release Finance Proof' || docType === 'Finance Proof') {
-           displayType = isPhysical ? 'Finance Proof' : (docType || 'Finance Proof');
+           displayType = isPhysical ? 'Finance Proof' : (docType === 'Release Finance Proof' ? 'Release Finance Proof' : 'Finance Proof');
+       } else if (docType === 'Sale Finance Proof') {
+           displayType = 'Sale Finance Proof';
        }
 
        if (displayType.toLowerCase() === 'sale finance proof') displayType = 'Sale Finance Proof';
@@ -528,12 +561,11 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
       const docType = (proof.documentType || proof.baseDisplayType || '').toLowerCase();
       const id = String(proof._id || '');
 
-      // 1. Release
       if (
         id.startsWith('rel_') ||
-        docType.includes('release') ||
+        (docType.includes('release') && !docType.includes('sale finance')) ||
         uploadName === 'release' ||
-        (!isPhysical && uploadName === 'finance_proof')
+        (!isPhysical && uploadName === 'finance_proof' && id.startsWith('rel_'))
       ) {
         return { rank: 1, label: 'Release' };
       }
@@ -998,16 +1030,83 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                 </Grid>
               </>
             )}
-            {(data?.paymentType === 'bank' || data?.bank?.accountNo) && (
-              <>
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
-                    Bank Detail:
-                  </Typography>
-                  <BankDetailCard bank={data?.bank} paymentType={data?.paymentType} />
-                </Grid>
-              </>
-            )}
+            {(() => {
+              const rawFinanceBanks = (data?.financePayments || [])
+                .filter((fp) => fp.bank?.bankName || fp.bank?.accountNo);
+
+              const bankMap = new Map();
+              rawFinanceBanks.forEach((fp, idx) => {
+                const key = fp.bank?.accountNo || fp.bank?.bankId || String(idx);
+                const matchedBank = (data?.customer?.bank || []).find(
+                  (b) =>
+                    (b._id && fp.bank?.bankId && String(b._id) === String(fp.bank.bankId)) ||
+                    (b.accountNo && fp.bank?.accountNo && String(b.accountNo) === String(fp.bank.accountNo))
+                );
+                const item = {
+                  payment: fp,
+                  paymentIndex: idx,
+                  fullBank: matchedBank ? { ...matchedBank, ...fp.bank, proof: matchedBank.proof || fp.bank?.proof } : fp.bank,
+                  amount: fp.amount,
+                  isVerified: fp.isVerified || false,
+                  verifiedAmount: fp.verifiedAmount,
+                  verifiedProof: fp.verifiedProof,
+                };
+                if (!bankMap.has(key) || fp.isVerified) {
+                  bankMap.set(key, item);
+                }
+              });
+              const financeBanks = Array.from(bankMap.values());
+
+              if (financeBanks.length > 0) {
+                return (
+                  <Grid item xs={12}>
+                    <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1.5 }}>
+                      Bank Details ({financeBanks.length} Disbursed Account{financeBanks.length > 1 ? 's' : ''}):
+                    </Typography>
+                    <Stack spacing={2}>
+                      {financeBanks.map((fb, idx) => (
+                        <BankDetailCard
+                          key={fb.payment?._id || idx}
+                          bank={fb.fullBank}
+                          paymentType={data?.paymentType}
+                          amount={fb.amount}
+                          isVerified={fb.isVerified}
+                          verifiedAmount={fb.verifiedAmount}
+                          verifiedProof={fb.verifiedProof}
+                          onVerifyClick={() => {
+                            setSelectedVerifyTarget({
+                              payment: fb.payment,
+                              bank: fb.fullBank,
+                            });
+                            setOpenVerifyBankModal(true);
+                          }}
+                        />
+                      ))}
+                    </Stack>
+                  </Grid>
+                );
+              }
+
+              if (data?.paymentType === 'bank' || data?.bank?.accountNo || data?.bank) {
+                const matchedBank = (data?.customer?.bank || []).find(
+                  (b) =>
+                    (b._id && data?.bank?._id && String(b._id) === String(data.bank._id)) ||
+                    (b._id && typeof data?.bank === 'string' && String(b._id) === String(data.bank)) ||
+                    (b.accountNo && data?.bank?.accountNo && String(b.accountNo) === String(data.bank.accountNo))
+                );
+                const fullBank = matchedBank ? { ...matchedBank, ...(typeof data.bank === 'object' ? data.bank : {}), proof: matchedBank.proof || data.bank?.proof } : data.bank;
+                return (
+                  <Grid item xs={12}>
+                    <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
+                      Bank Detail:
+                    </Typography>
+                    <BankDetailCard bank={fullBank} paymentType={data?.paymentType} />
+                  </Grid>
+                );
+              }
+
+              return null;
+            })()}
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
                 Proof Documents
@@ -1109,6 +1208,27 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
         }}
         saleType={data.saleType}
         assigneeCompleted={data.assigneeCompleted}
+      />
+
+      <VerifyBankPaymentModal
+        open={openVerifyBankModal}
+        onClose={() => {
+          setOpenVerifyBankModal(false);
+          setSelectedVerifyTarget(null);
+        }}
+        saleId={id || data?._id || ''}
+        payment={selectedVerifyTarget?.payment}
+        bank={selectedVerifyTarget?.bank}
+        verifyApi={verifyFinancePayment}
+        setNotify={setNotify}
+        onSuccess={() => {
+          getSalesById(id).then((res) => {
+            if (res?.status && res?.data) {
+              setData(res.data);
+            }
+          });
+          onActionComplete?.();
+        }}
       />
     </>
   );
@@ -1217,8 +1337,37 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         if (res?.status && res?.data) {
           setSaleDetails(res.data);
           if (type === 'finance') {
-            if (res.data.payableAmount !== undefined && res.data.payableAmount !== null) {
-              setFieldValue('amount', Math.round(res.data.payableAmount));
+            const sale = res.data;
+            const isPledgedStage = sale.saleType === 'pledged' && !sale.assigneeCompleted;
+            if (isPledgedStage) {
+              const bReleases = (sale.release || []).filter((r) => r.paymentType === 'bank');
+              if (bReleases.length > 0) {
+                const totalReleaseBankAmt = bReleases.reduce((sum, r) => sum + (+r.payableAmount || 0), 0);
+                setFieldValue('amount', Math.round(totalReleaseBankAmt));
+                const targetBankId = bReleases[0]?.bank?._id || bReleases[0]?.bank;
+                const foundBank = (sale.customer?.bank || []).find(
+                  (b) => String(b._id) === String(targetBankId) || b.accountNo === bReleases[0]?.bank?.accountNo
+                );
+                if (foundBank) {
+                  setSelectedBank(foundBank);
+                  setFieldValue('bankId', foundBank._id?.toString() || foundBank.accountNo);
+                }
+              } else {
+                const totalReleaseAmt = (sale.release || []).reduce((sum, r) => sum + (+r.payableAmount || 0), 0);
+                setFieldValue('amount', Math.round(totalReleaseAmt));
+              }
+            } else {
+              if (sale.payableAmount !== undefined && sale.payableAmount !== null) {
+                setFieldValue('amount', Math.round(sale.payableAmount));
+              }
+              if (sale.bank) {
+                const saleBankId = sale.bank._id || sale.bank;
+                const found = (sale.customer?.bank || []).find((b) => String(b._id) === String(saleBankId));
+                if (found) {
+                  setSelectedBank(found);
+                  setFieldValue('bankId', found._id?.toString() || found.accountNo);
+                }
+              }
             }
           }
         }
@@ -1269,22 +1418,33 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     }
   };
 
+  const isPledgedReleaseStage = saleDetails?.saleType === 'pledged' && !saleDetails?.assigneeCompleted;
+  const bankReleases = isPledgedReleaseStage
+    ? (saleDetails?.release || []).filter((r) => r.paymentType === 'bank')
+    : [];
+  const hasBankRelease = bankReleases.length > 0;
+  const showBankDropdown = type === 'finance' && (
+    isPledgedReleaseStage ? hasBankRelease : saleDetails?.paymentType !== 'cash'
+  );
+
   return (
     <Dialog open={open} onClose={handleModalClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
         <DialogContent sx={{ pt: 2, mt: 1 }}>
           <Grid container spacing={3}>
-            {type === 'finance' && saleDetails?.paymentType !== 'cash' && (
+            {showBankDropdown && (
               <Grid item xs={12}>
                 <FormControl fullWidth>
-                  <InputLabel id="choose-bank-label">Choose Bank</InputLabel>
+                  <InputLabel id="choose-bank-label">
+                    {isPledgedReleaseStage ? 'Choose Release Bank' : 'Choose Bank'}
+                  </InputLabel>
                   <Select
                     labelId="choose-bank-label"
                     id="choose-bank-select"
                     name="bankId"
                     value={values.bankId || ''}
-                    label="Choose Bank"
+                    label={isPledgedReleaseStage ? 'Choose Release Bank' : 'Choose Bank'}
                     onChange={(e) => {
                       handleChange(e);
                       const banks = saleDetails?.customer?.bank || [];
@@ -1292,11 +1452,16 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                       setSelectedBank(found || null);
                     }}
                   >
-                    {(saleDetails?.customer?.bank || []).map((b) => (
-                      <MenuItem key={b._id || b.accountNo} value={b._id?.toString() || b.accountNo}>
-                        {b.bankName} - {b.accountNo}
-                      </MenuItem>
-                    ))}
+                    {(saleDetails?.customer?.bank || []).map((b) => {
+                      const isRelBank = (saleDetails?.release || []).some(
+                        (r) => String(r.bank?._id || r.bank) === String(b._id) || r.bank?.accountNo === b.accountNo
+                      );
+                      return (
+                        <MenuItem key={b._id || b.accountNo} value={b._id?.toString() || b.accountNo}>
+                          {b.bankName} - {b.accountNo} {isRelBank ? '(Release Bank)' : ''}
+                        </MenuItem>
+                      );
+                    })}
                     {(!saleDetails?.customer?.bank || saleDetails?.customer?.bank.length === 0) && (
                       <MenuItem value="" disabled>
                         No bank added for this customer

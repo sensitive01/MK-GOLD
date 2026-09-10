@@ -45,4 +45,13 @@ async function deleteSalesById(id) {
   }
 }
 
-export { getSales, getSalesById, findSales, updateSales, deleteSalesById };
+async function verifyFinancePayment(id, paymentId, payload) {
+  try {
+    const response = await apiClient().post(`/api/v1.0/accounts/sales/verify-finance-payment/${id}/${paymentId}`, payload);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+export { getSales, getSalesById, findSales, updateSales, deleteSalesById, verifyFinancePayment };
