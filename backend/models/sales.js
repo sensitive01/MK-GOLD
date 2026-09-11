@@ -175,6 +175,7 @@ const Sales = mongoose.model(
       financePayments: [
         {
           amount: { type: Number },
+          paymentType: { type: String, enum: ['cash', 'bank'], default: 'bank' },
           bank: {
             bankId: { type: mongoose.Schema.Types.ObjectId },
             bankName: { type: String },

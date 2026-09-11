@@ -1081,8 +1081,52 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           if (res.data.ornaments) {
             setOrnaments(res.data.ornaments);
           }
-          if (type === 'finance' && res.data.payableAmount !== undefined && res.data.payableAmount !== null) {
-            setFieldValue('amount', Math.round(res.data.payableAmount));
+          if (type === 'finance') {
+            if (res.data.paymentType === 'partial') {
+              const existingSalePayments = (res.data.financePayments || []).filter((fp) => fp.stage === 'sale');
+              const alreadyPaidCash = existingSalePayments
+                .filter((fp) => fp.paymentType === 'cash' || (!fp.bank?.bankId && !fp.bank?.accountNo && !fp.bank?.bankName))
+                .reduce((sum, fp) => sum + (+fp.amount || 0), 0);
+              const alreadyPaidBank = existingSalePayments
+                .filter((fp) => fp.paymentType === 'bank' || fp.bank?.accountNo || fp.bank?.bankName)
+                .reduce((sum, fp) => sum + (+fp.amount || 0), 0);
+
+              const expectedCash = res.data.cashAmount || 0;
+              const expectedBank = res.data.bankAmount || 0;
+              const remCash = Math.max(0, expectedCash - alreadyPaidCash);
+              const remBank = Math.max(0, expectedBank - alreadyPaidBank);
+
+              setFieldValue('cashAmount', remCash);
+              setFieldValue('bankAmount', remBank);
+              setFieldValue('amount', remCash + remBank);
+
+              if (res.data.bank) {
+                const saleBankId = res.data.bank._id || res.data.bank;
+                const found = (res.data.customer?.bank || []).find(
+                  (b) => String(b._id) === String(saleBankId) || b.accountNo === res.data.bank?.accountNo
+                );
+                if (found) {
+                  setSelectedBank(found);
+                  setFieldValue('bankId', found._id?.toString() || found.accountNo);
+                }
+              }
+            } else {
+              const fullPayable = res.data.payableAmount !== undefined && res.data.payableAmount !== null ? res.data.payableAmount : 0;
+              const existingSalePayments = (res.data.financePayments || []).filter((fp) => fp.stage === 'sale');
+              const alreadyPaidSale = existingSalePayments.reduce((sum, fp) => sum + (+fp.amount || 0), 0);
+              const remSale = Math.max(0, fullPayable - alreadyPaidSale);
+
+              setFieldValue('amount', Math.round(remSale > 0 ? remSale : fullPayable));
+
+              if (res.data.bank) {
+                const saleBankId = res.data.bank._id || res.data.bank;
+                const found = (res.data.customer?.bank || []).find((b) => String(b._id) === String(saleBankId));
+                if (found) {
+                  setSelectedBank(found);
+                  setFieldValue('bankId', found._id?.toString() || found.accountNo);
+                }
+              }
+            }
           }
 
         }
@@ -1097,7 +1141,13 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
   }, [id, open]);
 
   const schema = Yup.object({
-    amount: Yup.number().required('Amount is required'),
+    amount: Yup.number().when([], {
+      is: () => type !== 'finance' || saleDetails?.paymentType !== 'partial',
+      then: (s) => s.required('Amount is required'),
+      otherwise: (s) => s.nullable(),
+    }),
+    cashAmount: Yup.number().nullable(),
+    bankAmount: Yup.number().nullable(),
     comments: Yup.string().required('Comments are required'),
     isCompleted: Yup.boolean(),
   });
@@ -1105,6 +1155,8 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
   const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue } = useFormik({
     initialValues: {
       amount: '',
+      cashAmount: '',
+      bankAmount: '',
       bankId: '',
       comments: '',
       proof: '',
@@ -1122,21 +1174,66 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
 
       const payload = {};
       if (type === 'finance') {
-        payload.financeAmount = values.amount !== '' ? Number(values.amount) : undefined;
-        payload.payableAmount = values.amount !== '' ? Number(values.amount) : saleDetails?.payableAmount;
-        payload.financeComments = values.comments;
-        payload.financeProof = values.proof;
-        payload.newFinancePayment = {
-          amount: values.amount !== '' ? Number(values.amount) : 0,
-          bank: selectedBank ? {
-            bankId: selectedBank._id,
-            bankName: selectedBank.bankName,
-            accountNo: selectedBank.accountNo,
-          } : null,
-          proof: values.proof,
-          comments: values.comments,
-          createdAt: new Date(),
-        };
+        const isPartial = saleDetails?.paymentType === 'partial';
+        if (isPartial) {
+          const cashNum = values.cashAmount !== '' ? Number(values.cashAmount) : 0;
+          const bankNum = values.bankAmount !== '' ? Number(values.bankAmount) : 0;
+          const newPayments = [];
+
+          if (cashNum > 0) {
+            newPayments.push({
+              amount: cashNum,
+              paymentType: 'cash',
+              bank: null,
+              proof: bankNum === 0 ? values.proof : '',
+              comments: values.comments,
+              createdAt: new Date(),
+            });
+          }
+
+          if (bankNum > 0) {
+            newPayments.push({
+              amount: bankNum,
+              paymentType: 'bank',
+              bank: selectedBank ? {
+                bankId: selectedBank._id,
+                bankName: selectedBank.bankName,
+                accountNo: selectedBank.accountNo,
+              } : (saleDetails?.bank ? {
+                bankId: saleDetails.bank._id || saleDetails.bank,
+                bankName: saleDetails.bank.bankName,
+                accountNo: saleDetails.bank.accountNo,
+              } : null),
+              proof: values.proof,
+              comments: values.comments,
+              createdAt: new Date(),
+            });
+          }
+
+          payload.newFinancePayments = newPayments;
+          payload.financeAmount = (saleDetails?.financeAmount || 0) + cashNum + bankNum;
+          payload.payableAmount = saleDetails?.payableAmount;
+          payload.financeComments = values.comments;
+          if (values.proof) payload.financeProof = values.proof;
+        } else {
+          payload.financeAmount = values.amount !== '' ? Number(values.amount) : undefined;
+          payload.payableAmount = saleDetails?.payableAmount;
+          payload.financeComments = values.comments;
+          payload.financeProof = values.proof;
+          payload.newFinancePayment = {
+            amount: values.amount !== '' ? Number(values.amount) : 0,
+            paymentType: saleDetails?.paymentType === 'cash' ? 'cash' : 'bank',
+            bank: selectedBank ? {
+              bankId: selectedBank._id,
+              bankName: selectedBank.bankName,
+              accountNo: selectedBank.accountNo,
+            } : null,
+            proof: values.proof,
+            comments: values.comments,
+            createdAt: new Date(),
+          };
+        }
+
         if (values.isCompleted) {
           payload.financeCompleted = true;
           payload.financeCompletedAt = new Date();
@@ -1316,7 +1413,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         <DialogTitle>{sentenceCase(type || '')} Verification</DialogTitle>
         <DialogContent sx={{ mt: 1, pt: 2 }}>
           <Grid container spacing={3}>
-            {type === 'finance' && saleDetails?.paymentType !== 'cash' && (
+            {type === 'finance' && saleDetails?.paymentType !== 'cash' && saleDetails?.paymentType !== 'partial' && (
               <Grid item xs={12}>
                 <FormControl fullWidth>
                   <InputLabel id="choose-bank-label">Choose Bank</InputLabel>
@@ -1347,19 +1444,115 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                 </FormControl>
               </Grid>
             )}
-            <Grid item xs={12}>
-              <TextField
-                sx={{ mt: 1 }}
-                name="amount"
-                label="Payment Amount"
-                type="number"
-                value={values.amount}
-                error={touched.amount && errors.amount && true}
-                fullWidth
-                onBlur={handleBlur}
-                onChange={handleChange}
-              />
-            </Grid>
+
+            {type === 'finance' && saleDetails?.paymentType === 'partial' ? (
+              <>
+                <Grid item xs={12}>
+                  <Box sx={{ p: 2, bgcolor: '#f4f6f8', borderRadius: 1.5, border: '1px dashed #cfd8dc' }}>
+                    <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 1, fontWeight: 700 }}>
+                      Partial Payment Breakdown
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={4}>
+                        <Typography variant="caption" color="text.secondary" display="block">Total Payable</Typography>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                          ₹{Number(saleDetails?.payableAmount || 0).toLocaleString('en-IN')}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={4}>
+                        <Typography variant="caption" color="text.secondary" display="block">Expected Cash</Typography>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'success.dark' }}>
+                          ₹{Number(saleDetails?.cashAmount || 0).toLocaleString('en-IN')}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={4}>
+                        <Typography variant="caption" color="text.secondary" display="block">Expected Bank</Typography>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'info.dark' }}>
+                          ₹{Number(saleDetails?.bankAmount || 0).toLocaleString('en-IN')}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    name="cashAmount"
+                    label="Cash Amount"
+                    InputLabelProps={{ shrink: true }}
+                    type="number"
+                    value={values.cashAmount}
+                    error={touched.cashAmount && errors.cashAmount && true}
+                    helperText={touched.cashAmount && errors.cashAmount ? errors.cashAmount : `Expected: ₹${Number(saleDetails?.cashAmount || 0).toLocaleString('en-IN')}`}
+                    fullWidth
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                    onFocus={(e) => e.target.select()}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    name="bankAmount"
+                    label="Bank Amount"
+                    InputLabelProps={{ shrink: true }}
+                    type="number"
+                    value={values.bankAmount}
+                    error={touched.bankAmount && errors.bankAmount && true}
+                    helperText={touched.bankAmount && errors.bankAmount ? errors.bankAmount : `Expected: ₹${Number(saleDetails?.bankAmount || 0).toLocaleString('en-IN')}`}
+                    fullWidth
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                    onFocus={(e) => e.target.select()}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel id="choose-bank-label">Choose Bank (for Bank portion)</InputLabel>
+                    <Select
+                      labelId="choose-bank-label"
+                      id="choose-bank-select"
+                      name="bankId"
+                      value={values.bankId || ''}
+                      label="Choose Bank (for Bank portion)"
+                      onChange={(e) => {
+                        handleChange(e);
+                        const banks = saleDetails?.customer?.bank || [];
+                        const found = banks.find((b) => (b._id?.toString() || b.accountNo) === e.target.value);
+                        setSelectedBank(found || null);
+                      }}
+                    >
+                      {(saleDetails?.customer?.bank || []).map((b) => (
+                        <MenuItem key={b._id || b.accountNo} value={b._id?.toString() || b.accountNo}>
+                          {b.bankName} - {b.accountNo}
+                        </MenuItem>
+                      ))}
+                      {(!saleDetails?.customer?.bank || saleDetails?.customer?.bank.length === 0) && (
+                        <MenuItem value="" disabled>
+                          No bank added for this customer
+                        </MenuItem>
+                      )}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </>
+            ) : (
+              <Grid item xs={12}>
+                <TextField
+                  sx={{ mt: 1 }}
+                  name="amount"
+                  label="Payment Amount"
+                  type="number"
+                  value={values.amount}
+                  error={touched.amount && errors.amount && true}
+                  fullWidth
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                  onFocus={(e) => e.target.select()}
+                />
+              </Grid>
+            )}
             <Grid item xs={12}>
               <TextField
                 name="comments"

@@ -13,6 +13,7 @@ function getBrowserExecutablePath() {
   const candidates = [
     '/usr/bin/google-chrome',
     '/usr/bin/google-chrome-stable',
+    '/opt/google/chrome/chrome',
     '/usr/bin/chromium',
     '/usr/bin/chromium-browser',
     '/snap/bin/chromium',
@@ -470,8 +471,8 @@ async function generateExactInvoiceHtml(data) {
           <td style="width: 30%; text-align: center; vertical-align: bottom;">
             <div style="height: 50px; display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
               ${signatureBase64
-                ? `<img src="${signatureBase64}" alt="Customer Signature" style="max-height: 50px; max-width: 160px; object-fit: contain;" />`
-                : '<div style="border-bottom: 1px solid #000; width: 80%; height: 100%;"></div>'}
+      ? `<img src="${signatureBase64}" alt="Customer Signature" style="max-height: 50px; max-width: 160px; object-fit: contain;" />`
+      : '<div style="border-bottom: 1px solid #000; width: 80%; height: 100%;"></div>'}
             </div>
             <span style="font-size: 11px; font-weight: bold; display: block; border-top: ${signatureBase64 ? '1px solid #000' : 'none'}; width: 80%; margin: 0 auto; padding-top: 4px;">
               Customer Signature
@@ -534,7 +535,7 @@ async function printHtmlToPdf(html) {
     execFile(browserPath, args, { timeout: 25000 }, (error) => {
       try {
         if (fs.existsSync(tempHtml)) fs.unlinkSync(tempHtml);
-      } catch (e) {}
+      } catch (e) { }
 
       if (error && !fs.existsSync(tempPdf)) {
         return reject(error);
@@ -545,7 +546,7 @@ async function printHtmlToPdf(html) {
           const pdfBuffer = fs.readFileSync(tempPdf);
           try {
             fs.unlinkSync(tempPdf);
-          } catch (e) {}
+          } catch (e) { }
           return resolve(pdfBuffer);
         }
         reject(new Error('PDF file was not created by browser'));

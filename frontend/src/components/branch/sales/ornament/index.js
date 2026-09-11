@@ -514,23 +514,6 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
 
               <Grid item xs={12} sm={6} md={3}>
                 <TextField
-                  name="purity"
-                  type="number"
-                  value={values.purity}
-                  error={touched.purity && errors.purity && true}
-                  label={touched.purity && errors.purity ? errors.purity : 'Purity (%)'}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                  }}
-                  fullWidth
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                />
-              </Grid>
-
-              {/* Row 2: Weights & Net Amount (A balanced 4-column row) */}
-              <Grid item xs={12} sm={6} md={3}>
-                <TextField
                   name="grossWeight"
                   type="number"
                   value={values.grossWeight}
@@ -553,13 +536,14 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                 />
               </Grid>
 
+              {/* Row 2: Stone / Wastage, Net Weight, Purity, Net Amount */}
               <Grid item xs={12} sm={6} md={3}>
                 <TextField
                   name="stoneWeight"
                   type="number"
                   value={values.stoneWeight}
                   error={touched.stoneWeight && errors.stoneWeight && true}
-                  label={touched.stoneWeight && errors.stoneWeight ? errors.stoneWeight : 'Stone Weight'}
+                  label={touched.stoneWeight && errors.stoneWeight ? errors.stoneWeight : 'Stone / Wastage'}
                   InputProps={{
                     endAdornment: <InputAdornment position="end">g</InputAdornment>,
                   }}
@@ -589,6 +573,22 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                     endAdornment: <InputAdornment position="end">g</InputAdornment>,
                   }}
                   helperText="Auto (Gross - Stone)"
+                  fullWidth
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  name="purity"
+                  type="number"
+                  value={values.purity}
+                  error={touched.purity && errors.purity && true}
+                  label={touched.purity && errors.purity ? errors.purity : 'Purity (%)'}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  }}
                   fullWidth
                   onBlur={handleBlur}
                   onChange={handleChange}

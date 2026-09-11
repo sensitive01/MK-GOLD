@@ -92,12 +92,19 @@ export default function VerifyBankPaymentModal({
     setLoading(true);
     try {
       // 1. Upload proof file
+      const bankLabel = bankName && accountNo && accountNo !== 'N/A'
+        ? `${bankName} - ${accountNo}`
+        : (bankName && bankName !== 'Bank' ? bankName : '');
+      const docNo = bankLabel
+        ? `${bankLabel} | ₹${Number(amount).toLocaleString('en-IN')}`
+        : `₹${Number(amount).toLocaleString('en-IN')}`;
+
       const formData = new FormData();
       formData.append('uploadedFile', proofFile);
       formData.append('uploadId', saleId);
       formData.append('uploadName', 'verified_bank_proof');
       formData.append('documentType', 'Verified Bank Payment Proof');
-      formData.append('documentNo', `₹${Number(amount).toLocaleString('en-IN')}`);
+      formData.append('documentNo', docNo);
 
       const uploadRes = await createFile(formData);
       if (!uploadRes || !uploadRes.status) {
@@ -239,6 +246,7 @@ export default function VerifyBankPaymentModal({
                 setAmount(e.target.value);
                 if (amountError) setAmountError('');
               }}
+              onFocus={(e) => e.target.select()}
               error={Boolean(amountError)}
               helperText={amountError}
               InputProps={{

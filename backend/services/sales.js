@@ -775,7 +775,9 @@ async function findById(id) {
                 input: {
                   $concatArrays: [
                     { $map: { input: "$transits", as: "t", in: "$$t.proof" } },
-                    { $map: { input: "$transits", as: "t", in: "$$t.receivedProof" } }
+                    { $map: { input: "$transits", as: "t", in: "$$t.receivedProof" } },
+                    { $map: { input: "$transits", as: "t", in: "$$t.storeProof" } },
+                    { $map: { input: "$transits", as: "t", in: "$$t.adminProof" } }
                   ]
                 },
                 as: "pid",
@@ -802,7 +804,6 @@ async function findById(id) {
       },
       {
          $project: {
-            transits: 0,
             transitProofs: 0
          }
       },
@@ -851,7 +852,6 @@ async function findById(id) {
       },
       {
          $project: {
-            meltings: 0,
             meltingProofs: 0
          }
       },
@@ -1243,34 +1243,24 @@ async function update(id, payload) {
     }
 
     const pushOps = {};
-    if (payload.newFinancePayment) {
+    const isPledgedReleaseStage = sale.saleType === 'pledged' && !sale.assigneeCompleted;
+    const defaultStage = isPledgedReleaseStage ? 'release' : 'sale';
+
+    let paymentsToAdd = [];
+    if (payload.newFinancePayments && Array.isArray(payload.newFinancePayments) && payload.newFinancePayments.length > 0) {
+      paymentsToAdd = payload.newFinancePayments.map((fp) => ({
+        ...fp,
+        stage: fp.stage || defaultStage,
+      }));
+      delete payload.newFinancePayments;
+      delete payload.newFinancePayment;
+      pushOps.financePayments = { $each: paymentsToAdd };
+    } else if (payload.newFinancePayment) {
       const newFp = payload.newFinancePayment;
       delete payload.newFinancePayment;
-
-      // Stamp the stage at the time of payment
-      const isPledgedReleaseStage = sale.saleType === 'pledged' && !sale.assigneeCompleted;
-      newFp.stage = isPledgedReleaseStage ? 'release' : 'sale';
-
-      let existingIdx = -1;
-      if (sale.financePayments && sale.financePayments.length > 0 && newFp.bank) {
-        existingIdx = sale.financePayments.findIndex(
-          (fp) =>
-            !fp.isVerified &&
-            ((fp.bank?.accountNo && newFp.bank?.accountNo && String(fp.bank.accountNo) === String(newFp.bank.accountNo)) ||
-             (fp.bank?.bankId && newFp.bank?.bankId && String(fp.bank.bankId) === String(newFp.bank.bankId)))
-        );
-      }
-
-      if (existingIdx >= 0) {
-        sale.financePayments[existingIdx].amount = newFp.amount;
-        sale.financePayments[existingIdx].proof = newFp.proof || sale.financePayments[existingIdx].proof;
-        sale.financePayments[existingIdx].comments = newFp.comments || sale.financePayments[existingIdx].comments;
-        sale.financePayments[existingIdx].bank = newFp.bank;
-        sale.financePayments[existingIdx].stage = newFp.stage;
-        payload.financePayments = sale.financePayments;
-      } else {
-        pushOps.financePayments = newFp;
-      }
+      newFp.stage = newFp.stage || defaultStage;
+      pushOps.financePayments = newFp;
+      paymentsToAdd = [newFp];
     }
 
     const updateQuery = { $set: payload };
@@ -1282,25 +1272,29 @@ async function update(id, payload) {
       returnDocument: "after",
     }).exec();
 
-    if (pushOps.financePayments && pushOps.financePayments.proof) {
+    if (paymentsToAdd.length > 0) {
       try {
         const fileUploadModel = require("../models/fileupload");
-        const bankInfo = pushOps.financePayments.bank;
-        const bankDesc = bankInfo?.bankName && bankInfo?.accountNo 
-          ? `${bankInfo.bankName} - ${bankInfo.accountNo}` 
-          : (bankInfo?.bankName || '');
-        const amountStr = pushOps.financePayments.amount 
-          ? `₹${Number(pushOps.financePayments.amount).toLocaleString('en-IN')}` 
-          : '';
-        await fileUploadModel.findOneAndUpdate(
-          { uploadedFile: pushOps.financePayments.proof, uploadId: id },
-          {
-            $set: {
-              documentType: 'Finance Proof',
-              documentNo: bankDesc ? `${bankDesc}${amountStr ? ` | ${amountStr}` : ''}` : (amountStr || 'Finance Payment'),
-            }
+        for (const p of paymentsToAdd) {
+          if (p.proof) {
+            const bankInfo = p.bank;
+            const bankDesc = bankInfo?.bankName && bankInfo?.accountNo 
+              ? `${bankInfo.bankName} - ${bankInfo.accountNo}` 
+              : (bankInfo?.bankName || (p.paymentType === 'cash' ? 'Cash' : ''));
+            const amountStr = p.amount 
+              ? `₹${Number(p.amount).toLocaleString('en-IN')}` 
+              : '';
+            await fileUploadModel.findOneAndUpdate(
+              { uploadedFile: p.proof, uploadId: id },
+              {
+                $set: {
+                  documentType: 'Finance Proof',
+                  documentNo: bankDesc ? `${bankDesc}${amountStr ? ` | ${amountStr}` : ''}` : (amountStr || 'Finance Payment'),
+                }
+              }
+            ).exec();
           }
-        ).exec();
+        }
       } catch (err) {
         console.error("Error updating fileupload for finance proof:", err);
       }
@@ -1366,34 +1360,24 @@ async function updateWithLog(id, setData, logEntry) {
       timeline: timelineEntry
     };
 
-    if (setData.newFinancePayment) {
+    const isPledgedReleaseStage = sale.saleType === 'pledged' && !sale.assigneeCompleted;
+    const defaultStage = isPledgedReleaseStage ? 'release' : 'sale';
+
+    let paymentsToAdd = [];
+    if (setData.newFinancePayments && Array.isArray(setData.newFinancePayments) && setData.newFinancePayments.length > 0) {
+      paymentsToAdd = setData.newFinancePayments.map((fp) => ({
+        ...fp,
+        stage: fp.stage || defaultStage,
+      }));
+      delete setData.newFinancePayments;
+      delete setData.newFinancePayment;
+      pushOps.financePayments = { $each: paymentsToAdd };
+    } else if (setData.newFinancePayment) {
       const newFp = setData.newFinancePayment;
       delete setData.newFinancePayment;
-
-      // Stamp the stage at the time of payment
-      const isPledgedReleaseStage = sale.saleType === 'pledged' && !sale.assigneeCompleted;
-      newFp.stage = isPledgedReleaseStage ? 'release' : 'sale';
-
-      let existingIdx = -1;
-      if (sale.financePayments && sale.financePayments.length > 0 && newFp.bank) {
-        existingIdx = sale.financePayments.findIndex(
-          (fp) =>
-            !fp.isVerified &&
-            ((fp.bank?.accountNo && newFp.bank?.accountNo && String(fp.bank.accountNo) === String(newFp.bank.accountNo)) ||
-             (fp.bank?.bankId && newFp.bank?.bankId && String(fp.bank.bankId) === String(newFp.bank.bankId)))
-        );
-      }
-
-      if (existingIdx >= 0) {
-        sale.financePayments[existingIdx].amount = newFp.amount;
-        sale.financePayments[existingIdx].proof = newFp.proof || sale.financePayments[existingIdx].proof;
-        sale.financePayments[existingIdx].comments = newFp.comments || sale.financePayments[existingIdx].comments;
-        sale.financePayments[existingIdx].bank = newFp.bank;
-        sale.financePayments[existingIdx].stage = newFp.stage;
-        setData.financePayments = sale.financePayments;
-      } else {
-        pushOps.financePayments = newFp;
-      }
+      newFp.stage = newFp.stage || defaultStage;
+      pushOps.financePayments = newFp;
+      paymentsToAdd = [newFp];
     }
 
     const updatedSale = await Sales.findByIdAndUpdate(
@@ -1405,25 +1389,29 @@ async function updateWithLog(id, setData, logEntry) {
       { returnDocument: "after" }
     ).exec();
 
-    if (pushOps.financePayments && pushOps.financePayments.proof) {
+    if (paymentsToAdd.length > 0) {
       try {
         const fileUploadModel = require("../models/fileupload");
-        const bankInfo = pushOps.financePayments.bank;
-        const bankDesc = bankInfo?.bankName && bankInfo?.accountNo 
-          ? `${bankInfo.bankName} - ${bankInfo.accountNo}` 
-          : (bankInfo?.bankName || '');
-        const amountStr = pushOps.financePayments.amount 
-          ? `₹${Number(pushOps.financePayments.amount).toLocaleString('en-IN')}` 
-          : '';
-        await fileUploadModel.findOneAndUpdate(
-          { uploadedFile: pushOps.financePayments.proof, uploadId: id },
-          {
-            $set: {
-              documentType: 'Finance Proof',
-              documentNo: bankDesc ? `${bankDesc}${amountStr ? ` | ${amountStr}` : ''}` : (amountStr || 'Finance Payment'),
-            }
+        for (const p of paymentsToAdd) {
+          if (p.proof) {
+            const bankInfo = p.bank;
+            const bankDesc = bankInfo?.bankName && bankInfo?.accountNo 
+              ? `${bankInfo.bankName} - ${bankInfo.accountNo}` 
+              : (bankInfo?.bankName || (p.paymentType === 'cash' ? 'Cash' : ''));
+            const amountStr = p.amount 
+              ? `₹${Number(p.amount).toLocaleString('en-IN')}` 
+              : '';
+            await fileUploadModel.findOneAndUpdate(
+              { uploadedFile: p.proof, uploadId: id },
+              {
+                $set: {
+                  documentType: 'Finance Proof',
+                  documentNo: bankDesc ? `${bankDesc}${amountStr ? ` | ${amountStr}` : ''}` : (amountStr || 'Finance Payment'),
+                }
+              }
+            ).exec();
           }
-        ).exec();
+        }
       } catch (err) {
         console.error("Error updating fileupload for finance proof in updateWithLog:", err);
       }
@@ -1807,6 +1795,9 @@ async function verifyFinancePayment(saleId, paymentId, payload, user) {
     const verifiedProof = payload.proof || "";
 
     let paymentFound = false;
+    let verifiedBankAccountNo = null;
+    let verifiedBankName = null;
+
     if (sale.financePayments && sale.financePayments.length > 0) {
       for (let i = 0; i < sale.financePayments.length; i++) {
         const fp = sale.financePayments[i];
@@ -1816,7 +1807,27 @@ async function verifyFinancePayment(saleId, paymentId, payload, user) {
           fp.verifiedProof = verifiedProof;
           fp.verifiedAt = new Date();
           paymentFound = true;
+          // Remember which bank account was verified
+          verifiedBankAccountNo = fp.bank?.accountNo;
+          verifiedBankName = fp.bank?.bankName;
           break;
+        }
+      }
+
+      // Auto-verify all other unverified payments to the same bank account
+      if (paymentFound && verifiedBankAccountNo) {
+        for (let i = 0; i < sale.financePayments.length; i++) {
+          const fp = sale.financePayments[i];
+          if (
+            !fp.isVerified &&
+            fp.bank?.accountNo &&
+            String(fp.bank.accountNo) === String(verifiedBankAccountNo)
+          ) {
+            fp.isVerified = true;
+            fp.verifiedAmount = fp.verifiedAmount || verifiedAmount;
+            fp.verifiedProof = fp.verifiedProof || verifiedProof;
+            fp.verifiedAt = new Date();
+          }
         }
       }
     }
@@ -1849,15 +1860,34 @@ async function verifyFinancePayment(saleId, paymentId, payload, user) {
     if (verifiedProof) {
       try {
         const fileUploadModel = require("../models/fileupload");
-        await fileUploadModel.findOneAndUpdate(
-          { uploadedFile: verifiedProof, uploadId: saleId },
-          {
-            $set: {
-              documentType: 'Verified Bank Payment Proof',
-              documentNo: `₹${Number(verifiedAmount).toLocaleString('en-IN')}`,
-            }
+        // Build a bank-aware documentNo so the finance payments table can show the correct bank
+        let verifiedDocNo = `₹${Number(verifiedAmount).toLocaleString('en-IN')}`;
+        if (paymentFound) {
+          // Find the matched payment to get its bank info
+          const matchedFp = sale.financePayments.find(
+            (fp, i) => (fp._id && String(fp._id) === String(paymentId)) || String(i) === String(paymentId)
+          );
+          const bankName = matchedFp?.bank?.bankName;
+          const accountNo = matchedFp?.bank?.accountNo;
+          if (bankName && accountNo) {
+            verifiedDocNo = `${bankName} - ${accountNo} | ₹${Number(verifiedAmount).toLocaleString('en-IN')}`;
+          } else if (bankName) {
+            verifiedDocNo = `${bankName} | ₹${Number(verifiedAmount).toLocaleString('en-IN')}`;
           }
-        ).exec();
+        }
+        // Only update if the file's documentNo doesn't already have a richer bank-prefixed value
+        const existing = await fileUploadModel.findOne({ uploadedFile: verifiedProof, uploadId: saleId }).lean().exec();
+        if (!existing || !(existing.documentNo || '').includes(' | ')) {
+          await fileUploadModel.findOneAndUpdate(
+            { uploadedFile: verifiedProof, uploadId: saleId },
+            {
+              $set: {
+                documentType: 'Verified Bank Payment Proof',
+                documentNo: verifiedDocNo,
+              }
+            }
+          ).exec();
+        }
       } catch (e) {
         console.error("Error updating fileupload for verified payment:", e);
       }

@@ -321,7 +321,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
                   <TableRow hover key={e._id} tabIndex={-1}>
                     <TableCell padding="checkbox">
                       <Checkbox
-                        checked={selectedRelease?.find((v) => v._id === e._id)}
+                        checked={Boolean(selectedRelease?.find((v) => v._id === e._id))}
                         onChange={() => handleSelect(e)}
                       />
                     </TableCell>

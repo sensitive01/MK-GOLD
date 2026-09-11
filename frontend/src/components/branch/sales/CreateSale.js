@@ -286,6 +286,9 @@ function CreateSale(props) {
           pledgedBranch: '', releaseDate: moment().format('YYYY-MM-DD'), comments: '', assignee: '',
         });
         setStep(1);
+        if (props.setSaleIdToEdit) {
+          props.setSaleIdToEdit(null);
+        }
         props.setToggleContainer(false);
         props.setNotify({
           open: true,
@@ -1497,6 +1500,7 @@ CreateSale.propTypes = {
   id: PropTypes.string,
   setNotify: PropTypes.func,
   setToggleContainer: PropTypes.func,
+  setSaleIdToEdit: PropTypes.func,
 };
 
 export default CreateSale;
