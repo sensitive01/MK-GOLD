@@ -115,7 +115,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                 <TableCell align="left">Quantity</TableCell>
                 <TableCell align="center">Photo</TableCell>
                 <TableCell align="left">Gross Weight</TableCell>
-                <TableCell align="left">Stone / Wastage</TableCell>
+                <TableCell align="left">Stone</TableCell>
                 <TableCell align="left">Net Weight</TableCell>
                 <TableCell align="left">Purity</TableCell>
                 <TableCell align="left">Net Amount</TableCell>
@@ -292,13 +292,13 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
             <TableBody>
               {data?.release?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e) => (
                 <TableRow hover key={e._id} tabIndex={-1}>
-                  <TableCell align="left">{e.pledgeId}</TableCell>
-                  <TableCell align="left">{sentenceCase(e.pledgedIn || '')}</TableCell>
-                  <TableCell align="left">{e.weight?.toFixed(2)}</TableCell>
-                  <TableCell align="left">{Math.round(e.pledgeAmount)}</TableCell>
-                  <TableCell align="left">{moment(e.pledgedDate).format('YYYY-MM-DD')}</TableCell>
-                  <TableCell align="left">{Math.round(e.payableAmount)}</TableCell>
-                  <TableCell align="left">{sentenceCase(e.paymentType || '')}</TableCell>
+                  <TableCell align="left">{e.pledgeId || '-'}</TableCell>
+                  <TableCell align="left">{sentenceCase(e.pledgedIn || '') || '-'}</TableCell>
+                  <TableCell align="left">{e.weight != null && !isNaN(e.weight) ? Number(e.weight).toFixed(2) : '-'}</TableCell>
+                  <TableCell align="left">{e.pledgeAmount != null && !isNaN(e.pledgeAmount) ? Math.round(e.pledgeAmount) : '-'}</TableCell>
+                  <TableCell align="left">{e.pledgedDate ? moment(e.pledgedDate).format('YYYY-MM-DD') : '-'}</TableCell>
+                  <TableCell align="left">{e.payableAmount != null && !isNaN(e.payableAmount) ? Math.round(e.payableAmount) : '-'}</TableCell>
+                  <TableCell align="left">{sentenceCase(e.paymentType || '') || '-'}</TableCell>
                 </TableRow>
               ))}
               {emptyRows > 0 && (
@@ -2029,30 +2029,33 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                         <TableCell align="left">Bill Id: {data?.billId}</TableCell>
                         <TableCell align="left">Branch: {sentenceCase(data.branch?.branchName ?? '')}</TableCell>
                         <TableCell align="left">Sale Type: {sentenceCase(data.saleType ?? '')}</TableCell>
-                        <TableCell align="left">Ornament Type: {sentenceCase(data.purchaseType ?? '')}</TableCell>
+                        <TableCell align="left">Payment Type: {sentenceCase(data.paymentType ?? '')}</TableCell>
                       </TableRow>
                       <TableRow tabIndex={-1}>
                         <TableCell align="left">DOP: {data?.dop ? moment(data.dop).format('DD-MM-YYYY') : '-'}</TableCell>
-                        <TableCell align="left">Net Weight: {data.netWeight?.toFixed(2)}</TableCell>
-                        <TableCell align="left">Payment Type: {data.paymentType}</TableCell>
-                        <TableCell align="left">Margin: {data.margin}%</TableCell>
+                        <TableCell align="left">Ornament Type: {sentenceCase(data.purchaseType ?? '')}</TableCell>
+                        <TableCell align="left">
+                          {data?.purchaseType?.toLowerCase() === 'silver' ? 'Silver Rate' : 'Gold Rate'}: ₹{Number((data?.purchaseType?.toLowerCase() === 'silver' ? data?.silverRate : data?.goldRate) || 0).toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell align="left">Net Weight: {data.netWeight != null ? `${Number(data.netWeight).toFixed(2)} g` : '-'}</TableCell>
                       </TableRow>
                       <TableRow tabIndex={-1}>
-                        <TableCell align="left">Net Amount: {Math.round(data.netAmount)}</TableCell>
+                        <TableCell align="left">Net Amount: ₹{Math.round(data.netAmount || 0).toLocaleString('en-IN')}</TableCell>
                         <TableCell align="left">
                           Margin Amount:{' '}
-                          {data.status === 'approved'
-                            ? Math.round(
-                              data.netAmount -
-                              data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0) -
-                              values?.payableAmount
-                            )
-                            : Math.round((data.netAmount * data.margin) / 100)}
+                          ₹{Math.round(
+                            data.status === 'approved'
+                              ? (data.netAmount -
+                                  (data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0) || 0) -
+                                  values?.payableAmount)
+                              : ((data.netAmount * data.margin) / 100)
+                          ).toLocaleString('en-IN')}{' '}
+                          ({data.margin}%)
                         </TableCell>
                         {data?.saleType?.toLowerCase() !== 'physical' && (
                           <TableCell align="left">
                             Release Amount:{' '}
-                            {Math.round(data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0)) ?? 0}
+                            ₹{Math.round(data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0) || 0).toLocaleString('en-IN')}
                           </TableCell>
                         )}
                         <TableCell align="left" colSpan={data?.saleType?.toLowerCase() === 'physical' ? 2 : 1}>
@@ -2070,7 +2073,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                               onChange={handleChange}
                             />
                           ) : (
-                            <>Payable Amount: {Math.abs(Math.round(data.payableAmount || 0))}</>
+                            <>Payable Amount: ₹{Math.abs(Math.round(data.payableAmount || 0)).toLocaleString('en-IN')}</>
                           )}
                         </TableCell>
                       </TableRow>

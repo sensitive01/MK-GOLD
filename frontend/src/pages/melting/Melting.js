@@ -347,10 +347,8 @@ export default function Melting() {
     }
   };
 
-  // Calculations for display
-  const baseNetWeight = (selectedMelting && selectedMelting.actualNetWeight)
-    ? Number(selectedMelting.actualNetWeight)
-    : (selectedMelting ? Number(selectedMelting.totalNetWeight) : 0);
+  // Calculations for display - compared against Total Net Weight
+  const baseNetWeight = selectedMelting ? Number(selectedMelting.totalNetWeight) : 0;
 
   const totalNetBefore = selectedMelting ? Number(selectedMelting.totalNetWeight) : 0;
   let totalFineBefore = 0;
@@ -362,7 +360,7 @@ export default function Melting() {
 
   const currentBarWeight = Number(barWeight) || 0;
   const currentBarPurity = Number(barPurity) || 0;
-  // Weight difference compared against Actual Net Weight
+  // Weight difference compared against Total Net Weight
   const weightDiff = currentBarWeight - baseNetWeight;
   
   const avgPurityBefore = totalNetBefore ? (totalFineBefore / totalNetBefore) * 100 : 0;
@@ -850,7 +848,7 @@ export default function Melting() {
                 Total Net Weight : <strong>{(Number(selectedMelting?.totalNetWeight) || 0).toFixed(2)} g</strong>
               </Typography>
               <Typography variant="body2">
-                Stone / Wastage: <strong>{((Number(selectedMelting?.totalGrossWeight) || 0) - (Number(selectedMelting?.totalNetWeight) || 0)).toFixed(2)} g</strong>
+                Stone: <strong>{((Number(selectedMelting?.totalGrossWeight) || 0) - (Number(selectedMelting?.totalNetWeight) || 0)).toFixed(2)} g</strong>
               </Typography>
             </Stack>
 
@@ -942,11 +940,11 @@ export default function Melting() {
                 </Box>
               </Grid>
 
-              {/* Right Column: Actual Stone / Wastage & Proceed to Melt Button (if not completed) */}
+              {/* Right Column: Actual Stone & Proceed to Melt Button (if not completed) */}
               <Grid item xs={12} sm={4}>
                 <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
                   <TextField
-                    label="Actual Stone / Wastage"
+                    label="Actual Stone"
                     type="number"
                     value={actualStoneWastage}
                     InputProps={{ readOnly: true }}
@@ -1021,7 +1019,7 @@ export default function Melting() {
                     <Grid item xs={12}>
                       <Card sx={{ p: 2, bgcolor: 'background.neutral' }}>
                         <Typography variant="body2">
-                          Weight Diff (vs Actual Net Wt):{' '}
+                          Weight Diff (vs Total Net Wt):{' '}
                           <strong style={{ color: weightDiff < 0 ? 'red' : 'green' }}>
                             {weightDiff > 0 ? '+' : ''}{weightDiff.toFixed(2)} g
                           </strong>
@@ -1030,12 +1028,6 @@ export default function Melting() {
                           Purity Diff:{' '}
                           <strong style={{ color: purityDiff < 0 ? 'red' : 'green' }}>
                             {purityDiff > 0 ? '+' : ''}{purityDiff.toFixed(2)}%
-                          </strong>
-                        </Typography>
-                        <Typography variant="body2">
-                          Fine Gold Profit/Loss:{' '}
-                          <strong style={{ color: fineGoldDiff < 0 ? 'red' : 'green' }}>
-                            {fineGoldDiff > 0 ? '+' : ''}{fineGoldDiff.toFixed(3)} g
                           </strong>
                         </Typography>
                       </Card>

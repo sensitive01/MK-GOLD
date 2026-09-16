@@ -195,6 +195,15 @@ export default function Sale() {
     });
   }, [toggleContainer, auth.user.branch, fetchData]);
 
+  const editIdParam = searchParams.get('editId');
+  useEffect(() => {
+    if (editIdParam) {
+      setSaleIdToEdit(editIdParam);
+      setToggleContainer(true);
+      setToggleContainerType('create');
+    }
+  }, [editIdParam]);
+
   const handleOpenMenu = (event, id) => {
     setOpen(event.currentTarget);
     setSaleIdToEdit(id);
@@ -690,7 +699,7 @@ export default function Sale() {
           },
         }}
       >
-        {/* <MenuItem
+        <MenuItem
           disabled={['completed', 'intransit', 'moved', 'melted'].includes(selectedSale?.status)}
           onClick={() => {
             setOpen(null);
@@ -700,7 +709,7 @@ export default function Sale() {
         >
           <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
           Edit
-        </MenuItem> */}
+        </MenuItem>
         <MenuItem
           onClick={() => {
             setOpen(null);
@@ -947,6 +956,10 @@ function Status(props) {
   // Release Pending — assignee acts from the Release sidebar, sale advances automatically
   else if (status === 'release pending') {
     content = <Label color="warning">Release Pending</Label>;
+  }
+
+  else if (status === 'release completed') {
+    content = <Label color="info">Release Completed</Label>;
   }
 
   // Admin Approval Step (Legacy support)

@@ -293,7 +293,7 @@ export default function SalePrint({ id }) {
               <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '6%', textAlign: 'center' }}>Sno</th>
               <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '38%', textAlign: 'left' }}>Ornament(s)</th>
               <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '11%', textAlign: 'center' }}>Gross Wt</th>
-              <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '12%', textAlign: 'center' }}>Stone / Wastage</th>
+              <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '12%', textAlign: 'center' }}>Stone</th>
               <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '11%', textAlign: 'center' }}>Net Wt</th>
               <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '11%', textAlign: 'center' }}>Purity (%)</th>
               <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '11%', textAlign: 'right' }}>Value (₹)</th>

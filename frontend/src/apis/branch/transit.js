@@ -45,10 +45,20 @@ async function deleteTransitById(id) {
   }
 }
 
+async function generateTransitId() {
+  try {
+    const response = await apiClient().get('/api/v1.0/branch/transit/generate-id');
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
 export {
   findTransit,
   getTransitById,
   createTransit,
   updateTransit,
   deleteTransitById,
+  generateTransitId,
 };

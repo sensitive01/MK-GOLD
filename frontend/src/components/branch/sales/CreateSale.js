@@ -218,6 +218,8 @@ function CreateSale(props) {
     margin: Yup.string().required('Margin is required'),
   });
 
+  const [openConfirmModal, setOpenConfirmModal] = useState(false);
+
   const { handleSubmit, handleChange, handleBlur, values, setValues, resetForm, touched, errors } = useFormik({
     initialValues: {
       purchaseType: '',
@@ -240,7 +242,43 @@ function CreateSale(props) {
     },
   });
 
-  const [openConfirmModal, setOpenConfirmModal] = useState(false);
+  // Auto-populate ornaments and proofs when a completed release is selected for pledged bill
+  useEffect(() => {
+    if (values.saleType === 'pledged') {
+      if (selectedRelease && selectedRelease.length > 0) {
+        const allReleaseOrnaments = selectedRelease.reduce((acc, rel) => {
+          if (rel?.ornaments && Array.isArray(rel.ornaments) && rel.ornaments.length > 0) {
+            const relPhoto = rel.proofDocuments?.find(
+              (p) => p.documentType === 'Ornaments Photo' || p.documentType === 'Ornament Photo'
+            )?.documentFile || rel.proofDocuments?.[0]?.documentFile || '';
+            const mapped = rel.ornaments.map((orn) => ({
+              ...orn,
+              ornamentPhoto: orn.ornamentPhoto || relPhoto || '',
+            }));
+            return [...acc, ...mapped];
+          }
+          return acc;
+        }, []);
+
+        if (allReleaseOrnaments.length > 0) {
+          setOrnaments(allReleaseOrnaments);
+        }
+
+        const allReleaseProofs = selectedRelease.reduce((acc, rel) => {
+          if (rel?.proofDocuments && Array.isArray(rel.proofDocuments) && rel.proofDocuments.length > 0) {
+            return [...acc, ...rel.proofDocuments];
+          }
+          return acc;
+        }, []);
+
+        if (allReleaseProofs.length > 0) {
+          setProofDocument((prev) => (prev && prev.length > 0 ? prev : allReleaseProofs));
+        }
+      } else {
+        setOrnaments([]);
+      }
+    }
+  }, [selectedRelease, values.saleType]);
 
   const payload = {
     employee: auth.user._id,
@@ -256,7 +294,7 @@ function CreateSale(props) {
     status: 'bullion pending',
     assignee: selectedRelease?.[0]?.assignee || undefined, // Automatically take from the first selected release
   };
-  const isReleaseCompleted = selectedRelease?.length > 0 && selectedRelease.every(r => r.status === 'completed');
+  const isReleaseCompleted = (selectedRelease?.length > 0 && selectedRelease.every(r => r.status === 'completed')) || (ornaments && ornaments.length > 0);
   const showOrnaments = values.saleType === 'physical' || (values.saleType === 'pledged' && isReleaseCompleted);
 
   const submitSale = () => {
@@ -299,10 +337,6 @@ function CreateSale(props) {
     });
   };
 
-
-
-
-
   payload.saleType = values.saleType;
   payload.purchaseType = values.purchaseType;
   payload.dop = values.dop;
@@ -328,8 +362,6 @@ function CreateSale(props) {
         setAutoOpenEdit={setAutoOpenEdit}
         {...props}
       />
-
-
 
       <form
         onSubmit={(e) => {
@@ -653,19 +685,15 @@ function CreateSale(props) {
                   } else {
                     if (values.saleType === 'pledged' && !isReleaseCompleted) {
                       setOpenConfirmModal(true);
-                    } else if (values.saleType === 'physical') {
-                      setStep(4);
                     } else {
-                      setStep(step + 1);
+                      setStep(4);
                     }
                   }
                 }}
               >
                 {values.saleType === 'pledged' && !isReleaseCompleted
                   ? 'Submit'
-                  : values.saleType === 'physical'
-                  ? 'View Summary'
-                  : 'Proceed to upload documents'}
+                  : 'View Summary'}
               </LoadingButton>
             </Grid>
           </Grid>
@@ -767,6 +795,17 @@ function CreateSale(props) {
             </Grid>
             <Grid item xs={12} sm={4}>
               <TextField
+                name="goldOrSilverRate"
+                value={`₹${(values.purchaseType === 'silver' ? payload.silverRate : payload.goldRate) || 0}`}
+                label={values.purchaseType === 'silver' ? 'Silver Rate' : 'Gold Rate'}
+                fullWidth
+                InputProps={{
+                  readOnly: true,
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
                 name="marginPercent"
                 value={`${values.margin || 0}%`}
                 label={'Margin (%)'}
@@ -791,7 +830,7 @@ function CreateSale(props) {
                         <TableCell align="left">Quantity</TableCell>
                         <TableCell align="center">Photo</TableCell>
                         <TableCell align="left">Gross Weight</TableCell>
-                        <TableCell align="left">Stone / Wastage</TableCell>
+                        <TableCell align="left">Stone</TableCell>
                         <TableCell align="left">Net Weight</TableCell>
                         <TableCell align="left">Purity</TableCell>
                         <TableCell align="left">Net Amount</TableCell>
@@ -1107,7 +1146,7 @@ function CreateSale(props) {
                 name="submit"
                 type="button"
                 variant="contained"
-                onClick={() => setStep(values.saleType === 'physical' ? 2 : step - 1)}
+                onClick={() => setStep(2)}
                 sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
                 Prev

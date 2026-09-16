@@ -1,6 +1,7 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
 import { forwardRef, useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
@@ -1029,6 +1030,7 @@ EditReleaseModal.propTypes = {
 };
 
 function VerificationModal({ open, id, type, handleClose, fetchData }) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [ornaments, setOrnaments] = useState([]);
   const [showOrnamentForm, setShowOrnamentForm] = useState(false);
@@ -1159,7 +1161,19 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
         setLoading(false);
         if (data.status) {
           handleCloseVerifyModal();
-          fetchData();
+          const saleId = data.data?.saleId || data.data?.linkedSaleId;
+          const currentPath = window.location.pathname;
+          let targetSaleRoute = '/branch/sale';
+          if (currentPath.startsWith('/melting')) targetSaleRoute = '/melting/sale';
+          else if (currentPath.startsWith('/finance')) targetSaleRoute = '/finance/sale';
+          else if (currentPath.startsWith('/admin')) targetSaleRoute = '/admin/sale';
+          else if (currentPath.startsWith('/bullion-desk')) targetSaleRoute = '/bullion-desk/sale';
+
+          if (type === 'release_complete' && saleId) {
+            navigate(`${targetSaleRoute}?editId=${saleId}`);
+          } else {
+            fetchData();
+          }
         }
       });
     },

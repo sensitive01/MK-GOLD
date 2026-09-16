@@ -381,7 +381,7 @@ async function update(id, payload) {
         };
 
         if (payload.status === "completed" || updatedRelease.status === "completed") {
-          setDataSales.status = "bullion pending";
+          setDataSales.status = "release completed";
           setDataSales.assigneeCompleted = true;
           setDataSales.bullionCompleted = false;
           setDataSales.financeCompleted = false;
@@ -413,6 +413,13 @@ async function update(id, payload) {
         }
 
         await Sales.findByIdAndUpdate(sale._id, setDataSales).exec();
+      }
+
+      if (linkedSales.length > 0) {
+        const resObj = updatedRelease.toObject ? updatedRelease.toObject() : { ...updatedRelease };
+        resObj.saleId = linkedSales[0]._id;
+        resObj.linkedSaleId = linkedSales[0]._id;
+        return resObj;
       }
     }
 
@@ -452,7 +459,7 @@ async function updateWithLog(id, setData, logEntry) {
         };
 
         if (setData.status === "completed" || updatedRelease.status === "completed") {
-          setDataSales.status = "bullion pending";
+          setDataSales.status = "release completed";
           setDataSales.assigneeCompleted = true;
           setDataSales.bullionCompleted = false;
           setDataSales.financeCompleted = false;
@@ -484,11 +491,20 @@ async function updateWithLog(id, setData, logEntry) {
         }
 
         let saleLogEntry = { ...logEntry };
-        if (setDataSales.status === "bullion pending") {
+        if (setDataSales.status === "release completed") {
+          saleLogEntry.action = "Release completed";
+        } else if (setDataSales.status === "bullion pending") {
           saleLogEntry.action = "Bullion pending";
         }
 
         await salesService.updateWithLog(sale._id, setDataSales, saleLogEntry);
+      }
+
+      if (linkedSales.length > 0) {
+        const resObj = updatedRelease.toObject ? updatedRelease.toObject() : { ...updatedRelease };
+        resObj.saleId = linkedSales[0]._id;
+        resObj.linkedSaleId = linkedSales[0]._id;
+        return resObj;
       }
     }
 

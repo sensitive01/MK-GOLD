@@ -193,7 +193,7 @@ export default function SalePrint({ id }) {
             <tr>
               <td style={{ verticalAlign: 'top', paddingTop: '4px' }}>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>
-                  MK Gold World | {data?.branch?.branchName || ''}
+                  MK Gold | {data?.branch?.branchName || ''}
                 </h3>
                 <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#333' }}>
                   <strong>Address:</strong> {data?.branch?.address?.address || data?.branch?.address?.city || ''}
@@ -286,7 +286,7 @@ export default function SalePrint({ id }) {
               <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '6%', textAlign: 'center' }}>Sno</th>
               <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '38%', textAlign: 'left' }}>Ornament(s)</th>
               <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '11%', textAlign: 'center' }}>Gross Wt</th>
-              <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '12%', textAlign: 'center' }}>Stone / Wastage</th>
+              <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '12%', textAlign: 'center' }}>Stone</th>
               <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '11%', textAlign: 'center' }}>Net Wt</th>
               <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '11%', textAlign: 'center' }}>Purity (%)</th>
               <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '11%', textAlign: 'right' }}>Value (₹)</th>

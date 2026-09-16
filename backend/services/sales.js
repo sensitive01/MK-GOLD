@@ -219,6 +219,47 @@ async function find(query = {}) {
 
       {
         $lookup: {
+          from: "releases",
+          let: {
+            relIds: {
+              $map: {
+                input: { $ifNull: ["$release", []] },
+                as: "rel",
+                in: {
+                  $cond: {
+                    if: { $and: [{ $ne: ["$$rel", null] }, { $ne: ["$$rel._id", null] }] },
+                    then: { $toObjectId: "$$rel._id" },
+                    else: { $toObjectId: "$$rel" }
+                  }
+                }
+              }
+            }
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$_id", "$$relIds"]
+                }
+              }
+            }
+          ],
+          as: "fullReleases"
+        }
+      },
+      {
+        $addFields: {
+          release: {
+            $cond: {
+              if: { $gt: [{ $size: "$fullReleases" }, 0] },
+              then: "$fullReleases",
+              else: "$release"
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
           from: "fileuploads",
           let: { 
             saleId: "$_id", 
@@ -741,6 +782,47 @@ async function findById(id) {
 
       {
         $lookup: {
+          from: "releases",
+          let: {
+            relIds: {
+              $map: {
+                input: { $ifNull: ["$release", []] },
+                as: "rel",
+                in: {
+                  $cond: {
+                    if: { $and: [{ $ne: ["$$rel", null] }, { $ne: ["$$rel._id", null] }] },
+                    then: { $toObjectId: "$$rel._id" },
+                    else: { $toObjectId: "$$rel" }
+                  }
+                }
+              }
+            }
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$_id", "$$relIds"]
+                }
+              }
+            }
+          ],
+          as: "fullReleases"
+        }
+      },
+      {
+        $addFields: {
+          release: {
+            $cond: {
+              if: { $gt: [{ $size: "$fullReleases" }, 0] },
+              then: "$fullReleases",
+              else: "$release"
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
           from: "fileuploads",
           let: { 
             saleId: "$_id", 
@@ -1169,6 +1251,23 @@ async function create(payload) {
         });
       }
       payload.release = releases;
+      if ((!payload.ornaments || payload.ornaments.length === 0) && releases.length > 0) {
+        const relOrnaments = releases.reduce((acc, rel) => {
+          if (rel?.ornaments && Array.isArray(rel.ornaments)) {
+            return [...acc, ...rel.ornaments];
+          }
+          return acc;
+        }, []);
+        if (relOrnaments.length > 0) {
+          payload.ornaments = relOrnaments;
+          if (!payload.netWeight) {
+            payload.netWeight = relOrnaments.reduce((prev, cur) => prev + (+cur.netWeight || 0), 0);
+          }
+          if (!payload.netAmount) {
+            payload.netAmount = Math.round(relOrnaments.reduce((prev, cur) => prev + (+cur.netAmount || 0), 0));
+          }
+        }
+      }
     }
 
     // 6. Billing Initiated (Current Action)
@@ -1359,6 +1458,13 @@ async function updateWithLog(id, setData, logEntry) {
       actionLog: logEntry,
       timeline: timelineEntry
     };
+
+    if (setData.release && setData.release.length > 0) {
+      const releaseIds = setData.release.map(r => r._id || r);
+      const ReleaseModel = require("../models/release");
+      const releases = await ReleaseModel.find({ _id: { $in: releaseIds } }).lean().exec();
+      setData.release = releases;
+    }
 
     const isPledgedReleaseStage = sale.saleType === 'pledged' && !sale.assigneeCompleted;
     const defaultStage = isPledgedReleaseStage ? 'release' : 'sale';

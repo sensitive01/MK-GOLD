@@ -154,3 +154,36 @@ exports.getTransitById = async (req, res) => {
         });
     }
 }
+
+exports.generateTransitId = async (req, res) => {
+    try {
+        // Start with 4 random digits (1000 - 9999).
+        // If random 4-digit numbers are reached / already taken in DB,
+        // move to 5 digits (10000 - 99999), 6 digits, or more.
+        for (let digits = 4; digits <= 10; digits++) {
+            const min = Math.pow(10, digits - 1);
+            const max = Math.pow(10, digits) - 1;
+            for (let attempt = 0; attempt < 50; attempt++) {
+                const randNum = Math.floor(min + Math.random() * (max - min + 1));
+                const candidate = `TR${randNum}`;
+                const exists = await transitModel.findOne({ transitId: candidate }).lean();
+                if (!exists) {
+                    return res.json({
+                        status: true,
+                        transitId: candidate
+                    });
+                }
+            }
+        }
+        return res.json({
+            status: true,
+            transitId: `TR${Date.now()}`
+        });
+    } catch (err) {
+        return res.json({
+            status: false,
+            message: err.message,
+            transitId: `TR${Math.floor(1000 + Math.random() * 9000)}`
+        });
+    }
+};

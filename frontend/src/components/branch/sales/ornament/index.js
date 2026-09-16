@@ -265,7 +265,7 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                   <TableCell align="left">Quantity</TableCell>
                   <TableCell align="center">Photo</TableCell>
                   <TableCell align="left">Gross Weight</TableCell>
-                  <TableCell align="left">Stone / Wastage</TableCell>
+                  <TableCell align="left">Stone</TableCell>
                   <TableCell align="left">Net Weight</TableCell>
                   <TableCell align="left">Purity</TableCell>
                   <TableCell align="left">Net Amount</TableCell>
@@ -536,14 +536,14 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                 />
               </Grid>
 
-              {/* Row 2: Stone / Wastage, Net Weight, Purity, Net Amount */}
+              {/* Row 2: Stone, Net Weight, Purity, Net Amount */}
               <Grid item xs={12} sm={6} md={3}>
                 <TextField
                   name="stoneWeight"
                   type="number"
                   value={values.stoneWeight}
                   error={touched.stoneWeight && errors.stoneWeight && true}
-                  label={touched.stoneWeight && errors.stoneWeight ? errors.stoneWeight : 'Stone / Wastage'}
+                  label={touched.stoneWeight && errors.stoneWeight ? errors.stoneWeight : 'Stone'}
                   InputProps={{
                     endAdornment: <InputAdornment position="end">g</InputAdornment>,
                   }}

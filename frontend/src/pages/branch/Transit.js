@@ -25,6 +25,8 @@ import {
     TablePagination,
     TableRow,
     Typography,
+    InputAdornment,
+    Tooltip,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
@@ -34,7 +36,7 @@ import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 import { getTransitMeltingStatus } from '../../utils/transit';
 import { TransitListHead, TransitListToolbar } from '../../sections/@dashboard/transit';
-import { deleteTransitById, findTransit, createTransit, updateTransit } from '../../apis/branch/transit';
+import { deleteTransitById, findTransit, createTransit, updateTransit, generateTransitId } from '../../apis/branch/transit';
 import TransitPrint from '../../components/branch/transit/TransitPrint';
 import { createFile } from '../../apis/branch/fileupload';
 import global from '../../utils/global';
@@ -43,6 +45,34 @@ import * as Yup from 'yup';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { findSales } from '../../apis/branch/sales';
 import { LoadingButton } from '@mui/lab';
+
+// Autogenerate Transit with "TR" + 4 random numbers. If random limit / taken is reached, add 5 or more digits.
+export const generateRandomTransitId = (existingIds = []) => {
+  const existingSet = new Set((existingIds || []).map((id) => String(id).trim().toUpperCase()));
+  for (let digits = 4; digits <= 10; digits++) {
+    const min = Math.pow(10, digits - 1);
+    const max = Math.pow(10, digits) - 1;
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const rand = Math.floor(min + Math.random() * (max - min + 1));
+      const candidate = `TR${rand}`;
+      if (!existingSet.has(candidate.toUpperCase())) {
+        return candidate;
+      }
+    }
+  }
+  return `TR${Math.floor(1000 + Math.random() * 9000)}`;
+};
+
+// Calculate inclusive number of days from fromDate to toDate
+export const calculateTransitDays = (from, to) => {
+  if (!from || !to) return '';
+  const start = moment(from).startOf('day');
+  const end = moment(to).startOf('day');
+  if (!start.isValid() || !end.isValid()) return '';
+  const diff = end.diff(start, 'days');
+  if (diff < 0) return 0;
+  return diff + 1;
+};
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -230,6 +260,8 @@ export default function Transit() {
             }
           });
 
+          const fDate = minEndDate ? minEndDate.format('YYYY-MM-DD') : moment().format('YYYY-MM-DD');
+          const tDate = maxEndDate ? maxEndDate.format('YYYY-MM-DD') : moment().format('YYYY-MM-DD');
           setPrefillData({
             saleIds: saleIdsArray,
             totalNetWeight: totalNetWeight.toFixed(3),
@@ -238,8 +270,9 @@ export default function Transit() {
             numberOfPackets: sales.length,
             physical: physicalCount,
             released: releaseCount,
-            fromDate: minEndDate ? minEndDate.format('YYYY-MM-DD') : moment().format('YYYY-MM-DD'),
-            toDate: maxEndDate ? maxEndDate.format('YYYY-MM-DD') : moment().format('YYYY-MM-DD'),
+            fromDate: fDate,
+            toDate: tDate,
+            numberOfDays: calculateTransitDays(fDate, tDate),
             branch: sales[0]?.branch?._id || sales[0]?.branch,
           });
           setOpenCreateModal(true);
@@ -738,7 +771,7 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
   const { handleSubmit, handleChange, handleBlur, touched, errors, values, setFieldValue, resetForm, setValues, submitCount } = useFormik({
     initialValues: {
       saleIds: [],
-      transitId: '',
+      transitId: generateRandomTransitId(),
       numberOfPackets: '',
       physical: '',
       released: '',
@@ -747,7 +780,7 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
       totalNetWeight: '',
       fromDate: moment(),
       toDate: moment(),
-      numberOfDays: '',
+      numberOfDays: calculateTransitDays(moment(), moment()),
       packetWeight: '',
       deliveryBy: '',
       transitMovedThrough: '',
@@ -774,21 +807,39 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
   });
 
   useEffect(() => {
-    if (prefillData && open) {
+    if (open) {
+      const from = prefillData?.fromDate ? moment(prefillData.fromDate) : moment();
+      const to = prefillData?.toDate ? moment(prefillData.toDate) : moment();
+      const days = prefillData?.numberOfDays !== undefined && prefillData?.numberOfDays !== ''
+        ? prefillData.numberOfDays
+        : calculateTransitDays(from, to);
+
       setValues((prev) => ({
         ...prev,
-        saleIds: prefillData.saleIds || [],
-        numberOfPackets: prefillData.numberOfPackets !== undefined ? prefillData.numberOfPackets : '',
-        physical: prefillData.physical !== undefined ? prefillData.physical : '',
-        released: prefillData.released !== undefined ? prefillData.released : '',
-        numberOfOrnaments: prefillData.numberOfOrnaments || '',
-        totalGrossWeight: prefillData.totalGrossWeight || '',
-        totalNetWeight: prefillData.totalNetWeight || '',
-        fromDate: prefillData.fromDate ? moment(prefillData.fromDate) : moment(),
-        toDate: prefillData.toDate ? moment(prefillData.toDate) : moment(),
+        saleIds: prefillData?.saleIds || prev.saleIds || [],
+        numberOfPackets: prefillData?.numberOfPackets !== undefined ? prefillData.numberOfPackets : '',
+        physical: prefillData?.physical !== undefined ? prefillData.physical : '',
+        released: prefillData?.released !== undefined ? prefillData.released : '',
+        numberOfOrnaments: prefillData?.numberOfOrnaments || '',
+        totalGrossWeight: prefillData?.totalGrossWeight || '',
+        totalNetWeight: prefillData?.totalNetWeight || '',
+        fromDate: from,
+        toDate: to,
+        numberOfDays: days,
       }));
+
+      // Autogenerate unique transit ID via backend check, with client generator fallback
+      generateTransitId().then((res) => {
+        if (res?.status && res?.transitId) {
+          setFieldValue('transitId', res.transitId);
+        } else {
+          setFieldValue('transitId', generateRandomTransitId());
+        }
+      }).catch(() => {
+        setFieldValue('transitId', generateRandomTransitId());
+      });
     }
-  }, [prefillData, open, setValues]);
+  }, [prefillData, open, setValues, setFieldValue]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -865,7 +916,41 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
           )}
           <Grid container spacing={{ xs: 2, sm: 3 }}>
             <Grid item xs={12} sm={6}>
-              <TextField name="transitId" label="Transit ID" value={values.transitId} onChange={handleChange} onBlur={handleBlur} error={touched.transitId && !!errors.transitId} helperText={touched.transitId && errors.transitId} fullWidth />
+              <TextField
+                name="transitId"
+                label="Transit ID"
+                value={values.transitId}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.transitId && !!errors.transitId}
+                helperText={touched.transitId && errors.transitId}
+                fullWidth
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Tooltip title="Regenerate Transit ID">
+                        <IconButton
+                          edge="end"
+                          size="small"
+                          onClick={() => {
+                            generateTransitId().then((res) => {
+                              if (res?.status && res?.transitId) {
+                                setFieldValue('transitId', res.transitId);
+                              } else {
+                                setFieldValue('transitId', generateRandomTransitId());
+                              }
+                            }).catch(() => {
+                              setFieldValue('transitId', generateRandomTransitId());
+                            });
+                          }}
+                        >
+                          <Iconify icon="eva:refresh-fill" />
+                        </IconButton>
+                      </Tooltip>
+                    </InputAdornment>
+                  ),
+                }}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField name="numberOfPackets" type="number" label="Number of Packets" value={values.numberOfPackets} onChange={handleChange} onBlur={handleBlur} error={touched.numberOfPackets && !!errors.numberOfPackets} helperText={touched.numberOfPackets && errors.numberOfPackets} fullWidth />
@@ -887,12 +972,30 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
             </Grid>
             <Grid item xs={12} sm={6}>
               <LocalizationProvider dateAdapter={AdapterMoment}>
-                <DesktopDatePicker label="From Date" inputFormat="MM/DD/YYYY" value={values.fromDate} onChange={(v) => setFieldValue('fromDate', v)} renderInput={(params) => <TextField {...params} fullWidth error={touched.fromDate && !!errors.fromDate} helperText={touched.fromDate && errors.fromDate} />} />
+                <DesktopDatePicker
+                  label="From Date"
+                  inputFormat="MM/DD/YYYY"
+                  value={values.fromDate}
+                  onChange={(v) => {
+                    setFieldValue('fromDate', v);
+                    setFieldValue('numberOfDays', calculateTransitDays(v, values.toDate));
+                  }}
+                  renderInput={(params) => <TextField {...params} fullWidth error={touched.fromDate && !!errors.fromDate} helperText={touched.fromDate && errors.fromDate} />}
+                />
               </LocalizationProvider>
             </Grid>
             <Grid item xs={12} sm={6}>
               <LocalizationProvider dateAdapter={AdapterMoment}>
-                <DesktopDatePicker label="To Date" inputFormat="MM/DD/YYYY" value={values.toDate} onChange={(v) => setFieldValue('toDate', v)} renderInput={(params) => <TextField {...params} fullWidth error={touched.toDate && !!errors.toDate} helperText={touched.toDate && errors.toDate} />} />
+                <DesktopDatePicker
+                  label="To Date"
+                  inputFormat="MM/DD/YYYY"
+                  value={values.toDate}
+                  onChange={(v) => {
+                    setFieldValue('toDate', v);
+                    setFieldValue('numberOfDays', calculateTransitDays(values.fromDate, v));
+                  }}
+                  renderInput={(params) => <TextField {...params} fullWidth error={touched.toDate && !!errors.toDate} helperText={touched.toDate && errors.toDate} />}
+                />
               </LocalizationProvider>
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -1101,12 +1204,30 @@ function EditTransitModal({ open, id, handleClose, fetchData, setNotify }) {
             </Grid>
             <Grid item xs={12} sm={6}>
               <LocalizationProvider dateAdapter={AdapterMoment}>
-                <DesktopDatePicker label="From Date" inputFormat="MM/DD/YYYY" value={values.fromDate} onChange={(v) => setFieldValue('fromDate', v)} renderInput={(params) => <TextField {...params} fullWidth error={touched.fromDate && !!errors.fromDate} helperText={touched.fromDate && errors.fromDate} />} />
+                <DesktopDatePicker
+                  label="From Date"
+                  inputFormat="MM/DD/YYYY"
+                  value={values.fromDate}
+                  onChange={(v) => {
+                    setFieldValue('fromDate', v);
+                    setFieldValue('numberOfDays', calculateTransitDays(v, values.toDate));
+                  }}
+                  renderInput={(params) => <TextField {...params} fullWidth error={touched.fromDate && !!errors.fromDate} helperText={touched.fromDate && errors.fromDate} />}
+                />
               </LocalizationProvider>
             </Grid>
             <Grid item xs={12} sm={6}>
               <LocalizationProvider dateAdapter={AdapterMoment}>
-                <DesktopDatePicker label="To Date" inputFormat="MM/DD/YYYY" value={values.toDate} onChange={(v) => setFieldValue('toDate', v)} renderInput={(params) => <TextField {...params} fullWidth error={touched.toDate && !!errors.toDate} helperText={touched.toDate && errors.toDate} />} />
+                <DesktopDatePicker
+                  label="To Date"
+                  inputFormat="MM/DD/YYYY"
+                  value={values.toDate}
+                  onChange={(v) => {
+                    setFieldValue('toDate', v);
+                    setFieldValue('numberOfDays', calculateTransitDays(values.fromDate, v));
+                  }}
+                  renderInput={(params) => <TextField {...params} fullWidth error={touched.toDate && !!errors.toDate} helperText={touched.toDate && errors.toDate} />}
+                />
               </LocalizationProvider>
             </Grid>
             <Grid item xs={12} sm={6}>

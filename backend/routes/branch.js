@@ -143,6 +143,7 @@ branchRouter.post("/leave/create", leave.create);
 branchRouter.post("/leave/update/:id", leave.update);
 // branchRouter.post("/leave/delete/:id", leave.remove);
 
+branchRouter.get("/transit/generate-id", transit.generateTransitId);
 branchRouter.get("/transit/get", transit.findTransitData);
 branchRouter.post("/transit/get", transit.findTransitData);
 branchRouter.get("/transit/get/:id", transit.getTransitById);
