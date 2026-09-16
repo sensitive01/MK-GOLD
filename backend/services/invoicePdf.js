@@ -277,18 +277,22 @@ async function generateExactInvoiceHtml(data) {
   <div id="pdf" style="color: #000; background-color: #fff; padding: 10px 0; font-family: Arial, sans-serif; font-size: 13px; width: 750px; margin: 0 auto; box-sizing: border-box;">
 
     <!-- Header Section -->
-    <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 14px; table-layout: fixed;">
+      <colgroup>
+        <col style="width: 60%;" />
+        <col style="width: 40%;" />
+      </colgroup>
       <tbody>
         <tr>
-          <td style="vertical-align: top; padding-bottom: 8px;">
+          <td style="vertical-align: middle; padding-bottom: 6px;">
             <h2 style="margin: 0; font-size: 22px; font-weight: bold;">PURCHASE INVOICE</h2>
           </td>
-          <td style="text-align: right; vertical-align: top; padding-bottom: 8px;">
-            ${logoBase64 ? `<img alt="Logo" src="${logoBase64}" style="width: 90px; height: auto; object-fit: contain;" />` : ''}
+          <td style="text-align: right; vertical-align: middle; padding-bottom: 6px;">
+            ${logoBase64 ? `<img alt="Logo" src="${logoBase64}" style="width: 130px; height: auto; object-fit: contain; display: inline-block;" />` : ''}
           </td>
         </tr>
         <tr>
-          <td style="vertical-align: top; width: 60%; padding-top: 6px;">
+          <td style="vertical-align: top; padding-top: 4px;">
             <h3 style="margin: 0; font-size: 16px; font-weight: bold;">
               MK Gold | ${data?.branch?.branchName || ''}
             </h3>
@@ -299,7 +303,7 @@ async function generateExactInvoiceHtml(data) {
               <strong>Phone:</strong> 63661 11999 &nbsp;&nbsp;&nbsp;&nbsp; <strong>GST:</strong> ${data?.branch?.gstNumber || ''}
             </p>
           </td>
-          <td style="text-align: right; vertical-align: top; width: 40%; padding-top: 6px;">
+          <td style="text-align: right; vertical-align: top; padding-top: 4px;">
             <p style="margin: 0; font-size: 12px;">
               <strong>Invoice No.:</strong> ${data?.billId || ''}
             </p>

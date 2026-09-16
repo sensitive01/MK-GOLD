@@ -30,18 +30,36 @@ async function findSales(query = {}) {
 async function getSalesById(id) {
   try {
     const response = await apiClient().get(`/api/v1.0/admin/sales/get/${id}`);
+    if (response.data && response.data.status === false && (response.data.message === 'Unauthorized' || response.data.message === 'Unauthorized to view')) {
+      const fallback = await apiClient().get(`/api/v1.0/branch/sales/get/${id}`);
+      return fallback.data;
+    }
     return response.data;
   } catch (err) {
-    return err;
+    try {
+      const fallback = await apiClient().get(`/api/v1.0/branch/sales/get/${id}`);
+      return fallback.data;
+    } catch (e) {
+      return err;
+    }
   }
 }
 
 async function updateSales(id, payload) {
   try {
     const response = await apiClient().post(`/api/v1.0/admin/sales/update/${id}`, payload);
+    if (response.data && response.data.status === false && (response.data.message === 'Unauthorized' || response.data.message === 'Unauthorized to update')) {
+      const fallback = await apiClient().post(`/api/v1.0/branch/sales/update/${id}`, payload);
+      return fallback.data;
+    }
     return response.data;
   } catch (err) {
-    return err;
+    try {
+      const fallback = await apiClient().post(`/api/v1.0/branch/sales/update/${id}`, payload);
+      return fallback.data;
+    } catch (e) {
+      return err;
+    }
   }
 }
 

@@ -1080,7 +1080,7 @@ export default function TransitSales() {
           },
         }}
       >
-        <MenuItem
+        {/* <MenuItem
           onClick={() => {
             setOpen(null);
             setToggleContainer(!toggleContainer);
@@ -1089,7 +1089,7 @@ export default function TransitSales() {
         >
           <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
           Edit
-        </MenuItem>
+        </MenuItem> */}
         <MenuItem
           onClick={() => {
             setOpen(null);
@@ -1119,7 +1119,7 @@ export default function TransitSales() {
           <Iconify icon={'material-symbols:history'} sx={{ mr: 2 }} />
           Process Log & Timeline
         </MenuItem>
-        {global.canDelete(userType) && (
+        {/* {global.canDelete(userType) && (
           <MenuItem
             sx={{ color: 'error.main' }}
             onClick={() => {
@@ -1131,7 +1131,7 @@ export default function TransitSales() {
             <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
             Delete
           </MenuItem>
-        )}
+        )} */}
       </Popover>
 
       <Modal

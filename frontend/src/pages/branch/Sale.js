@@ -624,8 +624,8 @@ export default function Sale() {
 
       {toggleContainer === true && toggleContainerType === 'detail' && (
         <Container maxWidth="xl">
-          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={{ xs: 1.5, sm: 2 }}>
+            <Typography variant="h4" sx={{ color: '#fff', mb: 0 }}>
               Sale Details
             </Typography>
             <Stack direction="row" spacing={2}>
@@ -690,7 +690,7 @@ export default function Sale() {
           },
         }}
       >
-        <MenuItem
+        {/* <MenuItem
           disabled={['completed', 'intransit', 'moved', 'melted'].includes(selectedSale?.status)}
           onClick={() => {
             setOpen(null);
@@ -700,7 +700,7 @@ export default function Sale() {
         >
           <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
           Edit
-        </MenuItem>
+        </MenuItem> */}
         <MenuItem
           onClick={() => {
             setOpen(null);

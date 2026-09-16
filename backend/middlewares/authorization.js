@@ -4,9 +4,21 @@ function isAdmin(req, res, next) {
     return next();
   }
 
+  const branchUserTypes = [
+    "branch",
+    "assistant_branch_manager",
+    "branch_executive",
+    "transaction_executive",
+    "telecalling",
+    "bullion_desk",
+  ];
+
   if (
-    (userType === "branch" || userType === "assistant_branch_manager" || userType === "branch_executive") &&
-    (req.path.includes("transit-sales") || req.path.includes("branch/get") || req.path.includes("transit/get"))
+    branchUserTypes.includes(userType) &&
+    (req.path.includes("transit") ||
+      req.path.includes("branch/get") ||
+      req.path.includes("sales/get") ||
+      req.path.includes("sales/update"))
   ) {
     return next();
   }

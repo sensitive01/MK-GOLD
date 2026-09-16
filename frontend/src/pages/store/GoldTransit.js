@@ -756,7 +756,7 @@ export default function StoreGoldTransit() {
                     {selectedTransitObj?.totalNetWeight} g
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={6}>
                   <Typography variant="caption" color="text.secondary">
                     Branch Dispatch Proof
                   </Typography>
@@ -782,6 +782,22 @@ export default function StoreGoldTransit() {
                       </Typography>
                     )}
                   </div>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="caption" color="text.secondary">
+                    Package Weight
+                  </Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    {(() => {
+                      const pw = selectedTransitObj?.packetWeight ?? selectedTransitObj?.packageWeight;
+                      if (pw === undefined || pw === null || pw === '') return '-';
+                      if (Array.isArray(pw)) {
+                        const valid = pw.filter((w) => w !== null && w !== undefined && w !== '');
+                        return valid.length > 0 ? `${valid.join(', ')} g` : '-';
+                      }
+                      return `${pw} g`;
+                    })()}
+                  </Typography>
                 </Grid>
               </Grid>
             </Card>

@@ -178,23 +178,27 @@ export default function SalePrint({ id }) {
       <div id="pdf" style={{ color: '#000', backgroundColor: '#fff', padding: '30px', fontFamily: 'Arial, sans-serif', fontSize: '13px', width: '750px', margin: '0 auto', boxSizing: 'border-box' }}>
 
         {/* Header Section */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px', tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: '60%' }} />
+            <col style={{ width: '40%' }} />
+          </colgroup>
           <tbody>
             <tr>
-              <td style={{ verticalAlign: 'top', paddingBottom: '10px' }}>
+              <td style={{ verticalAlign: 'middle', paddingBottom: '6px' }}>
                 <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 'bold' }}>PURCHASE INVOICE</h2>
               </td>
-              <td style={{ textAlign: 'right', verticalAlign: 'top', paddingBottom: '10px' }}>
+              <td style={{ textAlign: 'right', verticalAlign: 'middle', paddingBottom: '6px' }}>
                 <img
                   alt="Logo"
                   src="/assets/icons/navbar/MK%20Gold%20Logo.png"
-                  style={{ width: '90px', height: 'auto', objectFit: 'contain' }}
+                  style={{ width: '130px', height: 'auto', objectFit: 'contain', display: 'inline-block' }}
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
               </td>
             </tr>
             <tr>
-              <td style={{ verticalAlign: 'top', width: '60%', paddingTop: '10px' }}>
+              <td style={{ verticalAlign: 'top', paddingTop: '4px' }}>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>
                   MK Gold | {data?.branch?.branchName || ''}
                 </h3>
@@ -205,7 +209,7 @@ export default function SalePrint({ id }) {
                   <strong>Phone:</strong> 63661 11999 &nbsp;&nbsp;&nbsp;&nbsp; <strong>GST:</strong> {data?.branch?.gstNumber || ''}
                 </p>
               </td>
-              <td style={{ textAlign: 'right', verticalAlign: 'top', width: '40%', paddingTop: '10px' }}>
+              <td style={{ textAlign: 'right', verticalAlign: 'top', paddingTop: '4px' }}>
                 <p style={{ margin: 0, fontSize: '12px' }}>
                   <strong>Invoice No.:</strong> {data?.billId || ''}
                 </p>

@@ -1619,17 +1619,22 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
     );
 
     if (!kycProofs || kycProofs.length === 0) {
-      return (
-        <Paper sx={{ p: 2.5, textAlign: 'center', bgcolor: 'background.neutral', borderRadius: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            No KYC proofs uploaded
-          </Typography>
-        </Paper>
-      );
+      return null;
     }
 
     return (
-      <Grid container spacing={2}>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        alignItems="center"
+        justifyContent={{ xs: 'center', lg: 'flex-end' }}
+        sx={{
+          flexWrap: 'wrap',
+          gap: 1.5,
+          width: { xs: '100%', lg: 'auto' },
+          flexShrink: 0,
+        }}
+      >
         {kycProofs.map((e, index) => {
           const isSignature =
             e?.uploadType?.toLowerCase() === 'signature' ||
@@ -1651,105 +1656,105 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
           const isImage = Boolean(e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i));
 
           return (
-            <Grid item xs={12} sm={6} md={4} key={e._id || index}>
-              <Card
+            <Card
+              key={e._id || index}
+              sx={{
+                p: 1.25,
+                borderRadius: 1.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                bgcolor: 'background.paper',
+                width: { xs: '100%', sm: 190, md: 210 },
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  borderColor: 'primary.main',
+                },
+              }}
+            >
+              <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+                <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
+                  <Iconify
+                    icon={isSignature ? 'fluent:signature-24-filled' : 'mdi:card-account-details-outline'}
+                    width={18}
+                    sx={{ color: isSignature ? 'info.main' : 'primary.main', flexShrink: 0 }}
+                  />
+                  <Typography variant="subtitle2" noWrap sx={{ fontWeight: 700, fontSize: '0.8rem' }}>
+                    {docName}
+                  </Typography>
+                </Stack>
+                {docNumber && (
+                  <Chip
+                    size="small"
+                    label={docNumber}
+                    variant="outlined"
+                    color="primary"
+                    sx={{ fontWeight: 600, fontSize: '0.7rem', height: 20, ml: 0.5, flexShrink: 0 }}
+                  />
+                )}
+              </Stack>
+
+              <Box
                 sx={{
-                  p: 2,
-                  borderRadius: 2,
+                  width: '100%',
+                  height: 105,
+                  borderRadius: 1,
+                  bgcolor: isSignature ? '#ffffff' : 'background.neutral',
                   border: '1px solid',
                   borderColor: 'divider',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                  height: '100%',
+                  overflow: 'hidden',
                   display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  transition: 'all 0.2s',
-                  '&:hover': {
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                    borderColor: 'primary.main',
-                  },
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  p: 0.5,
                 }}
               >
-                <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1.5}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <Iconify
-                      icon={isSignature ? 'fluent:signature-24-filled' : 'mdi:card-account-details-outline'}
-                      width={22}
-                      sx={{ color: isSignature ? 'info.main' : 'primary.main' }}
-                    />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                      {docName}
-                    </Typography>
-                  </Stack>
-                  {docNumber && (
-                    <Chip
-                      size="small"
-                      label={docNumber}
-                      variant="outlined"
-                      color="primary"
-                      sx={{ fontWeight: 600, fontSize: '0.75rem' }}
-                    />
-                  )}
-                </Stack>
-
-                <Box
-                  sx={{
-                    width: '100%',
-                    height: 170,
-                    borderRadius: 1.5,
-                    bgcolor: isSignature ? '#ffffff' : 'background.neutral',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    p: 1,
-                  }}
-                >
-                  {isImage ? (
-                    <a
-                      href={fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                {isImage ? (
+                  <a
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <img
+                      src={fileUrl}
+                      alt={docName}
                       style={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain',
+                        borderRadius: 4,
                       }}
-                    >
-                      <img
-                        src={fileUrl}
-                        alt={docName}
-                        style={{
-                          maxWidth: '100%',
-                          maxHeight: '100%',
-                          objectFit: 'contain',
-                          borderRadius: 4,
-                        }}
-                      />
-                    </a>
-                  ) : (
-                    <a
-                      href={fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ textDecoration: 'none', textAlign: 'center' }}
-                    >
-                      <img src="/assets/doc.svg" alt="document" style={{ width: '60px', margin: '0 auto' }} />
-                      <Typography variant="caption" display="block" sx={{ mt: 1, color: 'primary.main', fontWeight: 600 }}>
-                        View Document
-                      </Typography>
-                    </a>
-                  )}
-                </Box>
-              </Card>
-            </Grid>
+                    />
+                  </a>
+                ) : (
+                  <a
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ textDecoration: 'none', textAlign: 'center' }}
+                  >
+                    <img src="/assets/doc.svg" alt="document" style={{ width: '40px', margin: '0 auto' }} />
+                    <Typography variant="caption" display="block" sx={{ mt: 0.5, color: 'primary.main', fontWeight: 600, fontSize: '0.68rem' }}>
+                      View Document
+                    </Typography>
+                  </a>
+                )}
+              </Box>
+            </Card>
           );
         })}
-      </Grid>
+      </Stack>
     );
   }
 
@@ -1893,112 +1898,107 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
           <CircularProgress color="inherit" />
         </Backdrop>
       ) : (
-        <Card sx={{ p: { xs: 2, sm: 3, md: 4 }, my: { xs: 2, sm: 4 }, borderRadius: 2 }}>
-          <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: { xs: 2, sm: 3 }, fontSize: { xs: '1.5rem', sm: '2rem' }, fontWeight: 700 }}>
+        <Card sx={{ p: { xs: 2, sm: 3, md: 4 }, mt: 1, mb: { xs: 2, sm: 3 }, borderRadius: 2 }}>
+          <Typography variant="h4" sx={{ mb: 1.5, fontSize: { xs: '1.4rem', sm: '1.75rem' }, fontWeight: 700 }}>
             Billing Summary
           </Typography>
-          <Grid container spacing={{ xs: 2, sm: 3 }}>
+          <Grid container spacing={{ xs: 1.5, sm: 2 }}>
             <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+              <Typography variant="h6" sx={{ mb: 1, fontSize: { xs: '1.05rem', sm: '1.15rem' }, fontWeight: 600 }}>
                 Customer Detail:
               </Typography>
-              <Box sx={{ p: { xs: 2, sm: 3 }, bgcolor: 'background.neutral', borderRadius: 2 }}>
+              <Box sx={{ p: { xs: 2, sm: 2.5 }, bgcolor: 'background.neutral', borderRadius: 2 }}>
                 <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={{ xs: 2, sm: 3 }}
-                  alignItems="center"
+                  direction={{ xs: 'column', lg: 'row' }}
+                  spacing={{ xs: 2, sm: 2.5 }}
+                  alignItems={{ xs: 'center', lg: 'center' }}
+                  justifyContent="space-between"
                 >
-                  <Avatar
-                    src={data?.customer?.profileImage?.uploadedFile ? (data.customer.profileImage.uploadedFile.startsWith('http')
-                      ? data.customer.profileImage.uploadedFile
-                      : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`) : null}
-                    alt={data?.customer?.name}
-                    sx={{ width: { xs: 80, sm: 100 }, height: { xs: 80, sm: 100 } }}
-                  />
                   <Stack
-                    spacing={1}
-                    flexGrow={1}
-                    sx={{
-                      width: '100%',
-                      alignItems: { xs: 'center', sm: 'flex-start' },
-                      textAlign: { xs: 'center', sm: 'left' },
-                    }}
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={{ xs: 2, sm: 2.5 }}
+                    alignItems="center"
+                    sx={{ flexGrow: 1, width: { xs: '100%', lg: 'auto' } }}
                   >
-                    <Typography variant="h5" sx={{ fontWeight: 700 }}>{data?.customer?.name || 'N/A'}</Typography>
+                    <Avatar
+                      src={data?.customer?.profileImage?.uploadedFile ? (data.customer.profileImage.uploadedFile.startsWith('http')
+                        ? data.customer.profileImage.uploadedFile
+                        : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`) : null}
+                      alt={data?.customer?.name}
+                      sx={{ width: { xs: 75, sm: 90 }, height: { xs: 75, sm: 90 }, flexShrink: 0 }}
+                    />
                     <Stack
-                      direction={{ xs: 'column', sm: 'row' }}
-                      spacing={{ xs: 0.75, sm: 2 }}
-                      alignItems="center"
-                      justifyContent={{ xs: 'center', sm: 'flex-start' }}
-                      sx={{ color: 'text.secondary', flexWrap: 'wrap' }}
-                    >
-                      <Stack direction="row" spacing={0.5} alignItems="center">
-                        <Iconify icon="eva:email-fill" width={18} />
-                        <Typography variant="body2">{data?.customer?.email || 'N/A'}</Typography>
-                      </Stack>
-                      <Stack direction="row" spacing={0.5} alignItems="center">
-                        <Iconify icon="eva:phone-fill" width={18} />
-                        <Typography variant="body2">{global.maskPhoneNumber(data?.customer?.phoneNumber) || data?.customer?.phoneNumber || 'N/A'}</Typography>
-                      </Stack>
-                      <Stack direction="row" spacing={0.5} alignItems="center">
-                        <Iconify icon="eva:phone-outline" width={18} />
-                        <Typography variant="body2">
-                          Alt: {(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
-                            ? (global.maskPhoneNumber(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) || (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber))
-                            : 'N/A'}
-                        </Typography>
-                      </Stack>
-                    </Stack>
-                    <Stack
-                      direction="row"
                       spacing={0.75}
                       sx={{
-                        mt: 1,
-                        flexWrap: 'wrap',
-                        gap: 0.75,
-                        justifyContent: { xs: 'center', sm: 'flex-start' },
+                        width: '100%',
+                        alignItems: { xs: 'center', sm: 'flex-start' },
+                        textAlign: { xs: 'center', sm: 'left' },
                       }}
                     >
-                      <Chip size="small" label={`Gender: ${data?.customer?.gender || 'N/A'}`} />
-                      <Chip size="small" label={`Marital Status: ${data?.customer?.maritalStatus || 'N/A'}`} />
-                      <Chip size="small" label={`Source: ${data?.customer?.source || 'N/A'}`} />
-                      <Chip size="small" label={`ChooseId: ${data?.customer?.chooseId || 'N/A'}`} />
+                      <Typography variant="h5" sx={{ fontWeight: 700 }}>{data?.customer?.name || 'N/A'}</Typography>
+                      <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={{ xs: 0.75, sm: 2 }}
+                        alignItems="center"
+                        justifyContent={{ xs: 'center', sm: 'flex-start' }}
+                        sx={{ color: 'text.secondary', flexWrap: 'wrap' }}
+                      >
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Iconify icon="eva:email-fill" width={18} />
+                          <Typography variant="body2">{data?.customer?.email || 'N/A'}</Typography>
+                        </Stack>
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Iconify icon="eva:phone-fill" width={18} />
+                          <Typography variant="body2">{global.maskPhoneNumber(data?.customer?.phoneNumber) || data?.customer?.phoneNumber || 'N/A'}</Typography>
+                        </Stack>
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Iconify icon="eva:phone-outline" width={18} />
+                          <Typography variant="body2">
+                            Alt: {(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
+                              ? (global.maskPhoneNumber(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) || (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber))
+                              : 'N/A'}
+                          </Typography>
+                        </Stack>
+                      </Stack>
+                      <Stack
+                        direction="row"
+                        spacing={0.75}
+                        sx={{
+                          mt: 0.5,
+                          flexWrap: 'wrap',
+                          gap: 0.75,
+                          justifyContent: { xs: 'center', sm: 'flex-start' },
+                        }}
+                      >
+                        <Chip size="small" label={`Gender: ${data?.customer?.gender || 'N/A'}`} />
+                        <Chip size="small" label={`Marital Status: ${data?.customer?.maritalStatus || 'N/A'}`} />
+                        <Chip size="small" label={`Source: ${data?.customer?.source || 'N/A'}`} />
+                      </Stack>
                     </Stack>
                   </Stack>
+                  <KycProof />
                 </Stack>
               </Box>
             </Grid>
             <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
-                Customer KYC Proofs:
-              </Typography>
-              <KycProof />
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
                 Address Detail:
               </Typography>
               <Address />
             </Grid>
             <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
                 Ornament Detail:
               </Typography>
-            </Grid>
-            <Grid item xs={12}>
               <Ornament />
             </Grid>
             {data?.saleType !== 'physical' && (
-              <>
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
-                    Release Detail:
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Release />
-                </Grid>
-              </>
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Release Detail:
+                </Typography>
+                <Release />
+              </Grid>
             )}
             {(() => {
               const rawFinanceBanks = (data?.financePayments || [])
@@ -2078,47 +2078,35 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
               return null;
             })()}
             <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
                 Finance Payments
               </Typography>
-            </Grid>
-            <Grid item xs={12}>
               <FinancePayments />
             </Grid>
             <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
                 Proof Documents
               </Typography>
-            </Grid>
-            <Grid item xs={12}>
               <Proof />
             </Grid>
             {isMovedToTransit && (
-              <>
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
-                    Transit Proofs
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <TransitProof />
-                </Grid>
-              </>
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Transit Proofs
+                </Typography>
+                <TransitProof />
+              </Grid>
             )}
             {isMovedToMelting && (
-              <>
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
-                    Melting Proofs
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <MeltingProof />
-                </Grid>
-              </>
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Melting Proofs
+                </Typography>
+                <MeltingProof />
+              </Grid>
             )}
             <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
                 Bill Detail:
               </Typography>
               <Scrollbar>
@@ -2132,7 +2120,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                         <TableCell align="left">Ornament Type: {sentenceCase(data.purchaseType ?? '')}</TableCell>
                       </TableRow>
                       <TableRow tabIndex={-1}>
-                        <TableCell align="left">DOP: {new Date(data.dop).toUTCString()}</TableCell>
+                        <TableCell align="left">DOP: {data?.dop ? moment(data.dop).format('DD-MM-YYYY') : '-'}</TableCell>
                         <TableCell align="left">Net Weight: {data.netWeight?.toFixed(2)}</TableCell>
                         <TableCell align="left">Payment Type: {data.paymentType}</TableCell>
                         <TableCell align="left">Margin: {data.margin}%</TableCell>
@@ -2149,11 +2137,13 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                             )
                             : Math.round((data.netAmount * data.margin) / 100)}
                         </TableCell>
-                        <TableCell align="left">
-                          Release Amount:{' '}
-                          {Math.round(data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0)) ?? 0}
-                        </TableCell>
-                        <TableCell align="left">
+                        {data?.saleType?.toLowerCase() !== 'physical' && (
+                          <TableCell align="left">
+                            Release Amount:{' '}
+                            {Math.round(data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0)) ?? 0}
+                          </TableCell>
+                        )}
+                        <TableCell align="left" colSpan={data?.saleType?.toLowerCase() === 'physical' ? 2 : 1}>
                           {isAuthorized && data.status === 'bullion pending' ? (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
@@ -2175,7 +2165,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                           )}
                         </TableCell>
                       </TableRow>
-                      <TableRow tabIndex={-1}>
+                      {/* <TableRow tabIndex={-1}>
                         <TableCell align="left">Status: {sentenceCase(data.status || '')}</TableCell>
                         {data.paymentType === 'partial' && (
                           <>
@@ -2193,7 +2183,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                             At: {moment(data.actionAt).format('YYYY-MM-DD HH:mm:ss')}
                           </TableCell>
                         )}
-                      </TableRow>
+                      </TableRow> */}
                       {data.comments && (
                         <TableRow tabIndex={-1}>
                           <TableCell align="left" colSpan={4}>

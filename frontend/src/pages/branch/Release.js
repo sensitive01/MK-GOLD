@@ -428,7 +428,7 @@ export default function Release() {
             >
               Filter
             </Button>
-            {userType !== 'TRANSACTION_EXECUTIVE' && !userType?.toLowerCase().includes('bullion') && (
+            {/* {userType !== 'TRANSACTION_EXECUTIVE' && !userType?.toLowerCase().includes('bullion') && (
               <Button
                 variant="contained"
                 startIcon={<Iconify icon="eva:plus-fill" />}
@@ -437,7 +437,7 @@ export default function Release() {
               >
                 New Pledged Release
               </Button>
-            )}
+            )} */}
           </Stack>
         </Stack>
 
