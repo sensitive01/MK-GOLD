@@ -363,7 +363,7 @@ export default function Customer({ isTab = false }) {
             >
               Filter
             </Button>
-            <Button
+            {/* <Button
               variant="contained"
               startIcon={<Iconify icon="eva:plus-fill" />}
               sx={{ flex: { xs: '1 1 auto', sm: 'initial' }, whiteSpace: 'nowrap' }}
@@ -373,7 +373,7 @@ export default function Customer({ isTab = false }) {
               }}
             >
               New Customer
-            </Button>
+            </Button> */}
           </Stack>
         </Stack>
 

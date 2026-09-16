@@ -610,7 +610,7 @@ function Customer(props) {
                 ),
               }}
             />
-            <Button
+            {/* <Button
               variant="contained"
               startIcon={<Iconify icon="eva:plus-fill" />}
               sx={{ whiteSpace: 'nowrap', width: { xs: '100%', sm: 'auto' } }}
@@ -627,7 +627,7 @@ function Customer(props) {
               }}
             >
               New Customer
-            </Button>
+            </Button> */}
           </Stack>
         </Stack>
         <Scrollbar>
