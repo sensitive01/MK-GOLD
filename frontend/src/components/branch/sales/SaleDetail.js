@@ -58,8 +58,18 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
   const userType = auth.user?.userType?.toLowerCase();
   const isAuthorized = ['bullion_desk', 'admin'].includes(userType);
 
+  const isPledged = data?.saleType?.toLowerCase() !== 'physical';
+  const isReleasePending = isPledged && (
+    !data?.assigneeCompleted ||
+    Number(data?.netAmount || 0) === 0 ||
+    data?.status === 'release pending' ||
+    (Array.isArray(data?.release) && data.release.length > 0 && data.release.some((r) => r.status && r.status !== 'completed'))
+  );
+  const isReleaseBullionApproval = isReleasePending;
+
   const handleApprove = async () => {
-    if (payableAmount === '' || isNaN(Number(payableAmount))) {
+    const showPayableAmount = !isReleaseBullionApproval;
+    if (showPayableAmount && (payableAmount === '' || isNaN(Number(payableAmount)))) {
       if (setNotify) {
         setNotify({
           open: true,
@@ -75,16 +85,18 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
         status: 'finance pending',
         bullionCompleted: true,
         bullionCompletedAt: new Date(),
-        bullionComments: bullionComment.trim() || 'Approved by Bullion Desk',
-        comments: bullionComment.trim() || 'Approved by Bullion Desk',
-        payableAmount: Number(payableAmount),
+        bullionComments: bullionComment.trim(),
+        comments: bullionComment.trim(),
       };
+      if (showPayableAmount && payableAmount !== '' && !isNaN(Number(payableAmount))) {
+        payload.payableAmount = Number(payableAmount);
+      }
       const response = await updateSales(id, payload);
       if (response.status) {
         if (setNotify) {
           setNotify({
             open: true,
-            message: 'Sale approved successfully',
+            message: isReleaseBullionApproval ? 'Release accepted successfully' : 'Sale accepted successfully',
             severity: 'success',
           });
         }
@@ -95,7 +107,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
         if (setNotify) {
           setNotify({
             open: true,
-            message: response.message || 'Failed to approve sale',
+            message: response.message || (isReleaseBullionApproval ? 'Failed to accept release' : 'Failed to accept sale'),
             severity: 'error',
           });
         }
@@ -104,7 +116,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
       if (setNotify) {
         setNotify({
           open: true,
-          message: err.message || 'Error approving sale',
+          message: err.message || (isReleaseBullionApproval ? 'Error accepting release' : 'Error accepting sale'),
           severity: 'error',
         });
       }
@@ -134,7 +146,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
         if (setNotify) {
           setNotify({
             open: true,
-            message: 'Sale rejected successfully',
+            message: isReleaseBullionApproval ? 'Release rejected successfully' : 'Sale rejected successfully',
             severity: 'success',
           });
         }
@@ -145,7 +157,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
         if (setNotify) {
           setNotify({
             open: true,
-            message: response.message || 'Failed to reject sale',
+            message: response.message || (isPhysical ? 'Failed to reject sale' : 'Failed to reject release'),
             severity: 'error',
           });
         }
@@ -154,7 +166,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
       if (setNotify) {
         setNotify({
           open: true,
-          message: err.message || 'Error rejecting sale',
+          message: err.message || (isPhysical ? 'Error rejecting sale' : 'Error rejecting release'),
           severity: 'error',
         });
       }
@@ -2128,7 +2140,21 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                         <TableCell align="left">Net Weight: {data.netWeight != null ? `${Number(data.netWeight).toFixed(2)} g` : '-'}</TableCell>
                       </TableRow>
                       <TableRow tabIndex={-1}>
-                        <TableCell align="left">Net Amount: ₹{Math.round(data.netAmount || 0).toLocaleString('en-IN')}</TableCell>
+                        <TableCell align="left">
+                          Net Amount:{' '}
+                          {data?.saleType?.toLowerCase() !== 'physical' && (
+                            Number(data.netAmount || 0) === 0 ||
+                            !data.assigneeCompleted ||
+                            data.status === 'release pending' ||
+                            (Array.isArray(data.release) && data.release.length > 0 && data.release.some((r) => r.status && r.status !== 'completed'))
+                          ) ? (
+                            <Box component="span" sx={{ color: '#8A1B9F', fontWeight: 'bold' }}>
+                              Release Pending
+                            </Box>
+                          ) : (
+                            `₹${Math.round(data.netAmount || 0).toLocaleString('en-IN')}`
+                          )}
+                        </TableCell>
                         <TableCell align="left">
                           Margin Amount:{' '}
                           ₹{Math.round(
@@ -2147,7 +2173,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                           </TableCell>
                         )}
                         <TableCell align="left" colSpan={data?.saleType?.toLowerCase() === 'physical' ? 2 : 1}>
-                          {isAuthorized && data.status === 'bullion pending' ? (
+                          {isAuthorized && data.status === 'bullion pending' && !isReleaseBullionApproval ? (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
                                 Payable Amount:
@@ -2203,26 +2229,32 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                   </Typography>
 
                   <Grid container spacing={2} sx={{ mb: 2 }}>
-                    <Grid item xs={12} sm={4}>
-                      <TextField
-                        fullWidth
-                        type="number"
-                        label="Payable Amount (₹)"
-                        value={payableAmount}
-                        onChange={(e) => setPayableAmount(e.target.value)}
-                        helperText="Review or adjust payable amount before approving"
-                        InputProps={{
-                          startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-                        }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={8}>
+                    {!isReleaseBullionApproval && (
+                      <Grid item xs={12} sm={4}>
+                        <TextField
+                          fullWidth
+                          type="number"
+                          label="Payable Amount (₹)"
+                          value={payableAmount}
+                          onChange={(e) => setPayableAmount(e.target.value)}
+                          helperText="Review or adjust payable amount before approving"
+                          InputProps={{
+                            startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                          }}
+                        />
+                      </Grid>
+                    )}
+                    <Grid item xs={12} sm={!isReleaseBullionApproval ? 8 : 12}>
                       <TextField
                         fullWidth
                         label="Comments"
                         value={bullionComment}
                         onChange={(e) => setBullionComment(e.target.value)}
-                        placeholder="Type any comments before approving/rejecting (Optional for approval)"
+                        placeholder={
+                          isReleaseBullionApproval
+                            ? 'Type any comments before accepting/rejecting release (Optional for approval)'
+                            : 'Type any comments before accepting/rejecting (Optional for approval)'
+                        }
                       />
                     </Grid>
                   </Grid>
@@ -2245,7 +2277,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                         setOpenRejectDialog(true);
                       }}
                     >
-                      Reject Sale
+                      {isReleaseBullionApproval ? 'Reject Release' : 'Reject'}
                     </Button>
                     <LoadingButton
                       variant="contained"
@@ -2254,7 +2286,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                       sx={{ width: { xs: '100%', sm: 'auto' } }}
                       onClick={handleApprove}
                     >
-                      Approve Sale
+                      {isReleaseBullionApproval ? 'Accept Release' : 'Accept'}
                     </LoadingButton>
                   </Stack>
                 </Paper>
@@ -2265,10 +2297,10 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
       )}
 
       <Dialog open={openRejectDialog} onClose={() => setOpenRejectDialog(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Reject Sale</DialogTitle>
+        <DialogTitle>{isReleaseBullionApproval ? 'Reject Release' : 'Reject'}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-            Please provide a reason for rejecting this sale. This reason will be saved to the database.
+            Please provide a reason for rejecting this {isReleaseBullionApproval ? 'release' : 'sale'}. This reason will be saved to the database.
           </Typography>
           <TextField
             autoFocus
@@ -2292,7 +2324,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
             Cancel
           </Button>
           <LoadingButton onClick={handleReject} loading={actionLoading} variant="contained" color="error">
-            Reject Sale
+            {isReleaseBullionApproval ? 'Reject Release' : 'Reject'}
           </LoadingButton>
         </DialogActions>
       </Dialog>

@@ -462,6 +462,13 @@ export default function Sale() {
                 {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
                   const { _id, billId, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
                   const selectedData = selected.indexOf(_id) !== -1;
+                  const isPledged = saleType?.toLowerCase() !== 'physical';
+                  const isReleasePending = isPledged && (
+                    Number(netAmount || 0) === 0 ||
+                    !row.assigneeCompleted ||
+                    status === 'release pending' ||
+                    (Array.isArray(row.release) && row.release.length > 0 && row.release.some((r) => r.status && r.status !== 'completed'))
+                  );
 
                   return (
                     <TableRow
@@ -481,14 +488,16 @@ export default function Sale() {
                       }}
                       style={{ cursor: 'pointer' }}
                     >
-                      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedData}
-                          onChange={(event) => handleClick(event, _id)}
-                          onClick={(e) => e.stopPropagation()}
-                          disabled={isSelectForTransit && status !== 'completed' && status !== 'Completed'}
-                        />
-                      </TableCell>
+                      {!(auth.user?.userType?.toLowerCase().includes('bullion') || !isSelectForTransit) && (
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedData}
+                            onChange={(event) => handleClick(event, _id)}
+                            onClick={(e) => e.stopPropagation()}
+                            disabled={isSelectForTransit && status !== 'completed'}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell align="left">{billId}</TableCell>
                       <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                       <TableCell align="left">
@@ -508,7 +517,15 @@ export default function Sale() {
                       <TableCell align="left">{rowBranch?.branchName || '-'}</TableCell>
                       <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
                       <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
-                      <TableCell align="left">&#8377; {netAmount}</TableCell>
+                      <TableCell align="left">
+                        {isReleasePending ? (
+                          <Typography variant="body2" sx={{ color: '#8A1B9F', fontWeight: 'bold' }}>
+                            Release Pending
+                          </Typography>
+                        ) : (
+                          <>&#8377; {netAmount}</>
+                        )}
+                      </TableCell>
                       <TableCell align="left" onClick={(e) => e.stopPropagation()}>
                         <Status
                           status={status}
@@ -517,6 +534,7 @@ export default function Sale() {
                           fetchData={fetchData}
                           saleType={saleType}
                           assigneeCompleted={row.assigneeCompleted}
+                          isReleasePending={isReleasePending}
                         />
                       </TableCell>
                       <TableCell align="right" onClick={(e) => e.stopPropagation()}>
@@ -1011,9 +1029,11 @@ function Status(props) {
   // Finance Step
   if (status === 'finance pending') {
     if (userType === 'finance' || userType === 'accounts') {
+      const isPledged = saleType?.toLowerCase() !== 'physical';
+      const isReleaseFinance = isPledged && (!assigneeCompleted || isReleasePending);
       content = (
         <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
-          Update Finance
+          {isReleaseFinance ? 'Finance Pay Release' : 'Finance Update'}
         </Button>
       );
     } else {

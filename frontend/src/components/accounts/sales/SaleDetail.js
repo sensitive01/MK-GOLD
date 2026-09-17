@@ -2079,7 +2079,9 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
               <Grid item xs={12}>
                 <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
                   <Button variant="contained" color="warning" onClick={() => handleVerify('finance')}>
-                    Update Finance
+                    {data?.saleType?.toLowerCase() !== 'physical' && !data?.assigneeCompleted
+                      ? 'Finance Pay Release'
+                      : 'Update Finance'}
                   </Button>
                 </Stack>
               </Grid>
