@@ -4,17 +4,18 @@ const expenseService = require("../../services/expense");
 const goldRateService = require("../../services/goldrate");
 
 async function get(req, res) {
-  const date = new Date().toISOString().slice(0, 10);
-  const fullDate = new Date().toISOString();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const now = new Date();
+  const date = new Date(now.getTime() + istOffset).toISOString().slice(0, 10);
 
   const goldRate = await goldRateService.findOne({
-    date: fullDate,
+    date: date,
     state: "Karnataka",
     type: "gold",
   });
   
   const silverRate = await goldRateService.findOne({
-    date: fullDate,
+    date: date,
     state: "Karnataka",
     type: "silver",
   });
@@ -32,6 +33,7 @@ async function get(req, res) {
                 $dateToString: {
                   date: "$attendanceDate",
                   format: "%Y-%m-%d",
+                  timezone: "+05:30",
                 },
               },
             },
@@ -60,6 +62,7 @@ async function get(req, res) {
                 $dateToString: {
                   date: "$attendanceDate",
                   format: "%Y-%m-%d",
+                  timezone: "+05:30",
                 },
               },
             },

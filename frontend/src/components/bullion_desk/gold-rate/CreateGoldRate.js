@@ -34,7 +34,7 @@ function CreateGoldRate(props) {
     },
     validationSchema: schema,
     onSubmit: (values) => {
-      createGoldRate({ ...values, date: Date.now() }).then((data) => {
+      createGoldRate({ ...values, date: values.date || moment().format('YYYY-MM-DD') }).then((data) => {
         if (data.status === false) {
           props.setNotify({
             open: true,

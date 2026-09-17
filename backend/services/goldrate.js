@@ -57,7 +57,7 @@ async function findOne(query) {
     if (query.state) {
       query.state = { $regex: new RegExp(`^${query.state}$`, "i") };
     }
-    return await GoldRate.findOne(query).exec();
+    return await GoldRate.findOne(query).sort({ createdAt: -1 }).exec();
   } catch (err) {
     throw err;
   }
@@ -73,6 +73,13 @@ async function latest(query) {
 
 async function create(payload) {
   try {
+    if (payload.date) {
+      if (typeof payload.date === "number" || payload.date instanceof Date) {
+        const d = new Date(payload.date);
+        const istDate = new Date(d.getTime() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        payload.date = new Date(istDate);
+      }
+    }
     let goldRate = new GoldRate(payload);
     return await goldRate.save();
   } catch (err) {

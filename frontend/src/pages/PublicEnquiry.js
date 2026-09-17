@@ -68,7 +68,7 @@ const StyledContent = styled('div')(({ theme }) => ({
 
 const translations = {
   en: {
-    welcome: 'Welcome to MK Gold World',
+    welcome: 'Welcome to MK Gold',
     subtitle: 'The Most Trusted Gold Buyers',
     title: 'Customer Enquiry Form',
     formSubtitle: 'Please enter your details below',
@@ -100,7 +100,7 @@ const translations = {
     invalidOtp: 'Invalid OTP',
   },
   kn: {
-    welcome: 'MK ಗೋಲ್ಡ್ ವರ್ಲ್ಡ್‌ಗೆ ಸುಸ್ವಾಗತ',
+    welcome: 'MK ಗೋಲ್ಡ್‌ಗೆ ಸುಸ್ವಾಗತ',
     subtitle: 'ಅತ್ಯಂತ ವಿಶ್ವಾಸಾರ್ಹ ಚಿನ್ನದ ಖರೀದಿದಾರರು',
     title: 'ಗ್ರಾಹಕರ ವಿಚಾರಣೆ ಫಾರ್ಮ್',
     formSubtitle: 'ದಯವಿಟ್ಟು ನಿಮ್ಮ ವಿವರಗಳನ್ನು ಕೆಳಗೆ ನಮೂದಿಸಿ',
@@ -237,8 +237,12 @@ export default function PublicEnquiry() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.phoneNumber || !formData.grossWeight) {
+    if (!formData.name || !formData.phoneNumber || !formData.grossWeight || !formData.pincode) {
         setError(lang === 'en' ? 'Please fill all required fields' : 'ದಯವಿಟ್ಟು ಎಲ್ಲಾ ಅಗತ್ಯವಿರುವ ವಿವರಗಳನ್ನು ಭರ್ತಿ ಮಾಡಿ');
+        return;
+    }
+    if (!/^\d{6}$/.test(String(formData.pincode).trim())) {
+        setError(lang === 'en' ? 'Please enter a valid 6-digit pincode' : 'ದಯವಿಟ್ಟು ಮಾನ್ಯವಾದ 6-ಅಂಕಿಯ ಪಿನ್ ಕೋಡ್ ನಮೂದಿಸಿ');
         return;
     }
     if (!otp || !otpVerified) {
@@ -275,7 +279,7 @@ export default function PublicEnquiry() {
   return (
     <>
       <Helmet>
-        <title> Customer Enquiry | MK Gold World </title>
+        <title> Customer Enquiry | MK Gold </title>
       </Helmet>
 
       <StyledRoot>

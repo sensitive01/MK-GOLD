@@ -46,16 +46,19 @@ async function verifyAndSubmit(req, res) {
   try {
     const { phoneNumber, otp, skipOtp, ...formData } = req.body;
 
+    let otpRecord = null;
     if (!skipOtp) {
       if (!otp) {
         return res.json({ status: false, message: "OTP is required" });
       }
-      const otpRecord = await otpService.findOne({ phoneNumber, otp, type: 'enquiry' });
+      otpRecord = await otpService.findOne({ phoneNumber, otp, type: 'enquiry' });
       if (!otpRecord) {
         return res.json({ status: false, message: "Invalid OTP" });
       }
-      // Remove used OTP
-      await otpService.remove(otpRecord._id.toString());
+    }
+
+    if (!formData.pincode || !String(formData.pincode).trim()) {
+      return res.json({ status: false, message: "Pincode is required" });
     }
 
     // Check if customer already exists in our database
@@ -67,6 +70,11 @@ async function verifyAndSubmit(req, res) {
     }
 
     const result = await qrService.create({ ...formData, phoneNumber });
+
+    // Remove used OTP only after successfully creating enquiry
+    if (otpRecord) {
+      await otpService.remove(otpRecord._id.toString());
+    }
 
     // Send WhatsApp confirmation update with KYC link
     try {

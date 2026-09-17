@@ -4,9 +4,14 @@ const salesService = require("../../services/sales");
 const expenseService = require("../../services/expense");
 
 async function get(req, res) {
-  const date = new Date().toISOString();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const now = new Date();
+  const istDateStr = new Date(now.getTime() + istOffset).toISOString().slice(0, 10);
+  const todayStart = new Date(new Date(istDateStr + "T00:00:00.000Z").getTime() - istOffset);
+  const todayEnd = new Date(new Date(istDateStr + "T23:59:59.999Z").getTime() - istOffset);
+
   const goldRate = await goldRateService.findOne({
-    date: date,
+    date: istDateStr,
     state: "Karnataka",
     type: "gold",
   });
@@ -15,8 +20,8 @@ async function get(req, res) {
     {
       $match: {
         createdAt: {
-          $gte: new Date(date.replace(/T.*Z/, "T00:00:00Z")),
-          $lte: new Date(date.replace(/T.*Z/, "T23:59:59Z")),
+          $gte: todayStart,
+          $lte: todayEnd,
         },
       },
     },
@@ -27,8 +32,8 @@ async function get(req, res) {
     {
       $match: {
         createdAt: {
-          $gte: new Date(date.replace(/T.*Z/, "T00:00:00Z")),
-          $lte: new Date(date.replace(/T.*Z/, "T23:59:59Z")),
+          $gte: todayStart,
+          $lte: todayEnd,
         },
       },
     },
@@ -38,8 +43,8 @@ async function get(req, res) {
     {
       $match: {
         createdAt: {
-          $gte: new Date(date.replace(/T.*Z/, "T00:00:00Z")),
-          $lte: new Date(date.replace(/T.*Z/, "T23:59:59Z")),
+          $gte: todayStart,
+          $lte: todayEnd,
         },
       },
     },
@@ -52,22 +57,22 @@ async function get(req, res) {
     data: {
       todayGoldRate: goldRate?.rate ?? 0,
       todayCustomers: await customerService.count({
-        createdAt: date,
+        createdAt: { $gte: todayStart, $lte: todayEnd },
       }),
       todayBills: await salesService.count({
-        createdAt: date,
+        createdAt: { $gte: todayStart, $lte: todayEnd },
       }),
       todayPhysicalBills: await salesService.count({
-        createdAt: date,
+        createdAt: { $gte: todayStart, $lte: todayEnd },
         saleType: "physical",
       }),
       todayPledgeBills: await salesService.count({
-        createdAt: date,
+        createdAt: { $gte: todayStart, $lte: todayEnd },
         saleType: "pledged",
       }),
-      totalGrossWeight: totalGrossWeight[0]?.total,
-      totalNetAmount: totalNetAmount[0]?.total,
-      totalExpenses: totalExpenses[0]?.total,
+      totalGrossWeight: totalGrossWeight[0]?.total || 0,
+      totalNetAmount: totalNetAmount[0]?.total || 0,
+      totalExpenses: totalExpenses[0]?.total || 0,
     },
   });
 }

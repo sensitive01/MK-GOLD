@@ -226,11 +226,13 @@ async function findById(id) {
 async function count(query = {}) {
   try {
     if (query.createdAt) {
-      query.createdAt = new Date(query.createdAt).toISOString();
-      query.createdAt = {
-        $gte: new Date(query.createdAt.replace(/T.*Z/, "T00:00:00Z")),
-        $lte: new Date(query.createdAt.replace(/T.*Z/, "T23:59:59Z")),
-      };
+      if (typeof query.createdAt === "string") {
+        query.createdAt = new Date(query.createdAt).toISOString();
+        query.createdAt = {
+          $gte: new Date(query.createdAt.replace(/T.*Z/, "T00:00:00Z")),
+          $lte: new Date(query.createdAt.replace(/T.*Z/, "T23:59:59Z")),
+        };
+      }
     }
     return await Customer.count(query);
   } catch (err) {

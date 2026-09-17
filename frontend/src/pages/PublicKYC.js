@@ -452,14 +452,14 @@ export default function PublicKYC() {
   return (
     <>
       <Helmet>
-        <title> KYC | MK Gold World </title>
+        <title> KYC | MK Gold </title>
       </Helmet>
 
       <StyledRoot>
         {mdUp && (
           <StyledSection>
             <Typography variant="h3" sx={{ px: 5, mt: 10, mb: 2, fontWeight: 'bold' }}>
-              Welcome to MK Gold World
+              Welcome to MK Gold
             </Typography>
             <Typography variant="body1" sx={{ px: 5, mb: 5, opacity: 0.8 }}>
               Complete your KYC to proceed
@@ -512,7 +512,7 @@ export default function PublicKYC() {
                         KYC Submitted Successfully!
                     </Typography>
                     <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4 }}>
-                        Thank you for registering with MK Gold World. Our team will review your details.
+                        Thank you for registering with MK Gold. Our team will review your details.
                     </Typography>
                     <Button variant="contained" onClick={() => window.location.href = `/enquiry/${branch?._id || branchId}`}>
                         Return to Enquiry

@@ -12,18 +12,20 @@ const Employee = require("../../models/employee");
 const attendanceService = require("../../services/attendance");
 
 async function get(req, res) {
-  const date = new Date().toISOString();
-  const todayStart = new Date(date.replace(/T.*Z/, "T00:00:00Z"));
-  const todayEnd = new Date(date.replace(/T.*Z/, "T23:59:59Z"));
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const now = new Date();
+  const istDateStr = new Date(now.getTime() + istOffset).toISOString().slice(0, 10);
+  const todayStart = new Date(new Date(istDateStr + "T00:00:00.000Z").getTime() - istOffset);
+  const todayEnd = new Date(new Date(istDateStr + "T23:59:59.999Z").getTime() - istOffset);
 
   const goldRate = await goldRateService.findOne({
-    date: date,
+    date: istDateStr,
     state: "Karnataka",
     type: "gold",
   });
   
   const silverRate = await goldRateService.findOne({
-    date: date,
+    date: istDateStr,
     state: "Karnataka",
     type: "silver",
   });
@@ -98,7 +100,6 @@ async function get(req, res) {
   ]);
   const salaryAdvance = salaryAdvances[0]?.total || 0;
 
-  const strDate = date.substring(0, 10);
   const todayAttendances = await Attendance.aggregate([
     {
       $addFields: {
@@ -106,12 +107,13 @@ async function get(req, res) {
           $dateToString: {
             date: "$attendanceDate",
             format: "%Y-%m-%d",
+            timezone: "+05:30",
           },
         },
       },
     },
     {
-      $match: { convertedDate: strDate },
+      $match: { convertedDate: istDateStr },
     },
   ]);
   
@@ -166,21 +168,21 @@ async function get(req, res) {
       todayGoldRate: goldRate?.rate ?? 0,
       todaySilverRate: silverRate?.rate ?? 0,
       todayCustomers: await customerService.count({
-        createdAt: date,
+        createdAt: { $gte: todayStart, $lte: todayEnd },
       }),
       todayBills: await salesService.count({
-        createdAt: date,
+        createdAt: { $gte: todayStart, $lte: todayEnd },
       }),
       todaySilverBills: await salesService.count({
-        createdAt: date,
+        createdAt: { $gte: todayStart, $lte: todayEnd },
         purchaseType: "silver",
       }),
       todayPhysicalBills: await salesService.count({
-        createdAt: date,
+        createdAt: { $gte: todayStart, $lte: todayEnd },
         saleType: "physical",
       }),
       todayPledgeBills: await salesService.count({
-        createdAt: date,
+        createdAt: { $gte: todayStart, $lte: todayEnd },
         saleType: "pledged",
       }),
       totalGrossWeight: totalGrossWeight[0]?.total || 0,
