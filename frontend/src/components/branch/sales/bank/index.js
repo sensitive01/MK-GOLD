@@ -21,6 +21,7 @@ import {
   Paper,
   CircularProgress,
   IconButton,
+  Tooltip,
 } from '@mui/material';
 import { sentenceCase } from 'change-case';
 import { LoadingButton } from '@mui/lab';
@@ -34,7 +35,7 @@ import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import Iconify from '../../../iconify';
 import Scrollbar from '../../../scrollbar';
-import { getBankById, createBank, deleteBankById } from '../../../../apis/branch/customer-bank';
+import { getBankById, createBank, updateBank, deleteBankById } from '../../../../apis/branch/customer-bank';
 import { createFile } from '../../../../apis/branch/fileupload';
 import global from '../../../../utils/global';
 
@@ -53,7 +54,18 @@ const style = {
   overflow: 'auto',
 };
 
-const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, setData, modalRoot }) => {
+const CreateBankModal = ({
+  bankModal,
+  setBankModal,
+  selectedUser,
+  setNotify,
+  setData,
+  modalRoot,
+  bankToEdit,
+  setBankToEdit,
+  selectedBank,
+  setSelectedBank,
+}) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [bankProofPreview, setBankProofPreview] = useState(null);
 
@@ -67,25 +79,77 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
     proofType: Yup.string().required('Proof Type is required'),
   });
 
-  const { handleSubmit, handleChange, handleBlur, values, setValues, setFieldValue, resetForm, touched, errors, isSubmitting } =
-    useFormik({
-      initialValues: {
-        accountNo: '',
-        accountHolderName: '',
-        ifscCode: '',
-        bankName: '',
-        branch: '',
-        proofType: '',
-        proofFile: {},
-      },
-      validationSchema: schema,
-      onSubmit: async (values, { setSubmitting }) => {
-        try {
+  const {
+    handleSubmit,
+    handleChange,
+    handleBlur,
+    values,
+    setValues,
+    setFieldValue,
+    resetForm,
+    touched,
+    errors,
+    isSubmitting,
+  } = useFormik({
+    initialValues: {
+      accountNo: '',
+      accountHolderName: '',
+      ifscCode: '',
+      bankName: '',
+      branch: '',
+      proofType: '',
+      proofFile: {},
+    },
+    validationSchema: schema,
+    onSubmit: async (values, { setSubmitting }) => {
+      try {
+        if (bankToEdit) {
+          const res = await updateBank(selectedUser._id, bankToEdit._id, values);
+          if (res.status === false) {
+            setNotify({
+              open: true,
+              message: res.message || 'Bank not updated',
+              severity: 'error',
+            });
+          } else {
+            if (values.proofFile && values.proofFile instanceof File) {
+              const formData = new FormData();
+              formData.append('uploadId', bankToEdit._id);
+              formData.append('uploadName', 'customer_bank');
+              formData.append('uploadType', 'proof');
+              formData.append('uploadedFile', values.proofFile);
+              formData.append('documentType', values.proofType);
+              await createFile(formData);
+            }
+
+            const bankData = await getBankById(selectedUser._id);
+            setData(bankData.data);
+            window.dispatchEvent(new CustomEvent('bankUpdated'));
+
+            if (selectedBank && String(selectedBank._id) === String(bankToEdit._id)) {
+              const updatedSelected = (bankData.data || []).find((b) => String(b._id) === String(bankToEdit._id));
+              if (updatedSelected && setSelectedBank) {
+                setSelectedBank(updatedSelected);
+              }
+            }
+
+            resetForm();
+            setFieldValue('proofFile', {});
+            setBankProofPreview(null);
+            setBankModal(false);
+            if (setBankToEdit) setBankToEdit(null);
+            setNotify({
+              open: true,
+              message: 'Bank details updated successfully',
+              severity: 'success',
+            });
+          }
+        } else {
           const data = await createBank({ customerId: selectedUser._id, ...values });
           if (data.status === false) {
             setNotify({
               open: true,
-              message: 'Bank not created',
+              message: data.message || 'Bank not created',
               severity: 'error',
             });
           } else {
@@ -95,12 +159,12 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
             formData.append('uploadType', 'proof');
             formData.append('uploadedFile', values.proofFile);
             formData.append('documentType', values.proofType);
-            
+
             await createFile(formData);
             const bankData = await getBankById(selectedUser._id);
             setData(bankData.data);
             window.dispatchEvent(new CustomEvent('bankUpdated'));
-            
+
             resetForm();
             setFieldValue('proofFile', {});
             setBankProofPreview(null);
@@ -111,21 +175,42 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
               severity: 'success',
             });
           }
-        } catch (error) {
-          console.error('Error creating bank:', error);
-          setNotify({ open: true, message: 'An error occurred', severity: 'error' });
-        } finally {
-          setSubmitting(false);
         }
-      },
-    });
+      } catch (error) {
+        console.error('Error saving bank:', error);
+        setNotify({ open: true, message: error.message || 'An error occurred', severity: 'error' });
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
 
   useEffect(() => {
     if (bankModal) {
-      resetForm();
-      setBankProofPreview(null);
+      if (bankToEdit) {
+        setValues({
+          accountNo: bankToEdit.accountNo || '',
+          accountHolderName: bankToEdit.accountHolderName || '',
+          ifscCode: bankToEdit.ifscCode || '',
+          bankName: bankToEdit.bankName || '',
+          branch: bankToEdit.branch || '',
+          proofType: bankToEdit.proof?.documentType || 'Passbook',
+          proofFile: {},
+        });
+        if (bankToEdit.proof?.uploadedFile) {
+          const proofUrl = bankToEdit.proof.uploadedFile.startsWith('http')
+            ? bankToEdit.proof.uploadedFile
+            : `${global.baseURL}/${bankToEdit.proof.uploadedFile}`;
+          setBankProofPreview(proofUrl);
+        } else {
+          setBankProofPreview(null);
+        }
+      } else {
+        resetForm();
+        setBankProofPreview(null);
+      }
     }
-  }, [bankModal, resetForm]);
+  }, [bankModal, bankToEdit, resetForm, setValues]);
 
   const handleVerifyAccount = useCallback(() => {
     if (!values.ifscCode || values.ifscCode.length !== 11) {
@@ -136,7 +221,7 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
       setNotify({ open: true, message: 'Please enter an Account Number', severity: 'warning' });
       return;
     }
-    
+
     setIsVerifying(true);
 
     fetch(`https://ifsc.razorpay.com/${values.ifscCode}`)
@@ -195,19 +280,24 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
   return createPortal(
     <Modal
       open={bankModal}
-      onClose={() => setBankModal(false)}
+      onClose={() => {
+        setBankModal(false);
+        setBankProofPreview(null);
+        if (setBankToEdit) setBankToEdit(null);
+      }}
       aria-labelledby="modal-modal-title"
       aria-describedby="modal-modal-description"
     >
       <Box sx={style}>
         <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 3 }}>
-          Add Bank
+          {bankToEdit ? 'Edit Bank Details' : 'Add Bank'}
           <Button
             sx={{ color: '#222', float: 'right' }}
             startIcon={<CloseIcon />}
             onClick={() => {
               setBankModal(false);
               setBankProofPreview(null);
+              if (setBankToEdit) setBankToEdit(null);
             }}
           />
         </Typography>
@@ -329,7 +419,7 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
                       error={touched.proofFile && errors.proofFile && true}
                       onBlur={handleBlur}
                       onChange={handleFileUpload}
-                      required
+                      required={!bankToEdit && !bankProofPreview}
                       fullWidth
                     />
                   </Box>
@@ -350,7 +440,7 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
             </Grid>
             <Grid item xs={12}>
               <LoadingButton size="large" type="submit" variant="contained" loading={isSubmitting} startIcon={<SaveIcon />}>
-                Save Bank Details
+                {bankToEdit ? 'Update Bank Details' : 'Save Bank Details'}
               </LoadingButton>
               <Button
                 type="button"
@@ -362,6 +452,7 @@ const CreateBankModal = ({ bankModal, setBankModal, selectedUser, setNotify, set
                 onClick={() => {
                   setBankModal(false);
                   setBankProofPreview(null);
+                  if (setBankToEdit) setBankToEdit(null);
                 }}
               >
                 Cancel
@@ -379,6 +470,7 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
   const [data, setData] = useState([]);
   const [openId, setOpenId] = useState(null);
   const [bankModal, setBankModal] = useState(false);
+  const [bankToEdit, setBankToEdit] = useState(null);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
@@ -450,7 +542,14 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
           <Typography variant="h4" gutterBottom>
             Customer Bank
           </Typography>
-          <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={() => setBankModal(true)}>
+          <Button
+            variant="contained"
+            startIcon={<Iconify icon="eva:plus-fill" />}
+            onClick={() => {
+              setBankToEdit(null);
+              setBankModal(true);
+            }}
+          >
             New Bank
           </Button>
         </Stack>
@@ -508,18 +607,62 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
                       ) : 'N/A'}
                     </TableCell>
                     <TableCell align="left">
-                      {!(selectedUser?.sales?.some((sale) => sale.bank === e._id)) && (
-                        <Button
-                          variant="contained"
-                          startIcon={<DeleteIcon />}
-                          onClick={() => {
-                            setOpenId(e._id);
-                            handleOpenDeleteModal();
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      )}
+                      {(() => {
+                        const isFinanceApproved = selectedUser?.sales?.some((sale) => {
+                          const saleBankId = sale.bank?._id || sale.bank;
+                          const isMatch = String(saleBankId) === String(e._id);
+                          const isCompleted = sale.financeCompleted === true || sale.status === 'completed';
+                          return isMatch && isCompleted;
+                        });
+
+                        const isLinkedToSale = selectedUser?.sales?.some((sale) => {
+                          const saleBankId = sale.bank?._id || sale.bank;
+                          return String(saleBankId) === String(e._id);
+                        });
+
+                        return (
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Tooltip
+                              title={
+                                isFinanceApproved
+                                  ? 'Bank details cannot be edited after final finance approval'
+                                  : 'Edit bank details'
+                              }
+                            >
+                              <span>
+                                <Button
+                                  variant="contained"
+                                  color="primary"
+                                  size="small"
+                                  disabled={Boolean(isFinanceApproved)}
+                                  startIcon={<Iconify icon="eva:edit-fill" />}
+                                  onClick={() => {
+                                    setBankToEdit(e);
+                                    setBankModal(true);
+                                  }}
+                                >
+                                  Edit
+                                </Button>
+                              </span>
+                            </Tooltip>
+
+                            {!isLinkedToSale && (
+                              <Button
+                                variant="contained"
+                                color="warning"
+                                size="small"
+                                startIcon={<DeleteIcon />}
+                                onClick={() => {
+                                  setOpenId(e._id);
+                                  handleOpenDeleteModal();
+                                }}
+                              >
+                                Delete
+                              </Button>
+                            )}
+                          </Stack>
+                        );
+                      })()}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -564,7 +707,12 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
         setNotify={setNotify}
         setData={setData}
         modalRoot={modalRoot}
+        bankToEdit={bankToEdit}
+        setBankToEdit={setBankToEdit}
+        selectedBank={selectedBank}
+        setSelectedBank={setSelectedBank}
       />
+
 
       <Modal
         open={openDeleteModal}

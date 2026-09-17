@@ -79,9 +79,9 @@ export default {
     Jharkhand:
       'Bokaro|Chatra|Deoghar|Dhanbad|Dumka|East Singhbhum|Garhwa|Giridih|Godda|Gumla|Hazaribag|Jamtara|Khunti|Koderma|Latehar|Lohardaga|Pakur|Palamu|Ramgarh|Ranchi|Sahibganj|Seraikela Kharsawan|Simdega|West Singhbhum',
     Kerala:
-      'Alappuzha|Ernakulam|Idukki|Kannur|Kasaragod|Kollam|Kottayam|Kozhikode|Malappuram|Palakkad|Pathanamthitta|Thrissur|Thiruvananthapuram|Wayanad',
+      'Alappuzha|Calicut|Cochin|Ernakulam|Idukki|Kannur|Kasaragod|Kochi|Kollam|Kottayam|Kozhikode|Malappuram|Palakkad|Pathanamthitta|Thrissur|Thiruvananthapuram|Trivandrum|Wayanad',
     Karnataka:
-      'Bagalkot|Bangalore|Bangalore Urban|Belgaum|Bellary|Bidar|Bijapur|Chamarajnagar|Chikkamagaluru|Chikkaballapur|Chitradurga|Davanagere|Dharwad|Dakshina Kannada|Gadag|Gulbarga|Hassan|Haveri district|Kodagu|Kolar|Koppal|Mandya|Mysore|Raichur|Shimoga|Tumkur|Udupi|Uttara Kannada|Ramanagara|Yadgir',
+      'Bagalkot|Ballari|Bangalore|Bangalore Urban|Belagavi|Belgaum|Bellary|Bidar|Bijapur|Chamarajnagar|Chikkaballapur|Chikkamagaluru|Chitradurga|Dakshina Kannada|Davanagere|Dharwad|Gadag|Gulbarga|Hassan|Haveri|Haveri district|Hubballi|Hubli|Kalaburagi|Kodagu|Kolar|Koppal|Mandya|Mangalore|Mangaluru|Mysore|Mysuru|Raichur|Ramanagara|Shimoga|Shivamogga|Tumkur|Tumakuru|Udupi|Uttara Kannada|Vijayapura|Yadgir',
     Lakshadweep: 'Kavaratti|Lakshadweep',
     'Madhya Pradesh':
       'Alirajpur|Anuppur|Ashoknagar|Balaghat|Barwani|Betul|Bhilai|Bhind|Bhopal|Burhanpur|Chhatarpur|Chhindwara|Damoh|Dewas|Dhar|Guna|Gwalior|Hoshangabad|Indore|Itarsi|Jabalpur|Khajuraho|Khandwa|Khargone|Malanpur|Malanpuri (Gwalior)|Mandla|Mandsaur|Morena|Narsinghpur|Neemuch|Panna|Pithampur|Raipur|Raisen|Ratlam|Rewa|Sagar|Satna|Sehore|Seoni|Shahdol|Singrauli|Ujjain',

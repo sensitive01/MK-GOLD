@@ -132,9 +132,26 @@ function UpdateBranch(props) {
       try {
         const address = pinToAddress(Number(values.pincode));
         if (address) {
-          const divisionCity = address.divisionname ? address.divisionname.replace(/ Division/gi, '').replace(/ GPO/gi, '').trim() : '';
-          setFieldValue('city', divisionCity || address.district || address.block || '');
-          setFieldValue('state', address.state || '');
+          const state = address.state || '';
+          const divisionCity = address.divisionname
+            ? address.divisionname.replace(/ Division/gi, '').replace(/ GPO/gi, '').trim()
+            : '';
+          const stateCities = state && global.cities[state] ? global.cities[state].split('|') : [];
+
+          // Match best city name in global.cities: divisionCity, block, district
+          const matchedCity =
+            stateCities.find((c) => c.toLowerCase() === divisionCity.toLowerCase()) ||
+            stateCities.find((c) => c.toLowerCase() === (address.block || '').toLowerCase()) ||
+            stateCities.find((c) => c.toLowerCase() === (address.district || '').toLowerCase()) ||
+            divisionCity ||
+            address.block ||
+            address.district ||
+            '';
+
+          setFieldValue('city', matchedCity);
+          if (state) {
+            setFieldValue('state', state);
+          }
         }
       } catch (err) {
         console.error('Error fetching pincode:', err);
@@ -251,11 +268,18 @@ function UpdateBranch(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                {global.cities[values.state]?.split('|')?.map((city) => (
-                  <MenuItem key={city} value={city}>
-                    {city}
-                  </MenuItem>
-                ))}
+                {(() => {
+                  const rawList = global.cities[values.state]?.split('|') || [];
+                  const options = [...rawList];
+                  if (values.city && !options.includes(values.city)) {
+                    options.unshift(values.city);
+                  }
+                  return options.map((city) => (
+                    <MenuItem key={city} value={city}>
+                      {city}
+                    </MenuItem>
+                  ));
+                })()}
               </Select>
             </FormControl>
           </Grid>

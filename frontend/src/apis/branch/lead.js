@@ -81,4 +81,34 @@ async function markLeadsExclusive(data) {
   }
 }
 
-export { getLeads, getLeadById, createLead, bulkCreateLeads, updateLead, deleteLeadById, addDisposition, getLeadStats, markLeadsExclusive };
+async function assignExecutive(id, data) {
+  try {
+    const response = await apiClient().post(`/api/v1.0/branch/lead/assign-executive/${id}`, data);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+async function getBranchExecutives(branchId) {
+  try {
+    const response = await apiClient().get(`/api/v1.0/branch/lead/branch-executives/${branchId}`);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+export {
+  getLeads,
+  getLeadById,
+  createLead,
+  bulkCreateLeads,
+  updateLead,
+  deleteLeadById,
+  addDisposition,
+  getLeadStats,
+  markLeadsExclusive,
+  assignExecutive,
+  getBranchExecutives,
+};

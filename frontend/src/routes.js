@@ -423,6 +423,7 @@ export default function Router() {
         { path: 'attendance', element: <BranchAttendance /> },
         { path: 'release', element: <BranchRelease /> },
         { path: 'sale', element: <BranchSale /> },
+        { path: 'leads', element: <BranchLeads /> },
       ],
     },
     {

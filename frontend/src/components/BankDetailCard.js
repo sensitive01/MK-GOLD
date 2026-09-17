@@ -29,6 +29,7 @@ export default function BankDetailCard({
   verifiedAmount,
   verifiedProof,
   onVerifyClick,
+  onEditClick,
 }) {
   const theme = useTheme();
   const [copiedField, setCopiedField] = useState(null);
@@ -162,6 +163,25 @@ export default function BankDetailCard({
                           border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
                         }}
                       />
+                    )}
+
+                    {onEditClick && !isVerified && (
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                        startIcon={<Iconify icon="eva:edit-fill" width={16} />}
+                        onClick={onEditClick}
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          py: 0.5,
+                          px: 1.5,
+                          borderRadius: 1,
+                        }}
+                      >
+                        Edit Bank
+                      </Button>
                     )}
 
                     {isVerified ? (
@@ -549,4 +569,6 @@ BankDetailCard.propTypes = {
   verifiedAmount: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   verifiedProof: PropTypes.string,
   onVerifyClick: PropTypes.func,
+  onEditClick: PropTypes.func,
 };
+

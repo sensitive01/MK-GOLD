@@ -18,6 +18,18 @@ async function createBank(payload) {
   }
 }
 
+async function updateBank(customerId, id, payload) {
+  try {
+    const response = await apiClient().post(`/api/v1.0/branch/customer-bank/update/${id}`, {
+      customerId,
+      ...payload,
+    });
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
 async function deleteBankById(customerId, id) {
   try {
     const response = await apiClient().post(`/api/v1.0/branch/customer-bank/delete/${id}`, {
@@ -29,4 +41,5 @@ async function deleteBankById(customerId, id) {
   }
 }
 
-export { getBankById, createBank, deleteBankById };
+export { getBankById, createBank, updateBank, deleteBankById };
+

@@ -24,11 +24,12 @@ import {
 import { LoadingButton } from '@mui/lab';
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { getLeadById, addDisposition } from '../../../apis/branch/lead';
+import { getLeadById, addDisposition, assignExecutive, getBranchExecutives } from '../../../apis/branch/lead';
 import { getBranch } from '../../../apis/branch/branch';
 import global from '../../../utils/global';
 import moment from 'moment';
 import Iconify from '../../iconify';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 const DISPOSITIONS = [
   'RNR',
@@ -67,6 +68,15 @@ function PreviewLead(props) {
   const [selectedLog, setSelectedLog] = useState(null);
   const [branches, setBranches] = useState([]);
   const [visiblePhone, setVisiblePhone] = useState(false);
+
+  // Assign Executive state
+  const [openAssignModal, setOpenAssignModal] = useState(false);
+  const [selectedBranchId, setSelectedBranchId] = useState('');
+  const [selectedExecutiveId, setSelectedExecutiveId] = useState('');
+  const [branchExecutives, setBranchExecutives] = useState([]);
+  const [loadingExecutives, setLoadingExecutives] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+
   const [logForm, setLogForm] = useState({
     status: '',
     remark: '',
@@ -126,6 +136,71 @@ function PreviewLead(props) {
     });
   };
 
+  const handleOpenAssignModal = () => {
+    const currBranchId = data?.branch?._id || data?.branch || '';
+    const currExecId = data?.assignedExecutive?._id || data?.assignedExecutive || '';
+    setSelectedBranchId(currBranchId);
+    setSelectedExecutiveId(currExecId);
+    if (currBranchId) {
+      setLoadingExecutives(true);
+      getBranchExecutives(currBranchId).then((res) => {
+        setBranchExecutives(res?.data || []);
+        setLoadingExecutives(false);
+      });
+    } else {
+      setBranchExecutives([]);
+    }
+    setOpenAssignModal(true);
+  };
+
+  const handleAssignSubmit = () => {
+    if (!selectedBranchId || !selectedExecutiveId) return;
+    setAssigning(true);
+    const chosenExec = branchExecutives.find((e) => e._id === selectedExecutiveId);
+    const execName = chosenExec ? chosenExec.name : '';
+
+    assignExecutive(props.id, {
+      branch: selectedBranchId,
+      assignedExecutive: selectedExecutiveId,
+      assignedExecutiveName: execName,
+    })
+      .then((res) => {
+        setAssigning(false);
+        if (res?.status) {
+          setData(res.data);
+          setOpenAssignModal(false);
+          if (props.fetchData) {
+            props.fetchData();
+          }
+          if (props.setNotify) {
+            props.setNotify({
+              open: true,
+              message: 'Executive assigned successfully!',
+              severity: 'success',
+            });
+          }
+        } else {
+          if (props.setNotify) {
+            props.setNotify({
+              open: true,
+              message: res?.message || 'Failed to assign executive',
+              severity: 'error',
+            });
+          }
+        }
+      })
+      .catch((err) => {
+        setAssigning(false);
+        if (props.setNotify) {
+          props.setNotify({
+            open: true,
+            message: err.message || 'Error assigning executive',
+            severity: 'error',
+          });
+        }
+      });
+  };
+
   if (loading) return <div>Loading...</div>;
   if (!data) return <div>No data found</div>;
 
@@ -148,7 +223,19 @@ function PreviewLead(props) {
             Created: {moment(data.createdAt).format('LLLL')}
           </Typography>
         </Stack>
-        <Stack direction="row" spacing={2}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Button
+            variant="contained"
+            onClick={handleOpenAssignModal}
+            startIcon={<PersonAddIcon sx={{ color: '#fff !important' }} />}
+            sx={{
+              bgcolor: '#8A1B9F',
+              color: '#fff',
+              '&:hover': { bgcolor: '#731485' },
+            }}
+          >
+            Assign Executive
+          </Button>
           <Button
             variant="outlined"
             onClick={() => {
@@ -244,6 +331,20 @@ function PreviewLead(props) {
           <Box sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: data.status === 'pending' ? 'warning.main' : data.status === 'converted' ? 'primary.main' : data.status === 'rejected' ? 'info.main' : 'error.main', color: '#fff', width: 'fit-content', textTransform: 'capitalize', mt: 1 }}>
             {branchNameDisplay ? `${data.status} (${branchNameDisplay})` : data.status}
           </Box>
+        </Grid>
+
+        <Grid item xs={12} sm={data.type === 'pledged' ? 2 : 3}>
+          <Typography variant="subtitle2" sx={{ color: 'purple' }}>Assigned Branch</Typography>
+          <Typography variant="body1">
+            {data.branch?.branchName || (branches.find((b) => b._id === (data.branch?._id || data.branch))?.branchName) || '-'}
+          </Typography>
+        </Grid>
+
+        <Grid item xs={12} sm={data.type === 'pledged' ? 2 : 3}>
+          <Typography variant="subtitle2" sx={{ color: 'purple' }}>Assigned Executive</Typography>
+          <Typography variant="body1">
+            {data.assignedExecutive?.employee?.name || data.assignedExecutive?.username || data.assignedExecutiveName || '-'}
+          </Typography>
         </Grid>
 
         <Grid item xs={12}><Divider /></Grid>
@@ -506,6 +607,89 @@ function PreviewLead(props) {
               </Stack>
             </Grid>
           </Grid>
+        </Box>
+      </Modal>
+
+      {/* Assign Executive Modal */}
+      <Modal open={openAssignModal} onClose={() => setOpenAssignModal(false)}>
+        <Box sx={modalStyle}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
+            <Typography variant="h6" sx={{ color: '#000' }}>
+              Assign Executive
+            </Typography>
+            <IconButton size="small" onClick={() => setOpenAssignModal(false)}>
+              <Iconify icon="eva:close-fill" />
+            </IconButton>
+          </Stack>
+          <Stack spacing={2.5}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="assign-branch-label">Choose Branch</InputLabel>
+              <Select
+                labelId="assign-branch-label"
+                value={selectedBranchId}
+                label="Choose Branch"
+                onChange={(e) => {
+                  const branchId = e.target.value;
+                  setSelectedBranchId(branchId);
+                  setSelectedExecutiveId('');
+                  if (branchId) {
+                    setLoadingExecutives(true);
+                    getBranchExecutives(branchId).then((res) => {
+                      setBranchExecutives(res?.data || []);
+                      setLoadingExecutives(false);
+                    });
+                  } else {
+                    setBranchExecutives([]);
+                  }
+                }}
+              >
+                {branches.map((b) => (
+                  <MenuItem key={b._id} value={b._id}>
+                    {b.branchName}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth size="small" disabled={!selectedBranchId || loadingExecutives}>
+              <InputLabel id="assign-executive-label">
+                {loadingExecutives ? 'Loading executives...' : 'Choose Executive'}
+              </InputLabel>
+              <Select
+                labelId="assign-executive-label"
+                value={selectedExecutiveId}
+                label={loadingExecutives ? 'Loading executives...' : 'Choose Executive'}
+                onChange={(e) => setSelectedExecutiveId(e.target.value)}
+              >
+                {branchExecutives.length === 0 ? (
+                  <MenuItem disabled value="">
+                    {loadingExecutives ? 'Loading...' : 'No executives found for this branch'}
+                  </MenuItem>
+                ) : (
+                  branchExecutives.map((exec) => (
+                    <MenuItem key={exec._id} value={exec._id}>
+                      {exec.name} {exec.designation ? `(${exec.designation})` : exec.userType ? `(${exec.userType})` : ''}
+                    </MenuItem>
+                  ))
+                )}
+              </Select>
+            </FormControl>
+
+            <Stack direction="row" justifyContent="flex-end" spacing={1.5} mt={1}>
+              <Button variant="outlined" onClick={() => setOpenAssignModal(false)}>
+                Cancel
+              </Button>
+              <LoadingButton
+                variant="contained"
+                loading={assigning}
+                disabled={!selectedBranchId || !selectedExecutiveId}
+                onClick={handleAssignSubmit}
+                sx={{ bgcolor: '#8A1B9F', color: '#fff', '&:hover': { bgcolor: '#731485' } }}
+              >
+                Submit
+              </LoadingButton>
+            </Stack>
+          </Stack>
         </Box>
       </Modal>
     </Card>

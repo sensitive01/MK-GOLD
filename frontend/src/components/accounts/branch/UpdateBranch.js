@@ -1,4 +1,4 @@
-import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid } from '@mui/material';
+  import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import { useEffect } from 'react';
 import { useFormik } from 'formik';
@@ -7,6 +7,7 @@ import PropTypes from 'prop-types';
 import { getBranchById, updateBranch } from '../../../apis/accounts/branch';
 import { createFile, deleteFileById } from '../../../apis/accounts/fileupload';
 import global from '../../../utils/global';
+import { pinToAddress } from 'india-pincode-finder';
 
 const initialValues = {
   branchId: '',
@@ -119,6 +120,39 @@ function UpdateBranch(props) {
     }
   }, [props.id, initialValues, resetForm, setValues]);
 
+  // Auto-fill city and state from pincode
+  useEffect(() => {
+    if (values && values.pincode && values.pincode.toString().length === 6) {
+      try {
+        const address = pinToAddress(Number(values.pincode));
+        if (address) {
+          const state = address.state || '';
+          const divisionCity = address.divisionname
+            ? address.divisionname.replace(/ Division/gi, '').replace(/ GPO/gi, '').trim()
+            : '';
+          const stateCities = state && global.cities[state] ? global.cities[state].split('|') : [];
+
+          // Match best city name in global.cities: divisionCity, block, district
+          const matchedCity =
+            stateCities.find((c) => c.toLowerCase() === divisionCity.toLowerCase()) ||
+            stateCities.find((c) => c.toLowerCase() === (address.block || '').toLowerCase()) ||
+            stateCities.find((c) => c.toLowerCase() === (address.district || '').toLowerCase()) ||
+            divisionCity ||
+            address.block ||
+            address.district ||
+            '';
+
+          setFieldValue('city', matchedCity);
+          if (state) {
+            setFieldValue('state', state);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching pincode:', err);
+      }
+    }
+  }, [values?.pincode, setFieldValue]);
+
   return (
     <Card sx={{ p: 4, my: 4 }}>
       <form
@@ -228,11 +262,18 @@ function UpdateBranch(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               >
-                {global.cities[values.state]?.split('|')?.map((city) => (
-                  <MenuItem key={city} value={city}>
-                    {city}
-                  </MenuItem>
-                ))}
+                {(() => {
+                  const rawList = global.cities[values.state]?.split('|') || [];
+                  const options = [...rawList];
+                  if (values.city && !options.includes(values.city)) {
+                    options.unshift(values.city);
+                  }
+                  return options.map((city) => (
+                    <MenuItem key={city} value={city}>
+                      {city}
+                    </MenuItem>
+                  ));
+                })()}
               </Select>
             </FormControl>
           </Grid>

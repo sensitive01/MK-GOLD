@@ -59,7 +59,7 @@ const style = {
   border: 'none',
 };
 
-function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease }) {
+function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease, goldRate, silverRate, purchaseType }) {
   const auth = useSelector((state) => state.auth);
   const [branch, setBranch] = useState({});
   const [data, setData] = useState([]);
@@ -264,11 +264,36 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
   return (
     <>
       <Grid item xs={12}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mt={2} mb={3}>
-          <Typography variant="h4" gutterBottom>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mt={2} mb={3} flexWrap="wrap" gap={2}>
+          <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
             Customer Release
           </Typography>
-          {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && (
+          <Stack direction="row" spacing={2} alignItems="center">
+            {(Boolean(goldRate) || Boolean(silverRate)) && (
+              <Box
+                sx={{
+                  px: 2,
+                  py: 0.8,
+                  bgcolor: '#fff9e6',
+                  border: '1px solid #ffe082',
+                  borderRadius: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                }}
+              >
+                <Typography variant="body2" sx={{ color: '#7a5a00', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Iconify icon="mdi:gold" width={20} height={20} sx={{ color: '#b78103' }} />
+                  Today's Gold Rate: <b>₹{goldRate || 0}/g</b>
+                </Typography>
+                {Boolean(silverRate) && (
+                  <Typography variant="body2" sx={{ color: '#666', fontWeight: 500 }}>
+                    | Silver Rate: <b>₹{silverRate}/g</b>
+                  </Typography>
+                )}
+              </Box>
+            )}
+            {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && (
             <Button
               variant="contained"
               startIcon={<Iconify icon="eva:plus-fill" />}
@@ -299,6 +324,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
             </Button>
           )}
         </Stack>
+      </Stack>
         <Scrollbar>
           <TableContainer>
             <Table sx={{ minWidth: 800 }}>
@@ -435,7 +461,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
         aria-describedby="modal-modal-description"
       >
         <Box sx={style}>
-          <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 3 }}>
+          <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 2 }}>
             {isEdit ? 'Edit Release' : 'Add Release'}
             <Button
               sx={{ color: '#222', float: 'right' }}
@@ -443,6 +469,32 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease 
               onClick={() => setReleaseModal(false)}
             />
           </Typography>
+          {Boolean(goldRate) && (
+            <Box
+              sx={{
+                mb: 2.5,
+                p: 1.2,
+                bgcolor: '#fff9e6',
+                border: '1px solid #ffe082',
+                borderRadius: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 1,
+              }}
+            >
+              <Typography variant="body2" sx={{ color: '#7a5a00', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Iconify icon="mdi:gold" width={18} height={18} sx={{ color: '#b78103' }} />
+                Today's Gold Rate: <b>₹{goldRate}/g</b>
+              </Typography>
+              {values.weight && Number(values.weight) > 0 && (
+                <Typography variant="body2" sx={{ color: '#b78103', fontWeight: 700 }}>
+                  Estimated Gold Value: ₹{Math.round(Number(values.weight) * Number(goldRate)).toLocaleString('en-IN')}
+                </Typography>
+              )}
+            </Box>
+          )}
           <form onSubmit={handleSubmit} autoComplete="off">
             <Grid container spacing={3}>
               <Grid item xs={12} md={4}>

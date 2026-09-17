@@ -154,6 +154,19 @@ export default function DashboardAppPage() {
               />
             </Link>
           </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Link href="/transaction-executive/leads" underline="none">
+              <AppWidgetSummary
+                title="Leads"
+                total={false}
+                icon={'mdi:account-group'}
+                bgColor="#fff"
+                iconColor="#8A1B9F"
+                textColor="#000"
+              />
+            </Link>
+          </Grid>
         </Grid>
       </Container>
     </>

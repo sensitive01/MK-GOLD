@@ -183,32 +183,6 @@ function CreateSale(props) {
     }
   }, [props.id]);
 
-  useEffect(() => {
-      setBranch(auth.user.branch);
-      if (auth.user.branch) {
-        getGoldRateByState({
-          state: auth.user.branch.address.state,
-          type: 'gold',
-          date: moment().format('YYYY-MM-DD'),
-        }).then((data) => {
-          setGoldRate(data.data);
-        });
-        getGoldRateByState({
-          state: auth.user.branch.address.state,
-          type: 'silver',
-          date: moment().format('YYYY-MM-D'),
-        }).then((data) => {
-          setSilverRate(data.data);
-        });
-
-        getEmployee().then((res) => {
-          if (res?.data) {
-            setAssignees(res.data);
-          }
-        });
-      }
-  }, [auth.user.branch, auth.user.branch?.address?.state]);
-
   // Form validation
   const schema = Yup.object({
     purchaseType: Yup.string().required('Purchase type is required'),
@@ -241,6 +215,33 @@ function CreateSale(props) {
       }
     },
   });
+
+  useEffect(() => {
+    setBranch(auth.user.branch);
+    if (auth.user.branch) {
+      const rateDate = values.dop ? moment(values.dop).format('YYYY-MM-DD') : moment().format('YYYY-MM-DD');
+      getGoldRateByState({
+        state: auth.user.branch.address.state,
+        type: 'gold',
+        date: rateDate,
+      }).then((data) => {
+        setGoldRate(data.data);
+      });
+      getGoldRateByState({
+        state: auth.user.branch.address.state,
+        type: 'silver',
+        date: rateDate,
+      }).then((data) => {
+        setSilverRate(data.data);
+      });
+
+      getEmployee().then((res) => {
+        if (res?.data) {
+          setAssignees(res.data);
+        }
+      });
+    }
+  }, [auth.user.branch, auth.user.branch?.address?.state, values.dop]);
 
   // Auto-populate ornaments and proofs when a completed release is selected for pledged bill
   useEffect(() => {
@@ -581,6 +582,9 @@ function CreateSale(props) {
                 selectedUser={selectedUser}
                 selectedRelease={selectedRelease}
                 setSelectedRelease={setSelectedRelease}
+                goldRate={payload.goldRate}
+                silverRate={payload.silverRate}
+                purchaseType={values.purchaseType}
                 {...props}
               />
             )}

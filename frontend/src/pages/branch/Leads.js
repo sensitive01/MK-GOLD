@@ -75,6 +75,9 @@ function descendingComparator(a, b, orderBy) {
   if (orderBy === 'editedBy') {
     aValue = (a.updatedBy?.employee?.name || a.updatedBy?.username || '').toLowerCase();
     bValue = (b.updatedBy?.employee?.name || b.updatedBy?.username || '').toLowerCase();
+  } else if (orderBy === 'assignedExecutive') {
+    aValue = (a.assignedExecutive?.employee?.name || a.assignedExecutiveName || '').toLowerCase();
+    bValue = (b.assignedExecutive?.employee?.name || b.assignedExecutiveName || '').toLowerCase();
   } else if (orderBy === 'disposition') {
     aValue = (a.dispositions?.length > 0 ? a.dispositions[a.dispositions.length - 1].status : '').toLowerCase();
     bValue = (b.dispositions?.length > 0 ? b.dispositions[b.dispositions.length - 1].status : '').toLowerCase();
@@ -213,6 +216,21 @@ function applySortFilter(array, comparator, query, filters, user) {
 
 export default function Leads({ title = "Leads Management" }) {
   const auth = useSelector((state) => state.auth);
+  const isTelecaller = ['telecalling', 'admin'].includes(auth?.user?.userType?.toLowerCase());
+
+  const tableHead = [
+    { id: 'name', label: 'Name', alignRight: false },
+    { id: 'mobile', label: 'Mobile', alignRight: false },
+    { id: 'category', label: 'Category', alignRight: false },
+    { id: 'type', label: 'Type', alignRight: false },
+    { id: 'weight', label: 'Weight', alignRight: false },
+    { id: 'date', label: 'Date', alignRight: false },
+    { id: 'editedBy', label: 'Agent', alignRight: false },
+    ...(isTelecaller ? [{ id: 'assignedExecutive', label: 'Assigned Executive', alignRight: false }] : []),
+    { id: 'remarks', label: 'Remarks', alignRight: false },
+    { id: 'disposition', label: 'Status', alignRight: false },
+    { id: '' },
+  ];
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openId, setOpenId] = useState(null);
@@ -631,6 +649,10 @@ export default function Leads({ title = "Leads Management" }) {
       if (currentTab === 'my_leads') {
         return (row.assignedTo === currentUserId) ||
           (row.assignedTo?._id === currentUserId) ||
+          (row.assignedExecutive === currentUserId) ||
+          (row.assignedExecutive?._id === currentUserId) ||
+          (row.assignedExecutive?.employee?._id === currentUserId) ||
+          (row.assignedExecutive?.employee === currentUserId) ||
           (row.createdBy && row.createdBy === currentUserId) ||
           (row.updatedBy && row.updatedBy._id === currentUserId) ||
           (row.updatedBy?.employee?._id === currentUserId) ||
@@ -865,7 +887,7 @@ export default function Leads({ title = "Leads Management" }) {
                 <AttendanceListHead
                   order={order}
                   orderBy={orderBy}
-                  headLabel={TABLE_HEAD}
+                  headLabel={tableHead}
                   rowCount={data?.length || 0}
                   numSelected={selected?.length}
                   onRequestSort={handleRequestSort}
@@ -953,6 +975,11 @@ export default function Leads({ title = "Leads Management" }) {
                         </TableCell> */}
                         <TableCell align="left">{date ? moment(date).format('YYYY-MM-DD') : 'N/A'}</TableCell>
                         <TableCell align="left">{updatedBy?.employee?.name || updatedBy?.username || '-'}</TableCell>
+                        {isTelecaller && (
+                          <TableCell align="left">
+                            {row.assignedExecutive?.employee?.name || row.assignedExecutiveName || '-'}
+                          </TableCell>
+                        )}
                         <TableCell align="left" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={displayRemark || ''}>{displayRemark || '-'}</TableCell>
                         <TableCell align="left" sx={{ maxWidth: 150 }}>
                           {!row.isImported ? (
@@ -1016,12 +1043,12 @@ export default function Leads({ title = "Leads Management" }) {
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={10} />
+                      <TableCell colSpan={isTelecaller ? 11 : 10} />
                     </TableRow>
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={isTelecaller ? 11 : 10} sx={{ py: 3 }}>
                         <Paper sx={{ textAlign: 'center' }}>
                           <Typography paragraph>No leads found</Typography>
                         </Paper>
@@ -1136,7 +1163,14 @@ export default function Leads({ title = "Leads Management" }) {
           {isImportedLead ? (
             <PreviewImportedLead data={data.find(item => item._id === openId)} />
           ) : (
-            <PreviewLead setToggleContainer={setToggleContainer} setToggleContainerType={setToggleContainerType} id={openId} autoOpenLogModal={autoOpenLogModal} />
+            <PreviewLead
+              setToggleContainer={setToggleContainer}
+              setToggleContainerType={setToggleContainerType}
+              id={openId}
+              autoOpenLogModal={autoOpenLogModal}
+              fetchData={fetchData}
+              setNotify={setNotify}
+            />
           )}
         </Container>
       )}
