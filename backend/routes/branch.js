@@ -101,7 +101,8 @@ branchRouter.post("/customer-address/create", customerAddress.create);
 
 branchRouter.get("/customer-bank/get/:id", customerBank.findById);
 branchRouter.post("/customer-bank/create", customerBank.create);
-// branchRouter.post("/customer-bank/delete/:id", customerBank.remove);
+branchRouter.post("/customer-bank/update/:id", customerBank.update);
+branchRouter.post("/customer-bank/delete/:id", customerBank.remove);
 
 branchRouter.get("/lead/get", lead.find);
 branchRouter.post("/lead/get", lead.find);
@@ -113,6 +114,8 @@ branchRouter.post("/lead/update/:id", lead.update);
 branchRouter.post("/lead/mark-exclusive", lead.markExclusive);
 branchRouter.post("/lead/delete/:id", lead.remove);
 branchRouter.post("/lead/disposition/:id", multer.single("uploadedFile"), lead.addDisposition);
+branchRouter.post("/lead/assign-executive/:id", lead.assignExecutive);
+branchRouter.get("/lead/branch-executives/:branchId", lead.getBranchExecutives);
 
 branchRouter.post("/imported-lead/import", importedLead.importLeads);
 branchRouter.get("/imported-lead/get", importedLead.find);

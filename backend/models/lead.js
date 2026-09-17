@@ -124,6 +124,14 @@ const leadSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "users",
     },
+    assignedExecutive: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users",
+    },
+    assignedExecutiveName: {
+      type: String,
+      trim: true,
+    },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "users",

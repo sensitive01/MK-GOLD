@@ -140,4 +140,34 @@ async function markExclusive(req, res) {
   }
 }
 
-module.exports = { find, findById, create, bulkCreate, update, remove, addDisposition, getStats, markExclusive };
+async function assignExecutive(req, res) {
+  try {
+    const data = await leadService.assignExecutive(req.params.id, req.body, req.user);
+    res.json({ status: true, message: "Executive assigned successfully!", data });
+  } catch (err) {
+    res.json({ status: false, message: err.message, data: {} });
+  }
+}
+
+async function getBranchExecutives(req, res) {
+  try {
+    const data = await leadService.getBranchExecutives(req.params.branchId);
+    res.json({ status: true, message: "", data });
+  } catch (err) {
+    res.json({ status: false, message: err.message, data: [] });
+  }
+}
+
+module.exports = {
+  find,
+  findById,
+  create,
+  bulkCreate,
+  update,
+  remove,
+  addDisposition,
+  getStats,
+  markExclusive,
+  assignExecutive,
+  getBranchExecutives,
+};

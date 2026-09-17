@@ -11,9 +11,23 @@ async function find(query = {}, user = null) {
     if (
       userType === "branch" ||
       userType === "assistant_branch_manager" ||
-      userType === "branch_executive"
+      userType === "branch_executive" ||
+      userType === "transaction_executive"
     ) {
-      query.branch = user.branch?._id || user.branch;
+      const branchId = user.branch?._id || user.branch;
+      const branchOrCondition = [
+        { assignedExecutive: user._id },
+        ...(branchId ? [{ branch: branchId, assignedExecutive: { $in: [null, undefined] } }] : [])
+      ];
+      if (query.$or) {
+        query.$and = [
+          { $or: query.$or },
+          { $or: branchOrCondition }
+        ];
+        delete query.$or;
+      } else {
+        query.$or = branchOrCondition;
+      }
     } else if (userType === "telecalling") {
       // Telecallers only see unclaimed leads, or leads they have specifically claimed
       query.$or = [
@@ -58,6 +72,8 @@ async function find(query = {}, user = null) {
     await User.populate(docs, { path: "updatedBy", select: "username employee" });
     await Employee.populate(docs, { path: "updatedBy.employee", select: "name" });
     await Branch.populate(docs, { path: "branch", select: "branchName" });
+    await User.populate(docs, { path: "assignedExecutive", select: "username employee userType" });
+    await Employee.populate(docs, { path: "assignedExecutive.employee", select: "name employeeId phoneNumber designation" });
     
     return docs;
   } catch (err) {
@@ -68,6 +84,12 @@ async function find(query = {}, user = null) {
 async function findById(id) {
   try {
     const data = await Lead.findById(id)
+      .populate("branch", "branchName")
+      .populate({
+        path: "assignedExecutive",
+        select: "username employee userType",
+        populate: { path: "employee", select: "name employeeId phoneNumber designation" },
+      })
       .populate({
         path: "dispositions.createdBy",
         populate: { path: "employee" },
@@ -233,16 +255,15 @@ async function getLeadStats(user = null) {
     if (
       userType === "branch" ||
       userType === "assistant_branch_manager" ||
-      userType === "branch_executive"
+      userType === "branch_executive" ||
+      userType === "transaction_executive"
     ) {
       const branchId = user.branch?._id || user.branch;
-      if (branchId) {
-        query.branch = branchId;
-      } else {
-        // If user has no branch, look for leads with no branch
-        query.branch = { $in: [null, undefined] };
-      }
-      } else if (userType === "telecalling") {
+      query.$or = [
+        { assignedExecutive: user._id },
+        ...(branchId ? [{ branch: branchId, assignedExecutive: { $in: [null, undefined] } }] : [])
+      ];
+    } else if (userType === "telecalling") {
         query.leadSource = { $in: ["telecalling", "marketing"] };
         query.$or = [
           { assignedTo: null },
@@ -405,4 +426,71 @@ async function markExclusive(ids, isExclusive, user = null) {
   }
 }
 
-module.exports = { find, findById, create, bulkCreate, update, remove, addDisposition, getLeadStats, markExclusive, getNextTelecaller };
+async function assignExecutive(id, payload, user = null) {
+  try {
+    const updateData = {};
+    if (payload.branch) updateData.branch = payload.branch;
+    if (payload.assignedExecutive) updateData.assignedExecutive = payload.assignedExecutive;
+    if (payload.assignedExecutiveName) updateData.assignedExecutiveName = payload.assignedExecutiveName;
+    if (user) updateData.updatedBy = user._id;
+
+    return await Lead.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true }
+    )
+      .populate("branch", "branchName")
+      .populate({
+        path: "assignedExecutive",
+        select: "username employee userType",
+        populate: { path: "employee", select: "name employeeId phoneNumber designation" },
+      });
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function getBranchExecutives(branchId) {
+  try {
+    const User = require("../models/user");
+    const mongoose = require("mongoose");
+    const filter = {
+      status: "active",
+    };
+    if (branchId) {
+      filter.branch = new mongoose.Types.ObjectId(branchId);
+    }
+    const users = await User.find(filter)
+      .populate("employee", "name employeeId phoneNumber designation")
+      .select("_id username userType employee branch")
+      .lean();
+
+    return users.map((u) => ({
+      _id: u._id,
+      username: u.username,
+      userType: u.userType,
+      employeeId: u.employee?._id,
+      name: u.employee?.name || u.username,
+      employeeCode: u.employee?.employeeId,
+      designation: u.employee?.designation,
+      phoneNumber: u.employee?.phoneNumber,
+    }));
+  } catch (err) {
+    throw err;
+  }
+}
+
+module.exports = {
+  find,
+  findById,
+  create,
+  bulkCreate,
+  update,
+  remove,
+  addDisposition,
+  getLeadStats,
+  markExclusive,
+  getNextTelecaller,
+  assignExecutive,
+  getBranchExecutives,
+};
