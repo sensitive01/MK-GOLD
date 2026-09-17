@@ -271,8 +271,6 @@ function Customer(props) {
     setFetchingEnquiry(false);
   };
 
-
-
   // Form validation
   const schema = Yup.object({
     name: Yup.string().required('Name is required'),
@@ -281,7 +279,7 @@ function Customer(props) {
       .test('is-phone', 'Phone number must be exactly 10 digits', (val) => /^[0-9]{10}$/.test(val) || (val && val.includes('*'))),
     alternatePhoneNumber: Yup.string()
       .test('is-alt-phone', 'Alternate phone number must be exactly 10 digits', (val) => !val || /^[0-9]{10}$/.test(val) || val.includes('*')),
-    email: Yup.string().required('Email id is required').email(),
+    email: Yup.string().email(),
     dob: Yup.string().required('DOB is required'),
     gender: Yup.string().required('Gender is required'),
     otp: Yup.string()?.length(6),

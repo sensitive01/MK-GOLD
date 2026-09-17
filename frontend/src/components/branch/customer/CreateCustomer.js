@@ -54,7 +54,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         message: 'Alternate phone number must be exactly 10 digits',
         excludeEmptyString: true,
       }),
-    email: Yup.string().required('Email id is required'),
+    email: Yup.string().email('Enter a valid email id'),
     dob: Yup.string().required('DOB is required'),
     gender: Yup.string().required('Gender is required'),
     maritalStatus: Yup.string().required('Marital is required'),
