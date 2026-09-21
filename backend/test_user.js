@@ -1,0 +1,1 @@
+const mongoose = require('mongoose');mongoose.connect('mongodb://127.0.0.1:27017/MK-GOLD').then(async () => { const db = mongoose.connection.db; const cols = await db.listCollections().toArray(); for (let col of cols) { const doc = await db.collection(col.name).findOne({ phoneNumber: '8904469413' }); if (doc) console.log('Found in ', col.name, doc); } process.exit(0);});

@@ -2,19 +2,69 @@ const salesService = require("../../services/sales");
 const fileUploadService = require("../../services/fileupload");
 
 async function find(req, res) {
+  const query = req.body ?? {};
+  
+  if (req.user) {
+    const userType = req.user.userType?.toLowerCase();
+    const branchUserTypes = [
+      "branch",
+      "assistant_branch_manager",
+      "branch_executive",
+      "transaction_executive",
+      "telecalling",
+      "bullion_desk",
+      "marketing",
+      "admin_desk"
+    ];
+    if (branchUserTypes.includes(userType) && req.user.branch) {
+      query.branch = req.user.branch._id || req.user.branch;
+      if (req.user._id) {
+        query.employee = req.user._id;
+      }
+    }
+  }
+
   res.json({
     status: true,
     message: "",
-    data: await salesService.find(req.body ?? {}),
+    data: await salesService.find(query),
   });
 }
 
 async function findById(req, res) {
   try {
+    const sale = await salesService.findById(req.params.id);
+    if (req.user) {
+      const userType = req.user.userType?.toLowerCase();
+      const branchUserTypes = [
+        "branch",
+        "assistant_branch_manager",
+        "branch_executive",
+        "transaction_executive",
+        "telecalling",
+        "bullion_desk",
+        "marketing",
+        "admin_desk"
+      ];
+      if (branchUserTypes.includes(userType) && req.user.branch) {
+        const saleBranch = String(sale[0].branch?._id || sale[0].branch);
+        const userBranch = String(req.user.branch._id || req.user.branch);
+        const saleEmployee = String(sale[0].employee?._id || sale[0].employee);
+        const userEmployee = String(req.user._id);
+        
+        if (saleBranch !== userBranch || (req.user._id && saleEmployee !== userEmployee)) {
+           return res.json({
+             status: false,
+             message: "Unauthorized access to this sale",
+             data: {}
+           });
+        }
+      }
+    }
     res.json({
       status: true,
       message: "",
-      data: await salesService.findById(req.params.id),
+      data: sale,
     });
   } catch (err) {
     res.json({
@@ -27,6 +77,25 @@ async function findById(req, res) {
 
 async function create(req, res) {
   try {
+    if (req.user) {
+      const userType = req.user.userType?.toLowerCase();
+      const branchUserTypes = [
+        "branch",
+        "assistant_branch_manager",
+        "branch_executive",
+        "transaction_executive",
+        "telecalling",
+        "bullion_desk",
+        "marketing",
+        "admin_desk"
+      ];
+      if (branchUserTypes.includes(userType) && req.user.branch) {
+        req.body.branch = req.user.branch._id || req.user.branch;
+        if (req.user._id) {
+          req.body.employee = req.user._id;
+        }
+      }
+    }
     let createdData = await salesService.create(req.body);
     res.json({
       status: true,

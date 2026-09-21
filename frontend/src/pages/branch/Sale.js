@@ -151,13 +151,13 @@ export default function Sale() {
     onSubmit: (values) => {
       setOpenBackdrop(true);
       const query = { branch: auth.user?.branch?._id || auth.user?.branch };
-      
+
       if (values.fromDate || values.toDate) {
         query.createdAt = {};
         if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
         if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
       }
-      
+
       fetchData(query);
       setFilterOpen(false);
     },
@@ -233,8 +233,8 @@ export default function Sale() {
     if (isSelectForTransit) {
       const selectedSaleItem = data?.find(s => s._id === _id);
       if (selectedSaleItem?.status !== 'completed') {
-         setNotify({ open: true, message: 'Only completed sales can be selected for transit', severity: 'warning' });
-         return;
+        setNotify({ open: true, message: 'Only completed sales can be selected for transit', severity: 'warning' });
+        return;
       }
       // Allow multiple selection
     }
@@ -311,8 +311,8 @@ export default function Sale() {
   const Alert = forwardRef(AlertComponent);
 
 
-    const [openVerifyModal, setOpenVerifyModal] = useState(false);
-    const [verifyType, setVerifyType] = useState('');
+  const [openVerifyModal, setOpenVerifyModal] = useState(false);
+  const [verifyType, setVerifyType] = useState('');
 
 
   return (
@@ -345,253 +345,254 @@ export default function Sale() {
 
       {toggleContainer === false && (
         <Container maxWidth="xl" sx={{ px: { xs: 1, sm: 2, md: 3 }, display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          alignItems={{ xs: 'flex-start', sm: 'center' }}
-          justifyContent="space-between"
-          spacing={2}
-          mb={{ xs: 2.5, sm: 5 }}
-        >
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff', fontSize: { xs: '1.5rem', sm: '2rem' }, fontWeight: 700, mb: { xs: 0, sm: 1 } }}>
-            Sale
-          </Typography>
           <Stack
-            direction="row"
-            spacing={1}
-            sx={{
-              width: { xs: '100%', sm: 'auto' },
-              flexWrap: 'wrap',
-              gap: 1,
-            }}
+            direction={{ xs: 'column', sm: 'row' }}
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            justifyContent="space-between"
+            spacing={2}
+            mb={{ xs: 2.5, sm: 5 }}
           >
-            {isSelectForTransit && (
-              <Button
-                variant="contained"
-                startIcon={<Iconify icon="eva:plus-fill" />}
-                onClick={() => {
-                  if (selected.length === 0) {
-                    setNotify({ open: true, message: 'Please select at least one completed sale', severity: 'warning' });
-                    return;
-                  }
-                  navigate(`/branch/transit?createTransit=true&saleIds=${selected.join(',')}`);
-                }}
-              >
-                Create Transit for Selected
-              </Button>
-            )}
-            {(values.fromDate || values.toDate) && (
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
-                onClick={() => {
-                  setFilterOpen(false);
-                  resetForm();
-                  fetchData({
-                    branch: auth.user?.branch?._id || auth.user?.branch,
-                  });
-                }}
-              >
-                Clear Filter
-              </Button>
-            )}
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="material-symbols:filter-alt" />}
-              onClick={handleFilterOpen}
+            <Typography variant="h4" gutterBottom sx={{ color: '#fff', fontSize: { xs: '1.5rem', sm: '2rem' }, fontWeight: 700, mb: { xs: 0, sm: 1 } }}>
+              Sale
+            </Typography>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                width: { xs: '100%', sm: 'auto' },
+                flexWrap: 'wrap',
+                gap: 1,
+              }}
             >
-              Filter
-            </Button>
-            {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && (
+              {isSelectForTransit && (
+                <Button
+                  variant="contained"
+                  startIcon={<Iconify icon="eva:plus-fill" />}
+                  onClick={() => {
+                    if (selected.length === 0) {
+                      setNotify({ open: true, message: 'Please select at least one completed sale', severity: 'warning' });
+                      return;
+                    }
+                    navigate(`/branch/transit?createTransit=true&saleIds=${selected.join(',')}`);
+                  }}
+                >
+                  Create Transit for Selected
+                </Button>
+              )}
+              {(values.fromDate || values.toDate) && (
+                <Button
+                  variant="contained"
+                  color="error"
+                  startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                  onClick={() => {
+                    setFilterOpen(false);
+                    resetForm();
+                    fetchData({
+                      branch: auth.user?.branch?._id || auth.user?.branch,
+                    });
+                  }}
+                >
+                  Clear Filter
+                </Button>
+              )}
               <Button
                 variant="contained"
-                startIcon={<Iconify icon="eva:plus-fill" />}
-                onClick={() => {
-                  setSaleIdToEdit(null);
-                  setToggleContainer(true);
-                  setToggleContainerType('create');
-                }}
+                startIcon={<Iconify icon="material-symbols:filter-alt" />}
+                onClick={handleFilterOpen}
               >
-                New Sale
+                Filter
               </Button>
-            )}
+              {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && (
+                <Button
+                  variant="contained"
+                  startIcon={<Iconify icon="eva:plus-fill" />}
+                  onClick={() => {
+                    setSaleIdToEdit(null);
+                    setToggleContainer(true);
+                    setToggleContainerType('create');
+                  }}
+                >
+                  New Sale
+                </Button>
+              )}
+            </Stack>
           </Stack>
-        </Stack>
 
-        {(values.fromDate || values.toDate) && (
-          <p style={{ color: '#fff', marginBottom: '20px' }}>
-            {[
-              values.fromDate ? `From Date: ${values.fromDate.format('YYYY-MM-DD')}` : null,
-              values.toDate ? `To Date: ${values.toDate.format('YYYY-MM-DD')}` : null,
-            ].filter(Boolean).join(', ')}
-          </p>
-        )}
+          {(values.fromDate || values.toDate) && (
+            <p style={{ color: '#fff', marginBottom: '20px' }}>
+              {[
+                values.fromDate ? `From Date: ${values.fromDate.format('YYYY-MM-DD')}` : null,
+                values.toDate ? `To Date: ${values.toDate.format('YYYY-MM-DD')}` : null,
+              ].filter(Boolean).join(', ')}
+            </p>
+          )}
 
-        <Card>
-          <SaleListToolbar
-            numSelected={selected?.length}
-            filterName={filterName}
-            onFilterName={handleFilterByName}
-            handleDelete={() => {
-              setDeleteType('selected');
-              handleOpenDeleteModal();
-            }}
-          />
+          <Card>
+            <SaleListToolbar
+              numSelected={selected?.length}
+              filterName={filterName}
+              onFilterName={handleFilterByName}
+              handleDelete={() => {
+                setDeleteType('selected');
+                handleOpenDeleteModal();
+              }}
+            />
 
-          <Scrollbar>
-            <TableContainer>
-            <Table sx={{ minWidth: filteredData?.length === 0 ? 'auto' : 800 }}>
-              <SaleListHead
-                  order={order}
-                  orderBy={orderBy}
-                  headLabel={TABLE_HEAD}
-                  rowCount={data?.length || 0}
-                  numSelected={selected?.length}
-                  onRequestSort={handleRequestSort}
-                  onSelectAllClick={handleSelectAllClick}
-                  hideCheckbox={auth.user?.userType?.toLowerCase().includes('bullion') || !isSelectForTransit}
-                />
-                <TableBody>
-                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, billId, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
-                    const selectedData = selected.indexOf(_id) !== -1;
-                    const isPledged = saleType?.toLowerCase() !== 'physical';
-                    const isReleasePending = isPledged && (
-                      Number(netAmount || 0) === 0 ||
-                      !row.assigneeCompleted ||
-                      status === 'release pending' ||
-                      (Array.isArray(row.release) && row.release.length > 0 && row.release.some((r) => r.status && r.status !== 'completed'))
-                    );
+            <Scrollbar>
+              <TableContainer>
+                <Table sx={{ minWidth: filteredData?.length === 0 ? 'auto' : 800 }}>
+                  <SaleListHead
+                    order={order}
+                    orderBy={orderBy}
+                    headLabel={TABLE_HEAD}
+                    rowCount={data?.length || 0}
+                    numSelected={selected?.length}
+                    onRequestSort={handleRequestSort}
+                    onSelectAllClick={handleSelectAllClick}
+                    hideCheckbox={auth.user?.userType?.toLowerCase().includes('bullion') || !isSelectForTransit}
+                  />
+                  <TableBody>
+                    {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
+                      const { _id, billId, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
+                      const selectedData = selected.indexOf(_id) !== -1;
+                      const isPledged = saleType?.toLowerCase() !== 'physical';
+                      const isReleasePending = isPledged && (
+                        Number(netAmount || 0) === 0 ||
+                        !row.assigneeCompleted ||
+                        status === 'release pending' ||
+                        (Array.isArray(row.release) && row.release.length > 0 && row.release.some((r) => r.status && r.status !== 'completed'))
+                      );
 
-                    return (
-                      <TableRow
-                        hover
-                        key={_id}
-                        tabIndex={-1}
-                        role="checkbox"
-                        selected={selectedData}
-                        onClick={() => {
-                          if (isSelectForTransit) {
-                            handleClick(null, _id);
-                          } else {
-                            setSaleIdToEdit(_id);
-                            setToggleContainer(true);
-                            setToggleContainerType('detail');
-                          }
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {!(auth.user?.userType?.toLowerCase().includes('bullion') || !isSelectForTransit) && (
-                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selectedData}
-                              onChange={(event) => handleClick(event, _id)}
-                              onClick={(e) => e.stopPropagation()}
-                              disabled={isSelectForTransit && status !== 'completed'}
+                      return (
+                        <TableRow
+                          hover
+                          key={_id}
+                          tabIndex={-1}
+                          role="checkbox"
+                          selected={selectedData}
+                          onClick={() => {
+                            if (isSelectForTransit) {
+                              handleClick(null, _id);
+                            } else {
+                              setSaleIdToEdit(_id);
+                              setToggleContainer(true);
+                              setToggleContainerType('detail');
+                            }
+                          }}
+                          style={{ cursor: 'pointer' }}
+                          sx={{ ...(isReleasePending && { '& td, & td .MuiTypography-root': { color: '#8A1B9F !important', fontWeight: 'bold !important' } }) }}
+                        >
+                          {!(auth.user?.userType?.toLowerCase().includes('bullion') || !isSelectForTransit) && (
+                            <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedData}
+                                onChange={(event) => handleClick(event, _id)}
+                                onClick={(e) => e.stopPropagation()}
+                                disabled={isSelectForTransit && status !== 'completed'}
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell align="left">{billId}</TableCell>
+                          <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                          <TableCell align="left">
+                            {row.customer ? (
+                              <Typography variant="subtitle2">
+                                {row.customer.name}
+                                <br />
+                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                  {row.customer.phoneNumber}
+                                </Typography>
+                              </Typography>
+                            ) : (
+                              '-'
+                            )}
+                          </TableCell>
+                          <TableCell align="left">{rowBranch?.branchId || '-'}</TableCell>
+                          <TableCell align="left">{rowBranch?.branchName || '-'}</TableCell>
+                          <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
+                          <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
+                          <TableCell align="left">
+                            {isReleasePending ? (
+                              <Typography variant="body2">
+                                Release Pending
+                              </Typography>
+                            ) : (
+                              <>&#8377; {netAmount}</>
+                            )}
+                          </TableCell>
+                          <TableCell align="left" onClick={(e) => e.stopPropagation()}>
+                            <Status
+                              status={status}
+                              _id={_id}
+                              assignee={row.assignee?._id || row.assignee}
+                              fetchData={fetchData}
+                              saleType={saleType}
+                              assigneeCompleted={row.assigneeCompleted}
+                              isReleasePending={isReleasePending}
                             />
                           </TableCell>
-                        )}
-                        <TableCell align="left">{billId}</TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                        <TableCell align="left">
-                          {row.customer ? (
-                            <Typography variant="subtitle2">
-                              {row.customer.name}
-                              <br />
-                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                {row.customer.phoneNumber}
-                              </Typography>
-                            </Typography>
-                          ) : (
-                            '-'
-                          )}
-                        </TableCell>
-                        <TableCell align="left">{rowBranch?.branchId || '-'}</TableCell>
-                        <TableCell align="left">{rowBranch?.branchName || '-'}</TableCell>
-                        <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
-                        <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
-                        <TableCell align="left">
-                          {isReleasePending ? (
-                            <Typography variant="body2" sx={{ color: '#8A1B9F', fontWeight: 'bold' }}>
-                              Release Pending
-                            </Typography>
-                          ) : (
-                            <>&#8377; {netAmount}</>
-                          )}
-                        </TableCell>
-                        <TableCell align="left" onClick={(e) => e.stopPropagation()}>
-                          <Status 
-                            status={status} 
-                            _id={_id} 
-                            assignee={row.assignee?._id || row.assignee}
-                            fetchData={fetchData}
-                            saleType={saleType}
-                            assigneeCompleted={row.assigneeCompleted}
-                            isReleasePending={isReleasePending}
-                          />
-                        </TableCell>
-                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                          <IconButton
-                            size="large"
-                            color="inherit"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              handleOpenMenu(e, _id);
+                          <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                            <IconButton
+                              size="large"
+                              color="inherit"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                handleOpenMenu(e, _id);
+                              }}
+                            >
+                              <Iconify icon={'eva:more-vertical-fill'} />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {emptyRows > 0 && (
+                      <TableRow style={{ height: 53 * emptyRows }}>
+                        <TableCell colSpan={9} />
+                      </TableRow>
+                    )}
+                    {filteredData?.length === 0 && (
+                      <TableRow>
+                        <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                          <Paper
+                            sx={{
+                              textAlign: 'center',
                             }}
                           >
-                            <Iconify icon={'eva:more-vertical-fill'} />
-                          </IconButton>
+                            <Typography paragraph>No data in table</Typography>
+                          </Paper>
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
-                  {emptyRows > 0 && (
-                    <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={9} />
-                    </TableRow>
-                  )}
-                  {filteredData?.length === 0 && (
-                    <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
-                          }}
-                        >
-                          <Typography paragraph>No data in table</Typography>
-                        </Paper>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-
-                {filteredData?.length > 0 && isNotFound && (
-                  <TableBody>
-                    <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
-                          }}
-                        >
-                          <Typography variant="h6" paragraph>
-                            Not found
-                          </Typography>
-
-                          <Typography variant="body2">
-                            No results found for &nbsp;
-                            <strong>&quot;{filterName}&quot;</strong>.
-                            <br /> Try checking for typos or using complete words.
-                          </Typography>
-                        </Paper>
-                      </TableCell>
-                    </TableRow>
+                    )}
                   </TableBody>
-                )}
-              </Table>
-            </TableContainer>
-          </Scrollbar>
+
+                  {filteredData?.length > 0 && isNotFound && (
+                    <TableBody>
+                      <TableRow>
+                        <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                          <Paper
+                            sx={{
+                              textAlign: 'center',
+                            }}
+                          >
+                            <Typography variant="h6" paragraph>
+                              Not found
+                            </Typography>
+
+                            <Typography variant="body2">
+                              No results found for &nbsp;
+                              <strong>&quot;{filterName}&quot;</strong>.
+                              <br /> Try checking for typos or using complete words.
+                            </Typography>
+                          </Paper>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  )}
+                </Table>
+              </TableContainer>
+            </Scrollbar>
 
           </Card>
         </Container>
@@ -886,7 +887,7 @@ export default function Sale() {
                     </span>
                   </Typography>
                   <TimelineView timeline={sale.timeline} />
-                  
+
                   {sale.actionLog && sale.actionLog.length > 0 && (
                     <Box sx={{ mt: 4 }}>
                       <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.secondary' }}>
@@ -994,7 +995,7 @@ function Status(props) {
     <>
       {content}
 
-      <VerificationModal 
+      <VerificationModal
         open={openVerifyModal}
         id={_id}
         type={verifyType}
@@ -1067,7 +1068,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     validationSchema: schema,
     onSubmit: async (values) => {
       setLoading(true);
-      
+
       const payload = {};
       if (type === 'bullion') {
         payload.bullionComments = values.comments;
@@ -1463,29 +1464,29 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
             )}
             {type !== 'bullion' && (
               <Grid item xs={12}>
-                  <Stack spacing={2}>
-                    <Typography variant="subtitle2">Upload Proof</Typography>
-                    <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} />
-                    {preview && (
-                      <a
-                        href={values.proof ? (values.proof.startsWith('http') ? values.proof : `${global.baseURL}/${values.proof}`) : (pdfBlobUrl || preview)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <Box sx={{ mt: 2, position: 'relative', width: '100%', height: 200, borderRadius: 1, overflow: 'hidden', border: '1px solid #eee' }}>
-                          {fileType === 'pdf' ? (
-                              <Box display="flex" alignItems="center" justifyContent="center" height="100%">
-                                  <Typography>View PDF Document: {preview}</Typography>
-                              </Box>
-                          ) : (
-                              <img src={preview} alt="Proof Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                          )}
-                        </Box>
-                      </a>
-                    )}
-                  </Stack>
-                </Grid>
+                <Stack spacing={2}>
+                  <Typography variant="subtitle2">Upload Proof</Typography>
+                  <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} />
+                  {preview && (
+                    <a
+                      href={values.proof ? (values.proof.startsWith('http') ? values.proof : `${global.baseURL}/${values.proof}`) : (pdfBlobUrl || preview)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <Box sx={{ mt: 2, position: 'relative', width: '100%', height: 200, borderRadius: 1, overflow: 'hidden', border: '1px solid #eee' }}>
+                        {fileType === 'pdf' ? (
+                          <Box display="flex" alignItems="center" justifyContent="center" height="100%">
+                            <Typography>View PDF Document: {preview}</Typography>
+                          </Box>
+                        ) : (
+                          <img src={preview} alt="Proof Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        )}
+                      </Box>
+                    </a>
+                  )}
+                </Stack>
+              </Grid>
             )}
             <Grid item xs={12}>
               <TextField
@@ -1507,9 +1508,9 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                 <Divider sx={{ my: 2 }} />
                 <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
                   <Typography variant="h6">Add Ornaments</Typography>
-                  <Button 
-                    variant="outlined" 
-                    size="small" 
+                  <Button
+                    variant="outlined"
+                    size="small"
                     onClick={() => setShowOrnamentForm(!showOrnamentForm)}
                   >
                     {showOrnamentForm ? 'Hide Form' : 'Add New'}
@@ -1527,11 +1528,11 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                             onChange={(e) => setOrnamentValues({ ...ornamentValues, ornamentType: e.target.value })}
                             label="Type"
                           >
-                             <MenuItem value="Bangles">Bangles</MenuItem>
-                             <MenuItem value="Chain">Chain</MenuItem>
-                             <MenuItem value="Ring">Ring</MenuItem>
-                             <MenuItem value="Necklace">Necklace</MenuItem>
-                             {/* Simplified for now, can add more */}
+                            <MenuItem value="Bangles">Bangles</MenuItem>
+                            <MenuItem value="Chain">Chain</MenuItem>
+                            <MenuItem value="Ring">Ring</MenuItem>
+                            <MenuItem value="Necklace">Necklace</MenuItem>
+                            {/* Simplified for now, can add more */}
                           </Select>
                         </FormControl>
                       </Grid>
@@ -1576,9 +1577,9 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                         />
                       </Grid>
                       <Grid item xs={12} sm={4}>
-                        <Button 
-                          variant="contained" 
-                          fullWidth 
+                        <Button
+                          variant="contained"
+                          fullWidth
                           onClick={() => {
                             if (ornamentValues.ornamentType && ornamentValues.netWeight) {
                               setOrnaments([...ornaments, ornamentValues]);

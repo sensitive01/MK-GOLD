@@ -5,33 +5,33 @@ import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 // @mui
 import {
-    Backdrop,
-    Box,
-    Button,
-    Card,
-    Checkbox,
-    CircularProgress,
-    Container,
-    Grid,
-    IconButton,
-    InputLabel,
-    MenuItem,
-    Modal,
-    Paper,
-    Popover,
-    Select,
-    Snackbar,
-    Stack,
-    Table,
-    TableHead,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TablePagination,
-    TableRow,
-    TextField,
-    Typography,
-    Divider,
+  Backdrop,
+  Box,
+  Button,
+  Card,
+  Checkbox,
+  CircularProgress,
+  Container,
+  Grid,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Modal,
+  Paper,
+  Popover,
+  Select,
+  Snackbar,
+  Stack,
+  Table,
+  TableHead,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TablePagination,
+  TableRow,
+  TextField,
+  Typography,
+  Divider,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import MuiAlert from '@mui/material/Alert';
@@ -157,7 +157,7 @@ export default function AuditorSale() {
       if (values.branch) query.branch = values.branch;
       if (values.phoneNumber) query.phoneNumber = values.phoneNumber;
       if (values.status) query.status = values.status;
-      
+
       if (values.fromDate || values.toDate) {
         query.createdAt = {};
         if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
@@ -185,7 +185,7 @@ export default function AuditorSale() {
         if (values.branch) q.branch = values.branch;
         if (values.phoneNumber) q.phoneNumber = values.phoneNumber;
         if (values.status) q.status = values.status;
-        
+
         if (values.fromDate || values.toDate) {
           q.createdAt = {};
           if (values.fromDate) q.createdAt.$gte = typeof values.fromDate.format === 'function' ? values.fromDate.format("YYYY-MM-DD") : values.fromDate;
@@ -437,150 +437,151 @@ export default function AuditorSale() {
           <TableContainer>
             <Table sx={{ minWidth: 800 }}>
               <SaleListHead
-                  order={order}
-                  orderBy={orderBy}
-                  headLabel={TABLE_HEAD}
-                  rowCount={data?.length || 0}
-                  numSelected={selected?.length}
-                  onRequestSort={handleRequestSort}
-                  onSelectAllClick={handleSelectAllClick}
-                  hideCheckbox={true}
-                />
-                <TableBody>
-                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, billId, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
-                    const selectedData = selected.indexOf(_id) !== -1;
-                    const isPledged = saleType?.toLowerCase() !== 'physical';
-                    const isReleasePending = isPledged && (
-                      Number(netAmount || 0) === 0 ||
-                      !row.assigneeCompleted ||
-                      status === 'release pending' ||
-                      (Array.isArray(row.release) && row.release.length > 0 && row.release.some((r) => r.status && r.status !== 'completed'))
-                    );
+                order={order}
+                orderBy={orderBy}
+                headLabel={TABLE_HEAD}
+                rowCount={data?.length || 0}
+                numSelected={selected?.length}
+                onRequestSort={handleRequestSort}
+                onSelectAllClick={handleSelectAllClick}
+                hideCheckbox={true}
+              />
+              <TableBody>
+                {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
+                  const { _id, billId, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
+                  const selectedData = selected.indexOf(_id) !== -1;
+                  const isPledged = saleType?.toLowerCase() !== 'physical';
+                  const isReleasePending = isPledged && (
+                    Number(netAmount || 0) === 0 ||
+                    !row.assigneeCompleted ||
+                    status === 'release pending' ||
+                    (Array.isArray(row.release) && row.release.length > 0 && row.release.some((r) => r.status && r.status !== 'completed'))
+                  );
 
-                    return (
-                      <TableRow
-                        hover
-                        key={_id}
-                        tabIndex={-1}
-                        role="checkbox"
-                        selected={selectedData}
-                        onClick={() => {
-                          setSaleIdToEdit(_id);
-                          setToggleContainer(true);
-                          setToggleContainerType('detail');
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {false && (
-                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selectedData}
-                              onChange={(event) => handleClick(event, _id)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </TableCell>
-                        )}
-                        <TableCell align="left">{billId}</TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                        <TableCell align="left">
-                          {row.customer ? (
-                            <Typography variant="subtitle2">
-                              {row.customer.name}
-                              <br />
-                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                {row.customer.phoneNumber}
-                              </Typography>
-                            </Typography>
-                          ) : (
-                            '-'
-                          )}
-                        </TableCell>
-                        <TableCell align="left">{rowBranch?.branchId || '-'}</TableCell>
-                        <TableCell align="left">{rowBranch?.branchName || '-'}</TableCell>
-                        <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
-                        <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
-                        <TableCell align="left">
-                          {isReleasePending ? (
-                            <Typography variant="body2" sx={{ color: '#8A1B9F', fontWeight: 'bold' }}>
-                              Release Pending
-                            </Typography>
-                          ) : (
-                            <>&#8377; {netAmount}</>
-                          )}
-                        </TableCell>
-                        <TableCell align="left" onClick={(e) => e.stopPropagation()}>
-                          <Status 
-                            status={status} 
-                            _id={_id} 
-                            assignee={row.assignee?._id || row.assignee}
-                            fetchData={fetchData}
-                            saleType={saleType}
-                            assigneeCompleted={row.assigneeCompleted}
-                            isReleasePending={isReleasePending}
+                  return (
+                    <TableRow
+                      hover
+                      key={_id}
+                      tabIndex={-1}
+                      role="checkbox"
+                      selected={selectedData}
+                      onClick={() => {
+                        setSaleIdToEdit(_id);
+                        setToggleContainer(true);
+                        setToggleContainerType('detail');
+                      }}
+                      style={{ cursor: 'pointer' }}
+                      sx={{ ...(isReleasePending && { '& td, & td .MuiTypography-root': { color: '#8A1B9F !important', fontWeight: 'bold !important' } }) }}
+                    >
+                      {false && (
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedData}
+                            onChange={(event) => handleClick(event, _id)}
+                            onClick={(e) => e.stopPropagation()}
                           />
                         </TableCell>
-                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                          <IconButton
-                            size="large"
-                            color="inherit"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              handleOpenMenu(e, _id);
-                            }}
-                          >
-                            <Iconify icon={'eva:more-vertical-fill'} />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {emptyRows > 0 && (
-                    <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={9} />
-                    </TableRow>
-                  )}
-                  {filteredData?.length === 0 && (
-                    <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
-                          }}
-                        >
-                          <Typography paragraph>No data in table</Typography>
-                        </Paper>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-
-                {filteredData?.length > 0 && isNotFound && (
-                  <TableBody>
-                    <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
-                        <Paper
-                          sx={{
-                            textAlign: 'center',
-                          }}
-                        >
-                          <Typography variant="h6" paragraph>
-                            Not found
+                      )}
+                      <TableCell align="left">{billId}</TableCell>
+                      <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                      <TableCell align="left">
+                        {row.customer ? (
+                          <Typography variant="subtitle2">
+                            {row.customer.name}
+                            <br />
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              {row.customer.phoneNumber}
+                            </Typography>
                           </Typography>
-
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell align="left">{rowBranch?.branchId || '-'}</TableCell>
+                      <TableCell align="left">{rowBranch?.branchName || '-'}</TableCell>
+                      <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
+                      <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
+                      <TableCell align="left">
+                        {isReleasePending ? (
                           <Typography variant="body2">
-                            No results found for &nbsp;
-                            <strong>&quot;{filterName}&quot;</strong>.
-                            <br /> Try checking for typos or using complete words.
+                            Release Pending
                           </Typography>
-                        </Paper>
+                        ) : (
+                          <>&#8377; {netAmount}</>
+                        )}
+                      </TableCell>
+                      <TableCell align="left" onClick={(e) => e.stopPropagation()}>
+                        <Status
+                          status={status}
+                          _id={_id}
+                          assignee={row.assignee?._id || row.assignee}
+                          fetchData={fetchData}
+                          saleType={saleType}
+                          assigneeCompleted={row.assigneeCompleted}
+                          isReleasePending={isReleasePending}
+                        />
+                      </TableCell>
+                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                        <IconButton
+                          size="large"
+                          color="inherit"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            handleOpenMenu(e, _id);
+                          }}
+                        >
+                          <Iconify icon={'eva:more-vertical-fill'} />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
-                  </TableBody>
+                  );
+                })}
+                {emptyRows > 0 && (
+                  <TableRow style={{ height: 53 * emptyRows }}>
+                    <TableCell colSpan={9} />
+                  </TableRow>
                 )}
-              </Table>
-            </TableContainer>
+                {filteredData?.length === 0 && (
+                  <TableRow>
+                    <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <Paper
+                        sx={{
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Typography paragraph>No data in table</Typography>
+                      </Paper>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+
+              {filteredData?.length > 0 && isNotFound && (
+                <TableBody>
+                  <TableRow>
+                    <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <Paper
+                        sx={{
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Typography variant="h6" paragraph>
+                          Not found
+                        </Typography>
+
+                        <Typography variant="body2">
+                          No results found for &nbsp;
+                          <strong>&quot;{filterName}&quot;</strong>.
+                          <br /> Try checking for typos or using complete words.
+                        </Typography>
+                      </Paper>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              )}
+            </Table>
+          </TableContainer>
 
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
@@ -929,7 +930,7 @@ export default function AuditorSale() {
                     </span>
                   </Typography>
                   <TimelineView timeline={sale.timeline} />
-                  
+
                   {sale.actionLog && sale.actionLog.length > 0 && (
                     <Box sx={{ mt: 4 }}>
                       <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.secondary' }}>
@@ -1021,6 +1022,7 @@ function Status(props) {
         (status === 'completed' && 'success') ||
         (status === 'finance pending' && 'warning') ||
         (status === 'release pending' && 'warning') ||
+        (status === 'bullion pending' && 'warning') ||
         (status === 'admin approval pending' && 'info') ||
         (status === 'fund transfer pending' && 'warning') ||
         (status === 'intransit' && 'info') ||
@@ -1073,7 +1075,7 @@ function Status(props) {
     <>
       {content}
 
-      <VerificationModal 
+      <VerificationModal
         open={openVerifyModal}
         id={_id}
         type={verifyType}
@@ -1212,7 +1214,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
       }
 
       setLoading(true);
-      
+
       const payload = {};
       if (type === 'finance') {
         const isPartial = saleDetails?.paymentType === 'partial';
@@ -1323,12 +1325,12 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
       const formData = new FormData();
       formData.append('uploadedFile', file);
       formData.append('uploadId', id);
-      
+
       let uploadName = 'proof';
       if (type === 'finance') uploadName = 'finance_proof';
       else if (type === 'fund transfer') uploadName = 'fundTransfer_proof';
       else uploadName = 'assignee_proof';
-      
+
       formData.append('uploadName', uploadName);
       const res = await createFile(formData);
       if (res.status) {
@@ -1404,7 +1406,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         </DialogTitle>
         <DialogContent sx={{ mt: 2, p: 3 }}>
           {/* Render the full comprehensive SaleDetail component showing all customer, address, ornaments, release, and bank details! */}
-          <SaleDetail id={id} setNotify={() => {}} />
+          <SaleDetail id={id} setNotify={() => { }} />
 
           {/* Admin Review Action Notes */}
           <Box sx={{ mt: 3 }}>
@@ -1427,18 +1429,18 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           <Button onClick={handleClose} color="inherit" variant="outlined" size="large">
             Cancel
           </Button>
-          <LoadingButton 
-            variant="contained" 
-            color="error" 
+          <LoadingButton
+            variant="contained"
+            color="error"
             loading={loading}
             onClick={() => handleAdminAction('reject')}
             size="large"
           >
             Reject Stage
           </LoadingButton>
-          <LoadingButton 
-            variant="contained" 
-            color="success" 
+          <LoadingButton
+            variant="contained"
+            color="success"
             loading={loading}
             onClick={() => handleAdminAction('approve')}
             sx={{ color: '#fff' }}
@@ -1667,9 +1669,9 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                         />
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <Button 
-                          variant="contained" 
-                          fullWidth 
+                        <Button
+                          variant="contained"
+                          fullWidth
                           onClick={() => {
                             if (ornamentValues.ornamentType && ornamentValues.netWeight) {
                               setOrnaments([...ornaments, ornamentValues]);

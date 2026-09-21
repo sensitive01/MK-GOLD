@@ -470,6 +470,7 @@ export default function Sale() {
                         }
                       }}
                       style={{ cursor: 'pointer' }}
+                      sx={{ ...(isReleasePending && { '& td, & td .MuiTypography-root': { color: '#8A1B9F !important', fontWeight: 'bold !important' } }) }}
                     >
                       <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
@@ -997,6 +998,7 @@ function Status(props) {
         (status === 'completed' && 'success') ||
         (status === 'finance pending' && 'warning') ||
         (status === 'release pending' && 'warning') ||
+        (status === 'bullion pending' && 'warning') ||
         (status === 'admin approval pending' && 'info') ||
         (status === 'fund transfer pending' && 'warning') ||
         (status === 'intransit' && 'info') ||

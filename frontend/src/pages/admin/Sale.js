@@ -487,6 +487,7 @@ export default function Sale() {
                         }
                       }}
                       style={{ cursor: 'pointer' }}
+                      sx={{ ...(isReleasePending && { '& td, & td .MuiTypography-root': { color: '#8A1B9F !important', fontWeight: 'bold !important' } }) }}
                     >
                       {!(auth.user?.userType?.toLowerCase().includes('bullion') || !isSelectForTransit) && (
                         <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
@@ -1016,6 +1017,7 @@ function Status(props) {
         (status === 'completed' && 'success') ||
         (status === 'finance pending' && 'warning') ||
         (status === 'release pending' && 'warning') ||
+        (status === 'bullion pending' && 'warning') ||
         (status === 'admin approval pending' && 'info') ||
         (status === 'fund transfer pending' && 'warning') ||
         (status === 'intransit' && 'info') ||
@@ -1339,12 +1341,12 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
       const formData = new FormData();
       formData.append('uploadedFile', file);
       formData.append('uploadId', id);
-      
+
       let uploadName = 'proof';
       if (type === 'finance') uploadName = 'finance_proof';
       else if (type === 'fund transfer') uploadName = 'fundTransfer_proof';
       else uploadName = 'assignee_proof';
-      
+
       formData.append('uploadName', uploadName);
       const res = await createFile(formData);
       if (res.status) {

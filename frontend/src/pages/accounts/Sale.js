@@ -419,144 +419,145 @@ export default function Sale() {
           <Scrollbar sx={{ width: '100%' }}>
             <TableContainer sx={{ minWidth: 800 }}>
               <Table sx={{ minWidth: 800 }}>
-              <SaleListHead
-                order={order}
-                orderBy={orderBy}
-                headLabel={TABLE_HEAD}
-                rowCount={data?.length || 0}
-                numSelected={selected?.length}
-                onRequestSort={handleRequestSort}
-                onSelectAllClick={handleSelectAllClick}
-                hideCheckbox={true}
-              />
-              <TableBody>
-                {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                  const { _id, billId, saleType, netAmount, branch, purchaseType, status, createdAt } = row;
-                  const selectedData = selected.indexOf(_id) !== -1;
-                  const isPledged = saleType?.toLowerCase() !== 'physical';
-                  const isReleasePending = isPledged && (
-                    Number(netAmount || 0) === 0 ||
-                    !row.assigneeCompleted ||
-                    status === 'release pending' ||
-                    (Array.isArray(row.release) && row.release.length > 0 && row.release.some((r) => r.status && r.status !== 'completed'))
-                  );
+                <SaleListHead
+                  order={order}
+                  orderBy={orderBy}
+                  headLabel={TABLE_HEAD}
+                  rowCount={data?.length || 0}
+                  numSelected={selected?.length}
+                  onRequestSort={handleRequestSort}
+                  onSelectAllClick={handleSelectAllClick}
+                  hideCheckbox={true}
+                />
+                <TableBody>
+                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
+                    const { _id, billId, saleType, netAmount, branch, purchaseType, status, createdAt } = row;
+                    const selectedData = selected.indexOf(_id) !== -1;
+                    const isPledged = saleType?.toLowerCase() !== 'physical';
+                    const isReleasePending = isPledged && (
+                      Number(netAmount || 0) === 0 ||
+                      !row.assigneeCompleted ||
+                      status === 'release pending' ||
+                      (Array.isArray(row.release) && row.release.length > 0 && row.release.some((r) => r.status && r.status !== 'completed'))
+                    );
 
-                  return (
-                    <TableRow
-                      hover
-                      key={_id}
-                      tabIndex={-1}
-                      role="checkbox"
-                      selected={selectedData}
-                      onClick={() => {
-                        setOpenId(_id);
-                        setToggleContainer(true);
-                        setToggleContainerType('detail');
-                      }}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <TableCell align="left">{billId}</TableCell>
-                      <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
-                      <TableCell align="left">
-                        {row.customer ? (
-                          <Typography variant="subtitle2">
-                            {row.customer.name}
-                            <br />
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                              {row.customer.phoneNumber}
+                    return (
+                      <TableRow
+                        hover
+                        key={_id}
+                        tabIndex={-1}
+                        role="checkbox"
+                        selected={selectedData}
+                        onClick={() => {
+                          setOpenId(_id);
+                          setToggleContainer(true);
+                          setToggleContainerType('detail');
+                        }}
+                        style={{ cursor: 'pointer' }}
+                        sx={{ ...(isReleasePending && { '& td, & td .MuiTypography-root': { color: '#8A1B9F !important', fontWeight: 'bold !important' } }) }}
+                      >
+                        <TableCell align="left">{billId}</TableCell>
+                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                        <TableCell align="left">
+                          {row.customer ? (
+                            <Typography variant="subtitle2">
+                              {row.customer.name}
+                              <br />
+                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                {row.customer.phoneNumber}
+                              </Typography>
                             </Typography>
-                          </Typography>
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                      <TableCell align="left">{branch?.branchId || '-'}</TableCell>
-                      <TableCell align="left">{branch?.branchName || '-'}</TableCell>
-                      <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
-                      <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
-                      <TableCell align="left">
-                        {isReleasePending ? (
-                          <Typography variant="body2" sx={{ color: '#8A1B9F', fontWeight: 'bold' }}>
-                            Release Pending
-                          </Typography>
-                        ) : (
-                          <>&#8377; {netAmount}</>
-                        )}
-                      </TableCell>
-                      <TableCell align="left" onClick={(e) => e.stopPropagation()}>
-                        <Status
-                          status={status}
-                          _id={_id}
-                          assignee={row.assignee?._id || row.assignee}
-                          fetchData={fetchData}
-                          saleType={saleType}
-                          assigneeCompleted={row.assigneeCompleted}
-                          isReleasePending={isReleasePending}
-                        />
-                      </TableCell>
-                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                        <IconButton
-                          size="large"
-                          color="inherit"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            setOpenId(_id);
-                            handleOpenMenu(e);
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell align="left">{branch?.branchId || '-'}</TableCell>
+                        <TableCell align="left">{branch?.branchName || '-'}</TableCell>
+                        <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
+                        <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
+                        <TableCell align="left">
+                          {isReleasePending ? (
+                            <Typography variant="body2" sx={{ color: '#8A1B9F', fontWeight: 'bold' }}>
+                              Release Pending
+                            </Typography>
+                          ) : (
+                            <>&#8377; {netAmount}</>
+                          )}
+                        </TableCell>
+                        <TableCell align="left" onClick={(e) => e.stopPropagation()}>
+                          <Status
+                            status={status}
+                            _id={_id}
+                            assignee={row.assignee?._id || row.assignee}
+                            fetchData={fetchData}
+                            saleType={saleType}
+                            assigneeCompleted={row.assigneeCompleted}
+                            isReleasePending={isReleasePending}
+                          />
+                        </TableCell>
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                          <IconButton
+                            size="large"
+                            color="inherit"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              setOpenId(_id);
+                              handleOpenMenu(e);
+                            }}
+                          >
+                            <Iconify icon={'eva:more-vertical-fill'} />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {emptyRows > 0 && (
+                    <TableRow style={{ height: 53 * emptyRows }}>
+                      <TableCell colSpan={9} />
+                    </TableRow>
+                  )}
+                  {filteredData?.length === 0 && (
+                    <TableRow>
+                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                        <Paper
+                          sx={{
+                            textAlign: 'center',
                           }}
                         >
-                          <Iconify icon={'eva:more-vertical-fill'} />
-                        </IconButton>
+                          <Typography paragraph>No data in table</Typography>
+                        </Paper>
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-                {emptyRows > 0 && (
-                  <TableRow style={{ height: 53 * emptyRows }}>
-                    <TableCell colSpan={9} />
-                  </TableRow>
-                )}
-                {filteredData?.length === 0 && (
-                  <TableRow>
-                    <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
-                      <Paper
-                        sx={{
-                          textAlign: 'center',
-                        }}
-                      >
-                        <Typography paragraph>No data in table</Typography>
-                      </Paper>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-
-              {filteredData?.length > 0 && isNotFound && (
-                <TableBody>
-                  <TableRow>
-                    <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
-                      <Paper
-                        sx={{
-                          textAlign: 'center',
-                        }}
-                      >
-                        <Typography variant="h6" paragraph>
-                          Not found
-                        </Typography>
-
-                        <Typography variant="body2">
-                          No results found for &nbsp;
-                          <strong>&quot;{filterName}&quot;</strong>.
-                          <br /> Try checking for typos or using complete words.
-                        </Typography>
-                      </Paper>
-                    </TableCell>
-                  </TableRow>
+                  )}
                 </TableBody>
-              )}
-            </Table>
-          </TableContainer>
-        </Scrollbar>
+
+                {filteredData?.length > 0 && isNotFound && (
+                  <TableBody>
+                    <TableRow>
+                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                        <Paper
+                          sx={{
+                            textAlign: 'center',
+                          }}
+                        >
+                          <Typography variant="h6" paragraph>
+                            Not found
+                          </Typography>
+
+                          <Typography variant="body2">
+                            No results found for &nbsp;
+                            <strong>&quot;{filterName}&quot;</strong>.
+                            <br /> Try checking for typos or using complete words.
+                          </Typography>
+                        </Paper>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                )}
+              </Table>
+            </TableContainer>
+          </Scrollbar>
 
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
@@ -930,6 +931,7 @@ function Status(props) {
         (status === 'completed' && 'success') ||
         (status === 'finance pending' && 'warning') ||
         (status === 'release pending' && 'warning') ||
+        (status === 'bullion pending' && 'warning') ||
         (status === 'admin approval pending' && 'info') ||
         (status === 'fund transfer pending' && 'warning') ||
         'error'

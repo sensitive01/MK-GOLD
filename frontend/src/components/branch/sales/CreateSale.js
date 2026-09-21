@@ -174,9 +174,9 @@ function CreateSale(props) {
           setStep(2);
         } else {
           setNotify({
-              open: true,
-              message: 'Failed to fetch sale data: ' + data.message,
-              severity: 'error',
+            open: true,
+            message: 'Failed to fetch sale data: ' + data.message,
+            severity: 'error',
           });
         }
       });
@@ -378,7 +378,7 @@ function CreateSale(props) {
           </Typography>
           {statusLog && (
             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
-              Current Status: <strong>{sentenceCase(statusLog.status)}</strong> 
+              Current Status: <strong>{sentenceCase(statusLog.status)}</strong>
               {statusLog.by && ` by ${statusLog.by.name} (${statusLog.by.employeeId})`}
               {statusLog.at && ` at ${moment(statusLog.at).format('YYYY-MM-DD HH:mm:ss')}`}
             </Typography>
@@ -1174,13 +1174,13 @@ function CreateSale(props) {
         onAddressCreated={loadAddresses}
         setNotify={props.setNotify}
       />
-      <ConfirmModal 
-        open={openConfirmModal} 
-        handleClose={() => setOpenConfirmModal(false)} 
+      <ConfirmModal
+        open={openConfirmModal}
+        handleClose={() => setOpenConfirmModal(false)}
         handleConfirm={() => {
           setOpenConfirmModal(false);
           submitSale();
-        }} 
+        }}
       />
     </>
   );

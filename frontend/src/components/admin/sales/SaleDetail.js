@@ -1899,12 +1899,14 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
                 </Typography>
                 <Address />
               </Grid>
-              <Grid item xs={12}>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  Ornament Detail:
-                </Typography>
-                <Ornament />
-              </Grid>
+              {data?.ornaments && data.ornaments.length > 0 && (
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    Ornament Detail:
+                  </Typography>
+                  <Ornament />
+                </Grid>
+              )}
               {data?.saleType !== 'physical' && (
                 <Grid item xs={12}>
                   <Typography variant="h6" sx={{ mb: 1 }}>
@@ -1990,12 +1992,14 @@ export default function SaleDetail({ id, setNotify, onActionComplete }) {
 
                 return null;
               })()}
-              <Grid item xs={12}>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  Finance Payments
-                </Typography>
-                <FinancePayments />
-              </Grid>
+              {data?.financePayments && data.financePayments.length > 0 && (
+                <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    Finance Payments
+                  </Typography>
+                  <FinancePayments />
+                </Grid>
+              )}
               <Grid item xs={12}>
                 <Typography variant="h6" sx={{ mb: 1 }}>
                   Proof Documents
