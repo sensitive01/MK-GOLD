@@ -40,6 +40,11 @@ const navConfig = [
     path: '/transaction-executive/release',
     icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
   },
+  // {
+  //   title: 'Customers',
+  //   path: '/transaction-executive/customer',
+  //   icon: icon('ic_user'),
+  // },
   {
     title: 'Leads',
     path: '/transaction-executive/leads',

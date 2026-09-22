@@ -34,30 +34,24 @@ async function find(req, res) {
 async function findById(req, res) {
   try {
     const sale = await salesService.findById(req.params.id);
+    if (!sale) {
+      return res.json({
+        status: false,
+        message: "Sale not found",
+        data: {},
+      });
+    }
     if (req.user) {
       const userType = req.user.userType?.toLowerCase();
-      const branchUserTypes = [
-        "branch",
-        "assistant_branch_manager",
-        "branch_executive",
-        "transaction_executive",
-        "telecalling",
-        "bullion_desk",
-        "marketing",
-        "admin_desk"
-      ];
-      if (branchUserTypes.includes(userType) && req.user.branch) {
-        const saleBranch = String(sale[0].branch?._id || sale[0].branch);
+      if (userType !== 'bullion_desk' && req.user.branch && sale.branch) {
+        const saleBranch = String(sale.branch?._id || sale.branch);
         const userBranch = String(req.user.branch._id || req.user.branch);
-        const saleEmployee = String(sale[0].employee?._id || sale[0].employee);
-        const userEmployee = String(req.user._id);
-        
-        if (saleBranch !== userBranch || (req.user._id && saleEmployee !== userEmployee)) {
-           return res.json({
-             status: false,
-             message: "Unauthorized access to this sale",
-             data: {}
-           });
+        if (saleBranch !== userBranch) {
+          return res.json({
+            status: false,
+            message: "Unauthorized access to this sale",
+            data: {},
+          });
         }
       }
     }

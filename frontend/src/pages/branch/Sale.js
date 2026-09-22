@@ -64,13 +64,13 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
+  { id: 'sno', label: 'S.No', alignRight: false },
   { id: 'billId', label: 'Bill Id', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: 'customer', label: 'Customer', alignRight: false },
-  { id: 'branchId', label: 'Branch Id', alignRight: false },
   { id: 'branchName', label: 'Branch Name', alignRight: false },
+  { id: 'biller', label: 'Biller', alignRight: false },
   { id: 'saleType', label: 'Sale Type', alignRight: false },
-  { id: 'purchaseType', label: 'Ornament Type', alignRight: false },
   { id: 'netAmount', label: 'Net Amount', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: '' },
@@ -125,7 +125,9 @@ export default function Sale() {
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
+  const [detailedSale, setDetailedSale] = useState(null);
   const selectedSale = useMemo(() => data?.find((s) => s._id === saleIdToEdit), [data, saleIdToEdit]);
+  const isSaleCompleted = ['completed', 'intransit', 'moved', 'melted'].includes((detailedSale?.status || selectedSale?.status)?.toLowerCase());
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
@@ -452,7 +454,7 @@ export default function Sale() {
                     hideCheckbox={auth.user?.userType?.toLowerCase().includes('bullion') || !isSelectForTransit}
                   />
                   <TableBody>
-                    {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
+                    {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row, index) => {
                       const { _id, billId, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
                       const selectedData = selected.indexOf(_id) !== -1;
                       const isPledged = saleType?.toLowerCase() !== 'physical';
@@ -492,6 +494,7 @@ export default function Sale() {
                               />
                             </TableCell>
                           )}
+                          <TableCell align="left">{page * rowsPerPage + index + 1}</TableCell>
                           <TableCell align="left">{billId}</TableCell>
                           <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                           <TableCell align="left">
@@ -507,10 +510,27 @@ export default function Sale() {
                               '-'
                             )}
                           </TableCell>
-                          <TableCell align="left">{rowBranch?.branchId || '-'}</TableCell>
                           <TableCell align="left">{rowBranch?.branchName || '-'}</TableCell>
-                          <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
-                          <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
+                          <TableCell align="left">
+                            {row.biller ? (
+                              <Typography variant="subtitle2">
+                                {row.biller.name || '-'}
+                                {row.biller.employeeId && (
+                                  <>
+                                    <br />
+                                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                      {row.biller.employeeId}
+                                    </Typography>
+                                  </>
+                                )}
+                              </Typography>
+                            ) : (
+                              '-'
+                            )}
+                          </TableCell>
+                          <TableCell align="left">
+                            {[sentenceCase(saleType || ''), sentenceCase(purchaseType || '')].filter(Boolean).join(' ') || '-'}
+                          </TableCell>
                           <TableCell align="left">
                             {isReleasePending ? (
                               <Typography variant="body2">
@@ -549,12 +569,12 @@ export default function Sale() {
                     })}
                     {emptyRows > 0 && (
                       <TableRow style={{ height: 53 * emptyRows }}>
-                        <TableCell colSpan={9} />
+                        <TableCell colSpan={10} />
                       </TableRow>
                     )}
                     {filteredData?.length === 0 && (
                       <TableRow>
-                        <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                        <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
                           <Paper
                             sx={{
                               textAlign: 'center',
@@ -570,7 +590,7 @@ export default function Sale() {
                   {filteredData?.length > 0 && isNotFound && (
                     <TableBody>
                       <TableRow>
-                        <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                        <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
                           <Paper
                             sx={{
                               textAlign: 'center',
@@ -652,31 +672,34 @@ export default function Sale() {
         <Container maxWidth="xl">
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={{ xs: 1.5, sm: 2 }}>
             <Typography variant="h4" sx={{ color: '#fff', mb: 0 }}>
-              Sale Details
+              Billing Summary
             </Typography>
             <Stack direction="row" spacing={2}>
-              <Button
-                variant="contained"
-                sx={{
-                  bgcolor: '#FFD700',
-                  color: 'primary.main',
-                  '&:hover': {
+              {isSaleCompleted && (
+                <Button
+                  variant="contained"
+                  sx={{
                     bgcolor: '#FFD700',
-                  },
-                }}
-                startIcon={<Iconify icon="material-symbols:print" />}
-                onClick={() => {
-                  setToggleContainerType('print');
-                }}
-              >
-                Print
-              </Button>
+                    color: 'primary.main',
+                    '&:hover': {
+                      bgcolor: '#FFD700',
+                    },
+                  }}
+                  startIcon={<Iconify icon="material-symbols:print" />}
+                  onClick={() => {
+                    setToggleContainerType('print');
+                  }}
+                >
+                  Print
+                </Button>
+              )}
               <Button
                 variant="contained"
                 startIcon={<Iconify icon="mdi:arrow-left" />}
                 onClick={() => {
                   setToggleContainer(false);
                   setSaleIdToEdit(null);
+                  setDetailedSale(null);
                   fetchData();
                 }}
               >
@@ -688,9 +711,11 @@ export default function Sale() {
           <SaleDetail
             id={saleIdToEdit}
             setNotify={setNotify}
+            onSaleLoaded={setDetailedSale}
             onActionComplete={() => {
               setToggleContainer(false);
               setSaleIdToEdit(null);
+              setDetailedSale(null);
               fetchData();
             }}
           />
@@ -737,16 +762,18 @@ export default function Sale() {
           <Iconify icon={'carbon:view-filled'} sx={{ mr: 2 }} />
           View
         </MenuItem>
-        <MenuItem
-          onClick={() => {
-            setOpen(null);
-            setToggleContainer(true);
-            setToggleContainerType('print');
-          }}
-        >
-          <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
-          Print
-        </MenuItem>
+        {['completed', 'intransit', 'moved', 'melted'].includes(selectedSale?.status?.toLowerCase()) && (
+          <MenuItem
+            onClick={() => {
+              setOpen(null);
+              setToggleContainer(true);
+              setToggleContainerType('print');
+            }}
+          >
+            <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
+            Print
+          </MenuItem>
+        )}
         <MenuItem
           onClick={() => {
             setOpen(null);

@@ -150,9 +150,11 @@ export default {
     return role !== 'subadmin' && role !== 'transaction_executive';
   },
   maskPhoneNumber: (phone) => {
-    if (!phone || phone.length < 4) return phone;
-    const first2 = phone.substring(0, 2);
-    const last2 = phone.substring(phone.length - 2);
+    if (!phone) return '';
+    const strPhone = String(phone).trim();
+    if (strPhone.length < 4) return strPhone;
+    const first2 = strPhone.substring(0, 2);
+    const last2 = strPhone.substring(strPhone.length - 2);
     const masked = '******';
     return `${first2}${masked}${last2}`;
   },

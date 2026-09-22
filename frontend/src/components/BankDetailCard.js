@@ -465,31 +465,6 @@ export default function BankDetailCard({
                       </Stack>
                     )}
                   </Box>
-
-                  {/* Bottom Action Footer */}
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{ mt: 1, pt: 0.5 }}
-                  >
-                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.72rem' }}>
-                      Click image to zoom full view
-                    </Typography>
-                    <Button
-                      size="small"
-                      variant="text"
-                      color="primary"
-                      component="a"
-                      href={proofUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      endIcon={<Iconify icon="eva:external-link-fill" width={14} height={14} />}
-                      sx={{ fontSize: '0.75rem', fontWeight: 700, p: 0.5 }}
-                    >
-                      Open Full Document
-                    </Button>
-                  </Stack>
                 </Box>
               </Grid>
             )}

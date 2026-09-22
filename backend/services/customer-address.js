@@ -13,19 +13,23 @@ async function create(payload) {
     const QREnquiry = require("../models/qrEnquiry");
     const customer = await Customer.findById(payload.customerId).exec();
     
+    const rawAddr = (Array.isArray(payload.address) && payload.address.length > 0)
+      ? payload.address[0]
+      : payload;
+
     const data = {
-      address: payload.address,
-      area: payload.area,
-      city: payload.city,
-      state: payload.state,
-      pincode: payload.pincode,
-      landmark: payload.landmark,
-      residential: payload.residential,
-      label: payload.label,
-      createdBy: payload.createdBy,
+      address: typeof rawAddr.address === 'string' ? rawAddr.address : (typeof payload.address === 'string' ? payload.address : ''),
+      area: rawAddr.area || payload.area || '',
+      city: rawAddr.city || payload.city || '',
+      state: rawAddr.state || payload.state || '',
+      pincode: String(rawAddr.pincode || payload.pincode || ''),
+      landmark: rawAddr.landmark || payload.landmark || 'N/A',
+      residential: rawAddr.residential || payload.residential || 'Owned',
+      label: rawAddr.label || payload.label || 'Home',
+      createdBy: payload.createdBy || rawAddr.createdBy,
     };
     const updatedCustomer = await Customer.findByIdAndUpdate(
-      payload.customerId,
+      payload.customerId || rawAddr.customerId,
       { $push: { address: data } },
       {
         returnDocument: "after",

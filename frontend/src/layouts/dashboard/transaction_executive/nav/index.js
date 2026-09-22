@@ -79,7 +79,7 @@ export default function Nav({ openNav, onCloseNav }) {
         </Link>
       </Box>
 
-      <NavSection data={navConfig} />
+      <NavSection data={navConfig.filter((item) => !['Customer', 'Customers'].includes(item.title))} />
 
       <Box sx={{ flexGrow: 1 }} />
     </Scrollbar>

@@ -67,6 +67,7 @@ import { createFile } from '../../apis/branch/fileupload';
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
+  { id: 'sno', label: 'S.No', alignRight: false },
   { id: 'billId', label: 'Bill Id', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: 'customer', label: 'Customer', alignRight: false },
@@ -447,7 +448,7 @@ export default function AuditorSale() {
                 hideCheckbox={true}
               />
               <TableBody>
-                {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
+                {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row, index) => {
                   const { _id, billId, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
                   const selectedData = selected.indexOf(_id) !== -1;
                   const isPledged = saleType?.toLowerCase() !== 'physical';
@@ -482,6 +483,7 @@ export default function AuditorSale() {
                           />
                         </TableCell>
                       )}
+                      <TableCell align="left">{page * rowsPerPage + index + 1}</TableCell>
                       <TableCell align="left">{billId}</TableCell>
                       <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                       <TableCell align="left">
@@ -539,12 +541,12 @@ export default function AuditorSale() {
                 })}
                 {emptyRows > 0 && (
                   <TableRow style={{ height: 53 * emptyRows }}>
-                    <TableCell colSpan={9} />
+                    <TableCell colSpan={11} />
                   </TableRow>
                 )}
                 {filteredData?.length === 0 && (
                   <TableRow>
-                    <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                    <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                       <Paper
                         sx={{
                           textAlign: 'center',
@@ -560,7 +562,7 @@ export default function AuditorSale() {
               {filteredData?.length > 0 && isNotFound && (
                 <TableBody>
                   <TableRow>
-                    <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                    <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                       <Paper
                         sx={{
                           textAlign: 'center',

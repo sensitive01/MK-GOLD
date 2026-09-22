@@ -38,7 +38,7 @@ async function createAddress(req, res) {
       data: {
         data: createdData,
         fileUpload: {
-          uploadId: createdData.address[createdData.address.length - 1]._id,
+          uploadId: createdData?.address?.length > 0 ? createdData.address[createdData.address.length - 1]._id : null,
           uploadName: "customer_address",
         },
       },

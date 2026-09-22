@@ -32,6 +32,9 @@ import {
   TextField,
   Typography,
   Divider,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import MuiAlert from '@mui/material/Alert';
@@ -66,6 +69,7 @@ import { createFile } from '../../apis/branch/fileupload';
 // ----------------------------------------------------------------------
 
 const TABLE_HEAD = [
+  { id: 'sno', label: 'S.No', alignRight: false },
   { id: 'billId', label: 'Bill Id', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: 'customer', label: 'Customer', alignRight: false },
@@ -126,6 +130,9 @@ export default function Sale() {
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
+  const [detailedSale, setDetailedSale] = useState(null);
+  const selectedSale = useMemo(() => data?.find((s) => s._id === openId), [data, openId]);
+  const isSaleCompleted = ['completed', 'intransit', 'moved', 'melted'].includes((detailedSale?.status || selectedSale?.status)?.toLowerCase());
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
@@ -430,7 +437,7 @@ export default function Sale() {
                   hideCheckbox={true}
                 />
                 <TableBody>
-                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
+                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row, index) => {
                     const { _id, billId, saleType, netAmount, branch, purchaseType, status, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
                     const isPledged = saleType?.toLowerCase() !== 'physical';
@@ -456,6 +463,7 @@ export default function Sale() {
                         style={{ cursor: 'pointer' }}
                         sx={{ ...(isReleasePending && { '& td, & td .MuiTypography-root': { color: '#8A1B9F !important', fontWeight: 'bold !important' } }) }}
                       >
+                        <TableCell align="left">{page * rowsPerPage + index + 1}</TableCell>
                         <TableCell align="left">{billId}</TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="left">
@@ -493,6 +501,7 @@ export default function Sale() {
                             saleType={saleType}
                             assigneeCompleted={row.assigneeCompleted}
                             isReleasePending={isReleasePending}
+                            row={row}
                           />
                         </TableCell>
                         <TableCell align="right" onClick={(e) => e.stopPropagation()}>
@@ -514,12 +523,12 @@ export default function Sale() {
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={9} />
+                      <TableCell colSpan={11} />
                     </TableRow>
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -535,7 +544,7 @@ export default function Sale() {
                 {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
-                      <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -602,27 +611,30 @@ export default function Sale() {
             Sale Details
           </Typography>
           <Stack direction="row" spacing={2}>
-            <Button
-              variant="contained"
-              sx={{
-                bgcolor: '#FFD700',
-                color: 'primary.main',
-                '&:hover': {
+            {isSaleCompleted && (
+              <Button
+                variant="contained"
+                sx={{
                   bgcolor: '#FFD700',
-                },
-              }}
-              startIcon={<Iconify icon="material-symbols:print" />}
-              onClick={() => {
-                setToggleContainerType('print');
-              }}
-            >
-              Print
-            </Button>
+                  color: 'primary.main',
+                  '&:hover': {
+                    bgcolor: '#FFD700',
+                  },
+                }}
+                startIcon={<Iconify icon="material-symbols:print" />}
+                onClick={() => {
+                  setToggleContainerType('print');
+                }}
+              >
+                Print
+              </Button>
+            )}
             <Button
               variant="contained"
               startIcon={<Iconify icon="mdi:arrow-left" />}
               onClick={() => {
                 setToggleContainer(false);
+                setDetailedSale(null);
                 fetchData();
               }}
             >
@@ -634,8 +646,10 @@ export default function Sale() {
         <SaleDetail
           id={openId}
           setNotify={setNotify}
+          onSaleLoaded={setDetailedSale}
           onActionComplete={() => {
             setToggleContainer(false);
+            setDetailedSale(null);
             fetchData();
           }}
         />
@@ -669,16 +683,18 @@ export default function Sale() {
           <Iconify icon={'carbon:view-filled'} sx={{ mr: 2 }} />
           View
         </MenuItem>
-        <MenuItem
-          onClick={() => {
-            setOpen(null);
-            setToggleContainer(!toggleContainer);
-            setToggleContainerType('print');
-          }}
-        >
-          <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
-          Print
-        </MenuItem>
+        {['completed', 'intransit', 'moved', 'melted'].includes(selectedSale?.status?.toLowerCase()) && (
+          <MenuItem
+            onClick={() => {
+              setOpen(null);
+              setToggleContainer(!toggleContainer);
+              setToggleContainerType('print');
+            }}
+          >
+            <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
+            Print
+          </MenuItem>
+        )}
         <MenuItem
           onClick={() => {
             setOpen(null);
@@ -912,9 +928,10 @@ export default function Sale() {
 }
 
 function Status(props) {
-  const { _id, status, assignee, fetchData, saleType, assigneeCompleted, isReleasePending } = props;
+  const { _id, status, assignee, fetchData, saleType, assigneeCompleted, isReleasePending, row } = props;
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType?.toLowerCase();
+  const isAdmin = userType === 'admin';
   const employeeId = auth.user?.employee?._id || auth.user?.employee;
 
   const [openVerifyModal, setOpenVerifyModal] = useState(false);
@@ -941,9 +958,49 @@ function Status(props) {
     </Label>
   );
 
-  // Finance Step
-  if (status === 'finance pending') {
-    if (userType === 'finance' || userType === 'accounts') {
+  const hasFinanceUpdatedToday = Boolean(
+    status !== 'finance pending' &&
+    (status === 'completed' || row?.financeCompleted || (row?.financePayments && row.financePayments.length > 0)) &&
+    (isAdmin || moment(row?.financeCompletedAt || row?.actionAt || row?.updatedAt || row?.createdAt).isSame(moment(), 'day'))
+  );
+
+  if (hasFinanceUpdatedToday && (isAdmin || userType === 'finance' || userType === 'accounts')) {
+    content = (
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Label
+          color={
+            (status === 'completed' && 'success') ||
+            (status === 'finance pending' && 'warning') ||
+            (status === 'release pending' && 'warning') ||
+            (status === 'bullion pending' && 'warning') ||
+            (status === 'admin approval pending' && 'info') ||
+            (status === 'fund transfer pending' && 'warning') ||
+            'error'
+          }
+        >
+          {sentenceCase(status || '')}
+        </Label>
+        {status === 'release pending' && employeeId === assignee && (
+          <Button variant="contained" size="small" onClick={() => handleVerify('assignee')}>
+            Update Verification
+          </Button>
+        )}
+        <Button
+          variant="contained"
+          size="small"
+          color="warning"
+          sx={{ whiteSpace: 'nowrap', py: 0.5, px: 1, minWidth: 'auto', fontSize: '0.75rem' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleVerify('finance');
+          }}
+        >
+          Update Finance
+        </Button>
+      </Stack>
+    );
+  } else if (status === 'finance pending') {
+    if (isAdmin || userType === 'finance' || userType === 'accounts') {
       const isPledged = saleType?.toLowerCase() !== 'physical';
       const isReleaseFinance = isPledged && (!assigneeCompleted || isReleasePending);
       content = (
@@ -1036,6 +1093,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
       cashAmount: '',
       bankAmount: '',
       bankId: '',
+      paymentType: '',
       comments: '',
       proof: '',
       isCompleted: false,
@@ -1092,10 +1150,11 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           payload.payableAmount = saleDetails?.payableAmount;
           payload.financeComments = values.comments;
           payload.financeProof = values.proof;
+          const selectedPt = values.paymentType || (saleDetails?.paymentType === 'cash' ? 'cash' : 'bank');
           payload.newFinancePayment = {
             amount: values.amount !== '' ? Number(values.amount) : 0,
-            paymentType: saleDetails?.paymentType === 'cash' ? 'cash' : 'bank',
-            bank: selectedBank ? {
+            paymentType: selectedPt,
+            bank: selectedPt === 'bank' && selectedBank ? {
               bankId: selectedBank._id,
               bankName: selectedBank.bankName,
               accountNo: selectedBank.accountNo,
@@ -1106,11 +1165,16 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           };
         }
 
-        if (values.isCompleted) {
+        if (values.isCompleted || saleDetails?.status === 'completed' || saleDetails?.financeCompleted) {
           payload.financeCompleted = true;
-          payload.financeCompletedAt = new Date();
-          const isPhys = saleType === 'physical';
-          payload.status = (isPhys || assigneeCompleted) ? 'completed' : 'release pending';
+          payload.financeCompletedAt = saleDetails?.financeCompletedAt || new Date();
+          if (saleDetails?.status === 'completed') {
+            payload.status = 'completed';
+            payload.isFinanceReupdate = true;
+          } else {
+            const isPhys = (saleDetails?.saleType || saleType || '').toLowerCase() === 'physical';
+            payload.status = (isPhys || assigneeCompleted) ? 'completed' : (saleDetails?.status || 'release pending');
+          }
         }
       } else if (type === 'fund transfer') {
         payload.fundTransferAmount = values.amount;
@@ -1147,7 +1211,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     },
   });
 
-  const isPledgedReleaseStage = saleDetails?.saleType === 'pledged' && !saleDetails?.assigneeCompleted;
+  const isPledgedReleaseStage = (saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged' && !(saleDetails?.assigneeCompleted ?? assigneeCompleted);
   const bankReleases = isPledgedReleaseStage
     ? (saleDetails?.release || []).filter((r) => r.paymentType === 'bank')
     : [];
@@ -1163,8 +1227,55 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           const sale = res.data;
           setSaleDetails(sale);
           if (type === 'finance') {
-            const isPledgedStage = sale.saleType === 'pledged' && !sale.assigneeCompleted;
+            const isPledged = (sale.saleType || saleType || '').toLowerCase() === 'pledged';
+            const isPledgedStage = isPledged && !sale.assigneeCompleted;
+            const releases = sale.release || [];
+            const hasBankRel = releases.some((r) => String(r?.paymentType || '').toLowerCase() === 'bank');
+            const hasCashRel = releases.some((r) => String(r?.paymentType || '').toLowerCase() === 'cash');
+
+            let detectedPaymentType = 'bank';
             if (isPledgedStage) {
+              if (hasCashRel && !hasBankRel) {
+                detectedPaymentType = 'cash';
+              } else if (hasBankRel) {
+                detectedPaymentType = 'bank';
+              } else {
+                detectedPaymentType = (sale.paymentType || '').toLowerCase() || 'cash';
+              }
+            } else if (sale.paymentType) {
+              detectedPaymentType = sale.paymentType.toLowerCase();
+            }
+            setFieldValue('paymentType', detectedPaymentType);
+
+            if (sale.status === 'completed') {
+              if (sale.paymentType === 'partial') {
+                const initCash = sale.cashAmount || 0;
+                const initBank = sale.bankAmount || 0;
+                setFieldValue('cashAmount', initCash);
+                setFieldValue('bankAmount', initBank);
+                setFieldValue('amount', initCash + initBank);
+              } else {
+                const fullPayable = sale.financeAmount || sale.payableAmount || 0;
+                setFieldValue('amount', Math.round(fullPayable));
+              }
+              if (sale.bank) {
+                const saleBankId = sale.bank._id || sale.bank;
+                const found = (sale.customer?.bank || []).find(
+                  (b) => String(b._id) === String(saleBankId) || b.accountNo === sale.bank?.accountNo
+                );
+                if (found) {
+                  setSelectedBank(found);
+                  setFieldValue('bankId', found._id?.toString() || found.accountNo);
+                }
+              }
+              if (sale.financeProof) {
+                setFieldValue('proof', sale.financeProof);
+                setPreview(sale.financeProof.startsWith('http') ? sale.financeProof : `${global.baseURL}/fileuploads/${sale.financeProof}`);
+              }
+              if (sale.financeComments) {
+                setFieldValue('comments', sale.financeComments);
+              }
+            } else if (isPledgedStage) {
               const bReleases = (sale.release || []).filter((r) => r.paymentType === 'bank');
               const totalReleaseBankAmt = bReleases.reduce((sum, r) => sum + (+r.payableAmount || 0), 0);
               const totalReleaseAmt = (sale.release || []).reduce((sum, r) => sum + (+r.payableAmount || 0), 0);
@@ -1173,7 +1284,18 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               const alreadyPaidRelease = existingReleasePayments.reduce((sum, fp) => sum + (+fp.amount || 0), 0);
               const remRelease = Math.max(0, targetTotal - alreadyPaidRelease);
 
-              setFieldValue('amount', Math.round(remRelease > 0 ? remRelease : targetTotal));
+              setFieldValue('amount', Math.round(alreadyPaidRelease > 0 ? alreadyPaidRelease : (remRelease > 0 ? remRelease : targetTotal)));
+
+              if (sale.financeProof) {
+                setFieldValue('proof', sale.financeProof);
+                setPreview(sale.financeProof.startsWith('http') ? sale.financeProof : `${global.baseURL}/fileuploads/${sale.financeProof}`);
+              }
+              if (sale.financeComments) {
+                setFieldValue('comments', sale.financeComments);
+              }
+              if (sale.financeCompleted) {
+                setFieldValue('isCompleted', true);
+              }
 
               if (bReleases.length > 0) {
                 const targetBankId = bReleases[0]?.bank?._id || bReleases[0]?.bank;
@@ -1219,7 +1341,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               const alreadyPaidSale = existingSalePayments.reduce((sum, fp) => sum + (+fp.amount || 0), 0);
               const remSale = Math.max(0, fullPayable - alreadyPaidSale);
 
-              setFieldValue('amount', Math.round(remSale > 0 ? remSale : fullPayable));
+              setFieldValue('amount', Math.round(alreadyPaidSale > 0 ? alreadyPaidSale : (remSale > 0 ? remSale : fullPayable)));
 
               if (sale.bank) {
                 const saleBankId = sale.bank._id || sale.bank;
@@ -1373,7 +1495,32 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               </>
             ) : (
               <>
-                {showBankDropdown && (
+                {type === 'finance' && (
+                  <Grid item xs={12}>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Typography variant="subtitle2" sx={{ color: 'text.secondary', minWidth: 110 }}>
+                        Payment Mode:
+                      </Typography>
+                      <RadioGroup
+                        row
+                        name="paymentType"
+                        value={values.paymentType || (saleDetails?.paymentType === 'cash' ? 'cash' : 'bank')}
+                        onChange={(e) => {
+                          handleChange(e);
+                          if (e.target.value === 'cash') {
+                            setSelectedBank(null);
+                            setFieldValue('bankId', '');
+                          }
+                        }}
+                      >
+                        <FormControlLabel value="cash" control={<Radio size="small" />} label="Cash" />
+                        <FormControlLabel value="bank" control={<Radio size="small" />} label="Bank Transfer" />
+                      </RadioGroup>
+                    </Stack>
+                  </Grid>
+                )}
+
+                {type === 'finance' && (values.paymentType || (saleDetails?.paymentType === 'cash' ? 'cash' : 'bank')) === 'bank' && (
                   <Grid item xs={12}>
                     <FormControl fullWidth>
                       <InputLabel id="choose-bank-label">

@@ -83,7 +83,7 @@ export default function Nav({ openNav, onCloseNav }) {
         data={(() => {
           let data = [...navConfig];
           if (['assistant_branch_manager', 'branch_executive', 'telecalling'].includes(auth.user.userType)) {
-            data = data?.filter((item) => !['Employee', 'Report', 'Balancesheet', 'Move Gold'].includes(item.title));
+            data = data?.filter((item) => !['Employee', 'Report', 'Balancesheet', 'Move Gold', 'Customer', 'Customers'].includes(item.title));
           }
           if (auth.user.userType === 'telecalling') {
             const leadsIndex = data.findIndex((i) => i.title === 'Leads');

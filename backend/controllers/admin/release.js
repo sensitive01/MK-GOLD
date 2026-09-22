@@ -41,16 +41,19 @@ async function update(req, res) {
   try {
     if (req.body.status) {
       const performerId = req.user.employee || req.user._id;
+      const actionName = req.body.isFinanceReupdate ? 'Finance Updated (Admin)' : req.body.status;
       const logEntry = {
-        action: req.body.status,
+        action: actionName,
         performedBy: performerId,
         performedAt: new Date(),
+        comments: req.body.comments || req.body.financeComments,
       };
-      const result = await release.updateWithLog(req.params.id, {
-        status: req.body.status,
+      const updateData = {
+        ...req.body,
         actionBy: performerId,
         actionAt: new Date(),
-      }, logEntry);
+      };
+      const result = await release.updateWithLog(req.params.id, updateData, logEntry);
       res.json({
         status: true,
         message: "",

@@ -59,7 +59,7 @@ export default function DashboardAppPage() {
   ];
 
   const branchQuickLinks = [
-    { title: 'Customers', path: '/branch/customer', icon: 'mdi:account-group', bgColor: '#fff' },
+    // { title: 'Customers', path: '/branch/customer', icon: 'mdi:account-group', bgColor: '#fff' },
     { title: 'Billing', path: '/branch/sale', icon: 'mdi:file-document-edit', bgColor: '#FFD700' },
     { title: 'Expenses', path: '/branch/expense', icon: 'mdi:wallet', bgColor: '#fff' },
     { title: 'Funds', path: '/branch/fund', icon: 'mdi:bank', bgColor: '#FFD700' },

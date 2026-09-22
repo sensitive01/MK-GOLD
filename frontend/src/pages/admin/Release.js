@@ -54,7 +54,8 @@ import global from '../../utils/global';
 import { ReleaseListHead, ReleaseListToolbar } from '../../sections/@dashboard/release';
 // mock
 import { getBranch } from '../../apis/admin/branch';
-import { deleteReleaseById, findRelease, updateRelease } from '../../apis/admin/release';
+import { deleteReleaseById, findRelease, updateRelease, getReleaseById } from '../../apis/admin/release';
+import { createFile } from '../../apis/branch/fileupload';
 
 // ----------------------------------------------------------------------
 
@@ -125,6 +126,16 @@ export default function Release() {
   const [openEditModal, setOpenEditModal] = useState(false);
   const handleOpenEditModal = () => setOpenEditModal(true);
   const handleCloseEditModal = () => setOpenEditModal(false);
+  const [openFinanceModal, setOpenFinanceModal] = useState(false);
+  const [financeReleaseId, setFinanceReleaseId] = useState(null);
+  const handleOpenFinanceModal = (id) => {
+    setFinanceReleaseId(id);
+    setOpenFinanceModal(true);
+  };
+  const handleCloseFinanceModal = () => {
+    setOpenFinanceModal(false);
+    setFinanceReleaseId(null);
+  };
   const form = useRef();
 
   // Form validation
@@ -299,15 +310,37 @@ export default function Release() {
     const isPrivileged = userType === 'admin' || userType === 'subadmin';
 
     if (props.status !== 'pending') {
+      const isFinanced = props.status === 'approved' || props.status === 'completed' || props.status === 'release pending' || props.row?.financeCompleted;
+      const isCompletedToday = Boolean(
+        isFinanced &&
+        moment(props.row?.financeCompletedAt || props.row?.actionAt || props.row?.updatedAt || props.row?.createdAt || props.actionAt).isSame(moment(), 'day')
+      );
+
       return (
         <Stack direction="column" spacing={0.5}>
-          <Label
-            color={(props.status === 'approved' && 'success') || (props.status === 'rejected' && 'error') || 'warning'}
-          >
-            {sentenceCase(props.status)}
-          </Label>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Label
+              color={(props.status === 'approved' && 'success') || (props.status === 'completed' && 'success') || (props.status === 'rejected' && 'error') || 'warning'}
+            >
+              {sentenceCase(props.status)}
+            </Label>
+            {isCompletedToday && isPrivileged && (
+              <Button
+                variant="contained"
+                size="small"
+                color="warning"
+                sx={{ whiteSpace: 'nowrap', py: 0.5, px: 1, minWidth: 'auto', fontSize: '0.75rem' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenFinanceModal(props._id);
+                }}
+              >
+                Update Finance
+              </Button>
+            )}
+          </Stack>
 
-          {isPrivileged && (
+          {isPrivileged && props.status !== 'completed' && (
             <Button
               size="small"
               color="inherit"
@@ -490,7 +523,7 @@ export default function Release() {
                         <TableCell align="left">{payableAmount}</TableCell>
                         <TableCell align="left">{sentenceCase(paymentType)}</TableCell>
                         <TableCell align="left">
-                          <Status status={status} _id={_id} actionBy={row.actionBy} actionAt={row.actionAt} />
+                          <Status row={row} status={status} _id={_id} actionBy={row.actionBy} actionAt={row.actionAt} />
                         </TableCell>
                         <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         <TableCell align="right">
@@ -646,6 +679,13 @@ export default function Release() {
       </Modal>
 
       <EditReleaseModal open={openEditModal} id={openId} handleClose={handleCloseEditModal} fetchData={fetchData} />
+      <ReleaseFinanceModal
+        open={openFinanceModal}
+        id={financeReleaseId}
+        handleClose={handleCloseFinanceModal}
+        fetchData={fetchData}
+        setNotify={setNotify}
+      />
 
       <Dialog open={filterOpen} onClose={handleFilterClose}>
         <form
@@ -938,6 +978,186 @@ EditReleaseModal.propTypes = {
   handleClose: PropTypes.func,
   fetchData: PropTypes.func,
 };
+
+function ReleaseFinanceModal({ open, id, handleClose, fetchData, setNotify }) {
+  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [releaseData, setReleaseData] = useState(null);
+
+  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue } = useFormik({
+    initialValues: {
+      payableAmount: '',
+      paymentType: 'bank',
+      financeProof: '',
+      comments: '',
+    },
+    validationSchema: Yup.object({
+      payableAmount: Yup.number().required('Payable amount is required'),
+      paymentType: Yup.string().required('Payment type is required'),
+    }),
+    onSubmit: async (values) => {
+      setLoading(true);
+      const payload = {
+        payableAmount: Number(values.payableAmount),
+        paymentType: values.paymentType,
+        financeProof: values.financeProof,
+        financeComments: values.comments,
+        comments: values.comments,
+        status: releaseData?.status || 'completed',
+        isFinanceReupdate: true,
+      };
+      updateRelease(id, payload).then((res) => {
+        setLoading(false);
+        if (res.status !== false) {
+          setNotify?.({ open: true, message: 'Finance details updated successfully', severity: 'success' });
+          handleClose();
+          fetchData();
+        } else {
+          alert(res.message || 'Failed to update finance');
+        }
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (id && open) {
+      getReleaseById(id).then((res) => {
+        if (res && res.status && res.data) {
+          const rel = res.data;
+          setReleaseData(rel);
+          setValues({
+            payableAmount: rel.payableAmount ?? '',
+            paymentType: rel.paymentType || 'bank',
+            financeProof: rel.financeProof || '',
+            comments: rel.financeComments || rel.comments || '',
+          });
+          if (rel.financeProof) {
+            setPreview(`${global.baseURL}/fileuploads/${rel.financeProof}`);
+          } else {
+            setPreview(null);
+          }
+        }
+      });
+    } else {
+      setReleaseData(null);
+      setPreview(null);
+    }
+  }, [id, open, setValues]);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPreview(URL.createObjectURL(file));
+      const formData = new FormData();
+      formData.append('uploadedFile', file);
+      formData.append('uploadId', id);
+      formData.append('uploadName', 'release_finance_proof');
+      const res = await createFile(formData);
+      if (res.status) {
+        setFieldValue('financeProof', res.data.uploadedFile);
+      }
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <form onSubmit={handleSubmit}>
+        <DialogTitle>Update Finance Details</DialogTitle>
+        <DialogContent sx={{ mt: 1 }}>
+          <Grid container spacing={2.5}>
+            {releaseData?.pledgeId && (
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Pledge ID: <strong>{releaseData.pledgeId}</strong> | Branch: <strong>{releaseData.branch?.branchName || '-'}</strong>
+                </Typography>
+              </Grid>
+            )}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="payableAmount"
+                label="Payable Amount (₹)"
+                type="number"
+                value={values.payableAmount}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.payableAmount && !!errors.payableAmount}
+                helperText={touched.payableAmount && errors.payableAmount}
+                fullWidth
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Payment Mode</InputLabel>
+                <Select
+                  name="paymentType"
+                  value={values.paymentType}
+                  onChange={handleChange}
+                  label="Payment Mode"
+                >
+                  <MenuItem value="bank">Bank Transfer</MenuItem>
+                  <MenuItem value="cash">Cash</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Finance Payment Proof
+              </Typography>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                id="release-finance-file"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
+              <label htmlFor="release-finance-file">
+                <Button variant="outlined" component="span" startIcon={<Iconify icon="mdi:upload" />}>
+                  {values.financeProof ? 'Change Proof Document' : 'Upload Proof Document'}
+                </Button>
+              </label>
+              {preview && (
+                <Box sx={{ mt: 1.5 }}>
+                  {preview.endsWith('.pdf') ? (
+                    <Typography variant="body2" color="primary">PDF Uploaded</Typography>
+                  ) : (
+                    <img src={preview} alt="Proof Preview" style={{ maxHeight: 120, borderRadius: 6, border: '1px solid #ccc' }} />
+                  )}
+                </Box>
+              )}
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                name="comments"
+                label="Finance Remarks / Comments"
+                value={values.comments}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                fullWidth
+                multiline
+                rows={2}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancel</Button>
+          <LoadingButton type="submit" variant="contained" loading={loading} color="warning">
+            Save Updates
+          </LoadingButton>
+        </DialogActions>
+      </form>
+    </Dialog>
+  );
+}
+
+ReleaseFinanceModal.propTypes = {
+  open: PropTypes.bool,
+  id: PropTypes.string,
+  handleClose: PropTypes.func,
+  fetchData: PropTypes.func,
+  setNotify: PropTypes.func,
+};
+
 
 
 

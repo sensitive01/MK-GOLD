@@ -39,7 +39,7 @@ async function update(req, res) {
       };
 
       const logEntry = {
-        action: actionMap[req.body.status] || req.body.status,
+        action: req.body.isFinanceReupdate ? 'Finance Updated (Admin)' : (actionMap[req.body.status] || req.body.status),
         performedBy: performerId,
         performedAt: new Date(),
         comments: req.body.financeComments || req.body.assigneeComments || req.body.fundTransferComments || req.body.comments,

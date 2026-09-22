@@ -384,6 +384,82 @@ async function find(query = {}) {
       {
         $lookup: {
           from: "employees",
+          localField: "employee",
+          foreignField: "_id",
+          as: "billerDirectEmp",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: { empId: "$employee" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", "$$empId"] },
+              },
+            },
+            {
+              $lookup: {
+                from: "employees",
+                localField: "employee",
+                foreignField: "_id",
+                as: "userEmp",
+              },
+            },
+            {
+              $addFields: {
+                userEmp: { $first: "$userEmp" },
+              },
+            },
+          ],
+          as: "billerUserLookup",
+        },
+      },
+      {
+        $addFields: {
+          _billerDirectEmp: { $first: "$billerDirectEmp" },
+          _billerUserLookup: { $first: "$billerUserLookup" },
+        },
+      },
+      {
+        $addFields: {
+          biller: {
+            $cond: {
+              if: "$_billerDirectEmp",
+              then: {
+                _id: "$_billerDirectEmp._id",
+                name: "$_billerDirectEmp.name",
+                employeeId: "$_billerDirectEmp.employeeId",
+              },
+              else: {
+                $cond: {
+                  if: "$_billerUserLookup.userEmp",
+                  then: {
+                    _id: "$_billerUserLookup.userEmp._id",
+                    name: "$_billerUserLookup.userEmp.name",
+                    employeeId: "$_billerUserLookup.userEmp.employeeId",
+                  },
+                  else: {
+                    $cond: {
+                      if: "$_billerUserLookup",
+                      then: {
+                        _id: "$_billerUserLookup._id",
+                        name: { $ifNull: ["$_billerUserLookup.username", "Staff"] },
+                        employeeId: { $ifNull: ["$_billerUserLookup.username", "Staff"] },
+                      },
+                      else: null,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "employees",
           localField: "actionBy",
           foreignField: "_id",
           as: "actionByEmp",
@@ -584,6 +660,10 @@ async function find(query = {}) {
           _logUsers: 0,
           actionByEmp: 0,
           actionByUser: 0,
+          billerDirectEmp: 0,
+          billerUserLookup: 0,
+          _billerDirectEmp: 0,
+          _billerUserLookup: 0,
         },
       },
       {
@@ -947,6 +1027,82 @@ async function findById(id) {
       {
         $lookup: {
           from: "employees",
+          localField: "employee",
+          foreignField: "_id",
+          as: "billerDirectEmp",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: { empId: "$employee" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", "$$empId"] },
+              },
+            },
+            {
+              $lookup: {
+                from: "employees",
+                localField: "employee",
+                foreignField: "_id",
+                as: "userEmp",
+              },
+            },
+            {
+              $addFields: {
+                userEmp: { $first: "$userEmp" },
+              },
+            },
+          ],
+          as: "billerUserLookup",
+        },
+      },
+      {
+        $addFields: {
+          _billerDirectEmp: { $first: "$billerDirectEmp" },
+          _billerUserLookup: { $first: "$billerUserLookup" },
+        },
+      },
+      {
+        $addFields: {
+          biller: {
+            $cond: {
+              if: "$_billerDirectEmp",
+              then: {
+                _id: "$_billerDirectEmp._id",
+                name: "$_billerDirectEmp.name",
+                employeeId: "$_billerDirectEmp.employeeId",
+              },
+              else: {
+                $cond: {
+                  if: "$_billerUserLookup.userEmp",
+                  then: {
+                    _id: "$_billerUserLookup.userEmp._id",
+                    name: "$_billerUserLookup.userEmp.name",
+                    employeeId: "$_billerUserLookup.userEmp.employeeId",
+                  },
+                  else: {
+                    $cond: {
+                      if: "$_billerUserLookup",
+                      then: {
+                        _id: "$_billerUserLookup._id",
+                        name: { $ifNull: ["$_billerUserLookup.username", "Staff"] },
+                        employeeId: { $ifNull: ["$_billerUserLookup.username", "Staff"] },
+                      },
+                      else: null,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "employees",
           localField: "actionBy",
           foreignField: "_id",
           as: "actionByEmp",
@@ -1149,6 +1305,10 @@ async function findById(id) {
           _logUsers: 0,
           actionByEmp: 0,
           actionByUser: 0,
+          billerDirectEmp: 0,
+          billerUserLookup: 0,
+          _billerDirectEmp: 0,
+          _billerUserLookup: 0,
         },
       },
       { $limit: 1 },

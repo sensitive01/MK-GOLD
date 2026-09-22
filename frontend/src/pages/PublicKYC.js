@@ -307,18 +307,26 @@ export default function PublicKYC() {
         // Create Address
         const addressPayload = {
           customerId: customerId,
-          address: [{
-            address: formValues.line1,
-            area: formValues.line2 || formValues.city,
-            city: formValues.city,
-            state: formValues.state,
-            pincode: formValues.pincode,
-            landmark: 'N/A',
-            residential: 'Owned',
-            label: 'Home',
-          }]
+          address: formValues.line1,
+          area: formValues.line2 || formValues.city,
+          city: formValues.city,
+          state: formValues.state,
+          pincode: formValues.pincode,
+          landmark: 'N/A',
+          residential: 'Owned',
+          label: 'Home',
         };
-        await createAddressKYC(addressPayload);
+        const addressRes = await createAddressKYC(addressPayload);
+        if (addressRes?.data?.fileUpload?.uploadId && formValues.uploadId) {
+          const addrFormData = new FormData();
+          addrFormData.append('uploadId', addressRes.data.fileUpload.uploadId);
+          addrFormData.append('uploadName', 'customer_address');
+          addrFormData.append('uploadType', 'proof');
+          addrFormData.append('uploadedFile', formValues.uploadId);
+          addrFormData.append('documentType', formValues.chooseId);
+          addrFormData.append('documentNo', formValues.idNo);
+          await createFileKYC(addrFormData);
+        }
 
         setSuccess(true);
       } catch (err) {
