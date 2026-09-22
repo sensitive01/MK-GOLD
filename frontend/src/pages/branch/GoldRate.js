@@ -306,14 +306,15 @@ export default function GoldRate() {
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, rate, type, state, date } = row;
+                    const { _id, rate, type, state, date, createdAt } = row;
+                    const displayDate = (date && moment(date).format('HH:mm:ss') !== '05:30:00') ? date : (createdAt || date);
 
                     return (
                       <TableRow hover key={_id} tabIndex={-1}>
                         <TableCell align="left">{rate}</TableCell>
                         <TableCell align="left">{sentenceCase(type)}</TableCell>
                         <TableCell align="left">{sentenceCase(state)}</TableCell>
-                        <TableCell align="left">{moment(date).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                        <TableCell align="left">{moment(displayDate).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                         {isBullionDesk && (
                           <TableCell align="right">
                             <IconButton
