@@ -28,6 +28,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Tooltip,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import Backdrop from '@mui/material/Backdrop';
@@ -60,9 +61,58 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
   const [verifyType, setVerifyType] = useState('');
 
   const userType = auth.user?.userType?.toLowerCase();
+  const isAdmin = userType === 'admin';
+  const [visiblePhoneField, setVisiblePhoneField] = useState(null);
   const employeeId = auth.user?.employee?._id || auth.user?.employee;
 
   const handleVerify = (type) => {
+    if (type === 'finance') {
+      const isPledged = data?.saleType?.toLowerCase() !== 'physical';
+      const isReleaseFinance = isPledged && !data?.assigneeCompleted;
+      let isBankRequired = false;
+      let isBankPending = false;
+
+      if (isReleaseFinance) {
+        const rels = data?.release || [];
+        isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+        const isRelVerified = Boolean(
+          (data?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release') ||
+          (!data?.assigneeCompleted && data?.isBankVerified)
+        );
+        isBankPending = isBankRequired && !isRelVerified;
+      } else {
+        isBankRequired = data?.paymentType === 'bank' || (data?.paymentType === 'partial' && Number(data?.bankAmount) > 0);
+        const targetSaleBankId = data?.bank?._id || data?.bank;
+        const matchedSaleBank = (data?.customer?.bank || []).find(
+          (b) =>
+            (targetSaleBankId && String(b._id) === String(targetSaleBankId)) ||
+            (b.accountNo && data?.bank?.accountNo && String(b.accountNo) === String(data?.bank?.accountNo))
+        ) || (typeof data?.bank === 'object' && data?.bank?.accountNo ? data?.bank : null);
+        const saleAcct = matchedSaleBank?.accountNo || data?.bank?.accountNo;
+        const saleId = matchedSaleBank?._id || targetSaleBankId;
+        const isSaleVerified = Boolean(
+          (data?.financePayments || []).some(
+            (fp) => fp.isVerified && (
+              fp.stage === 'sale' ||
+              (saleId && String(fp.bank?.bankId || fp.bank?._id) === String(saleId)) ||
+              (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
+            )
+          ) || (data?.saleType === 'physical' && data?.isBankVerified)
+        );
+        isBankPending = isBankRequired && !isSaleVerified;
+      }
+
+      if (isBankPending) {
+        if (setNotify) {
+          setNotify({
+            open: true,
+            message: `Bank verification is required in Billing Summary before updating finance (${isReleaseFinance ? 'Release Bank' : 'Customer Sale Bank'})`,
+            severity: 'warning',
+          });
+        }
+        return;
+      }
+    }
     setVerifyType(type);
     setOpenVerifyModal(true);
   };
@@ -419,6 +469,10 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
         if (fp.proof) seenProofs.add(fp.proof);
         if (effectiveVerifiedProof) seenProofs.add(effectiveVerifiedProof);
 
+        const isStandaloneVerification = fp.isVerified && (fp.amount <= 1 || fp.comments === 'Verified Bank Payment Proof' || !fp.proof || fp.proof === effectiveVerifiedProof);
+        const resolvedPaymentMode = isStandaloneVerification ? 'Bank Verification' : paymentMode;
+        const resolvedComments = (isStandaloneVerification && (!fp.comments || fp.comments === '-')) ? 'Verified Bank Payment Proof' : (fp.comments || '-');
+
         // 1. Payment row
         paymentsList.push({
           id: fp._id || `fin_pay_${idx}`,
@@ -426,18 +480,26 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           stageKey: fp.stage || (isPledgedRelease ? 'release' : 'sale'),
           bankDetails: bankDesc,
           fullBank,
-          paymentType: paymentMode,
+          paymentType: resolvedPaymentMode,
           amount: fp.amount,
-          comments: fp.comments || '-',
-          proof: fp.proof,
+          comments: resolvedComments,
+          proof: fp.proof || effectiveVerifiedProof,
           isVerified: effectiveIsVerified,
           verifiedAmount: effectiveVerifiedAmount,
           createdAt: fp.createdAt,
           raw: fp,
+          isVerificationRow: isStandaloneVerification,
         });
 
-        // 2. Individual Bank Verification row
-        if (fp.isVerified && (effectiveVerifiedProof || effectiveVerifiedAmount !== undefined)) {
+        // 2. Individual Bank Verification row (only if distinct verification proof exists)
+        if (
+          fp.isVerified &&
+          effectiveVerifiedProof &&
+          fp.proof &&
+          effectiveVerifiedProof !== fp.proof &&
+          !seenProofs.has(`verify_${effectiveVerifiedProof}`)
+        ) {
+          seenProofs.add(`verify_${effectiveVerifiedProof}`);
           paymentsList.push({
             id: `fin_pay_verify_${fp._id || idx}`,
             stage: 'Sale',
@@ -1968,15 +2030,39 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                         </Stack>
                         <Stack direction="row" spacing={0.5} alignItems="center">
                           <Iconify icon="eva:phone-fill" width={18} />
-                          <Typography variant="body2">{global.maskPhoneNumber(data?.customer?.phoneNumber) || data?.customer?.phoneNumber || 'N/A'}</Typography>
+                          <Typography variant="body2">
+                            {isAdmin || visiblePhoneField === 'primary'
+                              ? data?.customer?.phoneNumber || 'N/A'
+                              : global.maskPhoneNumber(data?.customer?.phoneNumber) || data?.customer?.phoneNumber || 'N/A'}
+                          </Typography>
+                          {!isAdmin && data?.customer?.phoneNumber && (
+                            <IconButton
+                              size="small"
+                              onClick={() => setVisiblePhoneField(visiblePhoneField === 'primary' ? null : 'primary')}
+                              sx={{ p: 0.25 }}
+                            >
+                              <Iconify icon={visiblePhoneField === 'primary' ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={16} height={16} />
+                            </IconButton>
+                          )}
                         </Stack>
                         <Stack direction="row" spacing={0.5} alignItems="center">
                           <Iconify icon="eva:phone-outline" width={18} />
                           <Typography variant="body2">
                             Alt: {(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
-                              ? (global.maskPhoneNumber(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) || (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber))
+                              ? (isAdmin || visiblePhoneField === 'alt'
+                                  ? (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
+                                  : (global.maskPhoneNumber(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) || (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)))
                               : 'N/A'}
                           </Typography>
+                          {!isAdmin && (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) && (
+                            <IconButton
+                              size="small"
+                              onClick={() => setVisiblePhoneField(visiblePhoneField === 'alt' ? null : 'alt')}
+                              sx={{ p: 0.25 }}
+                            >
+                              <Iconify icon={visiblePhoneField === 'alt' ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={16} height={16} />
+                            </IconButton>
+                          )}
                         </Stack>
                       </Stack>
                       <Stack
@@ -2048,36 +2134,32 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
               });
               const financeBanks = Array.from(bankMap.values());
 
-              if (financeBanks.length > 0) {
-                return (
-                  <Grid item xs={12}>
-                    <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1.5 }}>
-                      Bank Details ({financeBanks.length} Disbursed Account{financeBanks.length > 1 ? 's' : ''}):
-                    </Typography>
-                    <Stack spacing={2}>
-                      {financeBanks.map((fb, idx) => (
-                        <BankDetailCard
-                          key={fb.payment?._id || idx}
-                          bank={fb.fullBank}
-                          paymentType={data?.paymentType}
-                          amount={fb.amount}
-                          isVerified={fb.isVerified}
-                          verifiedAmount={fb.verifiedAmount}
-                          verifiedProof={fb.verifiedProof}
-                          onVerifyClick={() => {
-                            setSelectedVerifyTarget({
-                              payment: fb.payment,
-                              bank: fb.fullBank,
-                            });
-                            setOpenVerifyBankModal(true);
-                          }}
-                        />
-                      ))}
-                    </Stack>
-                  </Grid>
-                );
-              }
+              // Release Banks (Pledged Gold Release)
+              const releaseBanks = (data?.release || [])
+                .filter((r) => r.paymentType === 'bank' || r.bank)
+                .map((r, idx) => {
+                  const targetBankId = r.bank?._id || r.bank;
+                  const matchedBank =
+                    (data?.customer?.bank || []).find(
+                      (b) =>
+                        (targetBankId && String(b._id) === String(targetBankId)) ||
+                        (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+                    ) ||
+                    (typeof r.bank === 'object' && r.bank?.accountNo ? r.bank : null) ||
+                    (data?.customer?.bank?.length > 0 ? data.customer.bank[0] : null);
 
+                  const fullBank = matchedBank
+                    ? { ...matchedBank, ...(typeof r.bank === 'object' ? r.bank : {}), proof: matchedBank.proof || r.bank?.proof }
+                    : (typeof r.bank === 'object' && r.bank?.accountNo ? r.bank : (data?.customer?.bank?.[0] || { bankName: 'Release Bank', accountNo: '' }));
+                  return {
+                    release: r,
+                    fullBank,
+                    idx,
+                  };
+                });
+
+              // Sale Bank (Customer Payout Account)
+              let fullSaleBank = null;
               if (data?.paymentType === 'bank' || data?.bank?.accountNo || data?.bank) {
                 const matchedBank = (data?.customer?.bank || []).find(
                   (b) =>
@@ -2085,18 +2167,144 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                     (b._id && typeof data?.bank === 'string' && String(b._id) === String(data.bank)) ||
                     (b.accountNo && data?.bank?.accountNo && String(b.accountNo) === String(data.bank.accountNo))
                 );
-                const fullBank = matchedBank ? { ...matchedBank, ...(typeof data.bank === 'object' ? data.bank : {}), proof: matchedBank.proof || data.bank?.proof } : data.bank;
-                return (
-                  <Grid item xs={12}>
-                    <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
-                      Bank Detail:
-                    </Typography>
-                    <BankDetailCard bank={fullBank} paymentType={data?.paymentType} />
-                  </Grid>
-                );
+                fullSaleBank = matchedBank
+                  ? { ...matchedBank, ...(typeof data.bank === 'object' ? data.bank : {}), proof: matchedBank.proof || data.bank?.proof }
+                  : data.bank;
               }
 
-              return null;
+              // Any additional disbursed bank accounts from finance payments not already shown in Release Bank or Sale Bank
+              const additionalFinanceBanks = financeBanks.filter(
+                (fb) =>
+                  !releaseBanks.some(
+                    (rb) =>
+                      (rb.fullBank?._id && fb.fullBank?._id && String(rb.fullBank._id) === String(fb.fullBank._id)) ||
+                      (rb.fullBank?.accountNo && fb.fullBank?.accountNo && String(rb.fullBank.accountNo) === String(fb.fullBank.accountNo))
+                  ) &&
+                  !(
+                    fullSaleBank &&
+                    ((fullSaleBank._id && fb.fullBank?._id && String(fullSaleBank._id) === String(fb.fullBank._id)) ||
+                      (fullSaleBank.accountNo && fb.fullBank?.accountNo && String(fullSaleBank.accountNo) === String(fb.fullBank.accountNo)))
+                  )
+              );
+
+              if (additionalFinanceBanks.length === 0 && releaseBanks.length === 0 && !fullSaleBank) {
+                return null;
+              }
+
+              return (
+                <>
+                  {/* 1. Release Bank Detail (for paying financiers/banks to release gold) */}
+                  {releaseBanks.length > 0 && (
+                    <Grid item xs={12}>
+                      <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
+                        Release Bank Detail{releaseBanks.length > 1 ? 's' : ''}:
+                      </Typography>
+                      <Stack spacing={2}>
+                        {releaseBanks.map((rb) => {
+                          const isRelVerified = Boolean(
+                            (data?.financePayments || []).some(
+                              (fp) => fp.isVerified && (
+                                fp.stage === 'release' ||
+                                String(fp.bank?.bankId || fp.bank?._id) === String(rb.fullBank?._id) ||
+                                (fp.bank?.accountNo && fp.bank.accountNo === rb.fullBank?.accountNo)
+                              )
+                            ) || data?.isBankVerified
+                          );
+                          return (
+                            <BankDetailCard
+                              key={rb.release?._id || rb.idx}
+                              bank={rb.fullBank}
+                              paymentType="bank"
+                              amount={rb.release?.payableAmount}
+                              isVerified={isRelVerified}
+                              onVerifyClick={isRelVerified ? undefined : () => {
+                                setSelectedVerifyTarget({
+                                  bank: rb.fullBank,
+                                  payment: {
+                                    amount: rb.release?.payableAmount,
+                                    stage: 'release',
+                                    releaseId: rb.release?._id,
+                                    bank: rb.fullBank,
+                                  },
+                                });
+                                setOpenVerifyBankModal(true);
+                              }}
+                            />
+                          );
+                        })}
+                      </Stack>
+                    </Grid>
+                  )}
+
+                  {/* 2. Sale Settlement Bank Detail (Customer Account for sale proceeds) */}
+                  {fullSaleBank && (
+                    <Grid item xs={12}>
+                      <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
+                        Sale Bank Detail (Customer Account):
+                      </Typography>
+                      {(() => {
+                        const isSaleVerified = Boolean(
+                          (data?.financePayments || []).some(
+                            (fp) => fp.isVerified && (
+                              fp.stage === 'sale' ||
+                              String(fp.bank?.bankId || fp.bank?._id) === String(fullSaleBank?._id) ||
+                              (fp.bank?.accountNo && fp.bank.accountNo === fullSaleBank?.accountNo)
+                            )
+                          ) || (data?.saleType === 'physical' && data?.isBankVerified)
+                        );
+                        return (
+                          <BankDetailCard
+                            bank={fullSaleBank}
+                            paymentType={data?.paymentType}
+                            amount={data?.bankAmount || (Number(data?.payableAmount) > 0 ? data?.payableAmount : undefined)}
+                            isVerified={isSaleVerified}
+                            onVerifyClick={isSaleVerified ? undefined : () => {
+                              setSelectedVerifyTarget({
+                                bank: fullSaleBank,
+                                payment: {
+                                  amount: data?.bankAmount || (Number(data?.payableAmount) > 0 ? data?.payableAmount : undefined),
+                                  stage: 'sale',
+                                  bank: fullSaleBank,
+                                },
+                              });
+                              setOpenVerifyBankModal(true);
+                            }}
+                          />
+                        );
+                      })()}
+                    </Grid>
+                  )}
+
+                  {/* 3. Disbursed Finance Accounts (if any other accounts were disbursed) */}
+                  {additionalFinanceBanks.length > 0 && (
+                    <Grid item xs={12}>
+                      <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1.5 }}>
+                        Disbursed Bank Details ({additionalFinanceBanks.length} Account{additionalFinanceBanks.length > 1 ? 's' : ''}):
+                      </Typography>
+                      <Stack spacing={2}>
+                        {additionalFinanceBanks.map((fb, idx) => (
+                          <BankDetailCard
+                            key={fb.payment?._id || idx}
+                            bank={fb.fullBank}
+                            paymentType={data?.paymentType}
+                            amount={fb.amount}
+                            isVerified={fb.isVerified}
+                            verifiedAmount={fb.verifiedAmount}
+                            verifiedProof={fb.verifiedProof}
+                            onVerifyClick={fb.isVerified ? undefined : () => {
+                              setSelectedVerifyTarget({
+                                payment: fb.payment,
+                                bank: fb.fullBank,
+                              });
+                              setOpenVerifyBankModal(true);
+                            }}
+                          />
+                        ))}
+                      </Stack>
+                    </Grid>
+                  )}
+                </>
+              );
             })()}
             {data?.financePayments && data.financePayments.length > 0 && (
               <Grid item xs={12}>
@@ -2192,17 +2400,72 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
               <TimelineView timeline={data.timeline} />
             </Grid>
 
-            {data.status === 'finance pending' && (userType === 'finance' || userType === 'accounts') && (
-              <Grid item xs={12}>
-                <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
-                  <Button variant="contained" color="warning" onClick={() => handleVerify('finance')}>
-                    {data?.saleType?.toLowerCase() !== 'physical' && !data?.assigneeCompleted
-                      ? 'Finance Pay Release'
-                      : 'Update Finance'}
-                  </Button>
-                </Stack>
-              </Grid>
-            )}
+            {data.status === 'finance pending' && (userType === 'finance' || userType === 'accounts') && (() => {
+              const isPledged = data?.saleType?.toLowerCase() !== 'physical';
+              const isReleaseFinance = isPledged && !data?.assigneeCompleted;
+              let isBankRequired = false;
+              let isBankPendingVerification = false;
+
+              if (isReleaseFinance) {
+                const rels = data?.release || [];
+                isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+                const isRelVerified = Boolean(
+                  (data?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release') ||
+                  (!data?.assigneeCompleted && data?.isBankVerified)
+                );
+                isBankPendingVerification = isBankRequired && !isRelVerified;
+              } else {
+                isBankRequired = data?.paymentType === 'bank' || (data?.paymentType === 'partial' && Number(data?.bankAmount) > 0);
+                const targetSaleBankId = data?.bank?._id || data?.bank;
+                const matchedSaleBank = (data?.customer?.bank || []).find(
+                  (b) =>
+                    (targetSaleBankId && String(b._id) === String(targetSaleBankId)) ||
+                    (b.accountNo && data?.bank?.accountNo && String(b.accountNo) === String(data?.bank?.accountNo))
+                ) || (typeof data?.bank === 'object' && data?.bank?.accountNo ? data?.bank : null);
+                const saleAcct = matchedSaleBank?.accountNo || data?.bank?.accountNo;
+                const saleId = matchedSaleBank?._id || targetSaleBankId;
+                const isSaleVerified = Boolean(
+                  (data?.financePayments || []).some(
+                    (fp) => fp.isVerified && (
+                      fp.stage === 'sale' ||
+                      (saleId && String(fp.bank?.bankId || fp.bank?._id) === String(saleId)) ||
+                      (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
+                    )
+                  ) || (data?.saleType === 'physical' && data?.isBankVerified)
+                );
+                isBankPendingVerification = isBankRequired && !isSaleVerified;
+              }
+
+              const buttonText = isReleaseFinance ? 'Finance Pay Release' : 'Update Finance';
+
+              return (
+                <Grid item xs={12}>
+                  <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
+                    {isBankPendingVerification ? (
+                      <Tooltip title={`Bank verification required in Billing Summary before updating finance (${isReleaseFinance ? 'Release Bank' : 'Customer Sale Bank'})`} arrow>
+                        <span>
+                          <Button
+                            variant="contained"
+                            disabled
+                            sx={{
+                              bgcolor: 'action.disabledBackground',
+                              color: 'text.disabled',
+                              cursor: 'not-allowed',
+                            }}
+                          >
+                            {buttonText}
+                          </Button>
+                        </span>
+                      </Tooltip>
+                    ) : (
+                      <Button variant="contained" color="warning" onClick={() => handleVerify('finance')}>
+                        {buttonText}
+                      </Button>
+                    )}
+                  </Stack>
+                </Grid>
+              );
+            })()}
 
             {data.status === 'release pending' && employeeId === (data.assignee?._id || data.assignee) && (
               <Grid item xs={12}>
@@ -2255,6 +2518,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
               setData(res.data);
             }
           });
+          onActionComplete?.();
         }}
       />
     </>

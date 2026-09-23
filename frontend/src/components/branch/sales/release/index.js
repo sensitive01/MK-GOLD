@@ -92,7 +92,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
     assignee: Yup.string().required('Assignee is required'),
   });
 
-  const { handleSubmit, handleChange, handleBlur, values, setValues, touched, errors } = useFormik({
+  const { handleSubmit, handleChange, handleBlur, values, setValues, setFieldValue, touched, errors } = useFormik({
     initialValues: {
       customer: selectedUser?._id,
       weight: '',
@@ -128,7 +128,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
         pledgeAmount: values.pledgeAmount,
         payableAmount: values.payableAmount,
         paymentType: values.paymentType,
-        bank: values.bank,
+        bank: selectedBank?._id || values.bank || undefined,
         pledgedDate: values.pledgedDate,
         pledgeId: values.pledgeId,
         pledgedIn: values.pledgedIn,
@@ -686,7 +686,10 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
                 <Bank
                   selectedUser={selectedUser}
                   selectedBank={selectedBank}
-                  setSelectedBank={setSelectedBank}
+                  setSelectedBank={(b) => {
+                    setSelectedBank(b);
+                    setFieldValue('bank', b?._id || '');
+                  }}
                   setNotify={setNotify}
                 />
               )}

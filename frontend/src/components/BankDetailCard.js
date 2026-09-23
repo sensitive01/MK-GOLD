@@ -187,7 +187,7 @@ export default function BankDetailCard({
                     {isVerified ? (
                       <Chip
                         icon={<Iconify icon="eva:checkmark-circle-2-fill" width={16} />}
-                        label="Payment Processed"
+                        label={amount ? "Payment Processed" : "Bank Verified"}
                         size="small"
                         color="success"
                         sx={{

@@ -466,7 +466,7 @@ const CreateBankModal = ({
   );
 };
 
-function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
+function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank, paymentType, bankAmount }) {
   const [data, setData] = useState([]);
   const [openId, setOpenId] = useState(null);
   const [bankModal, setBankModal] = useState(false);
@@ -515,7 +515,7 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
     fetchBank();
     window.addEventListener('bankUpdated', fetchBank);
     return () => window.removeEventListener('bankUpdated', fetchBank);
-  }, [selectedUser, selectedBank]);
+  }, [selectedUser]);
 
   const handleSelect = (bank) => {
     if (selectedBank && selectedBank._id === bank._id) {
@@ -535,12 +535,14 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
     });
   };
 
+  const isBankRequired = paymentType === 'bank' || (paymentType === 'partial' && Number(bankAmount) > 0);
+
   return (
     <>
       <Grid item xs={12}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mt={2} mb={3}>
           <Typography variant="h4" gutterBottom>
-            Customer Bank
+            Customer Bank {isBankRequired ? '*' : ''}
           </Typography>
           <Button
             variant="contained"
@@ -553,6 +555,26 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank }) {
             New Bank
           </Button>
         </Stack>
+
+        {isBankRequired && !selectedBank && (
+          <Box
+            sx={{
+              p: 1.5,
+              mb: 2,
+              border: '1px dashed #d32f2f',
+              borderRadius: 1,
+              bgcolor: '#fff5f5',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <Typography variant="body2" color="error" sx={{ fontWeight: 600 }}>
+              {(!data || data.length === 0)
+                ? '* Customer bank is mandatory for bank payment. Please click "New Bank" to add and select bank details.'
+                : '* Please mark a bank account below by checking the checkbox to proceed with the sale.'}
+            </Typography>
+          </Box>
+        )}
         <Scrollbar>
           <TableContainer>
             <Table sx={{ minWidth: 800 }}>

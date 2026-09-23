@@ -51,6 +51,7 @@ import Scrollbar from '../../components/scrollbar';
 // sections
 import { SaleListHead, SaleListToolbar } from '../../sections/@dashboard/sales';
 // mock
+import { getBranch } from '../../apis/branch/branch';
 import { deleteSalesById, findSales, updateSales, getSalesById } from '../../apis/branch/sales';
 import { createFile } from '../../apis/branch/fileupload';
 import global from '../../utils/global';
@@ -101,14 +102,44 @@ function applySortFilter(array, comparator, query) {
     if (order !== 0) return order;
     return a[1] - b[1];
   });
-  if (query) {
-    return filter(array || [], (row) => row.customer?.phoneNumber.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+  let results = stabilizedThis?.map((el) => el[0]) || [];
+  if (query && query.trim() !== '') {
+    const q = query.trim().toLowerCase();
+    results = filter(results, (row) => {
+      const billId = String(row.billId || '').toLowerCase();
+      const customerName = String(row.customer?.name || '').toLowerCase();
+      const phoneNumber = String(row.customer?.phoneNumber || '').toLowerCase();
+      const branchName = String(row.branch?.branchName || '').toLowerCase();
+      const branchId = String(row.branch?.branchId || '').toLowerCase();
+      const billerName = String(row.biller?.name || row.biller?.employeeId || '').toLowerCase();
+      const saleType = String(row.saleType || '').toLowerCase();
+      const status = String(row.status || '').toLowerCase();
+      const netAmount = String(row.netAmount || '');
+
+      return (
+        billId.includes(q) ||
+        customerName.includes(q) ||
+        phoneNumber.includes(q) ||
+        branchName.includes(q) ||
+        branchId.includes(q) ||
+        billerName.includes(q) ||
+        saleType.includes(q) ||
+        status.includes(q) ||
+        netAmount.includes(q)
+      );
+    });
   }
-  return stabilizedThis?.map((el) => el[0]);
+  return results;
 }
 
 export default function Sale() {
   const auth = useSelector((state) => state.auth);
+  const userType = auth?.user?.userType?.toLowerCase();
+  const isBullionDesk = userType === 'bullion_desk';
+  const isAdmin = userType === 'admin';
+  const canFilterBranch = isBullionDesk || isAdmin || !auth?.user?.branch;
+  const [branches, setBranches] = useState([]);
+  const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const isSelectForTransit = searchParams.get('selectForTransit') === 'true';
@@ -121,7 +152,7 @@ export default function Sale() {
   const [selected, setSelected] = useState([]);
   const [orderBy, setOrderBy] = useState(null);
   const [filterName, setFilterName] = useState('');
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
@@ -136,41 +167,81 @@ export default function Sale() {
   const handleOpenLogModal = () => setOpenLogModal(true);
   const handleCloseLogModal = () => setOpenLogModal(false);
 
-  const [filterOpen, setFilterOpen] = useState(false);
-
-  // Form validation
+  // Date & Branch filter form
   const schema = Yup.object({
     fromDate: Yup.mixed().nullable(),
     toDate: Yup.mixed().nullable(),
   });
 
-  const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
+  const { values, setFieldValue, resetForm } = useFormik({
     initialValues: {
       fromDate: null,
       toDate: null,
+      branch: '',
     },
     validationSchema: schema,
-    onSubmit: (values) => {
-      setOpenBackdrop(true);
-      const query = { branch: auth.user?.branch?._id || auth.user?.branch };
-
-      if (values.fromDate || values.toDate) {
-        query.createdAt = {};
-        if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
-        if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
-      }
-
-      fetchData(query);
-      setFilterOpen(false);
-    },
   });
 
-  const handleFilterOpen = () => {
-    setFilterOpen(true);
+  const handleDateChange = (field, value) => {
+    setFieldValue(field, value);
+    setPage(0);
+    const updatedValues = { ...values, [field]: value };
+    const query = {};
+    if (!canFilterBranch && (auth.user?.branch?._id || auth.user?.branch)) {
+      query.branch = auth.user?.branch?._id || auth.user?.branch;
+    } else if (updatedValues.branch) {
+      query.branch = updatedValues.branch;
+    }
+
+    const createdAt = {};
+    if (updatedValues.fromDate && moment(updatedValues.fromDate).isValid()) {
+      createdAt.$gte = moment(updatedValues.fromDate).format('YYYY-MM-DD');
+    }
+    if (updatedValues.toDate && moment(updatedValues.toDate).isValid()) {
+      createdAt.$lte = moment(updatedValues.toDate).format('YYYY-MM-DD');
+    }
+    if (Object.keys(createdAt).length > 0) {
+      query.createdAt = createdAt;
+    }
+
+    setOpenBackdrop(true);
+    fetchData(query);
   };
 
-  const handleFilterClose = () => {
-    setFilterOpen(false);
+  const handleBranchChange = (value) => {
+    setFieldValue('branch', value);
+    setPage(0);
+    const query = {};
+    if (!canFilterBranch && (auth.user?.branch?._id || auth.user?.branch)) {
+      query.branch = auth.user?.branch?._id || auth.user?.branch;
+    } else if (value) {
+      query.branch = value;
+    }
+
+    const createdAt = {};
+    if (values.fromDate && moment(values.fromDate).isValid()) {
+      createdAt.$gte = moment(values.fromDate).format('YYYY-MM-DD');
+    }
+    if (values.toDate && moment(values.toDate).isValid()) {
+      createdAt.$lte = moment(values.toDate).format('YYYY-MM-DD');
+    }
+    if (Object.keys(createdAt).length > 0) {
+      query.createdAt = createdAt;
+    }
+
+    setOpenBackdrop(true);
+    fetchData(query);
+  };
+
+  const handleClearFilter = () => {
+    resetForm();
+    setPage(0);
+    setOpenBackdrop(true);
+    const query = {};
+    if (!canFilterBranch && (auth.user?.branch?._id || auth.user?.branch)) {
+      query.branch = auth.user?.branch?._id || auth.user?.branch;
+    }
+    fetchData(query);
   };
 
   const [notify, setNotify] = useState({
@@ -181,21 +252,37 @@ export default function Sale() {
 
   const fetchData = useCallback(
     (query = {}) => {
-      if (!query.branch) query.branch = branch?._id || branch;
-      findSales(query).then((data) => {
+      const finalQuery = { ...query };
+      if (!canFilterBranch && !finalQuery.branch && (auth?.user?.branch?._id || auth?.user?.branch)) {
+        finalQuery.branch = auth?.user?.branch?._id || auth?.user?.branch;
+      }
+      if (finalQuery.branch === '' || finalQuery.branch === undefined || finalQuery.branch === null) {
+        delete finalQuery.branch;
+      }
+      findSales(finalQuery).then((data) => {
         setData(Array.isArray(data?.data) ? data.data : []);
         setOpenBackdrop(false);
       });
     },
-    [branch]
+    [canFilterBranch, auth?.user?.branch]
   );
 
   useEffect(() => {
-    setBranch(auth.user.branch);
-    fetchData({
-      branch: auth.user.branch?._id || auth.user.branch,
-    });
-  }, [toggleContainer, auth.user.branch, fetchData]);
+    if (canFilterBranch) {
+      getBranch().then((data) => {
+        if (Array.isArray(data?.data)) {
+          setBranches(data.data);
+        }
+      });
+    }
+    setBranch(auth?.user?.branch);
+    const initialQuery = {};
+    if (!canFilterBranch && (auth?.user?.branch?._id || auth?.user?.branch)) {
+      initialQuery.branch = auth?.user?.branch?._id || auth?.user?.branch;
+    }
+    fetchData(initialQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toggleContainer]);
 
   const editIdParam = searchParams.get('editId');
   useEffect(() => {
@@ -369,7 +456,8 @@ export default function Sale() {
               {isSelectForTransit && (
                 <Button
                   variant="contained"
-                  startIcon={<Iconify icon="eva:plus-fill" />}
+                  color="warning"
+                  startIcon={<Iconify icon="material-symbols:local-shipping" />}
                   onClick={() => {
                     if (selected.length === 0) {
                       setNotify({ open: true, message: 'Please select at least one completed sale', severity: 'warning' });
@@ -381,29 +469,6 @@ export default function Sale() {
                   Create Transit for Selected
                 </Button>
               )}
-              {(values.fromDate || values.toDate) && (
-                <Button
-                  variant="contained"
-                  color="error"
-                  startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
-                  onClick={() => {
-                    setFilterOpen(false);
-                    resetForm();
-                    fetchData({
-                      branch: auth.user?.branch?._id || auth.user?.branch,
-                    });
-                  }}
-                >
-                  Clear Filter
-                </Button>
-              )}
-              <Button
-                variant="contained"
-                startIcon={<Iconify icon="material-symbols:filter-alt" />}
-                onClick={handleFilterOpen}
-              >
-                Filter
-              </Button>
               {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && (
                 <Button
                   variant="contained"
@@ -413,21 +478,13 @@ export default function Sale() {
                     setToggleContainer(true);
                     setToggleContainerType('create');
                   }}
+                  sx={{ height: 40 }}
                 >
                   New Sale
                 </Button>
               )}
             </Stack>
           </Stack>
-
-          {(values.fromDate || values.toDate) && (
-            <p style={{ color: '#fff', marginBottom: '20px' }}>
-              {[
-                values.fromDate ? `From Date: ${values.fromDate.format('YYYY-MM-DD')}` : null,
-                values.toDate ? `To Date: ${values.toDate.format('YYYY-MM-DD')}` : null,
-              ].filter(Boolean).join(', ')}
-            </p>
-          )}
 
           <Card>
             <SaleListToolbar
@@ -438,7 +495,191 @@ export default function Sale() {
                 setDeleteType('selected');
                 handleOpenDeleteModal();
               }}
-            />
+            >
+              <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap">
+                {(values.fromDate || values.toDate || values.branch) && (
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="error"
+                    startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                    onClick={handleClearFilter}
+                    sx={{ height: 40 }}
+                  >
+                    Clear Filter
+                  </Button>
+                )}
+                <LocalizationProvider dateAdapter={AdapterMoment}>
+                  <DesktopDatePicker
+                    label="From Date"
+                    inputFormat="DD-MM-YYYY"
+                    value={values.fromDate}
+                    onChange={(val) => handleDateChange('fromDate', val)}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        size="small"
+                        InputLabelProps={{
+                          ...params.InputLabelProps,
+                          shrink: true,
+                          sx: {
+                            color: '#637381',
+                            fontWeight: 500,
+                            bgcolor: '#ffffff',
+                            px: 0.5,
+                            '&.Mui-focused': {
+                              color: 'primary.main',
+                            },
+                          },
+                        }}
+                        inputProps={{
+                          ...params.inputProps,
+                          placeholder: 'dd-mm-yyyy',
+                        }}
+                        sx={{
+                          width: { xs: 140, sm: 165 },
+                          '& .MuiOutlinedInput-root': {
+                            height: 40,
+                            color: '#212B36',
+                            fontWeight: 500,
+                            bgcolor: '#ffffff',
+                            borderRadius: 1,
+                            '& fieldset': {
+                              borderColor: '#cfd8dc',
+                            },
+                            '&:hover fieldset': {
+                              borderColor: '#90a4ae',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: 'primary.main',
+                            },
+                          },
+                          '& .MuiSvgIcon-root, & .MuiIconButton-root': {
+                            color: '#212B36',
+                          },
+                        }}
+                      />
+                    )}
+                  />
+                </LocalizationProvider>
+                <LocalizationProvider dateAdapter={AdapterMoment}>
+                  <DesktopDatePicker
+                    label="To Date"
+                    inputFormat="DD-MM-YYYY"
+                    value={values.toDate}
+                    onChange={(val) => handleDateChange('toDate', val)}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        size="small"
+                        InputLabelProps={{
+                          ...params.InputLabelProps,
+                          shrink: true,
+                          sx: {
+                            color: '#637381',
+                            fontWeight: 500,
+                            bgcolor: '#ffffff',
+                            px: 0.5,
+                            '&.Mui-focused': {
+                              color: 'primary.main',
+                            },
+                          },
+                        }}
+                        inputProps={{
+                          ...params.inputProps,
+                          placeholder: 'dd-mm-yyyy',
+                        }}
+                        sx={{
+                          width: { xs: 140, sm: 165 },
+                          '& .MuiOutlinedInput-root': {
+                            height: 40,
+                            color: '#212B36',
+                            fontWeight: 500,
+                            bgcolor: '#ffffff',
+                            borderRadius: 1,
+                            '& fieldset': {
+                              borderColor: '#cfd8dc',
+                            },
+                            '&:hover fieldset': {
+                              borderColor: '#90a4ae',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: 'primary.main',
+                            },
+                          },
+                          '& .MuiSvgIcon-root, & .MuiIconButton-root': {
+                            color: '#212B36',
+                          },
+                        }}
+                      />
+                    )}
+                  />
+                </LocalizationProvider>
+                {canFilterBranch && (
+                  <FormControl
+                    size="small"
+                    sx={{
+                      minWidth: 150,
+                      '& .MuiOutlinedInput-root': {
+                        height: 40,
+                        color: '#212B36',
+                        fontWeight: 500,
+                        bgcolor: '#ffffff',
+                        borderRadius: 1,
+                        '& fieldset': {
+                          borderColor: '#cfd8dc',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#90a4ae',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: 'primary.main',
+                        },
+                      },
+                      '& .MuiSelect-icon': {
+                        color: '#212B36',
+                      },
+                    }}
+                  >
+                    <InputLabel
+                      id="branch-select-label"
+                      shrink
+                      sx={{
+                        color: '#637381',
+                        fontWeight: 500,
+                        bgcolor: '#ffffff',
+                        px: 0.5,
+                        '&.Mui-focused': {
+                          color: 'primary.main',
+                        },
+                      }}
+                    >
+                      Branch
+                    </InputLabel>
+                    <Select
+                      labelId="branch-select-label"
+                      id="branch-select"
+                      label="Branch"
+                      notched
+                      name="branch"
+                      value={values.branch}
+                      onChange={(e) => handleBranchChange(e.target.value)}
+                    >
+                      <MenuItem value="">
+                        <em>All Branches</em>
+                      </MenuItem>
+                      {branches
+                        ?.filter((e) => e.isHeadOffice !== 'yes' && !e.branchName?.toLowerCase().includes('head office'))
+                        ?.map((e) => (
+                          <MenuItem key={e._id} value={e._id}>
+                            {e.branchId} {e.branchName}
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </Stack>
+            </SaleListToolbar>
 
             <Scrollbar>
               <TableContainer>
@@ -502,9 +743,23 @@ export default function Sale() {
                               <Typography variant="subtitle2">
                                 {row.customer.name}
                                 <br />
-                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                  {row.customer.phoneNumber}
-                                </Typography>
+                                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                    {isAdmin || visiblePhoneId === _id ? row.customer.phoneNumber : global.maskPhoneNumber(row.customer.phoneNumber)}
+                                  </Typography>
+                                  {!isAdmin && row.customer.phoneNumber && (
+                                    <IconButton
+                                      size="small"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setVisiblePhoneId(visiblePhoneId === _id ? null : _id);
+                                      }}
+                                      sx={{ ml: 0.5, p: 0.25 }}
+                                    >
+                                      <Iconify icon={visiblePhoneId === _id ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={14} height={14} />
+                                    </IconButton>
+                                  )}
+                                </Box>
                               </Typography>
                             ) : (
                               '-'
@@ -614,6 +869,15 @@ export default function Sale() {
               </TableContainer>
             </Scrollbar>
 
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25, 50, 100]}
+              component="div"
+              count={filteredData?.length || data?.length || 0}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
           </Card>
         </Container>
       )}
@@ -835,70 +1099,6 @@ export default function Sale() {
         <CircularProgress color="inherit" />
       </Backdrop>
 
-      <Dialog open={filterOpen} onClose={handleFilterClose}>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmit(e);
-          }}
-          autoComplete="off"
-        >
-          <DialogTitle>Filter</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={3} sx={{ p: 1 }}>
-              <Grid item xs={12} sm={6}>
-                <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
-                  <DesktopDatePicker
-                    label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
-                    inputFormat="MM/DD/YYYY"
-                    name="fromDate"
-                    value={values.fromDate}
-                    onChange={(value) => {
-                      setFieldValue('fromDate', value, true);
-                    }}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
-                  />
-                </LocalizationProvider>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
-                  <DesktopDatePicker
-                    label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
-                    inputFormat="MM/DD/YYYY"
-                    name="toDate"
-                    value={values.toDate}
-                    onChange={(value) => {
-                      setFieldValue('toDate', value, true);
-                    }}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
-                  />
-                </LocalizationProvider>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => {
-                setFilterOpen(false);
-                resetForm();
-                fetchData({
-                  branch: auth.user?.branch?._id || auth.user?.branch,
-                });
-              }}
-            >
-              Clear
-            </Button>
-            <Button variant="contained" onClick={handleFilterClose}>
-              Close
-            </Button>
-            <Button variant="contained" type="submit">
-              Filter
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
 
       <Dialog open={openLogModal} onClose={handleCloseLogModal} maxWidth="lg" fullWidth>
         <DialogTitle>Process Log & Timeline</DialogTitle>

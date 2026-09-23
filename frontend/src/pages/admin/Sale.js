@@ -35,6 +35,7 @@ import {
   Radio,
   RadioGroup,
   FormControlLabel,
+  Tooltip,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import MuiAlert from '@mui/material/Alert';
@@ -75,10 +76,9 @@ const TABLE_HEAD = [
   { id: 'billId', label: 'Bill Id', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: 'customer', label: 'Customer', alignRight: false },
-  { id: 'branchId', label: 'Branch Id', alignRight: false },
   { id: 'branchName', label: 'Branch Name', alignRight: false },
+  { id: 'biller', label: 'Biller', alignRight: false },
   { id: 'saleType', label: 'Sale Type', alignRight: false },
-  { id: 'purchaseType', label: 'Ornament Type', alignRight: false },
   { id: 'netAmount', label: 'Net Amount', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: '' },
@@ -122,6 +122,8 @@ export default function Sale() {
   const [saleIdToEdit, setSaleIdToEdit] = useState(null);
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType;
+  const isAdmin = userType?.toLowerCase() === 'admin';
+  const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
   const [selected, setSelected] = useState([]);
@@ -515,18 +517,49 @@ export default function Sale() {
                           <Typography variant="subtitle2">
                             {row.customer.name}
                             <br />
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                              {row.customer.phoneNumber}
-                            </Typography>
+                            <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                {isAdmin || visiblePhoneId === _id ? row.customer.phoneNumber : global.maskPhoneNumber(row.customer.phoneNumber)}
+                              </Typography>
+                              {!isAdmin && row.customer.phoneNumber && (
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setVisiblePhoneId(visiblePhoneId === _id ? null : _id);
+                                  }}
+                                  sx={{ ml: 0.5, p: 0.25 }}
+                                >
+                                  <Iconify icon={visiblePhoneId === _id ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={14} height={14} />
+                                </IconButton>
+                              )}
+                            </Box>
                           </Typography>
                         ) : (
                           '-'
                         )}
                       </TableCell>
-                      <TableCell align="left">{rowBranch?.branchId || '-'}</TableCell>
                       <TableCell align="left">{rowBranch?.branchName || '-'}</TableCell>
-                      <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
-                      <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
+                      <TableCell align="left">
+                        {row.biller ? (
+                          <Typography variant="subtitle2">
+                            {row.biller.name || '-'}
+                            {row.biller.employeeId && (
+                              <>
+                                <br />
+                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                  {row.biller.employeeId}
+                                </Typography>
+                              </>
+                            )}
+                          </Typography>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell align="left">
+                        {[sentenceCase(saleType || ''), sentenceCase(purchaseType || '')].filter(Boolean).join(' ') || '-'}
+                      </TableCell>
                       <TableCell align="left">
                         {isReleasePending ? (
                           <Typography variant="body2" sx={{ color: '#8A1B9F', fontWeight: 'bold' }}>
@@ -566,12 +599,12 @@ export default function Sale() {
                 })}
                 {emptyRows > 0 && (
                   <TableRow style={{ height: 53 * emptyRows }}>
-                    <TableCell colSpan={11} />
+                    <TableCell colSpan={10} />
                   </TableRow>
                 )}
                 {filteredData?.length === 0 && (
                   <TableRow>
-                    <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
+                    <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
                       <Paper
                         sx={{
                           textAlign: 'center',
@@ -587,7 +620,7 @@ export default function Sale() {
               {filteredData?.length > 0 && isNotFound && (
                 <TableBody>
                   <TableRow>
-                    <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
+                    <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
                       <Paper
                         sx={{
                           textAlign: 'center',
@@ -1002,6 +1035,52 @@ function Status(props) {
   const [confirmAction, setConfirmAction] = useState(''); // 'approve' or 'reject'
 
   const handleVerify = (type) => {
+    if (type === 'finance') {
+      const isPledged = saleType?.toLowerCase() !== 'physical';
+      const isReleaseFinance = isPledged && (!assigneeCompleted || isReleasePending);
+      let isBankRequired = false;
+      let isBankPending = false;
+
+      if (isReleaseFinance) {
+        const rels = row?.release || [];
+        isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+        const isRelVerified = Boolean(
+          (row?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release') ||
+          (!assigneeCompleted && row?.isBankVerified)
+        );
+        isBankPending = isBankRequired && !isRelVerified;
+      } else {
+        isBankRequired = row?.paymentType === 'bank' || (row?.paymentType === 'partial' && Number(row?.bankAmount) > 0);
+        const targetSaleBankId = row?.bank?._id || row?.bank;
+        const matchedSaleBank = (row?.customer?.bank || []).find(
+          (b) =>
+            (targetSaleBankId && String(b._id) === String(targetSaleBankId)) ||
+            (b.accountNo && row?.bank?.accountNo && String(b.accountNo) === String(row?.bank?.accountNo))
+        ) || (typeof row?.bank === 'object' && row?.bank?.accountNo ? row?.bank : null);
+        const saleAcct = matchedSaleBank?.accountNo || row?.bank?.accountNo;
+        const saleId = matchedSaleBank?._id || targetSaleBankId;
+        const isSaleVerified = Boolean(
+          (row?.financePayments || []).some(
+            (fp) => fp.isVerified && (
+              fp.stage === 'sale' ||
+              (saleId && String(fp.bank?.bankId || fp.bank?._id) === String(saleId)) ||
+              (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
+            )
+          ) || (row?.saleType === 'physical' && row?.isBankVerified)
+        );
+        isBankPending = isBankRequired && !isSaleVerified;
+      }
+
+      if (isBankPending) {
+        setNotify?.({
+          open: true,
+          message: `Bank verification required in Billing Summary before updating finance (${isReleaseFinance ? 'Release Bank' : 'Customer Sale Bank'})`,
+          severity: 'warning',
+        });
+        return;
+      }
+    }
+
     setVerifyType(type);
     setOpenVerifyModal(true);
   };
@@ -1092,11 +1171,67 @@ function Status(props) {
     if (isAdmin || userType === 'finance' || userType === 'accounts') {
       const isPledged = saleType?.toLowerCase() !== 'physical';
       const isReleaseFinance = isPledged && (!assigneeCompleted || isReleasePending);
-      content = (
-        <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
-          {isReleaseFinance ? 'Finance Pay Release' : 'Finance Update'}
-        </Button>
-      );
+
+      // Check if bank verification is required for the respective stage
+      let isBankRequired = false;
+      let isBankPendingVerification = false;
+
+      if (isReleaseFinance) {
+        const rels = row?.release || [];
+        isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+        const isRelVerified = Boolean(
+          (row?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release') ||
+          (!assigneeCompleted && row?.isBankVerified)
+        );
+        isBankPendingVerification = isBankRequired && !isRelVerified;
+      } else {
+        isBankRequired = row?.paymentType === 'bank' || (row?.paymentType === 'partial' && Number(row?.bankAmount) > 0);
+        const targetSaleBankId = row?.bank?._id || row?.bank;
+        const matchedSaleBank = (row?.customer?.bank || []).find(
+          (b) =>
+            (targetSaleBankId && String(b._id) === String(targetSaleBankId)) ||
+            (b.accountNo && row?.bank?.accountNo && String(b.accountNo) === String(row?.bank?.accountNo))
+        ) || (typeof row?.bank === 'object' && row?.bank?.accountNo ? row?.bank : null);
+        const saleAcct = matchedSaleBank?.accountNo || row?.bank?.accountNo;
+        const saleId = matchedSaleBank?._id || targetSaleBankId;
+        const isSaleVerified = Boolean(
+          (row?.financePayments || []).some(
+            (fp) => fp.isVerified && (
+              fp.stage === 'sale' ||
+              (saleId && String(fp.bank?.bankId || fp.bank?._id) === String(saleId)) ||
+              (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
+            )
+          ) || (row?.saleType === 'physical' && row?.isBankVerified)
+        );
+        isBankPendingVerification = isBankRequired && !isSaleVerified;
+      }
+
+      if (isBankPendingVerification) {
+        content = (
+          <Tooltip title={`Bank verification required in Billing Summary before updating finance (${isReleaseFinance ? 'Release Bank' : 'Customer Sale Bank'})`} arrow>
+            <span>
+              <Button
+                variant="contained"
+                size="small"
+                disabled
+                sx={{
+                  bgcolor: 'action.disabledBackground',
+                  color: 'text.disabled',
+                  cursor: 'not-allowed',
+                }}
+              >
+                {isReleaseFinance ? 'Finance Pay Release' : 'Finance Update'}
+              </Button>
+            </span>
+          </Tooltip>
+        );
+      } else {
+        content = (
+          <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
+            {isReleaseFinance ? 'Finance Pay Release' : 'Finance Update'}
+          </Button>
+        );
+      }
     } else {
       content = <Label color="warning">Finance Pending</Label>;
     }
@@ -1348,6 +1483,19 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
       if (type === 'assignee' && !saleDetails.financeCompleted) {
         alert('Cannot verify Assignee stage: Finance verification must be completed first!');
         return;
+      }
+
+      if (type === 'finance') {
+        const isPledged = (saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged';
+        const isPledgedStage = isPledged && !(saleDetails?.assigneeCompleted ?? assigneeCompleted);
+        const bankRequired = isPledgedStage
+          ? (saleDetails?.release || []).some((r) => r.paymentType === 'bank' || r.bank)
+          : (saleDetails?.paymentType === 'bank' || (saleDetails?.paymentType === 'partial' && Number(saleDetails?.bankAmount) > 0));
+
+        if (bankRequired && !saleDetails?.isBankVerified) {
+          alert('Customer bank has not been verified yet. Please verify the bank in the Billing Summary before updating finance.');
+          return;
+        }
       }
 
       setLoading(true);
@@ -1949,6 +2097,19 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               </Grid>
             )}
 
+            {type === 'finance' && (
+              ((saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged' && !(saleDetails?.assigneeCompleted ?? assigneeCompleted)
+                ? (saleDetails?.release || []).some((r) => r.paymentType === 'bank' || r.bank)
+                : (saleDetails?.paymentType === 'bank' || (saleDetails?.paymentType === 'partial' && Number(saleDetails?.bankAmount) > 0))
+              ) && !saleDetails?.isBankVerified
+            ) && (
+              <Grid item xs={12}>
+                <MuiAlert severity="error" sx={{ mb: 1 }}>
+                  Customer bank has not been verified yet. Please verify the bank in the Billing Summary before updating finance.
+                </MuiAlert>
+              </Grid>
+            )}
+
             <Grid item xs={12}>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Checkbox
@@ -1963,7 +2124,20 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <LoadingButton type="submit" variant="contained" loading={loading} sx={{ color: '#fff' }}>
+          <LoadingButton
+            type="submit"
+            variant="contained"
+            loading={loading}
+            disabled={
+              type === 'finance' && (
+                ((saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged' && !(saleDetails?.assigneeCompleted ?? assigneeCompleted)
+                  ? (saleDetails?.release || []).some((r) => r.paymentType === 'bank' || r.bank)
+                  : (saleDetails?.paymentType === 'bank' || (saleDetails?.paymentType === 'partial' && Number(saleDetails?.bankAmount) > 0))
+                ) && !saleDetails?.isBankVerified
+              )
+            }
+            sx={{ color: '#fff' }}
+          >
             Save & Update Status
           </LoadingButton>
         </DialogActions>

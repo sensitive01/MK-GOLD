@@ -16,7 +16,7 @@ async function find(req, res) {
       "marketing",
       "admin_desk"
     ];
-    if (branchUserTypes.includes(userType) && req.user.branch) {
+    if (userType !== "bullion_desk" && branchUserTypes.includes(userType) && req.user.branch) {
       query.branch = req.user.branch._id || req.user.branch;
       if (req.user._id) {
         query.employee = req.user._id;

@@ -123,6 +123,8 @@ export default function TransitSales() {
   const [saleIdToEdit, setSaleIdToEdit] = useState(null);
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType;
+  const isAdmin = userType?.toLowerCase() === 'admin';
+  const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
   const [selected, setSelected] = useState([]);
@@ -740,9 +742,23 @@ export default function TransitSales() {
                           <Typography variant="subtitle2">
                             {row.customer.name}
                             <br />
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                              {row.customer.phoneNumber}
-                            </Typography>
+                            <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                {isAdmin || visiblePhoneId === _id ? row.customer.phoneNumber : global.maskPhoneNumber(row.customer.phoneNumber)}
+                              </Typography>
+                              {!isAdmin && row.customer.phoneNumber && (
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setVisiblePhoneId(visiblePhoneId === _id ? null : _id);
+                                  }}
+                                  sx={{ ml: 0.5, p: 0.25 }}
+                                >
+                                  <Iconify icon={visiblePhoneId === _id ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={14} height={14} />
+                                </IconButton>
+                              )}
+                            </Box>
                           </Typography>
                         ) : (
                           '-'

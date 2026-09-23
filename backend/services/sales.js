@@ -6,22 +6,26 @@ async function find(query = {}) {
   try {
     let filter = {};
     if (query.createdAt) {
-      const dateFilter = { ...query.createdAt };
-      if (dateFilter["$gte"]) {
+      const dateFilter = {};
+      if (query.createdAt["$gte"] && !isNaN(new Date(query.createdAt["$gte"]).getTime())) {
         dateFilter["$gte"] = new Date(
-          new Date(dateFilter["$gte"])
+          new Date(query.createdAt["$gte"])
             .toISOString()
-            .replace(/T.*Z/, "T00:00:00Z")
+            .replace(/T.*Z/, "T00:00:00.000Z")
         );
       }
-      if (dateFilter["$lte"]) {
+      if (query.createdAt["$lte"] && !isNaN(new Date(query.createdAt["$lte"]).getTime())) {
         dateFilter["$lte"] = new Date(
-          new Date(dateFilter["$lte"])
+          new Date(query.createdAt["$lte"])
             .toISOString()
-            .replace(/T.*Z/, "T23:59:59Z")
+            .replace(/T.*Z/, "T23:59:59.999Z")
         );
       }
-      query.createdAt = dateFilter;
+      if (Object.keys(dateFilter).length > 0) {
+        query.createdAt = dateFilter;
+      } else {
+        delete query.createdAt;
+      }
     }
     if (query.branch) {
       if (mongoose.Types.ObjectId.isValid(String(query.branch))) { query.branch = new mongoose.Types.ObjectId(String(query.branch)); } else { delete query.branch; }
@@ -1356,6 +1360,23 @@ async function create(payload) {
     const timeline = [];
     const customer = await Customer.findById(payload.customer).exec();
     
+    if (!customer) {
+      throw new Error("Customer not found");
+    }
+
+    if (!customer.address || customer.address.length === 0) {
+      throw new Error("Customer address is mandatory to create a sale. Please add an address first.");
+    }
+
+    const isBankPayment = payload.paymentType === 'bank' || (payload.paymentType === 'partial' && Number(payload.bankAmount) > 0);
+    if (isBankPayment && !payload.bank) {
+      throw new Error("Customer bank is mandatory for bank payment. Please mark a bank for sale.");
+    }
+
+    if (!payload.address && customer.address.length > 0) {
+      payload.address = customer.address[customer.address.length - 1]._id;
+    }
+
     if (customer) {
       // 1. Enquiry Stage
       if (customer.enqID) {
@@ -1496,6 +1517,53 @@ async function update(id, payload) {
       throw new Error("Cannot update sale status: Finance must approve first");
     }
 
+    // Bank Verification check for Finance step:
+    const isFinanceUpdate = Boolean(
+      payload.financeAmount ||
+      payload.newFinancePayment ||
+      (payload.newFinancePayments && payload.newFinancePayments.length > 0) ||
+      payload.financeCompleted ||
+      payload.financeProof
+    );
+
+    if (isFinanceUpdate) {
+      const isPledgedRelease = sale.saleType === 'pledged' && !sale.assigneeCompleted;
+
+      if (isPledgedRelease) {
+        const rels = sale.release || [];
+        const bankRequired = rels.some(r => r.paymentType === 'bank' || r.bank);
+        if (bankRequired) {
+          const isReleaseBankVerified = Boolean(
+            (sale.financePayments || []).some(fp => fp.isVerified && fp.stage === 'release') ||
+            (!sale.assigneeCompleted && sale.isBankVerified)
+          );
+          if (!isReleaseBankVerified) {
+            throw new Error("Release bank must be verified in Billing Summary before paying release.");
+          }
+        }
+      } else {
+        const bankRequired = sale.paymentType === 'bank' || (sale.paymentType === 'partial' && Number(sale.bankAmount) > 0);
+        if (bankRequired) {
+          const targetSaleBankId = sale.bank?._id || sale.bank;
+          const saleAcct = sale.bank?.accountNo;
+          const saleId = targetSaleBankId;
+
+          const isSaleBankVerified = Boolean(
+            (sale.financePayments || []).some(
+              (fp) => fp.isVerified && (
+                fp.stage === 'sale' ||
+                (saleId && String(fp.bank?.bankId || fp.bank?._id) === String(saleId)) ||
+                (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
+              )
+            ) || (sale.saleType === 'physical' && sale.isBankVerified)
+          );
+          if (!isSaleBankVerified) {
+            throw new Error("Customer sale bank must be verified in Billing Summary before updating finance.");
+          }
+        }
+      }
+    }
+
     if (payload.release && payload.release.length > 0) {
       const releaseIds = payload.release.map(r => r._id || r);
       const ReleaseModel = require("../models/release");
@@ -1600,6 +1668,55 @@ async function updateWithLog(id, setData, logEntry) {
     }
     if (setData.status === "completed" && !sale.financeCompleted && !setData.financeCompleted) {
       throw new Error("Cannot update sale status: Finance must approve first");
+    }
+
+    // Bank Verification check for Finance step:
+    const isFinanceUpdate = Boolean(
+      setData.financeAmount ||
+      setData.newFinancePayment ||
+      (setData.newFinancePayments && setData.newFinancePayments.length > 0) ||
+      setData.financeCompleted ||
+      setData.financeProof ||
+      logEntry?.action === 'finance completed' ||
+      logEntry?.action === 'finance updated'
+    );
+
+    if (isFinanceUpdate) {
+      const isPledgedRelease = sale.saleType === 'pledged' && !sale.assigneeCompleted;
+
+      if (isPledgedRelease) {
+        const rels = sale.release || [];
+        const bankRequired = rels.some(r => r.paymentType === 'bank' || r.bank);
+        if (bankRequired) {
+          const isReleaseBankVerified = Boolean(
+            (sale.financePayments || []).some(fp => fp.isVerified && fp.stage === 'release') ||
+            (!sale.assigneeCompleted && sale.isBankVerified)
+          );
+          if (!isReleaseBankVerified) {
+            throw new Error("Release bank must be verified in Billing Summary before paying release.");
+          }
+        }
+      } else {
+        const bankRequired = sale.paymentType === 'bank' || (sale.paymentType === 'partial' && Number(sale.bankAmount) > 0);
+        if (bankRequired) {
+          const targetSaleBankId = sale.bank?._id || sale.bank;
+          const saleAcct = sale.bank?.accountNo;
+          const saleId = targetSaleBankId;
+
+          const isSaleBankVerified = Boolean(
+            (sale.financePayments || []).some(
+              (fp) => fp.isVerified && (
+                fp.stage === 'sale' ||
+                (saleId && String(fp.bank?.bankId || fp.bank?._id) === String(saleId)) ||
+                (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
+              )
+            ) || (sale.saleType === 'physical' && sale.isBankVerified)
+          );
+          if (!isSaleBankVerified) {
+            throw new Error("Customer sale bank must be verified in Billing Summary before updating finance.");
+          }
+        }
+      }
     }
 
     const timelineEntry = {
@@ -2066,18 +2183,30 @@ async function verifyFinancePayment(saleId, paymentId, payload, user) {
     let verifiedBankAccountNo = null;
     let verifiedBankName = null;
 
+    const payloadAcct = payload.bank?.accountNo;
+    const isNew = !paymentId || paymentId === 'new' || paymentId === 'custom' || paymentId === 0 || paymentId === '0';
+
     if (sale.financePayments && sale.financePayments.length > 0) {
       for (let i = 0; i < sale.financePayments.length; i++) {
         const fp = sale.financePayments[i];
-        if ((fp._id && String(fp._id) === String(paymentId)) || String(i) === String(paymentId)) {
+        const fpAcct = fp.bank?.accountNo;
+        const matchesId = fp._id && String(fp._id) === String(paymentId);
+        const matchesBankAndStage = payloadAcct && fpAcct && String(payloadAcct) === String(fpAcct) && (fp.stage === payload.stage || !fp.stage || !payload.stage);
+        const matchesIndex = !isNew && String(i) === String(paymentId) && (!payloadAcct || !fpAcct || String(payloadAcct) === String(fpAcct));
+
+        if (matchesId || matchesBankAndStage || matchesIndex) {
           fp.isVerified = true;
           fp.verifiedAmount = verifiedAmount;
           fp.verifiedProof = verifiedProof;
           fp.verifiedAt = new Date();
+          if (payload.stage) fp.stage = payload.stage;
+          if (payload.bank && Object.keys(payload.bank).length > 0) {
+            fp.bank = { ...fp.bank, ...payload.bank };
+          }
           paymentFound = true;
           // Remember which bank account was verified
-          verifiedBankAccountNo = fp.bank?.accountNo;
-          verifiedBankName = fp.bank?.bankName;
+          verifiedBankAccountNo = fp.bank?.accountNo || payloadAcct;
+          verifiedBankName = fp.bank?.bankName || payload.bank?.bankName;
           break;
         }
       }
@@ -2100,6 +2229,10 @@ async function verifyFinancePayment(saleId, paymentId, payload, user) {
       }
     }
 
+    sale.isBankVerified = true;
+    sale.bankVerifiedAt = new Date();
+    sale.bankVerifiedBy = performerId;
+
     if (!paymentFound) {
       sale.financePayments.push({
         amount: verifiedAmount,
@@ -2108,15 +2241,32 @@ async function verifyFinancePayment(saleId, paymentId, payload, user) {
         verifiedAmount: verifiedAmount,
         verifiedProof: verifiedProof,
         verifiedAt: new Date(),
+        bank: payload.bank || {},
+        stage: payload.stage || 'sale',
       });
+      verifiedBankAccountNo = payload.bank?.accountNo;
+      verifiedBankName = payload.bank?.bankName;
+    }
+
+    try {
+      const Customer = require("../models/customer");
+      const acctNo = verifiedBankAccountNo || payload.bank?.accountNo;
+      if (acctNo && sale.customer) {
+        await Customer.updateOne(
+          { _id: sale.customer, "bank.accountNo": acctNo },
+          { $set: { "bank.$.isVerified": true } }
+        ).exec();
+      }
+    } catch (e) {
+      console.warn("Could not mark customer bank as verified:", e.message);
     }
 
     if (sale.timeline) {
       sale.timeline.push({
-        event: "Payment Processed",
+        event: "Bank Verified",
         performedBy: performerId,
         performedAt: new Date(),
-        details: `Bank payment of ₹${Number(verifiedAmount).toLocaleString('en-IN')} verified and processed`,
+        details: `Bank ${verifiedBankName ? `${verifiedBankName} ` : ''}(${verifiedBankAccountNo || payload.bank?.accountNo || 'Account'}) verified${verifiedAmount ? ` with ₹${Number(verifiedAmount).toLocaleString('en-IN')}` : ''}`,
         proof: verifiedProof || null,
       });
     }

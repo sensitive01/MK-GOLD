@@ -35,6 +35,7 @@ import {
   Radio,
   RadioGroup,
   FormControlLabel,
+  Tooltip,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import MuiAlert from '@mui/material/Alert';
@@ -73,10 +74,9 @@ const TABLE_HEAD = [
   { id: 'billId', label: 'Bill Id', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: 'customer', label: 'Customer', alignRight: false },
-  { id: 'branchId', label: 'Branch Id', alignRight: false },
   { id: 'branchName', label: 'Branch Name', alignRight: false },
+  { id: 'biller', label: 'Biller', alignRight: false },
   { id: 'saleType', label: 'Sale Type', alignRight: false },
-  { id: 'purchaseType', label: 'Ornament Type', alignRight: false },
   { id: 'netAmount', label: 'Net Amount', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: '' },
@@ -107,16 +107,42 @@ function applySortFilter(array, comparator, query) {
     if (order !== 0) return order;
     return a[1] - b[1];
   });
-  if (query) {
-    return filter(array, (row) => row.customer?.phoneNumber.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+  let results = stabilizedThis?.map((el) => el[0]) || [];
+  if (query && query.trim() !== '') {
+    const q = query.trim().toLowerCase();
+    results = filter(results, (row) => {
+      const billId = String(row.billId || '').toLowerCase();
+      const customerName = String(row.customer?.name || '').toLowerCase();
+      const phoneNumber = String(row.customer?.phoneNumber || '').toLowerCase();
+      const branchName = String(row.branch?.branchName || '').toLowerCase();
+      const branchId = String(row.branch?.branchId || '').toLowerCase();
+      const billerName = String(row.biller?.name || row.biller?.employeeId || '').toLowerCase();
+      const saleType = String(row.saleType || '').toLowerCase();
+      const status = String(row.status || '').toLowerCase();
+      const netAmount = String(row.netAmount || '');
+
+      return (
+        billId.includes(q) ||
+        customerName.includes(q) ||
+        phoneNumber.includes(q) ||
+        branchName.includes(q) ||
+        branchId.includes(q) ||
+        billerName.includes(q) ||
+        saleType.includes(q) ||
+        status.includes(q) ||
+        netAmount.includes(q)
+      );
+    });
   }
-  return stabilizedThis?.map((el) => el[0]);
+  return results;
 }
 
 export default function Sale() {
+  const auth = useSelector((state) => state.auth);
+  const isAdmin = auth?.user?.userType?.toLowerCase() === 'admin';
+  const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const [branches, setBranches] = useState([]);
   const [open, setOpen] = useState(null);
-  const [filterOpen, setFilterOpen] = useState(false);
   const [openId, setOpenId] = useState(null);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
@@ -126,7 +152,7 @@ export default function Sale() {
   const [openLogModal, setOpenLogModal] = useState(false);
   const handleOpenLogModal = () => setOpenLogModal(true);
   const handleCloseLogModal = () => setOpenLogModal(false);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
@@ -140,38 +166,70 @@ export default function Sale() {
   const form = useRef();
   const [openBackdrop, setOpenBackdrop] = useState(true);
 
-  // Form validation
+  // Date & Branch filter form
   const schema = Yup.object({
     fromDate: Yup.mixed().nullable(),
     toDate: Yup.mixed().nullable(),
   });
 
-  const { handleSubmit, handleBlur, handleChange, touched, errors, values, setFieldValue, resetForm } = useFormik({
+  const { values, setFieldValue, resetForm } = useFormik({
     initialValues: {
       fromDate: null,
       toDate: null,
       branch: '',
-      phoneNumber: '',
     },
     validationSchema: schema,
-    onSubmit: (values) => {
-      setOpenBackdrop(true);
-      const query = {};
-      if (values.fromDate || values.toDate) {
-        query.createdAt = {};
-        if (values.fromDate) query.createdAt.$gte = values.fromDate.format("YYYY-MM-DD");
-        if (values.toDate) query.createdAt.$lte = values.toDate.format("YYYY-MM-DD");
-      }
-      if (values.branch) query.branch = values.branch;
-      if (values.phoneNumber) query.phoneNumber = values.phoneNumber;
-
-      findSales(query).then((data) => {
-        setData(data.data);
-        setOpenBackdrop(false);
-      });
-      setFilterOpen(false);
-    },
   });
+
+  const handleDateChange = (field, value) => {
+    setFieldValue(field, value);
+    setPage(0);
+    const updatedValues = { ...values, [field]: value };
+    const query = {};
+
+    const createdAt = {};
+    if (updatedValues.fromDate && moment(updatedValues.fromDate).isValid()) {
+      createdAt.$gte = moment(updatedValues.fromDate).format('YYYY-MM-DD');
+    }
+    if (updatedValues.toDate && moment(updatedValues.toDate).isValid()) {
+      createdAt.$lte = moment(updatedValues.toDate).format('YYYY-MM-DD');
+    }
+    if (Object.keys(createdAt).length > 0) {
+      query.createdAt = createdAt;
+    }
+    if (updatedValues.branch) query.branch = updatedValues.branch;
+
+    setOpenBackdrop(true);
+    fetchData(query);
+  };
+
+  const handleBranchChange = (value) => {
+    setFieldValue('branch', value);
+    setPage(0);
+    const query = {};
+
+    const createdAt = {};
+    if (values.fromDate && moment(values.fromDate).isValid()) {
+      createdAt.$gte = moment(values.fromDate).format('YYYY-MM-DD');
+    }
+    if (values.toDate && moment(values.toDate).isValid()) {
+      createdAt.$lte = moment(values.toDate).format('YYYY-MM-DD');
+    }
+    if (Object.keys(createdAt).length > 0) {
+      query.createdAt = createdAt;
+    }
+    if (value) query.branch = value;
+
+    setOpenBackdrop(true);
+    fetchData(query);
+  };
+
+  const handleClearFilter = () => {
+    resetForm();
+    setPage(0);
+    setOpenBackdrop(true);
+    fetchData({});
+  };
 
   const [notify, setNotify] = useState({
     open: false,
@@ -179,22 +237,22 @@ export default function Sale() {
     severity: 'success',
   });
 
-  const fetchData = useCallback(
-    (query = {}) => {
-      findSales(query).then((data) => {
-        setData(data.data);
-        setOpenBackdrop(false);
-      });
-    },
-    [values.fromDate, values.toDate]
-  );
+  const fetchData = useCallback((query = {}) => {
+    findSales(query).then((data) => {
+      setData(Array.isArray(data?.data) ? data.data : []);
+      setOpenBackdrop(false);
+    });
+  }, []);
 
   useEffect(() => {
     getBranch().then((data) => {
-      setBranches(data.data);
+      if (Array.isArray(data?.data)) {
+        setBranches(data.data);
+      }
     });
     fetchData({});
-  }, [toggleContainer, fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toggleContainer]);
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -303,13 +361,7 @@ export default function Sale() {
   const Alert = forwardRef(AlertComponent);
 
 
-  const handleFilterOpen = () => {
-    setFilterOpen(true);
-  };
 
-  const handleFilterClose = () => {
-    setFilterOpen(false);
-  };
 
   return (
     <>
@@ -341,76 +393,40 @@ export default function Sale() {
 
       <Container maxWidth={false} sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          direction="row"
+          alignItems="center"
           justifyContent="space-between"
-          spacing={{ xs: 1.5, sm: 2 }}
           mb={{ xs: 2.5, sm: 4 }}
         >
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff', mb: { xs: 0, sm: 1 } }}>
+          <Typography variant="h4" sx={{ color: '#fff' }}>
             Billing
           </Typography>
-          <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
-            {(values.fromDate || values.toDate || values.branch || values.phoneNumber) && (
-              <Button
-                variant="contained"
-                size="small"
-                color="error"
-                startIcon={<Iconify icon="eva:trash-2-outline" />}
-                onClick={() => {
-                  resetForm();
-                  setOpenBackdrop(true);
-                  fetchData({});
-                }}
-              >
-                Clear Filter
-              </Button>
-            )}
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
-              onClick={handleFilterOpen}
-            >
-              Filter
-            </Button>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<Iconify icon="carbon:document-export" />}
-              onClick={() => {
-                handleExport(
-                  data?.map((e) => {
-                    console.log(e);
-                    return {
-                      BillId: e.billId,
-                      SaleType: e.saleType,
-                      NetAmount: e.netAmount,
-                      BranchId: e.branch?.branchId,
-                      BranchName: e.branch?.branchName,
-                      OrnamentType: e.purchaseType,
-                      status: e.status,
-                    };
-                  }),
-                  'Sales'
-                );
-              }}
-            >
-              Export
-            </Button>
-          </Stack>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<Iconify icon="carbon:document-export" />}
+            onClick={() => {
+              handleExport(
+                data?.map((e) => {
+                  console.log(e);
+                  return {
+                    BillId: e.billId,
+                    SaleType: e.saleType,
+                    NetAmount: e.netAmount,
+                    BranchId: e.branch?.branchId,
+                    BranchName: e.branch?.branchName,
+                    OrnamentType: e.purchaseType,
+                    status: e.status,
+                  };
+                }),
+                'Sales'
+              );
+            }}
+            sx={{ height: 40 }}
+          >
+            Export
+          </Button>
         </Stack>
-
-        {(values.fromDate || values.toDate || values.branch || values.phoneNumber) && (
-          <p style={{ color: '#fff', paddingBottom: '10px' }}>
-            {[
-              values.fromDate && `From Date: ${moment(values.fromDate).format('YYYY-MM-DD')}`,
-              values.toDate && `To Date: ${moment(values.toDate).format('YYYY-MM-DD')}`,
-              values.branch && branches?.find((e) => e._id === values.branch) && `Branch: ${branches?.find((e) => e._id === values.branch)?.branchName}`,
-              values.phoneNumber && `Phone Number: ${global.maskPhoneNumber(values.phoneNumber)}`,
-            ].filter(Boolean).join(', ')}
-          </p>
-        )}
 
         <Card>
           <SaleListToolbar
@@ -421,7 +437,189 @@ export default function Sale() {
               setDeleteType('selected');
               handleOpenDeleteModal();
             }}
-          />
+          >
+            <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap">
+              {(values.fromDate || values.toDate || values.branch) && (
+                <Button
+                  variant="contained"
+                  size="small"
+                  color="error"
+                  startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
+                  onClick={handleClearFilter}
+                  sx={{ height: 40 }}
+                >
+                  Clear Filter
+                </Button>
+              )}
+              <LocalizationProvider dateAdapter={AdapterMoment}>
+                <DesktopDatePicker
+                  label="From Date"
+                  inputFormat="DD-MM-YYYY"
+                  value={values.fromDate}
+                  onChange={(val) => handleDateChange('fromDate', val)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      size="small"
+                      InputLabelProps={{
+                        ...params.InputLabelProps,
+                        shrink: true,
+                        sx: {
+                          color: '#637381',
+                          fontWeight: 500,
+                          bgcolor: '#ffffff',
+                          px: 0.5,
+                          '&.Mui-focused': {
+                            color: 'primary.main',
+                          },
+                        },
+                      }}
+                      inputProps={{
+                        ...params.inputProps,
+                        placeholder: 'dd-mm-yyyy',
+                      }}
+                      sx={{
+                        width: { xs: 140, sm: 165 },
+                        '& .MuiOutlinedInput-root': {
+                          height: 40,
+                          color: '#212B36',
+                          fontWeight: 500,
+                          bgcolor: '#ffffff',
+                          borderRadius: 1,
+                          '& fieldset': {
+                            borderColor: '#cfd8dc',
+                          },
+                          '&:hover fieldset': {
+                            borderColor: '#90a4ae',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: 'primary.main',
+                          },
+                        },
+                        '& .MuiSvgIcon-root, & .MuiIconButton-root': {
+                          color: '#212B36',
+                        },
+                      }}
+                    />
+                  )}
+                />
+              </LocalizationProvider>
+              <LocalizationProvider dateAdapter={AdapterMoment}>
+                <DesktopDatePicker
+                  label="To Date"
+                  inputFormat="DD-MM-YYYY"
+                  value={values.toDate}
+                  onChange={(val) => handleDateChange('toDate', val)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      size="small"
+                      InputLabelProps={{
+                        ...params.InputLabelProps,
+                        shrink: true,
+                        sx: {
+                          color: '#637381',
+                          fontWeight: 500,
+                          bgcolor: '#ffffff',
+                          px: 0.5,
+                          '&.Mui-focused': {
+                            color: 'primary.main',
+                          },
+                        },
+                      }}
+                      inputProps={{
+                        ...params.inputProps,
+                        placeholder: 'dd-mm-yyyy',
+                      }}
+                      sx={{
+                        width: { xs: 140, sm: 165 },
+                        '& .MuiOutlinedInput-root': {
+                          height: 40,
+                          color: '#212B36',
+                          fontWeight: 500,
+                          bgcolor: '#ffffff',
+                          borderRadius: 1,
+                          '& fieldset': {
+                            borderColor: '#cfd8dc',
+                          },
+                          '&:hover fieldset': {
+                            borderColor: '#90a4ae',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: 'primary.main',
+                          },
+                        },
+                        '& .MuiSvgIcon-root, & .MuiIconButton-root': {
+                          color: '#212B36',
+                        },
+                      }}
+                    />
+                  )}
+                />
+              </LocalizationProvider>
+              <FormControl
+                size="small"
+                sx={{
+                  minWidth: 150,
+                  '& .MuiOutlinedInput-root': {
+                    height: 40,
+                    color: '#212B36',
+                    fontWeight: 500,
+                    bgcolor: '#ffffff',
+                    borderRadius: 1,
+                    '& fieldset': {
+                      borderColor: '#cfd8dc',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#90a4ae',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                  },
+                  '& .MuiSelect-icon': {
+                    color: '#212B36',
+                  },
+                }}
+              >
+                <InputLabel
+                  id="branch-select-label"
+                  shrink
+                  sx={{
+                    color: '#637381',
+                    fontWeight: 500,
+                    bgcolor: '#ffffff',
+                    px: 0.5,
+                    '&.Mui-focused': {
+                      color: 'primary.main',
+                    },
+                  }}
+                >
+                  Branch
+                </InputLabel>
+                <Select
+                  labelId="branch-select-label"
+                  id="branch-select"
+                  label="Branch"
+                  notched
+                  name="branch"
+                  value={values.branch}
+                  onChange={(e) => handleBranchChange(e.target.value)}
+                >
+                  <MenuItem value="">
+                    <em>All Branches</em>
+                  </MenuItem>
+                  {branches
+                    ?.filter((e) => e.isHeadOffice !== 'yes' && !e.branchName?.toLowerCase().includes('head office'))
+                    ?.map((e) => (
+                      <MenuItem key={e._id} value={e._id}>
+                        {e.branchId} {e.branchName}
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
+            </Stack>
+          </SaleListToolbar>
 
           <Scrollbar sx={{ width: '100%' }}>
             <TableContainer sx={{ minWidth: 800 }}>
@@ -471,18 +669,49 @@ export default function Sale() {
                             <Typography variant="subtitle2">
                               {row.customer.name}
                               <br />
-                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                {row.customer.phoneNumber}
-                              </Typography>
+                              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                  {isAdmin || visiblePhoneId === _id ? row.customer.phoneNumber : global.maskPhoneNumber(row.customer.phoneNumber)}
+                                </Typography>
+                                {!isAdmin && row.customer.phoneNumber && (
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setVisiblePhoneId(visiblePhoneId === _id ? null : _id);
+                                    }}
+                                    sx={{ ml: 0.5, p: 0.25 }}
+                                  >
+                                    <Iconify icon={visiblePhoneId === _id ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={14} height={14} />
+                                  </IconButton>
+                                )}
+                              </Box>
                             </Typography>
                           ) : (
                             '-'
                           )}
                         </TableCell>
-                        <TableCell align="left">{branch?.branchId || '-'}</TableCell>
                         <TableCell align="left">{branch?.branchName || '-'}</TableCell>
-                        <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
-                        <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
+                        <TableCell align="left">
+                          {row.biller ? (
+                            <Typography variant="subtitle2">
+                              {row.biller.name || '-'}
+                              {row.biller.employeeId && (
+                                <>
+                                  <br />
+                                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                    {row.biller.employeeId}
+                                  </Typography>
+                                </>
+                              )}
+                            </Typography>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell align="left">
+                          {[sentenceCase(saleType || ''), sentenceCase(purchaseType || '')].filter(Boolean).join(' ') || '-'}
+                        </TableCell>
                         <TableCell align="left">
                           {isReleasePending ? (
                             <Typography variant="body2" sx={{ color: '#8A1B9F', fontWeight: 'bold' }}>
@@ -523,12 +752,12 @@ export default function Sale() {
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={11} />
+                      <TableCell colSpan={10} />
                     </TableRow>
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -544,7 +773,7 @@ export default function Sale() {
                 {filteredData?.length > 0 && isNotFound && (
                   <TableBody>
                     <TableRow>
-                      <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
                         <Paper
                           sx={{
                             textAlign: 'center',
@@ -569,9 +798,9 @@ export default function Sale() {
           </Scrollbar>
 
           <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
+            rowsPerPageOptions={[5, 10, 25, 50, 100]}
             component="div"
-            count={data?.length || 0}
+            count={filteredData?.length || data?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -762,106 +991,6 @@ export default function Sale() {
         </Box>
       </Modal>
 
-      <Dialog open={filterOpen} onClose={handleFilterClose} fullWidth maxWidth="xs">
-        <form
-          ref={form}
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmit(e);
-          }}
-          autoComplete="off"
-        >
-          <DialogTitle>Filter</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={3} sx={{ p: 1 }}>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth error={touched.branch && errors.branch && true}>
-                  <InputLabel id="select-label">Select branch</InputLabel>
-                  <Select
-                    labelId="select-label"
-                    id="select"
-                    label={touched.branch && errors.branch ? errors.branch : 'Select branch'}
-                    name="branch"
-                    value={values.branch}
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                  >
-                    {branches?.filter(e => e.isHeadOffice !== 'yes' && !e.branchName?.toLowerCase().includes('head office'))?.map((e) => (
-                      <MenuItem key={e._id} value={e._id}>
-                        {e.branchId} {e.branchName}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  name="phoneNumber"
-                  type="number"
-                  value={values.phoneNumber}
-                  error={touched.phoneNumber && errors.phoneNumber && true}
-                  label={touched.phoneNumber && errors.phoneNumber ? errors.phoneNumber : 'Phone Number'}
-                  fullWidth
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl sx={{ minWidth: 120 }}>
-                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.fromDate && errors.fromDate && true}>
-                    <DesktopDatePicker
-                      label={touched.fromDate && errors.fromDate ? errors.fromDate : 'From Date'}
-                      inputFormat="MM/DD/YYYY"
-                      name="fromDate"
-                      value={values.fromDate}
-                      onChange={(value) => {
-                        setFieldValue('fromDate', value, true);
-                      }}
-                      renderInput={(params) => <TextField {...params} fullWidth />}
-                    />
-                  </LocalizationProvider>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl sx={{ minWidth: 120 }}>
-                  <LocalizationProvider dateAdapter={AdapterMoment} error={touched.toDate && errors.toDate && true}>
-                    <DesktopDatePicker
-                      label={touched.toDate && errors.toDate ? errors.toDate : 'To Date'}
-                      inputFormat="MM/DD/YYYY"
-                      name="toDate"
-                      value={values.toDate}
-                      onChange={(value) => {
-                        setFieldValue('toDate', value, true);
-                      }}
-                      renderInput={(params) => <TextField {...params} fullWidth />}
-                    />
-                  </LocalizationProvider>
-                </FormControl>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => {
-                setFilterOpen(false);
-                resetForm();
-                setOpenBackdrop(true);
-                fetchData({});
-              }}
-            >
-              Clear
-            </Button>
-            <Button variant="contained" onClick={handleFilterClose}>
-              Close
-            </Button>
-            <Button variant="contained" type="submit">
-              Filter
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
 
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
@@ -938,6 +1067,52 @@ function Status(props) {
   const [verifyType, setVerifyType] = useState('');
 
   const handleVerify = (type) => {
+    if (type === 'finance') {
+      const isPledged = saleType?.toLowerCase() !== 'physical';
+      const isReleaseFinance = isPledged && (!assigneeCompleted || isReleasePending);
+      let isBankRequired = false;
+      let isBankPending = false;
+
+      if (isReleaseFinance) {
+        const rels = row?.release || [];
+        isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+        const isRelVerified = Boolean(
+          (row?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release') ||
+          (!assigneeCompleted && row?.isBankVerified)
+        );
+        isBankPending = isBankRequired && !isRelVerified;
+      } else {
+        isBankRequired = row?.paymentType === 'bank' || (row?.paymentType === 'partial' && Number(row?.bankAmount) > 0);
+        const targetSaleBankId = row?.bank?._id || row?.bank;
+        const matchedSaleBank = (row?.customer?.bank || []).find(
+          (b) =>
+            (targetSaleBankId && String(b._id) === String(targetSaleBankId)) ||
+            (b.accountNo && row?.bank?.accountNo && String(b.accountNo) === String(row?.bank?.accountNo))
+        ) || (typeof row?.bank === 'object' && row?.bank?.accountNo ? row?.bank : null);
+        const saleAcct = matchedSaleBank?.accountNo || row?.bank?.accountNo;
+        const saleId = matchedSaleBank?._id || targetSaleBankId;
+        const isSaleVerified = Boolean(
+          (row?.financePayments || []).some(
+            (fp) => fp.isVerified && (
+              fp.stage === 'sale' ||
+              (saleId && String(fp.bank?.bankId || fp.bank?._id) === String(saleId)) ||
+              (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
+            )
+          ) || (row?.saleType === 'physical' && row?.isBankVerified)
+        );
+        isBankPending = isBankRequired && !isSaleVerified;
+      }
+
+      if (isBankPending) {
+        setNotify?.({
+          open: true,
+          message: `Bank verification required in Billing Summary before updating finance (${isReleaseFinance ? 'Release Bank' : 'Customer Sale Bank'})`,
+          severity: 'warning',
+        });
+        return;
+      }
+    }
+
     setVerifyType(type);
     setOpenVerifyModal(true);
   };
@@ -1005,11 +1180,67 @@ function Status(props) {
     if (isAdmin || userType === 'finance' || userType === 'accounts') {
       const isPledged = saleType?.toLowerCase() !== 'physical';
       const isReleaseFinance = isPledged && (!assigneeCompleted || isReleasePending);
-      content = (
-        <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
-          {isReleaseFinance ? 'Finance Pay Release' : 'Finance Update'}
-        </Button>
-      );
+
+      // Check if bank verification is required for the respective stage
+      let isBankRequired = false;
+      let isBankPendingVerification = false;
+
+      if (isReleaseFinance) {
+        const rels = row?.release || [];
+        isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+        const isRelVerified = Boolean(
+          (row?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release') ||
+          (!assigneeCompleted && row?.isBankVerified)
+        );
+        isBankPendingVerification = isBankRequired && !isRelVerified;
+      } else {
+        isBankRequired = row?.paymentType === 'bank' || (row?.paymentType === 'partial' && Number(row?.bankAmount) > 0);
+        const targetSaleBankId = row?.bank?._id || row?.bank;
+        const matchedSaleBank = (row?.customer?.bank || []).find(
+          (b) =>
+            (targetSaleBankId && String(b._id) === String(targetSaleBankId)) ||
+            (b.accountNo && row?.bank?.accountNo && String(b.accountNo) === String(row?.bank?.accountNo))
+        ) || (typeof row?.bank === 'object' && row?.bank?.accountNo ? row?.bank : null);
+        const saleAcct = matchedSaleBank?.accountNo || row?.bank?.accountNo;
+        const saleId = matchedSaleBank?._id || targetSaleBankId;
+        const isSaleVerified = Boolean(
+          (row?.financePayments || []).some(
+            (fp) => fp.isVerified && (
+              fp.stage === 'sale' ||
+              (saleId && String(fp.bank?.bankId || fp.bank?._id) === String(saleId)) ||
+              (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
+            )
+          ) || (row?.saleType === 'physical' && row?.isBankVerified)
+        );
+        isBankPendingVerification = isBankRequired && !isSaleVerified;
+      }
+
+      if (isBankPendingVerification) {
+        content = (
+          <Tooltip title={`Bank verification required in Billing Summary before updating finance (${isReleaseFinance ? 'Release Bank' : 'Customer Sale Bank'})`} arrow>
+            <span>
+              <Button
+                variant="contained"
+                size="small"
+                disabled
+                sx={{
+                  bgcolor: 'action.disabledBackground',
+                  color: 'text.disabled',
+                  cursor: 'not-allowed',
+                }}
+              >
+                {isReleaseFinance ? 'Finance Pay Release' : 'Finance Update'}
+              </Button>
+            </span>
+          </Tooltip>
+        );
+      } else {
+        content = (
+          <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
+            {isReleaseFinance ? 'Finance Pay Release' : 'Finance Update'}
+          </Button>
+        );
+      }
     } else {
       content = <Label color="warning">Finance Pending</Label>;
     }
@@ -1102,6 +1333,19 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     },
     validationSchema: schema,
     onSubmit: async (values) => {
+      if (type === 'finance') {
+        const isPledged = (saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged';
+        const isPledgedStage = isPledged && !(saleDetails?.assigneeCompleted ?? assigneeCompleted);
+        const bankRequired = isPledgedStage
+          ? (saleDetails?.release || []).some((r) => r.paymentType === 'bank' || r.bank)
+          : (saleDetails?.paymentType === 'bank' || (saleDetails?.paymentType === 'partial' && Number(saleDetails?.bankAmount) > 0));
+
+        if (bankRequired && !saleDetails?.isBankVerified) {
+          alert('Customer bank has not been verified yet. Please verify the bank in the Billing Summary before updating finance.');
+          return;
+        }
+      }
+
       setLoading(true);
 
       const payload = {};
@@ -1228,6 +1472,11 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
   const showBankDropdown = type === 'finance' && (
     isPledgedReleaseStage ? hasBankRelease : saleDetails?.paymentType !== 'cash'
   );
+
+  const bankRequired = isPledgedReleaseStage
+    ? (saleDetails?.release || []).some((r) => r.paymentType === 'bank' || r.bank)
+    : (saleDetails?.paymentType === 'bank' || (saleDetails?.paymentType === 'partial' && Number(saleDetails?.bankAmount) > 0));
+  const isBankPendingVerification = type === 'finance' && bankRequired && !saleDetails?.isBankVerified;
 
   useEffect(() => {
     if (open && id) {
@@ -1753,6 +2002,14 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               </Grid>
             )}
 
+            {isBankPendingVerification && (
+              <Grid item xs={12}>
+                <MuiAlert severity="error" sx={{ mb: 1 }}>
+                  Customer bank has not been verified yet. Please verify the bank in the Billing Summary before updating finance.
+                </MuiAlert>
+              </Grid>
+            )}
+
             <Grid item xs={12}>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Checkbox
@@ -1767,7 +2024,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         </DialogContent>
         <DialogActions>
           <Button onClick={handleModalClose}>Cancel</Button>
-          <LoadingButton type="submit" variant="contained" loading={loading || isUploading} disabled={isUploading} sx={{ color: '#fff' }}>
+          <LoadingButton type="submit" variant="contained" loading={loading || isUploading} disabled={isUploading || isBankPendingVerification} sx={{ color: '#fff' }}>
             Save & Update Status
           </LoadingButton>
         </DialogActions>

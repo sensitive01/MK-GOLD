@@ -100,6 +100,8 @@ function applySortFilter(array, comparator, query) {
 export default function Customer({ isTab = false }) {
   const Wrapper = isTab ? Box : Container;
   const auth = useSelector((state) => state.auth);
+  const isAdmin = auth.user?.userType?.toLowerCase() === 'admin';
+  const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const [branch, setBranch] = useState({});
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
@@ -440,7 +442,23 @@ export default function Customer({ isTab = false }) {
                         )}
                         <TableCell align="left">{sentenceCase(name ?? '')}</TableCell>
                         <TableCell align="left">{email}</TableCell>
-                        <TableCell align="left">{global.maskPhoneNumber(phoneNumber)}</TableCell>
+                        <TableCell align="left">
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            {isAdmin || visiblePhoneId === _id ? phoneNumber : global.maskPhoneNumber(phoneNumber)}
+                            {!isAdmin && phoneNumber && (
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setVisiblePhoneId(visiblePhoneId === _id ? null : _id);
+                                }}
+                                sx={{ ml: 0.5, p: 0.25 }}
+                              >
+                                <Iconify icon={visiblePhoneId === _id ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={16} height={16} />
+                              </IconButton>
+                            )}
+                          </Box>
+                        </TableCell>
                         <TableCell align="left">{sentenceCase(gender ?? '')}</TableCell>
                         <TableCell align="left">
                           <Label

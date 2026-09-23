@@ -134,6 +134,10 @@ const Customer = mongoose.model(
             type: mongoose.Schema.Types.ObjectId,
             ref: "employees",
           },
+          isVerified: {
+            type: Boolean,
+            default: false,
+          },
         }, { timestamps: true }),
       ],
       source: {

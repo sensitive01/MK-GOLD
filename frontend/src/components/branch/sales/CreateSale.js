@@ -68,6 +68,7 @@ const getFileUrl = (url) => {
 
 
 function CreateSale(props) {
+  const { setNotify } = props;
   const auth = useSelector((state) => state.auth);
   const [branch, setBranch] = useState({});
   const [goldRate, setGoldRate] = useState({});
@@ -101,14 +102,23 @@ function CreateSale(props) {
   const loadAddresses = () => {
     if (selectedUser) {
       getAddressById(selectedUser._id).then((res) => {
-        setAddresses(res.data || []);
-        if (res.data && res.data.length > 0) {
-          // If no address is selected, auto-select the last added address
-          setSelectedAddress(res.data[res.data.length - 1]);
+        const addrList = res.data || [];
+        setAddresses(addrList);
+        if (addrList.length > 0) {
+          // If no address is selected or current selectedAddress is not in the list, auto-select the latest
+          setSelectedAddress((prev) => {
+            if (prev && addrList.some((a) => a._id === prev._id)) {
+              return prev;
+            }
+            return addrList[addrList.length - 1];
+          });
+        } else {
+          setSelectedAddress(null);
         }
       });
     } else {
       setAddresses([]);
+      setSelectedAddress(null);
     }
   };
 
@@ -173,11 +183,13 @@ function CreateSale(props) {
           // Set step to 2 to skip customer selection if already present
           setStep(2);
         } else {
-          setNotify({
-            open: true,
-            message: 'Failed to fetch sale data: ' + data.message,
-            severity: 'error',
-          });
+          if (setNotify) {
+            setNotify({
+              open: true,
+              message: 'Failed to fetch sale data: ' + (data?.message || 'Error'),
+              severity: 'error',
+            });
+          }
         }
       });
     }
@@ -208,6 +220,23 @@ function CreateSale(props) {
     },
     validationSchema: schema,
     onSubmit: (values) => {
+      if (!selectedAddress) {
+        props.setNotify({
+          open: true,
+          message: 'Customer address is mandatory to create a sale. Please add and select a billing address.',
+          severity: 'error',
+        });
+        return;
+      }
+      const isBankPaymentRequired = values.paymentType === 'bank' || (values.paymentType === 'partial' && Number(values.bankAmount) > 0);
+      if (isBankPaymentRequired && !selectedBank) {
+        props.setNotify({
+          open: true,
+          message: 'Customer bank is mandatory for bank payment. Please mark a bank for sale.',
+          severity: 'error',
+        });
+        return;
+      }
       if (values.saleType === 'pledged') {
         setOpenConfirmModal(true);
       } else {
@@ -285,6 +314,7 @@ function CreateSale(props) {
     employee: auth.user._id,
     customer: selectedUser?._id,
     branch: branch?._id,
+    address: selectedAddress?._id,
     goldRate: goldRate?.rate ?? 0,
     release: selectedRelease?.map((e) => e._id),
     silverRate: silverRate?.rate ?? 0,
@@ -299,12 +329,29 @@ function CreateSale(props) {
   const showOrnaments = values.saleType === 'physical' || (values.saleType === 'pledged' && isReleaseCompleted);
 
   const submitSale = () => {
+    if (!selectedAddress) {
+      props.setNotify({
+        open: true,
+        message: 'Customer address is mandatory to create a sale. Please add and select a billing address.',
+        severity: 'error',
+      });
+      return;
+    }
+    const isBankPaymentRequired = values.paymentType === 'bank' || (values.paymentType === 'partial' && Number(values.bankAmount) > 0);
+    if (isBankPaymentRequired && !selectedBank) {
+      props.setNotify({
+        open: true,
+        message: 'Customer bank is mandatory for bank payment. Please mark a bank for sale.',
+        severity: 'error',
+      });
+      return;
+    }
     const apiCall = props.id ? updateSales(props.id, payload) : createSales(payload);
     apiCall.then((data) => {
       if (data.status === false) {
         props.setNotify({
           open: true,
-          message: props.id ? 'Sale not updated' : 'Sale not created',
+          message: data.message || (props.id ? 'Sale not updated' : 'Sale not created'),
           severity: 'error',
         });
       } else {
@@ -403,12 +450,12 @@ function CreateSale(props) {
             <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
               <Grid item xs={12} sm={8}>
                 {addresses && addresses.length > 0 ? (
-                  <FormControl fullWidth size="small">
-                    <InputLabel id="select-address-label">Billing Address</InputLabel>
+                  <FormControl fullWidth size="small" required error={!selectedAddress}>
+                    <InputLabel id="select-address-label">Billing Address *</InputLabel>
                     <Select
                       labelId="select-address-label"
                       value={selectedAddress?._id || ''}
-                      label="Billing Address"
+                      label="Billing Address *"
                       onChange={(e) => {
                         const addr = addresses.find((a) => a._id === e.target.value);
                         setSelectedAddress(addr);
@@ -422,16 +469,27 @@ function CreateSale(props) {
                     </Select>
                   </FormControl>
                 ) : (
-                  <Typography variant="body1" color="text.secondary" sx={{ fontStyle: 'italic', pl: 1 }}>
-                    No address added
-                  </Typography>
+                  <Box
+                    sx={{
+                      p: 1.25,
+                      border: '1px dashed #d32f2f',
+                      borderRadius: 1,
+                      bgcolor: '#fff5f5',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Typography variant="body2" color="error" sx={{ fontWeight: 600 }}>
+                      * Customer address is mandatory to create a sale. Please click &quot;Add Address&quot;.
+                    </Typography>
+                  </Box>
                 )}
               </Grid>
               <Grid item xs={12} sm={4}>
                 <Button
                   type="button"
                   variant="contained"
-                  color="primary"
+                  color={!addresses || addresses.length === 0 ? 'error' : 'primary'}
                   size="small"
                   startIcon={<Iconify icon="eva:plus-fill" />}
                   onClick={() => setAddressModalOpen(true)}
@@ -458,7 +516,7 @@ function CreateSale(props) {
                   id="select"
                   label={touched.purchaseType && errors.purchaseType ? errors.purchaseType : 'Select purchase type'}
                   name="purchaseType"
-                  value={values.purchaseType}
+                  value={values.purchaseType || ''}
                   onBlur={handleBlur}
                   onChange={handleChange}
                 >
@@ -475,7 +533,7 @@ function CreateSale(props) {
                   id="select"
                   label={touched.saleType && errors.saleType ? errors.saleType : 'Select sale type'}
                   name="saleType"
-                  value={values.saleType}
+                  value={values.saleType || ''}
                   onBlur={handleBlur}
                   onChange={handleChange}
                 >
@@ -507,7 +565,7 @@ function CreateSale(props) {
                   id="select"
                   label={touched.paymentType && errors.paymentType ? errors.paymentType : 'Select payment type'}
                   name="paymentType"
-                  value={values.paymentType}
+                  value={values.paymentType || ''}
                   onBlur={handleBlur}
                   onChange={handleChange}
                 >
@@ -522,7 +580,7 @@ function CreateSale(props) {
                 <TextField
                   name="cashAmount"
                   type={'number'}
-                  value={values.cashAmount}
+                  value={values.cashAmount ?? ''}
                   error={touched.cashAmount && errors.cashAmount && true}
                   label={touched.cashAmount && errors.cashAmount ? errors.cashAmount : 'Cash Amount'}
                   fullWidth
@@ -546,7 +604,7 @@ function CreateSale(props) {
                 <TextField
                   name="bankAmount"
                   type={'number'}
-                  value={values.bankAmount}
+                  value={values.bankAmount ?? ''}
                   error={touched.bankAmount && errors.bankAmount && true}
                   label={touched.bankAmount && errors.bankAmount ? errors.bankAmount : 'Bank Amount'}
                   fullWidth
@@ -569,7 +627,7 @@ function CreateSale(props) {
               <TextField
                 name="margin"
                 type={'number'}
-                value={values.margin}
+                value={values.margin ?? ''}
                 error={touched.margin && errors.margin && true}
                 label={touched.margin && errors.margin ? errors.margin : 'Margin'}
                 fullWidth
@@ -603,13 +661,15 @@ function CreateSale(props) {
                 selectedUser={selectedUser}
                 selectedBank={selectedBank}
                 setSelectedBank={setSelectedBank}
+                paymentType={values.paymentType}
+                bankAmount={values.bankAmount}
                 {...props}
               />
             )}
             <Grid item xs={12}>
               <TextField
                 name="comments"
-                value={values.comments}
+                value={values.comments || ''}
                 label="Comments (Optional)"
                 fullWidth
                 multiline
@@ -638,60 +698,85 @@ function CreateSale(props) {
                 endIcon={<Iconify icon="eva:arrow-ios-forward-fill" />}
                 sx={{ ml: { xs: 0, sm: 3 }, bgcolor: 'primary.main', color: '#fff', '&:hover': { bgcolor: 'primary.dark' }, '& .iconify': { color: '#fff' }, width: { xs: '100%', sm: 'auto' } }}
                 onClick={async () => {
-                  if (values.paymentType === 'bank' && !selectedBank) {
+                  if (!selectedAddress) {
                     props.setNotify({
                       open: true,
-                      message: 'Please select bank',
-                      severity: 'info',
+                      message: (!addresses || addresses.length === 0)
+                        ? 'Customer address is mandatory. Please add an address to continue.'
+                        : 'Customer billing address is mandatory. Please select an address.',
+                      severity: 'error',
                     });
-                  } else if (values.paymentType === 'partial' && values.bankAmount === '') {
-                    props.setNotify({
-                      open: true,
-                      message: 'Please enter bank amount',
-                      severity: 'info',
-                    });
-                  } else if (values.paymentType === 'partial' && values.cashAmount === '') {
-                    props.setNotify({
-                      open: true,
-                      message: 'Please enter cash amount',
-                      severity: 'info',
-                    });
-                  } else if (values.saleType === 'pledged' && selectedRelease?.length === 0) {
-                    props.setNotify({
-                      open: true,
-                      message: 'Please select release',
-                      severity: 'info',
-                    });
-                  } else if (showOrnaments && ornaments?.length === 0) {
-                    props.setNotify({
-                      open: true,
-                      message: 'Please add ornaments',
-                      severity: 'info',
-                    });
-                  } else if (!values.purchaseType) {
-                    props.setNotify({
-                      open: true,
-                      message: 'Please select ornament type',
-                      severity: 'info',
-                    });
-                  } else if (!values.saleType) {
+                    return;
+                  }
+                  if (!values.saleType) {
                     props.setNotify({
                       open: true,
                       message: 'Please select sale type',
                       severity: 'info',
                     });
-                  } else if (!values.paymentType) {
+                    return;
+                  }
+                  if (!values.purchaseType) {
+                    props.setNotify({
+                      open: true,
+                      message: 'Please select ornament type',
+                      severity: 'info',
+                    });
+                    return;
+                  }
+                  if (!values.paymentType) {
                     props.setNotify({
                       open: true,
                       message: 'Please select payment type',
                       severity: 'info',
                     });
+                    return;
+                  }
+                  if (values.paymentType === 'partial' && (values.bankAmount === '' || values.bankAmount === null || values.bankAmount === undefined)) {
+                    props.setNotify({
+                      open: true,
+                      message: 'Please enter bank amount',
+                      severity: 'info',
+                    });
+                    return;
+                  }
+                  if (values.paymentType === 'partial' && (values.cashAmount === '' || values.cashAmount === null || values.cashAmount === undefined)) {
+                    props.setNotify({
+                      open: true,
+                      message: 'Please enter cash amount',
+                      severity: 'info',
+                    });
+                    return;
+                  }
+                  const isBankPaymentRequired = values.paymentType === 'bank' || (values.paymentType === 'partial' && Number(values.bankAmount) > 0);
+                  if (isBankPaymentRequired && !selectedBank) {
+                    props.setNotify({
+                      open: true,
+                      message: 'Customer bank is mandatory for bank payment. Please mark a bank for sale.',
+                      severity: 'error',
+                    });
+                    return;
+                  }
+                  if (values.saleType === 'pledged' && selectedRelease?.length === 0) {
+                    props.setNotify({
+                      open: true,
+                      message: 'Please select release',
+                      severity: 'info',
+                    });
+                    return;
+                  }
+                  if (showOrnaments && ornaments?.length === 0) {
+                    props.setNotify({
+                      open: true,
+                      message: 'Please add ornaments',
+                      severity: 'info',
+                    });
+                    return;
+                  }
+                  if (values.saleType === 'pledged' && !isReleaseCompleted) {
+                    setOpenConfirmModal(true);
                   } else {
-                    if (values.saleType === 'pledged' && !isReleaseCompleted) {
-                      setOpenConfirmModal(true);
-                    } else {
-                      setStep(4);
-                    }
+                    setStep(4);
                   }
                 }}
               >

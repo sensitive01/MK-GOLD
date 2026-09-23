@@ -50,12 +50,14 @@ SaleListToolbar.propTypes = {
   filterName: PropTypes.string,
   onFilterName: PropTypes.func,
   userType: PropTypes.string,
+  children: PropTypes.node,
 };
 
-export default function SaleListToolbar({ handleDelete, numSelected, filterName, onFilterName, userType }) {
+export default function SaleListToolbar({ handleDelete, numSelected, filterName, onFilterName, userType, children }) {
   return (
     <StyledRoot
       sx={{
+        padding: (theme) => ({ xs: theme.spacing(1.5), sm: theme.spacing(0, 3) }),
         ...(numSelected > 0 && {
           color: 'primary.main',
           bgcolor: 'primary.lighter',
@@ -89,7 +91,9 @@ export default function SaleListToolbar({ handleDelete, numSelected, filterName,
             <Iconify icon="eva:trash-2-fill" />
           </IconButton>
         </Tooltip>
-      ) : null}
+      ) : (
+        children || null
+      )}
     </StyledRoot>
   );
 }

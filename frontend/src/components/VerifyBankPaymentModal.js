@@ -114,7 +114,7 @@ export default function VerifyBankPaymentModal({
       const uploadedProofPath = uploadRes.data?.uploadedFile;
 
       // 2. Call verification API
-      const paymentIdentifier = payment?._id || payment?.paymentIndex || 0;
+      const paymentIdentifier = payment?._id || (payment?.paymentIndex !== undefined && payment?.paymentIndex !== null ? payment.paymentIndex : 'new');
       const verifyFn = verifyApi;
       if (!verifyFn) {
         throw new Error('Verification API handler not provided');
@@ -123,8 +123,10 @@ export default function VerifyBankPaymentModal({
       const res = await verifyFn(saleId, paymentIdentifier, {
         amount: Number(amount),
         proof: uploadedProofPath,
+        bank: bank || payment?.bank || {},
+        stage: payment?.stage || 'sale',
       });
-
+      
       if (res && res.status) {
         setNotify?.({
           open: true,

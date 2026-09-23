@@ -24,6 +24,9 @@ const Sales = mongoose.model(
         ref: "branches",
         required: true,
       },
+      address: {
+        type: mongoose.Schema.Types.ObjectId,
+      },
       saleType: {
         type: String,
         required: true,
@@ -171,6 +174,17 @@ const Sales = mongoose.model(
       },
       financeCompletedAt: {
         type: Date,
+      },
+      isBankVerified: {
+        type: Boolean,
+        default: false,
+      },
+      bankVerifiedAt: {
+        type: Date,
+      },
+      bankVerifiedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "employees",
       },
       financePayments: [
         {
