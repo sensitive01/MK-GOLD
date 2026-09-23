@@ -964,7 +964,9 @@ function Status(props) {
     (isAdmin || moment(row?.financeCompletedAt || row?.actionAt || row?.updatedAt || row?.createdAt).isSame(moment(), 'day'))
   );
 
-  if (hasFinanceUpdatedToday && (isAdmin || userType === 'finance' || userType === 'accounts')) {
+  const canShowUpdateFinance = isAdmin;
+
+  if (hasFinanceUpdatedToday && canShowUpdateFinance) {
     content = (
       <Stack direction="row" spacing={1} alignItems="center">
         <Label
@@ -1146,13 +1148,19 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           payload.financeComments = values.comments;
           if (values.proof) payload.financeProof = values.proof;
         } else {
-          payload.financeAmount = values.amount !== '' ? Number(values.amount) : undefined;
+          const prevPaid = (saleDetails?.financePayments || [])
+            .filter((fp) => fp.stage === 'sale')
+            .reduce((sum, fp) => sum + (+fp.amount || 0), 0);
+          const enteredAmt = values.amount !== '' ? Number(values.amount) : 0;
+          payload.financeAmount = saleDetails?.status === 'completed'
+            ? (values.amount !== '' ? Number(values.amount) : undefined)
+            : (prevPaid + enteredAmt);
           payload.payableAmount = saleDetails?.payableAmount;
           payload.financeComments = values.comments;
           payload.financeProof = values.proof;
           const selectedPt = values.paymentType || (saleDetails?.paymentType === 'cash' ? 'cash' : 'bank');
           payload.newFinancePayment = {
-            amount: values.amount !== '' ? Number(values.amount) : 0,
+            amount: enteredAmt,
             paymentType: selectedPt,
             bank: selectedPt === 'bank' && selectedBank ? {
               bankId: selectedBank._id,
@@ -1173,7 +1181,8 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
             payload.isFinanceReupdate = true;
           } else {
             const isPhys = (saleDetails?.saleType || saleType || '').toLowerCase() === 'physical';
-            payload.status = (isPhys || assigneeCompleted) ? 'completed' : (saleDetails?.status || 'release pending');
+            const isAssigneeDone = Boolean(saleDetails?.assigneeCompleted ?? assigneeCompleted);
+            payload.status = (isPhys || isAssigneeDone) ? 'completed' : 'release pending';
           }
         }
       } else if (type === 'fund transfer') {
@@ -1284,7 +1293,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               const alreadyPaidRelease = existingReleasePayments.reduce((sum, fp) => sum + (+fp.amount || 0), 0);
               const remRelease = Math.max(0, targetTotal - alreadyPaidRelease);
 
-              setFieldValue('amount', Math.round(alreadyPaidRelease > 0 ? alreadyPaidRelease : (remRelease > 0 ? remRelease : targetTotal)));
+              setFieldValue('amount', Math.round(remRelease > 0 ? remRelease : targetTotal));
 
               if (sale.financeProof) {
                 setFieldValue('proof', sale.financeProof);
@@ -1341,7 +1350,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               const alreadyPaidSale = existingSalePayments.reduce((sum, fp) => sum + (+fp.amount || 0), 0);
               const remSale = Math.max(0, fullPayable - alreadyPaidSale);
 
-              setFieldValue('amount', Math.round(alreadyPaidSale > 0 ? alreadyPaidSale : (remSale > 0 ? remSale : fullPayable)));
+              setFieldValue('amount', Math.round(remSale > 0 ? remSale : fullPayable));
 
               if (sale.bank) {
                 const saleBankId = sale.bank._id || sale.bank;
@@ -1501,21 +1510,57 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                       <Typography variant="subtitle2" sx={{ color: 'text.secondary', minWidth: 110 }}>
                         Payment Mode:
                       </Typography>
-                      <RadioGroup
-                        row
-                        name="paymentType"
-                        value={values.paymentType || (saleDetails?.paymentType === 'cash' ? 'cash' : 'bank')}
-                        onChange={(e) => {
-                          handleChange(e);
-                          if (e.target.value === 'cash') {
-                            setSelectedBank(null);
-                            setFieldValue('bankId', '');
-                          }
-                        }}
-                      >
-                        <FormControlLabel value="cash" control={<Radio size="small" />} label="Cash" />
-                        <FormControlLabel value="bank" control={<Radio size="small" />} label="Bank Transfer" />
-                      </RadioGroup>
+                      {isPledgedReleaseStage ? (
+                        (bankReleases.length > 0 && !saleDetails?.release?.some((r) => String(r?.paymentType || '').toLowerCase() === 'cash')) ? (
+                          <Label color="info" sx={{ fontSize: '0.875rem', px: 1.5, py: 0.5 }}>
+                            Bank Transfer
+                          </Label>
+                        ) : (!bankReleases.length && saleDetails?.release?.some((r) => String(r?.paymentType || '').toLowerCase() === 'cash')) ? (
+                          <Label color="success" sx={{ fontSize: '0.875rem', px: 1.5, py: 0.5 }}>
+                            Cash
+                          </Label>
+                        ) : (
+                          <RadioGroup
+                            row
+                            name="paymentType"
+                            value={values.paymentType || (saleDetails?.paymentType === 'cash' ? 'cash' : 'bank')}
+                            onChange={(e) => {
+                              handleChange(e);
+                              if (e.target.value === 'cash') {
+                                setSelectedBank(null);
+                                setFieldValue('bankId', '');
+                              }
+                            }}
+                          >
+                            <FormControlLabel value="cash" control={<Radio size="small" />} label="Cash" />
+                            <FormControlLabel value="bank" control={<Radio size="small" />} label="Bank Transfer" />
+                          </RadioGroup>
+                        )
+                      ) : (saleDetails?.paymentType === 'cash' || values.paymentType === 'cash') && saleDetails?.paymentType !== 'bank' ? (
+                        <Label color="success" sx={{ fontSize: '0.875rem', px: 1.5, py: 0.5 }}>
+                          Cash
+                        </Label>
+                      ) : (saleDetails?.paymentType === 'bank' || values.paymentType === 'bank') && saleDetails?.paymentType !== 'cash' ? (
+                        <Label color="info" sx={{ fontSize: '0.875rem', px: 1.5, py: 0.5 }}>
+                          Bank Transfer
+                        </Label>
+                      ) : (
+                        <RadioGroup
+                          row
+                          name="paymentType"
+                          value={values.paymentType || (saleDetails?.paymentType === 'cash' ? 'cash' : 'bank')}
+                          onChange={(e) => {
+                            handleChange(e);
+                            if (e.target.value === 'cash') {
+                              setSelectedBank(null);
+                              setFieldValue('bankId', '');
+                            }
+                          }}
+                        >
+                          <FormControlLabel value="cash" control={<Radio size="small" />} label="Cash" />
+                          <FormControlLabel value="bank" control={<Radio size="small" />} label="Bank Transfer" />
+                        </RadioGroup>
+                      )}
                     </Stack>
                   </Grid>
                 )}
