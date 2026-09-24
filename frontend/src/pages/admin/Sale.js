@@ -1045,8 +1045,7 @@ function Status(props) {
         const rels = row?.release || [];
         isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
         const isRelVerified = Boolean(
-          (row?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release') ||
-          (!assigneeCompleted && row?.isBankVerified)
+          (row?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
         );
         isBankPending = isBankRequired && !isRelVerified;
       } else {
@@ -1126,7 +1125,7 @@ function Status(props) {
   const hasFinanceUpdatedToday = Boolean(
     status !== 'finance pending' &&
     (status === 'completed' || row?.financeCompleted || (row?.financePayments && row.financePayments.length > 0)) &&
-    (isAdmin || moment(row?.financeCompletedAt || row?.actionAt || row?.updatedAt || row?.createdAt).isSame(moment(), 'day'))
+    moment(row?.createdAt).isSame(moment(), 'day')
   );
 
   const canShowUpdateFinance = isAdmin;
@@ -1180,8 +1179,7 @@ function Status(props) {
         const rels = row?.release || [];
         isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
         const isRelVerified = Boolean(
-          (row?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release') ||
-          (!assigneeCompleted && row?.isBankVerified)
+          (row?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
         );
         isBankPendingVerification = isBankRequired && !isRelVerified;
       } else {
@@ -1487,14 +1485,34 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
 
       if (type === 'finance') {
         const isPledged = (saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged';
-        const isPledgedStage = isPledged && !(saleDetails?.assigneeCompleted ?? assigneeCompleted);
-        const bankRequired = isPledgedStage
-          ? (saleDetails?.release || []).some((r) => r.paymentType === 'bank' || r.bank)
-          : (saleDetails?.paymentType === 'bank' || (saleDetails?.paymentType === 'partial' && Number(saleDetails?.bankAmount) > 0));
-
-        if (bankRequired && !saleDetails?.isBankVerified) {
-          alert('Customer bank has not been verified yet. Please verify the bank in the Billing Summary before updating finance.');
-          return;
+        if (isPledgedStage) {
+          const rels = saleDetails?.release || [];
+          const bankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+          const isRelVerified = Boolean(
+            (saleDetails?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
+          );
+          if (bankRequired && !isRelVerified) {
+            alert('Release bank has not been verified yet. Please verify the Release Bank in the Billing Summary before paying release.');
+            return;
+          }
+        } else {
+          const isPartial = saleDetails?.paymentType === 'partial';
+          const bankRequired = saleDetails?.paymentType === 'bank' || (isPartial && Number(values.bankAmount || saleDetails?.bankAmount) > 0);
+          const targetSaleBankId = saleDetails?.bank?._id || saleDetails?.bank;
+          const saleAcct = saleDetails?.bank?.accountNo;
+          const isSaleVerified = Boolean(
+            (saleDetails?.financePayments || []).some(
+              (fp) => fp.isVerified && (
+                fp.stage === 'sale' ||
+                (targetSaleBankId && String(fp.bank?.bankId || fp.bank?._id) === String(targetSaleBankId)) ||
+                (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
+              )
+            )
+          );
+          if (bankRequired && !isSaleVerified) {
+            alert('Customer sale bank has not been verified yet. Please verify the bank in the Billing Summary before updating finance.');
+            return;
+          }
         }
       }
 

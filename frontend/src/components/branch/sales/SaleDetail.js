@@ -497,6 +497,10 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
   }
 
   function Release() {
+    if (!data?.release || data.release.length === 0) {
+      return null;
+    }
+
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
 
@@ -1343,27 +1347,15 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
     };
 
     if (allProofs.length === 0) {
-      return (
-        <Paper
-          sx={{
-            py: 3,
-            px: 2,
-            textAlign: 'center',
-            bgcolor: 'background.neutral',
-            border: '1px dashed',
-            borderColor: 'divider',
-            borderRadius: 1.5,
-          }}
-        >
-          <Typography variant="body2" color="text.secondary">
-            No proof documents available
-          </Typography>
-        </Paper>
-      );
+      return null;
     }
 
     return (
-      <Box sx={{ mb: 2 }}>
+      <Grid item xs={12}>
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          Proof Documents
+        </Typography>
+        <Box sx={{ mb: 2 }}>
         <Grid container spacing={2}>
           {allProofs.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((e, index) => {
             const isImage = Boolean(e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i));
@@ -1541,7 +1533,8 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           sx={{ mt: 1 }}
         />
       </Box>
-    );
+    </Grid>
+  );
   }
 
   function TransitProof() {
@@ -2023,6 +2016,10 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
   }
 
   function Address() {
+    if (!data?.customer?.address || data.customer.address.length === 0) {
+      return null;
+    }
+
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
 
@@ -2274,12 +2271,14 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 </Stack>
               </Box>
             </Grid>
-            <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                Address Detail:
-              </Typography>
-              <Address />
-            </Grid>
+            {data?.customer?.address && data.customer.address.length > 0 && (
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Address Detail:
+                </Typography>
+                <Address />
+              </Grid>
+            )}
             {data?.ornaments && data.ornaments.length > 0 && (
               <Grid item xs={12}>
                 <Typography variant="h6" sx={{ mb: 1 }}>
@@ -2288,7 +2287,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 <Ornament />
               </Grid>
             )}
-            {data?.saleType !== 'physical' && (
+            {data?.saleType !== 'physical' && data?.release && data.release.length > 0 && (
               <Grid item xs={12}>
                 <Typography variant="h6" sx={{ mb: 1 }}>
                   Release Detail:
@@ -2397,7 +2396,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                                 String(fp.bank?.bankId || fp.bank?._id) === String(rb.fullBank?._id) ||
                                 (fp.bank?.accountNo && fp.bank.accountNo === rb.fullBank?.accountNo)
                               )
-                            ) || data?.isBankVerified
+                            )
                           );
                           return (
                             <BankDetailCard
@@ -2473,12 +2472,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 <FinancePayments />
               </Grid>
             )}
-            <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                Proof Documents
-              </Typography>
-              <Proof />
-            </Grid>
+            <Proof />
             {isMovedToTransit && (
               <Grid item xs={12}>
                 <Typography variant="h6" sx={{ mb: 1 }}>

@@ -1530,19 +1530,35 @@ async function update(id, payload) {
       const isPledgedRelease = sale.saleType === 'pledged' && !sale.assigneeCompleted;
 
       if (isPledgedRelease) {
-        const rels = sale.release || [];
-        const bankRequired = rels.some(r => r.paymentType === 'bank' || r.bank);
+        let bankRequired = false;
+        if (payload.newFinancePayment && payload.newFinancePayment.paymentType === 'bank') {
+          bankRequired = true;
+        } else if (payload.newFinancePayments && payload.newFinancePayments.some(p => p.paymentType === 'bank')) {
+          bankRequired = true;
+        }
+
+        if (!bankRequired) {
+          let rels = sale.release || [];
+          if (rels.length > 0 && (typeof rels[0] === 'string' || mongoose.Types.ObjectId.isValid(String(rels[0])) || !rels[0].paymentType)) {
+            const ReleaseModel = require("../models/release");
+            const relIds = rels.map(r => r._id || r);
+            rels = await ReleaseModel.find({ _id: { $in: relIds } }).lean().exec();
+          }
+          bankRequired = rels.some(r => r.paymentType === 'bank' || r.bank);
+        }
+
         if (bankRequired) {
           const isReleaseBankVerified = Boolean(
-            (sale.financePayments || []).some(fp => fp.isVerified && fp.stage === 'release') ||
-            (!sale.assigneeCompleted && sale.isBankVerified)
+            (sale.financePayments || []).some(fp => fp.isVerified && fp.stage === 'release')
           );
           if (!isReleaseBankVerified) {
             throw new Error("Release bank must be verified in Billing Summary before paying release.");
           }
         }
       } else {
-        const bankRequired = sale.paymentType === 'bank' || (sale.paymentType === 'partial' && Number(sale.bankAmount) > 0);
+        const bankRequired = sale.paymentType === 'bank' || (sale.paymentType === 'partial' && Number(sale.bankAmount) > 0) ||
+          (payload.newFinancePayment && payload.newFinancePayment.paymentType === 'bank') ||
+          (payload.newFinancePayments && payload.newFinancePayments.some(p => p.paymentType === 'bank'));
         if (bankRequired) {
           const targetSaleBankId = sale.bank?._id || sale.bank;
           const saleAcct = sale.bank?.accountNo;
@@ -1555,7 +1571,7 @@ async function update(id, payload) {
                 (saleId && String(fp.bank?.bankId || fp.bank?._id) === String(saleId)) ||
                 (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
               )
-            ) || (sale.saleType === 'physical' && sale.isBankVerified)
+            ) || (sale.saleType === 'physical' && sale.isBankVerified && !(sale.financePayments || []).length)
           );
           if (!isSaleBankVerified) {
             throw new Error("Customer sale bank must be verified in Billing Summary before updating finance.");
@@ -1685,19 +1701,35 @@ async function updateWithLog(id, setData, logEntry) {
       const isPledgedRelease = sale.saleType === 'pledged' && !sale.assigneeCompleted;
 
       if (isPledgedRelease) {
-        const rels = sale.release || [];
-        const bankRequired = rels.some(r => r.paymentType === 'bank' || r.bank);
+        let bankRequired = false;
+        if (setData.newFinancePayment && setData.newFinancePayment.paymentType === 'bank') {
+          bankRequired = true;
+        } else if (setData.newFinancePayments && setData.newFinancePayments.some(p => p.paymentType === 'bank')) {
+          bankRequired = true;
+        }
+
+        if (!bankRequired) {
+          let rels = sale.release || [];
+          if (rels.length > 0 && (typeof rels[0] === 'string' || mongoose.Types.ObjectId.isValid(String(rels[0])) || !rels[0].paymentType)) {
+            const ReleaseModel = require("../models/release");
+            const relIds = rels.map(r => r._id || r);
+            rels = await ReleaseModel.find({ _id: { $in: relIds } }).lean().exec();
+          }
+          bankRequired = rels.some(r => r.paymentType === 'bank' || r.bank);
+        }
+
         if (bankRequired) {
           const isReleaseBankVerified = Boolean(
-            (sale.financePayments || []).some(fp => fp.isVerified && fp.stage === 'release') ||
-            (!sale.assigneeCompleted && sale.isBankVerified)
+            (sale.financePayments || []).some(fp => fp.isVerified && fp.stage === 'release')
           );
           if (!isReleaseBankVerified) {
             throw new Error("Release bank must be verified in Billing Summary before paying release.");
           }
         }
       } else {
-        const bankRequired = sale.paymentType === 'bank' || (sale.paymentType === 'partial' && Number(sale.bankAmount) > 0);
+        const bankRequired = sale.paymentType === 'bank' || (sale.paymentType === 'partial' && Number(sale.bankAmount) > 0) ||
+          (setData.newFinancePayment && setData.newFinancePayment.paymentType === 'bank') ||
+          (setData.newFinancePayments && setData.newFinancePayments.some(p => p.paymentType === 'bank'));
         if (bankRequired) {
           const targetSaleBankId = sale.bank?._id || sale.bank;
           const saleAcct = sale.bank?.accountNo;
@@ -1710,7 +1742,7 @@ async function updateWithLog(id, setData, logEntry) {
                 (saleId && String(fp.bank?.bankId || fp.bank?._id) === String(saleId)) ||
                 (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
               )
-            ) || (sale.saleType === 'physical' && sale.isBankVerified)
+            ) || (sale.saleType === 'physical' && sale.isBankVerified && !(sale.financePayments || []).length)
           );
           if (!isSaleBankVerified) {
             throw new Error("Customer sale bank must be verified in Billing Summary before updating finance.");

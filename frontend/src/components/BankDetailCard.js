@@ -151,20 +151,6 @@ export default function BankDetailCard({
                   </Stack>
 
                   <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                    {amount !== undefined && amount !== null && amount !== '' && (
-                      <Chip
-                        label={`Paid: ₹${Number(amount).toLocaleString('en-IN')}`}
-                        size="small"
-                        sx={{
-                          fontWeight: 700,
-                          fontSize: '0.75rem',
-                          bgcolor: alpha(theme.palette.primary.main, 0.1),
-                          color: 'primary.dark',
-                          border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                        }}
-                      />
-                    )}
-
                     {onEditClick && !isVerified && (
                       <Button
                         variant="outlined"
@@ -212,20 +198,7 @@ export default function BankDetailCard({
                       >
                         Verify Bank
                       </Button>
-                    ) : (
-                      <Chip
-                        icon={<Iconify icon="eva:checkmark-circle-2-fill" width={16} />}
-                        label="Bank Transfer"
-                        size="small"
-                        sx={{
-                          fontWeight: 700,
-                          fontSize: '0.75rem',
-                          bgcolor: alpha(theme.palette.success.main, 0.12),
-                          color: 'success.dark',
-                          border: `1px solid ${alpha(theme.palette.success.main, 0.24)}`,
-                        }}
-                      />
-                    )}
+                    ) : null}
                   </Stack>
                 </Box>
 
