@@ -135,9 +135,20 @@ function applySortFilter(array, comparator, query) {
 export default function Sale() {
   const auth = useSelector((state) => state.auth);
   const userType = auth?.user?.userType?.toLowerCase();
-  const isBullionDesk = userType === 'bullion_desk';
+  const isBullionDesk = Boolean(
+    userType === 'bullion_desk' ||
+    userType?.includes('bullion') ||
+    window.location.pathname.startsWith('/bullion-desk')
+  );
   const isAdmin = userType === 'admin';
   const canFilterBranch = isBullionDesk || isAdmin || !auth?.user?.branch;
+
+  const tableHead = useMemo(() => {
+    if (isBullionDesk) {
+      return TABLE_HEAD.filter((col) => col.id !== '');
+    }
+    return TABLE_HEAD;
+  }, [isBullionDesk]);
   const [branches, setBranches] = useState([]);
   const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const [searchParams] = useSearchParams();
@@ -687,7 +698,7 @@ export default function Sale() {
                   <SaleListHead
                     order={order}
                     orderBy={orderBy}
-                    headLabel={TABLE_HEAD}
+                    headLabel={tableHead}
                     rowCount={data?.length || 0}
                     numSelected={selected?.length}
                     onRequestSort={handleRequestSort}
@@ -806,30 +817,32 @@ export default function Sale() {
                               isReleasePending={isReleasePending}
                             />
                           </TableCell>
-                          <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                            <IconButton
-                              size="large"
-                              color="inherit"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                handleOpenMenu(e, _id);
-                              }}
-                            >
-                              <Iconify icon={'eva:more-vertical-fill'} />
-                            </IconButton>
-                          </TableCell>
+                          {!isBullionDesk && (
+                            <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                              <IconButton
+                                size="large"
+                                color="inherit"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  handleOpenMenu(e, _id);
+                                }}
+                              >
+                                <Iconify icon={'eva:more-vertical-fill'} />
+                              </IconButton>
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
                     })}
                     {emptyRows > 0 && (
                       <TableRow style={{ height: 53 * emptyRows }}>
-                        <TableCell colSpan={10} />
+                        <TableCell colSpan={isBullionDesk ? 9 : 10} />
                       </TableRow>
                     )}
                     {filteredData?.length === 0 && (
                       <TableRow>
-                        <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
+                        <TableCell align="center" colSpan={isBullionDesk ? 9 : 10} sx={{ py: 3 }}>
                           <Paper
                             sx={{
                               textAlign: 'center',
@@ -845,7 +858,7 @@ export default function Sale() {
                   {filteredData?.length > 0 && isNotFound && (
                     <TableBody>
                       <TableRow>
-                        <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
+                        <TableCell align="center" colSpan={isBullionDesk ? 9 : 10} sx={{ py: 3 }}>
                           <Paper
                             sx={{
                               textAlign: 'center',
