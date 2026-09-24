@@ -825,24 +825,22 @@ export default function Sale() {
             Sale Details
           </Typography>
           <Stack direction="row" spacing={2}>
-            {isSaleCompleted && (
-              <Button
-                variant="contained"
-                sx={{
-                  bgcolor: '#FFD700',
-                  color: 'primary.main',
-                  '&:hover': {
-                    bgcolor: '#FFD700',
-                  },
-                }}
-                startIcon={<Iconify icon="material-symbols:print" />}
-                onClick={() => {
-                  setToggleContainerType('print');
-                }}
-              >
-                Print
-              </Button>
-            )}
+            <Button
+              variant="contained"
+              sx={{
+                bgcolor: '#FFD700',
+                color: 'primary.main',
+                '&:hover': {
+                  bgcolor: '#e6c200',
+                },
+              }}
+              startIcon={<Iconify icon="material-symbols:print" />}
+              onClick={() => {
+                setToggleContainerType('print');
+              }}
+            >
+              Print
+            </Button>
             <Button
               variant="contained"
               startIcon={<Iconify icon="mdi:arrow-left" />}
@@ -862,8 +860,6 @@ export default function Sale() {
           setNotify={setNotify}
           onSaleLoaded={setDetailedSale}
           onActionComplete={() => {
-            setToggleContainer(false);
-            setDetailedSale(null);
             fetchData();
           }}
         />

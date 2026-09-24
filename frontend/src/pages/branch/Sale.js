@@ -952,7 +952,7 @@ export default function Sale() {
               Billing Summary
             </Typography>
             <Stack direction="row" spacing={2}>
-              {isSaleCompleted && (
+              {(isBullionDesk || isSaleCompleted) && (
                 <Button
                   variant="contained"
                   sx={{
@@ -1039,7 +1039,7 @@ export default function Sale() {
           <Iconify icon={'carbon:view-filled'} sx={{ mr: 2 }} />
           View
         </MenuItem>
-        {['completed', 'intransit', 'moved', 'melted'].includes(selectedSale?.status?.toLowerCase()) && (
+        {(isBullionDesk || ['completed', 'intransit', 'moved', 'melted'].includes(selectedSale?.status?.toLowerCase())) && (
           <MenuItem
             onClick={() => {
               setOpen(null);

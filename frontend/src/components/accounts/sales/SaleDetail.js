@@ -448,8 +448,8 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
         const bankDesc = isCashFp
           ? 'Cash'
           : (fullBank?.bankName && fullBank?.accountNo
-              ? `${fullBank.bankName} - ${fullBank.accountNo}`
-              : (fullBank?.bankName || (!hasBank && data?.paymentType === 'cash' ? 'Cash' : '-')));
+            ? `${fullBank.bankName} - ${fullBank.accountNo}`
+            : (fullBank?.bankName || (!hasBank && data?.paymentType === 'cash' ? 'Cash' : '-')));
 
         const isPledgedRelease = data?.saleType === 'pledged' && !data?.assigneeCompleted;
         const stageLabel = fp.stage ? (fp.stage === 'release' ? 'Release' : 'Sale') : (isPledgedRelease ? 'Release' : 'Sale');
@@ -458,10 +458,10 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
         const paymentMode = isCashFp
           ? 'Cash'
           : (hasBank
-              ? 'Bank Transfer'
-              : (stageLabel === 'Release'
-                  ? (relBankPayment ? 'Bank Transfer' : 'Cash')
-                  : (data?.paymentType && data?.paymentType !== 'partial' ? sentenceCase(data.paymentType) : 'Bank Transfer')));
+            ? 'Bank Transfer'
+            : (stageLabel === 'Release'
+              ? (relBankPayment ? 'Bank Transfer' : 'Cash')
+              : (data?.paymentType && data?.paymentType !== 'partial' ? sentenceCase(data.paymentType) : 'Bank Transfer')));
 
         const bankVerifiedInfo = fp.bank?.accountNo ? verifiedBankMap[fp.bank.accountNo] : null;
         const effectiveIsVerified = fp.isVerified || Boolean(bankVerifiedInfo);
@@ -656,15 +656,15 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
       if (isFinProof && p.uploadedFile && !seenProofs.has(p.uploadedFile)) {
         const isVerifiedDoc = p.uploadName === 'verified_bank_proof' || p.documentType === 'Verified Bank Payment Proof';
 
-        const cashRowIndex = paymentsList.findIndex(pay => 
-            (pay.paymentType?.toLowerCase().includes('cash') || pay.bankDetails?.toLowerCase() === 'cash') 
-            && !pay.proof && !pay.isVerificationRow
+        const cashRowIndex = paymentsList.findIndex(pay =>
+          (pay.paymentType?.toLowerCase().includes('cash') || pay.bankDetails?.toLowerCase() === 'cash')
+          && !pay.proof && !pay.isVerificationRow
         );
 
         if (cashRowIndex !== -1 && !isVerifiedDoc && p.uploadName !== 'transit_proof') {
-           paymentsList[cashRowIndex].proof = p.uploadedFile;
-           seenProofs.add(p.uploadedFile);
-           return;
+          paymentsList[cashRowIndex].proof = p.uploadedFile;
+          seenProofs.add(p.uploadedFile);
+          return;
         }
 
         seenProofs.add(p.uploadedFile);
@@ -1044,55 +1044,55 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
     });
 
     allProofs.forEach(e => {
-       const releaseDoc = data?.release?.flatMap((r) => r.proofDocuments || [])?.find((doc) => doc.documentFile === e.uploadedFile);
-       let docType = e.documentType || releaseDoc?.documentType;
-       let displayType = docType ? sentenceCase(docType) : 'Release Document';
-       
-       if (!docType && e.uploadName && e.uploadName !== 'Release Document' && e.uploadName !== 'release') {
-         if (e.uploadName === 'finance_proof') {
-           displayType = isPhysical ? 'Finance Proof' : 'Sale Finance Proof';
-         } else if (e.uploadName === 'sale_finance_proof' || e.uploadName === 'sale_proof') {
-           displayType = 'Sale Finance Proof';
-         } else if (e.uploadName === 'transit_proof') {
-           displayType = 'Transit Dispatch Proof';
-         } else if (e.uploadName === 'transit_received_proof') {
-           displayType = 'Transit Received Proof';
-         } else if (e.uploadName === 'melt_proof') {
-           displayType = 'Initial Batch Proof (Before Melt)';
-         } else if (e.uploadName === 'pre_melt_proof') {
-           displayType = 'Pre-Melt Proof (Stage 1)';
-         } else if (e.uploadName === 'after_melt_proof') {
-           displayType = 'After Melt Proof';
-         } else {
-           displayType = e.uploadName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-         }
-       } else if (docType === 'Release Finance Proof' || docType === 'Finance Proof') {
-           displayType = isPhysical ? 'Finance Proof' : (docType === 'Release Finance Proof' ? 'Release Finance Proof' : 'Finance Proof');
-       } else if (docType === 'Sale Finance Proof') {
-           displayType = 'Sale Finance Proof';
-       }
+      const releaseDoc = data?.release?.flatMap((r) => r.proofDocuments || [])?.find((doc) => doc.documentFile === e.uploadedFile);
+      let docType = e.documentType || releaseDoc?.documentType;
+      let displayType = docType ? sentenceCase(docType) : 'Release Document';
 
-       if (displayType.toLowerCase() === 'sale finance proof') displayType = 'Sale Finance Proof';
-       if (displayType.toLowerCase() === 'release finance proof' || displayType.toLowerCase() === 'release finance document') displayType = 'Release Finance Proof';
-       
-       e.baseDisplayType = displayType;
-       e.documentNo = e.documentNo || releaseDoc?.documentNo || 'N/A';
+      if (!docType && e.uploadName && e.uploadName !== 'Release Document' && e.uploadName !== 'release') {
+        if (e.uploadName === 'finance_proof') {
+          displayType = isPhysical ? 'Finance Proof' : 'Sale Finance Proof';
+        } else if (e.uploadName === 'sale_finance_proof' || e.uploadName === 'sale_proof') {
+          displayType = 'Sale Finance Proof';
+        } else if (e.uploadName === 'transit_proof') {
+          displayType = 'Transit Dispatch Proof';
+        } else if (e.uploadName === 'transit_received_proof') {
+          displayType = 'Transit Received Proof';
+        } else if (e.uploadName === 'melt_proof') {
+          displayType = 'Initial Batch Proof (Before Melt)';
+        } else if (e.uploadName === 'pre_melt_proof') {
+          displayType = 'Pre-Melt Proof (Stage 1)';
+        } else if (e.uploadName === 'after_melt_proof') {
+          displayType = 'After Melt Proof';
+        } else {
+          displayType = e.uploadName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        }
+      } else if (docType === 'Release Finance Proof' || docType === 'Finance Proof') {
+        displayType = isPhysical ? 'Finance Proof' : (docType === 'Release Finance Proof' ? 'Release Finance Proof' : 'Finance Proof');
+      } else if (docType === 'Sale Finance Proof') {
+        displayType = 'Sale Finance Proof';
+      }
 
-       if (!e.bankDetails) {
-         if (e.uploadName === 'finance_proof') {
-           if (e.documentNo && e.documentNo.includes(' - ')) {
-             const parts = e.documentNo.split(' | ');
-             e.bankDetails = parts[0];
-             if (parts[1] && parts[1].startsWith('₹')) {
-               e.amount = parts[1].replace('₹', '').replace(/,/g, '');
-             }
-           } else {
-             e.bankDetails = '-';
-           }
-         } else {
-           e.bankDetails = '-';
-         }
-       }
+      if (displayType.toLowerCase() === 'sale finance proof') displayType = 'Sale Finance Proof';
+      if (displayType.toLowerCase() === 'release finance proof' || displayType.toLowerCase() === 'release finance document') displayType = 'Release Finance Proof';
+
+      e.baseDisplayType = displayType;
+      e.documentNo = e.documentNo || releaseDoc?.documentNo || 'N/A';
+
+      if (!e.bankDetails) {
+        if (e.uploadName === 'finance_proof') {
+          if (e.documentNo && e.documentNo.includes(' - ')) {
+            const parts = e.documentNo.split(' | ');
+            e.bankDetails = parts[0];
+            if (parts[1] && parts[1].startsWith('₹')) {
+              e.amount = parts[1].replace('₹', '').replace(/,/g, '');
+            }
+          } else {
+            e.bankDetails = '-';
+          }
+        } else {
+          e.bankDetails = '-';
+        }
+      }
     });
 
     const proofTypeTotals = {};
@@ -1163,185 +1163,185 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           Proof Documents
         </Typography>
         <Box sx={{ mb: 2 }}>
-        <Grid container spacing={2}>
-          {allProofs.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((e, index) => {
-            const isImage = Boolean(e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i));
-            const fileUrl = e?.uploadedFile?.startsWith('http')
-              ? e.uploadedFile
-              : `${global.baseURL}/${e?.uploadedFile}`;
+          <Grid container spacing={2}>
+            {allProofs.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((e, index) => {
+              const isImage = Boolean(e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i));
+              const fileUrl = e?.uploadedFile?.startsWith('http')
+                ? e.uploadedFile
+                : `${global.baseURL}/${e?.uploadedFile}`;
 
-            return (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={e._id || index}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    borderRadius: 1.5,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                    transition: 'all 0.2s ease-in-out',
-                    '&:hover': {
-                      boxShadow: '0 6px 18px rgba(0,0,0,0.08)',
-                      borderColor: 'primary.main',
-                      transform: 'translateY(-2px)',
-                    },
-                  }}
-                >
-                  {/* Top: Stage Badge and Amount if available */}
-                  <Box sx={{ p: 1.5, pb: 1 }}>
-                    <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mb: 1 }}>
-                      <Chip
-                        size="small"
-                        label={e.categoryLabel}
-                        sx={{
-                          fontWeight: 700,
-                          fontSize: '0.72rem',
-                          height: 22,
-                          ...(e.categoryRank === 1 && { bgcolor: '#e3f2fd', color: '#1565c0' }),
-                          ...(e.categoryRank === 2 && { bgcolor: '#e8f5e9', color: '#2e7d32' }),
-                          ...(e.categoryRank === 3 && { bgcolor: '#fff8e1', color: '#f57f17' }),
-                          ...(e.categoryRank === 4 && { bgcolor: '#f3e5f5', color: '#7b1fa2' }),
-                        }}
-                      />
-                      {e.amount !== undefined && e.amount !== null && e.amount !== '' && (
-                        <Typography variant="subtitle2" sx={{ color: 'primary.main', fontWeight: 700, fontSize: '0.85rem' }}>
-                          ₹{Number(e.amount).toLocaleString('en-IN')}
-                        </Typography>
-                      )}
-                    </Stack>
-
-                    <Typography
-                      variant="subtitle2"
-                      title={e.displayType}
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: '0.875rem',
-                        lineHeight: 1.3,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        minHeight: '2.6em',
-                      }}
-                    >
-                      {e.displayType}
-                    </Typography>
-                  </Box>
-
-                  {/* Thumbnail / Preview with Hover effect */}
-                  <Box
-                    component="a"
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+              return (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={e._id || index}>
+                  <Card
                     sx={{
-                      mx: 1.5,
-                      height: 150,
-                      borderRadius: 1,
-                      bgcolor: 'background.neutral',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      borderRadius: 1.5,
                       border: '1px solid',
                       borderColor: 'divider',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      position: 'relative',
-                      textDecoration: 'none',
-                      cursor: 'pointer',
-                      '&:hover .preview-overlay': {
-                        opacity: 1,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        boxShadow: '0 6px 18px rgba(0,0,0,0.08)',
+                        borderColor: 'primary.main',
+                        transform: 'translateY(-2px)',
                       },
                     }}
                   >
-                    {isImage ? (
-                      <Box
-                        component="img"
-                        src={fileUrl}
-                        alt={e.displayType || 'document'}
-                        sx={{
-                          maxWidth: '100%',
-                          maxHeight: '100%',
-                          objectFit: 'contain',
-                          p: 0.5,
-                        }}
-                      />
-                    ) : (
-                      <Box sx={{ textAlign: 'center', p: 1 }}>
-                        <Box component="img" src="/assets/doc.svg" alt="doc" sx={{ width: 48, height: 48, mx: 'auto', mb: 0.5 }} />
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          Click to view
-                        </Typography>
-                      </Box>
-                    )}
+                    {/* Top: Stage Badge and Amount if available */}
+                    <Box sx={{ p: 1.5, pb: 1 }}>
+                      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mb: 1 }}>
+                        <Chip
+                          size="small"
+                          label={e.categoryLabel}
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: '0.72rem',
+                            height: 22,
+                            ...(e.categoryRank === 1 && { bgcolor: '#e3f2fd', color: '#1565c0' }),
+                            ...(e.categoryRank === 2 && { bgcolor: '#e8f5e9', color: '#2e7d32' }),
+                            ...(e.categoryRank === 3 && { bgcolor: '#fff8e1', color: '#f57f17' }),
+                            ...(e.categoryRank === 4 && { bgcolor: '#f3e5f5', color: '#7b1fa2' }),
+                          }}
+                        />
+                        {e.amount !== undefined && e.amount !== null && e.amount !== '' && (
+                          <Typography variant="subtitle2" sx={{ color: 'primary.main', fontWeight: 700, fontSize: '0.85rem' }}>
+                            ₹{Number(e.amount).toLocaleString('en-IN')}
+                          </Typography>
+                        )}
+                      </Stack>
 
-                    {/* Hover Overlay */}
+                      <Typography
+                        variant="subtitle2"
+                        title={e.displayType}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: '0.875rem',
+                          lineHeight: 1.3,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          minHeight: '2.6em',
+                        }}
+                      >
+                        {e.displayType}
+                      </Typography>
+                    </Box>
+
+                    {/* Thumbnail / Preview with Hover effect */}
                     <Box
-                      className="preview-overlay"
+                      component="a"
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        bgcolor: 'rgba(0,0,0,0.3)',
+                        mx: 1.5,
+                        height: 150,
+                        borderRadius: 1,
+                        bgcolor: 'background.neutral',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        overflow: 'hidden',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        opacity: 0,
-                        transition: 'opacity 0.2s',
-                        color: '#fff',
+                        position: 'relative',
+                        textDecoration: 'none',
+                        cursor: 'pointer',
+                        '&:hover .preview-overlay': {
+                          opacity: 1,
+                        },
                       }}
                     >
-                      <Stack direction="row" spacing={0.5} alignItems="center" sx={{ bgcolor: 'rgba(0,0,0,0.65)', px: 1.25, py: 0.5, borderRadius: 1 }}>
-                        <Iconify icon="solar:eye-bold" width={16} />
-                        <Typography variant="caption" sx={{ fontWeight: 600, color: '#fff' }}>
-                          View
-                        </Typography>
-                      </Stack>
+                      {isImage ? (
+                        <Box
+                          component="img"
+                          src={fileUrl}
+                          alt={e.displayType || 'document'}
+                          sx={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain',
+                            p: 0.5,
+                          }}
+                        />
+                      ) : (
+                        <Box sx={{ textAlign: 'center', p: 1 }}>
+                          <Box component="img" src="/assets/doc.svg" alt="doc" sx={{ width: 48, height: 48, mx: 'auto', mb: 0.5 }} />
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Click to view
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {/* Hover Overlay */}
+                      <Box
+                        className="preview-overlay"
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          bgcolor: 'rgba(0,0,0,0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: 0,
+                          transition: 'opacity 0.2s',
+                          color: '#fff',
+                        }}
+                      >
+                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ bgcolor: 'rgba(0,0,0,0.65)', px: 1.25, py: 0.5, borderRadius: 1 }}>
+                          <Iconify icon="solar:eye-bold" width={16} />
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: '#fff' }}>
+                            View
+                          </Typography>
+                        </Stack>
+                      </Box>
                     </Box>
-                  </Box>
 
-                  {/* Metadata: Bank details and Document / Ref No */}
-                  <Box sx={{ p: 1.5, pt: 1, mt: 'auto' }}>
-                    {e.bankDetails && e.bankDetails !== '-' && (
-                      <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.5 }}>
-                        <Iconify icon="mdi:bank-outline" width={16} sx={{ color: 'text.secondary', flexShrink: 0 }} />
-                        <Typography variant="caption" noWrap sx={{ fontWeight: 600, color: 'text.primary' }}>
-                          {e.bankDetails}
-                        </Typography>
-                      </Stack>
-                    )}
+                    {/* Metadata: Bank details and Document / Ref No */}
+                    <Box sx={{ p: 1.5, pt: 1, mt: 'auto' }}>
+                      {e.bankDetails && e.bankDetails !== '-' && (
+                        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 0.5 }}>
+                          <Iconify icon="mdi:bank-outline" width={16} sx={{ color: 'text.secondary', flexShrink: 0 }} />
+                          <Typography variant="caption" noWrap sx={{ fontWeight: 600, color: 'text.primary' }}>
+                            {e.bankDetails}
+                          </Typography>
+                        </Stack>
+                      )}
 
-                    {e.documentNo && e.documentNo !== 'N/A' && e.documentNo !== '-' && (
-                      <Stack direction="row" spacing={0.75} alignItems="center">
-                        <Iconify icon="mdi:file-document-outline" width={16} sx={{ color: 'text.secondary', flexShrink: 0 }} />
-                        <Typography variant="caption" color="text.secondary" noWrap>
-                          Ref / Date: {e.documentNo}
-                        </Typography>
-                      </Stack>
-                    )}
-                  </Box>
-                </Card>
-              </Grid>
-            );
-          })}
-        </Grid>
+                      {e.documentNo && e.documentNo !== 'N/A' && e.documentNo !== '-' && (
+                        <Stack direction="row" spacing={0.75} alignItems="center">
+                          <Iconify icon="mdi:file-document-outline" width={16} sx={{ color: 'text.secondary', flexShrink: 0 }} />
+                          <Typography variant="caption" color="text.secondary" noWrap>
+                            Ref / Date: {e.documentNo}
+                          </Typography>
+                        </Stack>
+                      )}
+                    </Box>
+                  </Card>
+                </Grid>
+              );
+            })}
+          </Grid>
 
-        <TablePagination
-          rowsPerPageOptions={[4, 8, 12, 24]}
-          component="div"
-          count={allProofs.length || 0}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          sx={{ mt: 1 }}
-        />
-      </Box>
-    </Grid>
-  );
+          <TablePagination
+            rowsPerPageOptions={[4, 8, 12, 24]}
+            component="div"
+            count={allProofs.length || 0}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            sx={{ mt: 1 }}
+          />
+        </Box>
+      </Grid>
+    );
   }
 
   function TransitProof() {
@@ -1708,8 +1708,8 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           const docName = isSignature
             ? 'Signature'
             : (e?.documentType
-                ? sentenceCase(e.documentType)
-                : data?.customer?.chooseId
+              ? sentenceCase(e.documentType)
+              : data?.customer?.chooseId
                 ? sentenceCase(data.customer.chooseId)
                 : sentenceCase(e.uploadType || 'ID Proof'));
 
@@ -2046,8 +2046,8 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                           <Typography variant="body2">
                             Alt: {(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
                               ? (isAdmin || visiblePhoneField === 'alt'
-                                  ? (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
-                                  : (global.maskPhoneNumber(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) || (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)))
+                                ? (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
+                                : (global.maskPhoneNumber(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) || (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)))
                               : 'N/A'}
                           </Typography>
                           {!isAdmin && (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) && (
@@ -2485,6 +2485,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           getSalesById(id).then((res) => {
             if (res.status && res.data) {
               setData(res.data);
+              onSaleLoaded?.(res.data);
             }
           });
           onActionComplete?.();
@@ -2508,6 +2509,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           getSalesById(id || data?._id).then((res) => {
             if (res?.status && res?.data) {
               setData(res.data);
+              onSaleLoaded?.(res.data);
             }
           });
           onActionComplete?.();

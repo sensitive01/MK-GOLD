@@ -686,24 +686,22 @@ export default function Sale() {
             Sale Details
           </Typography>
           <Stack direction="row" spacing={2}>
-            {isSaleCompleted && (
-              <Button
-                variant="contained"
-                sx={{
+            <Button
+              variant="contained"
+              sx={{
+                bgcolor: '#FFD700',
+                color: 'primary.main',
+                '&:hover': {
                   bgcolor: '#FFD700',
-                  color: 'primary.main',
-                  '&:hover': {
-                    bgcolor: '#FFD700',
-                  },
-                }}
-                startIcon={<Iconify icon="material-symbols:print" />}
-                onClick={() => {
-                  setToggleContainerType('print');
-                }}
-              >
-                Print
-              </Button>
-            )}
+                },
+              }}
+              startIcon={<Iconify icon="material-symbols:print" />}
+              onClick={() => {
+                setToggleContainerType('print');
+              }}
+            >
+              Print
+            </Button>
             <Button
               variant="contained"
               startIcon={<Iconify icon="mdi:arrow-left" />}
@@ -780,18 +778,16 @@ export default function Sale() {
           <Iconify icon={'carbon:view-filled'} sx={{ mr: 2 }} />
           View
         </MenuItem>
-        {['completed', 'intransit', 'moved', 'melted'].includes(selectedSale?.status?.toLowerCase()) && (
-          <MenuItem
-            onClick={() => {
-              setOpen(null);
-              setToggleContainer(!toggleContainer);
-              setToggleContainerType('print');
-            }}
-          >
-            <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
-            Print
-          </MenuItem>
-        )}
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
+            setToggleContainer(!toggleContainer);
+            setToggleContainerType('print');
+          }}
+        >
+          <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
+          Print
+        </MenuItem>
         <MenuItem
           onClick={() => {
             setOpen(null);
