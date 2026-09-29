@@ -163,24 +163,8 @@ async function generateExactInvoiceHtml(data) {
   const netAmount = Number(data?.netAmount) || 0;
   const marginPercent = Number(data?.margin) || 0;
   const marginAmount = Math.round((netAmount * marginPercent) / 100);
-
-  let cgstAmount = 0;
-  let sgstAmount = 0;
-  let serviceChargesAmount = 0;
-
-  if (marginPercent >= 3) {
-    cgstAmount = Math.round(netAmount * 0.015);
-    sgstAmount = Math.round(netAmount * 0.015);
-    serviceChargesAmount = Math.max(0, marginAmount - cgstAmount - sgstAmount);
-  } else {
-    cgstAmount = Math.round(marginAmount * 0.25);
-    sgstAmount = Math.round(marginAmount * 0.25);
-    serviceChargesAmount = Math.max(0, marginAmount - cgstAmount - sgstAmount);
-  }
-
-  const cgstPercent = marginPercent >= 3 ? 1.5 : (marginPercent * 0.25).toFixed(2);
-  const sgstPercent = marginPercent >= 3 ? 1.5 : (marginPercent * 0.25).toFixed(2);
-  const serviceChargesPercent = marginPercent >= 3 ? (marginPercent - 3) : (marginPercent * 0.5).toFixed(2);
+  const serviceChargesAmount = marginAmount;
+  const serviceChargesPercent = marginPercent;
   const releaseChargesAmount = Math.round(data?.release?.reduce((prev, cur) => prev + (cur?.payableAmount || 0), 0) || 0);
 
   // 4. Preload images as Base64 Data URLs
@@ -407,7 +391,7 @@ async function generateExactInvoiceHtml(data) {
           <td style="vertical-align: top; padding-left: 15px;">
             <table style="width: 100%; border-collapse: collapse; border: 1px solid #000;">
               <tbody>
-                <tr>
+                <!-- <tr>
                   <td style="border: 1px solid #000; padding: 4px 6px; font-size: 11px; color: #444; vertical-align: middle; width: 65%;">
                     (Service Charges are typically charges against Appraiser Charges, Payment Handling Charges, Release Handling Charges, Melting Charges, etc.)
                     <strong style="display: block; color: #000; font-size: 12px; margin-top: 2px;">Service Charges (${serviceChargesPercent}%) =</strong>
@@ -415,19 +399,7 @@ async function generateExactInvoiceHtml(data) {
                   <td style="border: 1px solid #000; padding: 4px 6px; text-align: right; font-weight: bold; font-size: 13px; vertical-align: bottom; width: 35%;">
                     &#8377; ${serviceChargesAmount.toLocaleString('en-IN')}
                   </td>
-                </tr>
-                <tr>
-                  <td style="border: 1px solid #000; padding: 6px; font-weight: bold; font-size: 12px;">CGST (${cgstPercent}%) =</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: bold; font-size: 13px;">
-                    &#8377; ${cgstAmount.toLocaleString('en-IN')}
-                  </td>
-                </tr>
-                <tr>
-                  <td style="border: 1px solid #000; padding: 6px; font-weight: bold; font-size: 12px;">SGST (${sgstPercent}%) =</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: bold; font-size: 13px;">
-                    &#8377; ${sgstAmount.toLocaleString('en-IN')}
-                  </td>
-                </tr>
+                </tr> -->
                 ${data?.saleType === 'pledged' ? `
                   <tr>
                     <td style="border: 1px solid #000; padding: 6px; font-weight: bold; font-size: 12px;">Release Charges =</td>
@@ -437,7 +409,7 @@ async function generateExactInvoiceHtml(data) {
                   </tr>
                 ` : ''}
                 <tr style="background-color: #FFD700;">
-                  <td style="border: 1px solid #000; padding: 8px 6px; font-weight: bold; font-size: 13px;">Payable Amount =</td>
+                  <td style="border: 1px solid #000; padding: 8px 6px; font-weight: bold; font-size: 13px;">Total Amount =</td>
                   <td style="border: 1px solid #000; padding: 8px 6px; text-align: right; font-weight: bold; font-size: 15px;">
                     &#8377; ${Math.abs(Math.round(data?.payableAmount || 0)).toLocaleString('en-IN')}
                   </td>
@@ -602,7 +574,7 @@ async function createPdfKitFallbackBuffer(sale) {
       doc.fillColor('#000000').fontSize(18).font('Helvetica-Bold').text('PURCHASE INVOICE', margin, 30);
       doc.fontSize(12).text(`MK Gold | ${branch.branchName || ''}`, margin, 58);
       doc.fontSize(9).font('Helvetica').text(`Invoice No.: ${sale.billId || ''}`, margin, 74);
-      doc.text(`Payable Amount: ₹ ${Math.abs(Math.round(sale.payableAmount || 0)).toLocaleString('en-IN')}`, margin, 88);
+      doc.text(`Total Amount: ₹ ${Math.abs(Math.round(sale.payableAmount || 0)).toLocaleString('en-IN')}`, margin, 88);
 
       doc.end();
     } catch (e) {

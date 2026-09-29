@@ -1,6 +1,6 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
-import { forwardRef, useEffect, useState, useCallback } from 'react';
+import { forwardRef, useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 // @mui
@@ -1075,25 +1075,33 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
     }
   }, [open, auth.user?.branch?.address?.state]);
 
+  const prevCalcRef = useRef({ ornamentType: '', grossWeight: '', stoneWeight: '', purity: '', rate: 0 });
+
   useEffect(() => {
     const { ornamentType, grossWeight, stoneWeight, purity } = ornamentValues;
     if (!ornamentType && !grossWeight && !stoneWeight && !purity) {
+      prevCalcRef.current = { ornamentType: '', grossWeight: '', stoneWeight: '', purity: '', rate: 0 };
       return;
     }
 
     const isSilver = ['Anklets', 'Toe Ring'].includes(ornamentType);
     const rate = isSilver ? silverRate : goldRate;
-    const gWt = parseFloat(grossWeight) || 0;
-    const sWt = parseFloat(stoneWeight) || 0;
-    const pVal = parseFloat(purity) || 0;
-
-    const calculatedNetWeight = Math.max(0, gWt - sWt);
-    const calculatedNetAmount = Math.round(((calculatedNetWeight * pVal) / 100) * rate);
 
     if (
-      calculatedNetWeight !== parseFloat(ornamentValues.netWeight) ||
-      calculatedNetAmount !== parseFloat(ornamentValues.netAmount)
+      prevCalcRef.current.ornamentType !== ornamentType ||
+      prevCalcRef.current.grossWeight !== grossWeight ||
+      prevCalcRef.current.stoneWeight !== stoneWeight ||
+      prevCalcRef.current.purity !== purity ||
+      prevCalcRef.current.rate !== rate
     ) {
+      prevCalcRef.current = { ornamentType, grossWeight, stoneWeight, purity, rate };
+      const gWt = parseFloat(grossWeight) || 0;
+      const sWt = parseFloat(stoneWeight) || 0;
+      const pVal = parseFloat(purity) || 0;
+
+      const calculatedNetWeight = Math.max(0, gWt - sWt);
+      const calculatedNetAmount = Math.round(((calculatedNetWeight * pVal) / 100) * rate);
+
       setOrnamentValues((prev) => ({
         ...prev,
         netWeight: calculatedNetWeight || '',
@@ -1107,8 +1115,6 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
     ornamentValues.purity,
     goldRate,
     silverRate,
-    ornamentValues.netWeight,
-    ornamentValues.netAmount,
   ]);
 
   const schema = Yup.object({
@@ -1497,10 +1503,8 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                           size="small"
                           type="number"
                           value={ornamentValues.netAmount}
+                          onChange={(e) => setOrnamentValues({ ...ornamentValues, netAmount: e.target.value })}
                           fullWidth
-                          InputProps={{
-                            readOnly: true,
-                          }}
                         />
                       </Grid>
                       <Grid item xs={12} md={3}>

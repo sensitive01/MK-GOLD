@@ -201,7 +201,7 @@ function CreateSale(props) {
     saleType: Yup.string().required('Customer id is required'),
     dop: Yup.string().required('DOP is required'),
     paymentType: Yup.string().required('Payment type is required'),
-    margin: Yup.string().required('Margin is required'),
+    margin: Yup.mixed().default(0),
   });
 
   const [openConfirmModal, setOpenConfirmModal] = useState(false);
@@ -214,7 +214,7 @@ function CreateSale(props) {
       paymentType: '',
       cashAmount: '',
       bankAmount: '',
-      margin: 3,
+      margin: 0,
       status: 'pending',
       comments: '',
     },
@@ -623,7 +623,7 @@ function CreateSale(props) {
                 />
               </Grid>
             )}
-            <Grid item xs={12} sm={4}>
+            {/* <Grid item xs={12} sm={4}>
               <TextField
                 name="margin"
                 type={'number'}
@@ -634,7 +634,7 @@ function CreateSale(props) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               />
-            </Grid>
+            </Grid> */}
             {values.saleType === 'pledged' && (
               <Release
                 selectedUser={selectedUser}

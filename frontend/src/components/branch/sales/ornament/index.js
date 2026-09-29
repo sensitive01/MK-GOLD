@@ -40,7 +40,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 import Iconify from '../../../iconify';
 import Scrollbar from '../../../scrollbar';
@@ -222,19 +222,27 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
     setBillUploading(false);
   };
 
+  const prevCalcRef = useRef({ netWeight: '', purity: '', rate: 0 });
+
   useEffect(() => {
+    if (!ornamentModal) {
+      prevCalcRef.current = { netWeight: '', purity: '', rate: 0 };
+      return;
+    }
     const rate = purchaseType === 'gold' ? goldRate : purchaseType === 'silver' ? silverRate : 0;
     const netWeight = values.netWeight || 0;
     const purity = values.purity || 0;
-    const amount = Math.round(((netWeight * purity) / 100) * rate);
-    
-    if (amount !== values.netAmount) {
-      setValues((prev) => ({
-        ...prev,
-        netAmount: amount,
-      }));
+
+    if (
+      prevCalcRef.current.netWeight !== netWeight ||
+      prevCalcRef.current.purity !== purity ||
+      prevCalcRef.current.rate !== rate
+    ) {
+      prevCalcRef.current = { netWeight, purity, rate };
+      const amount = Math.round(((Number(netWeight) * Number(purity)) / 100) * Number(rate));
+      setFieldValue('netAmount', amount);
     }
-  }, [goldRate, silverRate, purchaseType, values.netWeight, values.purity, values.netAmount, setValues]);
+  }, [ornamentModal, goldRate, silverRate, purchaseType, values.netWeight, values.purity, setFieldValue]);
 
   return (
     <>
@@ -603,7 +611,6 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                   error={touched.netAmount && errors.netAmount && true}
                   label={touched.netAmount && errors.netAmount ? errors.netAmount : 'Net Amount'}
                   InputProps={{
-                    readOnly: true,
                     startAdornment: <InputAdornment position="start">₹</InputAdornment>,
                   }}
                   helperText={`Rate: ₹${purchaseType === 'gold' ? goldRate : silverRate}`}

@@ -45,6 +45,13 @@ export default function SalePrint({ id }) {
       }
     });
   }
+  if (data?.ornaments && data.ornaments.length > 0) {
+    data.ornaments.forEach((orn) => {
+      if (orn.ornamentPhoto) {
+        ornamentPhotos.push(orn.ornamentPhoto);
+      }
+    });
+  }
 
   const uniqueOrnamentPhotos = Array.from(new Set(ornamentPhotos));
 
@@ -98,24 +105,8 @@ export default function SalePrint({ id }) {
   const netAmount = data?.netAmount || 0;
   const marginPercent = data?.margin || 0;
   const marginAmount = Math.round((netAmount * marginPercent) / 100);
-
-  let cgstAmount = 0;
-  let sgstAmount = 0;
-  let serviceChargesAmount = 0;
-
-  if (marginPercent >= 3) {
-    cgstAmount = Math.round(netAmount * 0.015);
-    sgstAmount = Math.round(netAmount * 0.015);
-    serviceChargesAmount = Math.max(0, marginAmount - cgstAmount - sgstAmount);
-  } else {
-    cgstAmount = Math.round(marginAmount * 0.25);
-    sgstAmount = Math.round(marginAmount * 0.25);
-    serviceChargesAmount = Math.max(0, marginAmount - cgstAmount - sgstAmount);
-  }
-
-  const cgstPercent = marginPercent >= 3 ? 1.5 : (marginPercent * 0.25).toFixed(2);
-  const sgstPercent = marginPercent >= 3 ? 1.5 : (marginPercent * 0.25).toFixed(2);
-  const serviceChargesPercent = marginPercent >= 3 ? (marginPercent - 3) : (marginPercent * 0.5).toFixed(2);
+  const serviceChargesAmount = marginAmount;
+  const serviceChargesPercent = marginPercent;
 
   const releaseChargesAmount = Math.round(data?.release?.reduce((prev, cur) => prev + (cur?.payableAmount || 0), 0) || 0);
 
@@ -357,7 +348,7 @@ export default function SalePrint({ id }) {
               <td style={{ verticalAlign: 'top', paddingLeft: '15px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000' }}>
                   <tbody>
-                    <tr>
+                    {/* <tr>
                       <td style={{ border: '1px solid #000', padding: '4px 6px', fontSize: '11px', color: '#444', verticalAlign: 'middle', width: '65%' }}>
                         (Service Charges are typically charges against Appraiser Charges, Payment Handling Charges, Release Handling Charges, Melting Charges, etc.)
                         <strong style={{ display: 'block', color: '#000', fontSize: '12px', marginTop: '2px' }}>Service Charges ({serviceChargesPercent}%) =</strong>
@@ -365,19 +356,7 @@ export default function SalePrint({ id }) {
                       <td style={{ border: '1px solid #000', padding: '4px 6px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px', verticalAlign: 'bottom', width: '35%' }}>
                         &#8377; {serviceChargesAmount.toLocaleString('en-IN')}
                       </td>
-                    </tr>
-                    <tr>
-                      <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>CGST ({cgstPercent}%) =</td>
-                      <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>
-                        &#8377; {cgstAmount.toLocaleString('en-IN')}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>SGST ({sgstPercent}%) =</td>
-                      <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>
-                        &#8377; {sgstAmount.toLocaleString('en-IN')}
-                      </td>
-                    </tr>
+                    </tr> */}
                     {data?.saleType === 'pledged' && (
                       <tr>
                         <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>Release Charges =</td>
@@ -387,7 +366,7 @@ export default function SalePrint({ id }) {
                       </tr>
                     )}
                     <tr style={{ backgroundColor: '#FFD700' }}>
-                      <td style={{ border: '1px solid #000', padding: '8px 6px', fontWeight: 'bold', fontSize: '13px' }}>Payable Amount =</td>
+                      <td style={{ border: '1px solid #000', padding: '8px 6px', fontWeight: 'bold', fontSize: '13px' }}>Total Amount =</td>
                       <td style={{ border: '1px solid #000', padding: '8px 6px', textAlign: 'right', fontWeight: 'bold', fontSize: '15px' }}>
                         &#8377; {Math.abs(Math.round(data?.payableAmount || 0)).toLocaleString('en-IN')}
                       </td>
