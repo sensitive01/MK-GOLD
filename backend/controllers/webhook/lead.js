@@ -18,10 +18,10 @@ async function createWebLead(req, res) {
     } = req.body || {};
 
     // 1. Mandatory field validation
-    if (!name || !phone) {
+    if (!name || !phone || !source) {
       return res.status(400).json({
         status: false,
-        message: "name and phone are required"
+        message: "name, phone and source are required"
       });
     }
 
