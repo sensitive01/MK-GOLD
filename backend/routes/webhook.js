@@ -26,7 +26,7 @@ router.post("/meta", webhookMetaController.handleMetaLead);
 
 // 3. Health check for webhook receiver
 router.get("/health", (req, res) => {
-  res.json({ status: true, message: "Webhook service is running 🚀" });
+  res.json({ status: true, message: "Webhook service is running" });
 });
 
 module.exports = router;

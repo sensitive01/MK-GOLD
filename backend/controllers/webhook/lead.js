@@ -7,13 +7,14 @@ async function createWebLead(req, res) {
       name,
       phone,
       city,
-      gold_type,
+      state,
+      pincode,
       weight_grams,
-      purity_karat,
       notes,
       source,
-      estimated_value,
-      pincode
+      category,
+      type,
+      unit,
     } = req.body || {};
 
     // 1. Mandatory field validation
@@ -34,18 +35,14 @@ async function createWebLead(req, res) {
 
     // 2. Source mapping
     let sourceLabel = "Website Lead";
-    if (source === "calculator-gate") sourceLabel = "Calculator Lead Form";
-    else if (source === "popup-lead-form") sourceLabel = "Website Popup";
-    else if (source === "meta-lead") sourceLabel = "Meta Lead Ads";
-    else if (source) sourceLabel = source;
+    if (source === "calculator-gate")  sourceLabel = "Calculator Lead Form";
+    else if (source === "popup-lead-form")  sourceLabel = "Website Popup";
+    else if (source === "website-contact")  sourceLabel = "Website Contact";
+    else if (source === "meta-lead")        sourceLabel = "Meta Lead Ads";
+    else if (source)                        sourceLabel = source;
 
-    // 3. Compile remarks from extra fields
-    const remarkDetails = [];
-    if (notes) remarkDetails.push(`Notes: ${notes}`);
-    if (gold_type) remarkDetails.push(`Gold Type: ${gold_type}`);
-    if (purity_karat) remarkDetails.push(`Purity: ${purity_karat}K`);
-    if (estimated_value) remarkDetails.push(`Est Value: ₹${estimated_value}`);
-    if (pincode) remarkDetails.push(`Pincode: ${pincode}`);
+    // 3. Only store the customer's notes in remarks — telecaller fills the rest after calling
+    const remarks = notes ? String(notes).trim() : "";
 
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
@@ -59,8 +56,7 @@ async function createWebLead(req, res) {
     });
 
     if (existingLead) {
-      // Append repeat enquiry note so telecaller is notified of customer's renewed interest
-      const repeatRemark = `[Repeat Enquiry ${new Date().toLocaleTimeString('en-IN')}] ${remarkDetails.join(" | ") || sourceLabel}`;
+      const repeatRemark = `[Repeat Enquiry ${new Date().toLocaleTimeString("en-IN")}] ${remarkDetails.join(" | ") || sourceLabel}`;
       await Lead.findByIdAndUpdate(existingLead._id, {
         $push: {
           dispositions: {
@@ -83,21 +79,25 @@ async function createWebLead(req, res) {
       });
     }
 
-    // 5. Build normalized lead payload
+    // 5. Build lead payload — all fields mapped to Lead model schema
     const leadPayload = {
-      name: String(name).trim(),
-      mobile: cleanMobile,
-      city: city ? String(city).trim() : "",
-      place: city ? String(city).trim() : "",
-      source: sourceLabel,
+      name:       String(name).trim(),
+      mobile:     cleanMobile,
+      city:       city    ? String(city).trim()    : "",
+      place:      city    ? String(city).trim()    : "",
+      state:      state   ? String(state).trim()   : "",
+      pincode:    pincode ? String(pincode).trim() : "",
+      source:     sourceLabel,
       leadSource: "marketing",
-      category: "gold",
-      weight: parseFloat(weight_grams) || 0,
-      remarks: remarkDetails.join(" | "),
-      date: new Date()
+      category:   ["gold", "silver"].includes(category) ? category : "gold",
+      type:       ["physical", "pledged"].includes(type) ? type : "physical",
+      unit:       unit || "gm",
+      weight:     parseFloat(weight_grams) || 0,
+      remarks,
+      date:              new Date(),
     };
 
-    // 6. Create lead (Option B: automatically assigns to active telecaller with least leads today)
+    // 6. Create lead — auto assigns to next telecaller via round-robin
     const createdLead = await leadService.create(leadPayload);
 
     return res.status(201).json({
