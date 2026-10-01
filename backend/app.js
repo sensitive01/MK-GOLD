@@ -28,6 +28,8 @@ app.set("trust proxy", 1);
 
 // ✅ CORS CONFIG (production safe)
 const allowedOrigins = [
+  "https://mkgold.in",
+  "https://www.mkgold.in",
   "https://mkgold.tech",
   "https://www.mkgold.tech",
   "http://localhost:3000",
@@ -38,7 +40,7 @@ const allowedOrigins = [
   "http://192.168.29.31:5173"
 ];
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
     // allow requests with no origin (mobile apps, curl, postman)
     if (!origin) return callback(null, true);
@@ -50,10 +52,12 @@ app.use(cors({
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "X-Requested-With", "Accept"],
   credentials: true
-}));
+};
 
-app.options("*", cors());
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 // middleware
 app.use(logger("dev"));

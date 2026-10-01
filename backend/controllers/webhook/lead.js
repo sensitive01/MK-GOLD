@@ -3,29 +3,36 @@ const Lead = require("../../models/lead");
 
 async function createWebLead(req, res) {
   try {
+    console.log("[WEBHOOK_LEAD] Received payload:", JSON.stringify(req.body));
+
+    const rawName = req.body?.name || req.body?.fullName || req.body?.full_name;
+    const rawPhone = req.body?.phone || req.body?.mobile || req.body?.phone_number || req.body?.phoneNumber;
+    const rawSource = req.body?.source || req.body?.leadSource || "popup-lead-form";
+
     const {
-      name,
-      phone,
       city,
+      place,
       state,
       pincode,
       weight_grams,
+      weight,
       notes,
-      source,
+      remarks: bodyRemarks,
+      message,
       category,
       type,
       unit,
     } = req.body || {};
 
     // 1. Mandatory field validation
-    if (!name || !phone || !source) {
+    if (!rawName || !rawPhone) {
       return res.status(400).json({
         status: false,
-        message: "name, phone and source are required"
+        message: "name (or full_name) and phone (or mobile) are required"
       });
     }
 
-    const cleanMobile = String(phone).replace(/[\s\-\+]/g, "").slice(-10);
+    const cleanMobile = String(rawPhone).replace(/[\s\-\+]/g, "").slice(-10);
     if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
       return res.status(400).json({
         status: false,
@@ -34,15 +41,17 @@ async function createWebLead(req, res) {
     }
 
     // 2. Source mapping
-    let sourceLabel = "Website Lead";
-    if (source === "calculator-gate")  sourceLabel = "Calculator Lead Form";
-    else if (source === "popup-lead-form")  sourceLabel = "Website Popup";
-    else if (source === "website-contact")  sourceLabel = "Website Contact";
-    else if (source === "meta-lead")        sourceLabel = "Meta Lead Ads";
-    else if (source)                        sourceLabel = source;
+    let sourceLabel = "Website Popup";
+    if (rawSource === "calculator-gate")      sourceLabel = "Calculator Lead Form";
+    else if (rawSource === "popup-lead-form") sourceLabel = "Website Popup";
+    else if (rawSource === "website-contact") sourceLabel = "Website Contact";
+    else if (rawSource === "meta-lead")       sourceLabel = "Meta Lead Ads";
+    else if (rawSource)                       sourceLabel = rawSource;
+
+    const leadNotes = notes || bodyRemarks || message || "";
 
     // 3. Only store the customer's notes in remarks — telecaller fills the rest after calling
-    const remarks = notes ? String(notes).trim() : "";
+    const remarks = leadNotes ? String(leadNotes).trim() : "";
 
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
@@ -56,7 +65,7 @@ async function createWebLead(req, res) {
     });
 
     if (existingLead) {
-      const repeatRemark = `[Repeat Enquiry ${new Date().toLocaleTimeString("en-IN")}] ${remarkDetails.join(" | ") || sourceLabel}`;
+      const repeatRemark = `[Repeat Enquiry ${new Date().toLocaleTimeString("en-IN")}] ${remarks || sourceLabel}`;
       await Lead.findByIdAndUpdate(existingLead._id, {
         $push: {
           dispositions: {
@@ -80,11 +89,12 @@ async function createWebLead(req, res) {
     }
 
     // 5. Build lead payload — all fields mapped to Lead model schema
+    const targetCity = city || place || "";
     const leadPayload = {
-      name:       String(name).trim(),
+      name:       String(rawName).trim(),
       mobile:     cleanMobile,
-      city:       city    ? String(city).trim()    : "",
-      place:      city    ? String(city).trim()    : "",
+      city:       targetCity ? String(targetCity).trim() : "",
+      place:      targetCity ? String(targetCity).trim() : "",
       state:      state   ? String(state).trim()   : "",
       pincode:    pincode ? String(pincode).trim() : "",
       source:     sourceLabel,
@@ -92,9 +102,9 @@ async function createWebLead(req, res) {
       category:   ["gold", "silver"].includes(category) ? category : "gold",
       type:       ["physical", "pledged"].includes(type) ? type : "physical",
       unit:       unit || "gm",
-      weight:     parseFloat(weight_grams) || 0,
+      weight:     parseFloat(weight_grams || weight) || 0,
       remarks,
-      date:              new Date(),
+      date:       new Date(),
     };
 
     // 6. Create lead — auto assigns to next telecaller via round-robin
