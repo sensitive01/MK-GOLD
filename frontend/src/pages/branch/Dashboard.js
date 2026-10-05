@@ -51,6 +51,7 @@ export default function DashboardAppPage() {
   const isBullionDesk = auth.user?.userType === 'bullion_desk' || window.location.pathname.startsWith('/bullion-desk');
 
   const bullionQuickLinks = [
+    { title: 'Leads', path: '/bullion-desk/leads', icon: 'mdi:account-group', bgColor: '#fff' },
     { title: 'Gold Rate', path: '/bullion-desk/gold-rate', icon: 'mdi:gold', bgColor: '#FFD700' },
     { title: 'Billing', path: '/bullion-desk/sale', icon: 'mdi:file-document-edit', bgColor: '#fff' },
     { title: 'Releases', path: '/bullion-desk/release', icon: 'mdi:file-document-check', bgColor: '#FFD700' },

@@ -10,6 +10,8 @@ function isAdmin(req, res, next) {
     "branch_executive",
     "transaction_executive",
     "telecalling",
+    "telecaller_tl",
+    "telecaller-tl",
     "bullion_desk",
   ];
 
@@ -63,6 +65,8 @@ function isBranch(req, res, next) {
     userType === "branch_executive" ||
     userType === "transaction_executive" ||
     userType === "telecalling" ||
+    userType === "telecaller_tl" ||
+    userType === "telecaller-tl" ||
     userType === "bullion_desk" ||
     userType === "marketing" ||
     userType === "admin_desk" ||

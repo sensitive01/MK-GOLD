@@ -14,7 +14,9 @@ async function find(req, res) {
       "telecalling",
       "bullion_desk",
       "marketing",
-      "admin_desk"
+      "admin_desk",
+      "telecaller_tl",
+      "telecaller-tl"
     ];
     if (userType !== "bullion_desk" && branchUserTypes.includes(userType) && req.user.branch) {
       query.branch = req.user.branch._id || req.user.branch;
@@ -81,7 +83,9 @@ async function create(req, res) {
         "telecalling",
         "bullion_desk",
         "marketing",
-        "admin_desk"
+        "admin_desk",
+        "telecaller_tl",
+        "telecaller-tl"
       ];
       if (branchUserTypes.includes(userType) && req.user.branch) {
         req.body.branch = req.user.branch._id || req.user.branch;

@@ -99,6 +99,35 @@ async function getBranchExecutives(branchId) {
   }
 }
 
+
+async function moveToBusiness(id) {
+  try {
+    const response = await apiClient().post(`/api/v1.0/branch/lead/move-to-business/${id}`);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+
+async function tlApproveLead(id) {
+  try {
+    const response = await apiClient().post(`/api/v1.0/branch/lead/tl-approve/${id}`);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+async function tlRejectLead(id, reason = '') {
+  try {
+    const response = await apiClient().post(`/api/v1.0/branch/lead/tl-reject/${id}`, { reason });
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
 export {
   getLeads,
   getLeadById,
@@ -111,4 +140,7 @@ export {
   markLeadsExclusive,
   assignExecutive,
   getBranchExecutives,
+  moveToBusiness,
+  tlApproveLead,
+  tlRejectLead,
 };

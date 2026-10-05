@@ -103,7 +103,7 @@ function CreateUser(props) {
       return designation.includes('assistant branch manager') || designation.includes('asst branch manager');
     }
 
-    if (values.userType === 'telecalling') {
+    if (values.userType === 'telecalling' || values.userType === 'telecaller_tl') {
       return designation.includes('tele');
     }
     

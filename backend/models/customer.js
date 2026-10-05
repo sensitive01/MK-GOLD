@@ -51,6 +51,9 @@ const Customer = mongoose.model(
       maritalStatus: {
         type: String,
       },
+      employmentStatus: {
+        type: String,
+      },
       employment: mongoose.Schema({
         employmentType: {
           type: String,

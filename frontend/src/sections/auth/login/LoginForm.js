@@ -79,6 +79,9 @@ export default function LoginForm() {
     if (userType === 'marketing') {
       return <Navigate to="/marketing/dashboard" />;
     }
+    if (userType === 'telecaller_tl' || userType === 'telecaller-tl') {
+      return <Navigate to="/telecaller-tl/dashboard" />;
+    }
     if (userType === 'admin_desk') {
       return <Navigate to="/admin-desk/dashboard" />;
     }

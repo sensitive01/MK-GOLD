@@ -46,7 +46,7 @@ import { AttendanceListHead } from '../../sections/@dashboard/attendance';
 import LeadListToolbar from '../../sections/@dashboard/lead/LeadListToolbar';
 import LeadFilterSidebar from '../../sections/@dashboard/lead/LeadFilterSidebar';
 // apis
-import { deleteLeadById, getLeads, bulkCreateLeads, markLeadsExclusive } from '../../apis/branch/lead';
+import { deleteLeadById, getLeads, bulkCreateLeads, markLeadsExclusive, moveToBusiness } from '../../apis/branch/lead';
 import { getImportedLeads, importLeads, deleteImportedLead } from '../../apis/branch/importedLead';
 import global from '../../utils/global';
 
@@ -216,7 +216,9 @@ function applySortFilter(array, comparator, query, filters, user) {
 
 export default function Leads({ title = "Leads Management" }) {
   const auth = useSelector((state) => state.auth);
-  const isTelecaller = ['telecalling', 'admin'].includes(auth?.user?.userType?.toLowerCase());
+  const isTelecallerRole = auth?.user?.userType?.toLowerCase() === 'telecalling';
+  const isAdmin = auth?.user?.userType?.toLowerCase() === 'admin';
+  const isTelecaller = isTelecallerRole || isAdmin;
 
   const tableHead = [
     { id: 'name', label: 'Name', alignRight: false },
@@ -226,7 +228,8 @@ export default function Leads({ title = "Leads Management" }) {
     { id: 'weight', label: 'Weight', alignRight: false },
     { id: 'date', label: 'Date', alignRight: false },
     { id: 'editedBy', label: 'Agent', alignRight: false },
-    ...(isTelecaller ? [{ id: 'assignedExecutive', label: 'Assigned Executive', alignRight: false }] : []),
+    ...(isAdmin ? [{ id: 'assignedExecutive', label: 'Assigned Executive', alignRight: false }] : []),
+    ...(isTelecallerRole ? [{ id: 'moveToBusiness', label: 'Move to Business', alignRight: false }] : []),
     { id: 'remarks', label: 'Remarks', alignRight: false },
     { id: 'disposition', label: 'Status', alignRight: false },
     { id: '' },
@@ -309,6 +312,36 @@ export default function Leads({ title = "Leads Management" }) {
   useEffect(() => {
     fetchData();
   }, [fetchData, toggleContainer]);
+
+  const handleMoveToBusiness = async (id) => {
+    try {
+      const res = await moveToBusiness(id);
+      if (res && res.status) {
+        setNotify({
+          open: true,
+          message: res.message || 'Lead moved to business successfully!',
+          severity: 'success',
+        });
+        setData((prevData) =>
+          prevData.map((item) =>
+            item._id === id ? { ...item, isMovedToBusiness: true, movedToBusinessAt: new Date() } : item
+          )
+        );
+      } else {
+        setNotify({
+          open: true,
+          message: res?.message || 'Failed to move lead to business',
+          severity: 'error',
+        });
+      }
+    } catch (err) {
+      setNotify({
+        open: true,
+        message: err.message || 'An error occurred',
+        severity: 'error',
+      });
+    }
+  };
 
   const handleFileChange = (event) => {
     const selectedFile = event.target.files[0];
@@ -975,9 +1008,57 @@ export default function Leads({ title = "Leads Management" }) {
                         </TableCell> */}
                         <TableCell align="left">{date ? moment(date).format('YYYY-MM-DD') : 'N/A'}</TableCell>
                         <TableCell align="left">{updatedBy?.employee?.name || updatedBy?.username || '-'}</TableCell>
-                        {isTelecaller && (
+                        {isAdmin && (
                           <TableCell align="left">
                             {row.assignedExecutive?.employee?.name || row.assignedExecutiveName || '-'}
+                          </TableCell>
+                        )}
+                        {isTelecallerRole && (
+                          <TableCell align="left" onClick={(e) => e.stopPropagation()}>
+                            {row.isMovedToBusiness ? (
+                              <Box
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  px: 1.2,
+                                  py: 0.4,
+                                  borderRadius: 1,
+                                  bgcolor: 'rgba(46, 125, 50, 0.12)',
+                                  color: '#2e7d32',
+                                  fontWeight: 600,
+                                  fontSize: '0.75rem',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                <Iconify icon="eva:checkmark-circle-2-fill" sx={{ width: 16, height: 16 }} />
+                                Moved to Business
+                              </Box>
+                            ) : (
+                              <Button
+                                variant="contained"
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMoveToBusiness(_id);
+                                }}
+                                startIcon={<Iconify icon="eva:trending-up-fill" sx={{ color: '#ffffff !important' }} />}
+                                sx={{
+                                  bgcolor: '#8A1B9F',
+                                  color: '#ffffff !important',
+                                  fontSize: '0.75rem',
+                                  whiteSpace: 'nowrap',
+                                  py: 0.4,
+                                  px: 1.2,
+                                  fontWeight: 600,
+                                  '&:hover': { bgcolor: '#731485' },
+                                  '& .MuiButton-startIcon': { color: '#ffffff !important' },
+                                  '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
+                                }}
+                              >
+                                Move To Business
+                              </Button>
+                            )}
                           </TableCell>
                         )}
                         <TableCell align="left" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={displayRemark || ''}>{displayRemark || '-'}</TableCell>
@@ -1043,12 +1124,12 @@ export default function Leads({ title = "Leads Management" }) {
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={isTelecaller ? 11 : 10} />
+                      <TableCell colSpan={(isAdmin || isTelecallerRole) ? 11 : 10} />
                     </TableRow>
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={isTelecaller ? 11 : 10} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={(isAdmin || isTelecallerRole) ? 11 : 10} sx={{ py: 3 }}>
                         <Paper sx={{ textAlign: 'center' }}>
                           <Typography paragraph>No leads found</Typography>
                         </Paper>

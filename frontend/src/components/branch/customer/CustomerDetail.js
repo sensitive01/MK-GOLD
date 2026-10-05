@@ -221,8 +221,11 @@ export default function CustomerDetail({ id }) {
                     <TableRow tabIndex={-1}>
                       <TableCell align="left">DOB: {data?.dob}</TableCell>
                       <TableCell align="left">Marital Status: {sentenceCase(data?.maritalStatus || '')}</TableCell>
+                      <TableCell align="left">Employment Status: {data?.employmentStatus || data?.employment?.employmentType || 'N/A'}</TableCell>
                       <TableCell align="left">Status: {sentenceCase(data?.status || '')}</TableCell>
-                      <TableCell align="left">Alternate Phone Number: {global.maskPhoneNumber(data?.alternatePhoneNumber)}</TableCell>
+                    </TableRow>
+                    <TableRow tabIndex={-1}>
+                      <TableCell align="left" colSpan={4}>Alternate Phone Number: {global.maskPhoneNumber(data?.alternatePhoneNumber)}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>

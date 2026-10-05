@@ -55,17 +55,26 @@ export default function SalePrint({ id }) {
 
   const uniqueOrnamentPhotos = Array.from(new Set(ornamentPhotos));
 
+  const currentRate = data?.purchaseType?.toLowerCase() === 'silver' ? (data?.silverRate || 0) : (data?.goldRate || 0);
+
   // Determine rows to display in the table
   const tableRows = [];
   if (data?.ornaments && data.ornaments.length > 0) {
     data.ornaments.forEach((orn) => {
+      // Use system calculated amount in the ornament table
+      const systemAmount = (orn.calculatedAmount !== undefined && orn.calculatedAmount !== null && Number(orn.calculatedAmount) > 0)
+        ? Number(orn.calculatedAmount)
+        : (currentRate > 0 && orn.netWeight && orn.purity)
+        ? Math.round(((Number(orn.netWeight) * Number(orn.purity)) / 100) * Number(currentRate))
+        : (Number(orn.netAmount || 0) - (Number(orn.adjustment) || 0));
+
       tableRows.push({
         name: orn.ornamentType || 'Ornament',
         grossWeight: orn.grossWeight || 0,
         stoneWeight: orn.stoneWeight || 0,
         netWeight: orn.netWeight || 0,
         purity: orn.purity || 0,
-        value: orn.netAmount || 0,
+        value: systemAmount,
       });
     });
   } else if (data?.release && data.release.length > 0) {
@@ -109,6 +118,18 @@ export default function SalePrint({ id }) {
   const serviceChargesPercent = marginPercent;
 
   const releaseChargesAmount = Math.round(data?.release?.reduce((prev, cur) => prev + (cur?.payableAmount || 0), 0) || 0);
+  const totalAdjustments = data?.totalAdjustment ?? data?.adjustments ?? (
+    data?.ornaments?.reduce((sum, orn) => {
+      let adj = orn.adjustment;
+      if (adj === undefined || adj === null) {
+        const sysVal = (currentRate > 0 && orn.netWeight && orn.purity)
+          ? Math.round(((Number(orn.netWeight) * Number(orn.purity)) / 100) * Number(currentRate))
+          : Number(orn.calculatedAmount || orn.netAmount || 0);
+        adj = Number(orn.netAmount || 0) - sysVal;
+      }
+      return sum + (Number(adj) || 0);
+    }, 0) || 0
+  );
 
   return (
     <>
@@ -362,6 +383,14 @@ export default function SalePrint({ id }) {
                         <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>Release Charges =</td>
                         <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>
                           &#8377; {releaseChargesAmount.toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    )}
+                    {Boolean(totalAdjustments) && (
+                      <tr>
+                        <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>Adjustments =</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px', color: totalAdjustments < 0 ? '#d32f2f' : '#2e7d32' }}>
+                          &#8377; {totalAdjustments > 0 ? `+${Math.round(totalAdjustments).toLocaleString('en-IN')}` : `-${Math.abs(Math.round(totalAdjustments)).toLocaleString('en-IN')}`}
                         </td>
                       </tr>
                     )}

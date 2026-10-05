@@ -98,6 +98,7 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
   // Form validation
   const schema = Yup.object({
     ornamentType: Yup.string().required('Ornament type is required'),
+    source: Yup.string().required('Source is required'),
     quantity: Yup.string().required('Quantity is required'),
     grossWeight: Yup.string().required('Gross weight is required'),
     stoneWeight: Yup.string().required('Stone weight is required'),
@@ -114,12 +115,16 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
   const { handleSubmit, handleChange, handleBlur, values, setValues, setFieldValue, touched, errors, resetForm } = useFormik({
     initialValues: {
       ornamentType: '',
+      source: '',
       quantity: '',
       grossWeight: '',
       stoneWeight: '',
       netWeight: '',
       purity: '',
       netAmount: '',
+      calculatedAmount: 0,
+      adjustment: 0,
+      isManualAmount: false,
       ornamentPhoto: '',
       hasBill: false,
       billDate: '',
@@ -127,7 +132,17 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
     },
     validationSchema: schema,
     onSubmit: (values) => {
-      setOrnaments([...(ornaments || []), values]);
+      const calcAmount = Number(values.calculatedAmount || 0);
+      const finalNetAmount = Number(values.netAmount || 0);
+      const adj = Math.round(finalNetAmount - calcAmount);
+      const ornamentData = {
+        ...values,
+        netAmount: finalNetAmount,
+        calculatedAmount: calcAmount,
+        adjustment: adj,
+        isManualAmount: Boolean(values.isManualAmount && adj !== 0),
+      };
+      setOrnaments([...(ornaments || []), ornamentData]);
       setOrnamentModal(false);
       resetForm();
       setNotify({
@@ -218,6 +233,7 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
   const handleCloseModal = () => {
     setOrnamentModal(false);
     resetForm();
+    prevCalcRef.current = { netWeight: '', purity: '', rate: 0 };
     setPhotoUploading(false);
     setBillUploading(false);
   };
@@ -239,10 +255,16 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
       prevCalcRef.current.rate !== rate
     ) {
       prevCalcRef.current = { netWeight, purity, rate };
-      const amount = Math.round(((Number(netWeight) * Number(purity)) / 100) * Number(rate));
-      setFieldValue('netAmount', amount);
+      const autoAmount = Math.round(((Number(netWeight) * Number(purity)) / 100) * Number(rate));
+      setFieldValue('calculatedAmount', autoAmount);
+      if (!values.isManualAmount) {
+        setFieldValue('netAmount', autoAmount);
+        setFieldValue('adjustment', 0);
+      } else {
+        setFieldValue('adjustment', Math.round(Number(values.netAmount || 0) - autoAmount));
+      }
     }
-  }, [ornamentModal, goldRate, silverRate, purchaseType, values.netWeight, values.purity, setFieldValue]);
+  }, [ornamentModal, goldRate, silverRate, purchaseType, values.netWeight, values.purity, values.isManualAmount, values.netAmount, setFieldValue]);
 
   return (
     <>
@@ -270,12 +292,14 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
               <TableHead>
                 <TableRow>
                   <TableCell align="left">Ornament Type</TableCell>
+                  <TableCell align="left">Source</TableCell>
                   <TableCell align="left">Quantity</TableCell>
                   <TableCell align="center">Photo</TableCell>
                   <TableCell align="left">Gross Weight</TableCell>
                   <TableCell align="left">Stone</TableCell>
                   <TableCell align="left">Net Weight</TableCell>
                   <TableCell align="left">Purity</TableCell>
+                  <TableCell align="left">Base Amount</TableCell>
                   <TableCell align="left">Net Amount</TableCell>
                   <TableCell align="center">Bill</TableCell>
                   <TableCell align="left">Action</TableCell>
@@ -285,6 +309,18 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                 {ornaments?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
                   <TableRow hover key={index} tabIndex={-1}>
                     <TableCell align="left">{e.ornamentType}</TableCell>
+                    <TableCell align="left">
+                      {e.source ? (
+                        <Chip
+                          size="small"
+                          label={e.source}
+                          color={e.source?.toLowerCase() === 'gift' ? 'secondary' : 'default'}
+                          variant="outlined"
+                        />
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
                     <TableCell align="left">{e.quantity}</TableCell>
                     <TableCell align="center">
                       {e.ornamentPhoto ? (
@@ -318,7 +354,30 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                     <TableCell align="left">{e.stoneWeight}</TableCell>
                     <TableCell align="left">{e.netWeight}</TableCell>
                     <TableCell align="left">{e.purity}</TableCell>
-                    <TableCell align="left">{e.netAmount}</TableCell>
+                    <TableCell align="left">
+                      ₹{Math.round(
+                        (e.calculatedAmount !== undefined && e.calculatedAmount !== null && Number(e.calculatedAmount) > 0)
+                          ? Number(e.calculatedAmount)
+                          : ((purchaseType === 'silver' ? silverRate : goldRate) > 0 && e.netWeight && e.purity)
+                          ? Math.round(((Number(e.netWeight) * Number(e.purity)) / 100) * Number(purchaseType === 'silver' ? silverRate : goldRate))
+                          : (Number(e.netAmount || 0) - (Number(e.adjustment) || 0))
+                      ).toLocaleString('en-IN')}
+                    </TableCell>
+                    <TableCell align="left">
+                      ₹{Math.round(e.netAmount || 0).toLocaleString('en-IN')}
+                      {Boolean(e.adjustment) && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            display: 'block',
+                            color: e.adjustment > 0 ? 'success.main' : 'error.main',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {e.adjustment > 0 ? `+₹${Number(e.adjustment).toLocaleString('en-IN')}` : `-₹${Math.abs(Number(e.adjustment)).toLocaleString('en-IN')}`}
+                        </Typography>
+                      )}
+                    </TableCell>
                     <TableCell align="center">
                       {e.hasBill ? (
                         <Chip
@@ -366,12 +425,12 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                 ))}
                 {emptyRows > 0 && (
                   <TableRow style={{ height: 53 * emptyRows }}>
-                    <TableCell colSpan={10} />
+                    <TableCell colSpan={12} />
                   </TableRow>
                 )}
                 {(!ornaments || ornaments.length === 0) && (
                   <TableRow>
-                    <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
+                    <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                       <Paper
                         sx={{
                           textAlign: 'center',
@@ -401,6 +460,7 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                     <TableCell align="left">
                       Total
                     </TableCell>
+                    <TableCell align="left">-</TableCell>
                     <TableCell align="left">
                       {ornaments.reduce((prev, cur) => prev + (+cur.quantity || 0), 0)}
                     </TableCell>
@@ -415,6 +475,19 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                       {ornaments.reduce((prev, cur) => prev + (+cur.netWeight || 0), 0).toFixed(2)}
                     </TableCell>
                     <TableCell align="left">-</TableCell>
+                    <TableCell align="left">
+                      ₹{Math.round(
+                        ornaments.reduce((prev, cur) => {
+                          const rateVal = purchaseType === 'silver' ? silverRate : goldRate;
+                          const sysAmt = (cur.calculatedAmount !== undefined && cur.calculatedAmount !== null && Number(cur.calculatedAmount) > 0)
+                            ? Number(cur.calculatedAmount)
+                            : (rateVal > 0 && cur.netWeight && cur.purity)
+                            ? Math.round(((Number(cur.netWeight) * Number(cur.purity)) / 100) * Number(rateVal))
+                            : (Number(cur.netAmount || 0) - (Number(cur.adjustment) || 0));
+                          return prev + (Number(sysAmt) || 0);
+                        }, 0)
+                      ).toLocaleString('en-IN')}
+                    </TableCell>
                     <TableCell align="left">
                       ₹{Math.round(ornaments.reduce((prev, cur) => prev + (+cur.netAmount || 0), 0)).toLocaleString('en-IN')}
                     </TableCell>
@@ -467,8 +540,8 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
             }}
           >
             <Grid container spacing={2.5}>
-              {/* Row 1: Ornament Specifications */}
-              <Grid item xs={12} md={6}>
+              {/* Row 1: Ornament Specifications & Source */}
+              <Grid item xs={12} sm={6}>
                 <FormControl fullWidth error={touched.ornamentType && errors.ornamentType && true}>
                   <InputLabel id="select-label">Select Ornament Type</InputLabel>
                   <Select
@@ -507,6 +580,25 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                 </FormControl>
               </Grid>
 
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth error={touched.source && errors.source && true}>
+                  <InputLabel id="source-select-label">Source</InputLabel>
+                  <Select
+                    labelId="source-select-label"
+                    id="source-select"
+                    label={touched.source && errors.source ? errors.source : 'Source'}
+                    name="source"
+                    value={values.source}
+                    onBlur={handleBlur}
+                    onChange={handleChange}
+                  >
+                    <MenuItem value="Purchase">Purchase</MenuItem>
+                    <MenuItem value="Gift">Gift</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Row 2: Quantities & Weights */}
               <Grid item xs={12} sm={6} md={3}>
                 <TextField
                   name="quantity"
@@ -544,7 +636,6 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                 />
               </Grid>
 
-              {/* Row 2: Stone, Net Weight, Purity, Net Amount */}
               <Grid item xs={12} sm={6} md={3}>
                 <TextField
                   name="stoneWeight"
@@ -587,7 +678,8 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
+              {/* Row 3: Purity & Net Amount */}
+              <Grid item xs={12} sm={6}>
                 <TextField
                   name="purity"
                   type="number"
@@ -603,7 +695,7 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                 />
               </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   name="netAmount"
                   type="number"
@@ -613,10 +705,22 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                   InputProps={{
                     startAdornment: <InputAdornment position="start">₹</InputAdornment>,
                   }}
-                  helperText={`Rate: ₹${purchaseType === 'gold' ? goldRate : silverRate}`}
+                  helperText={
+                    values.isManualAmount && values.adjustment !== 0
+                      ? `Rate: ₹${purchaseType === 'gold' ? goldRate : silverRate} | Base: ₹${Number(values.calculatedAmount || 0).toLocaleString('en-IN')} | Adj: ${values.adjustment > 0 ? `+₹${values.adjustment.toLocaleString('en-IN')}` : `-₹${Math.abs(values.adjustment).toLocaleString('en-IN')}`}`
+                      : `Rate: ₹${purchaseType === 'gold' ? goldRate : silverRate}`
+                  }
                   fullWidth
                   onBlur={handleBlur}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const manualVal = e.target.value;
+                    const numVal = manualVal === '' ? 0 : Number(manualVal);
+                    const calc = Number(values.calculatedAmount || 0);
+                    const adj = manualVal === '' ? 0 : Math.round(numVal - calc);
+                    setFieldValue('netAmount', manualVal);
+                    setFieldValue('isManualAmount', true);
+                    setFieldValue('adjustment', adj);
+                  }}
                 />
               </Grid>
 

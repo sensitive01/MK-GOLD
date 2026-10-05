@@ -47,6 +47,10 @@ const Sales = mongoose.model(
               type: String,
               required: true,
             },
+            source: {
+              type: String,
+              default: "",
+            },
             quantity: {
               type: Number,
               required: true,
@@ -70,6 +74,18 @@ const Sales = mongoose.model(
             netAmount: {
               type: Number,
               required: true,
+            },
+            calculatedAmount: {
+              type: Number,
+              default: 0,
+            },
+            adjustment: {
+              type: Number,
+              default: 0,
+            },
+            isManualAmount: {
+              type: Boolean,
+              default: false,
             },
             status: {
               type: String,
@@ -116,6 +132,18 @@ const Sales = mongoose.model(
       netAmount: {
         type: Number,
         required: true,
+      },
+      totalCalculatedAmount: {
+        type: Number,
+        default: 0,
+      },
+      adjustments: {
+        type: Number,
+        default: 0,
+      },
+      totalAdjustment: {
+        type: Number,
+        default: 0,
       },
       paymentType: {
         type: String,

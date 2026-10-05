@@ -259,7 +259,9 @@ export default function Leads({ title = "Leads Management" }) {
   const fetchData = useCallback(
     () => {
       setOpenBackdrop(true);
-      Promise.all([getLeads({ leadSource: 'marketing' }), getImportedLeads()])
+      const isTL = ['telecaller_tl', 'telecaller-tl'].includes(auth.user?.userType?.toLowerCase());
+      const query = isTL ? { leadSource: { $in: ['telecalling', 'marketing'] } } : { leadSource: 'marketing' };
+      Promise.all([getLeads(query), getImportedLeads()])
         .then(([leadsRes, importedRes]) => {
           const normalLeads = leadsRes.data || [];
           const importedLeads = (importedRes.status && importedRes.data) ? importedRes.data.map(item => ({
@@ -713,7 +715,7 @@ export default function Leads({ title = "Leads Management" }) {
           </Typography>
           <Stack direction="row" spacing={2}>
 
-            {auth.user?.userType?.toLowerCase() === 'marketing' && (
+            {['marketing', 'telecaller_tl', 'telecaller-tl'].includes(auth.user?.userType?.toLowerCase()) && (
               <Button
                 variant="outlined"
                 color="inherit"

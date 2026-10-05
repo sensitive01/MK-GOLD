@@ -348,12 +348,14 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
             <TableHead>
               <TableRow>
                 <TableCell align="left">Ornament Type</TableCell>
+                <TableCell align="left">Source</TableCell>
                 <TableCell align="left">Quantity</TableCell>
                 <TableCell align="center">Photo</TableCell>
                 <TableCell align="left">Gross Weight</TableCell>
                 <TableCell align="left">Stone</TableCell>
                 <TableCell align="left">Net Weight</TableCell>
                 <TableCell align="left">Purity</TableCell>
+                <TableCell align="left">Base Amount</TableCell>
                 <TableCell align="left">Net Amount</TableCell>
                 <TableCell align="center">Bill</TableCell>
               </TableRow>
@@ -362,6 +364,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
               {data?.ornaments?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
                 <TableRow hover key={index} tabIndex={-1}>
                   <TableCell align="left">{sentenceCase(e.ornamentType || '')}</TableCell>
+                  <TableCell align="left">{e.source || '-'}</TableCell>
                   <TableCell align="left">{e.quantity}</TableCell>
                   <TableCell align="center">
                     {e.ornamentPhoto ? (
@@ -394,7 +397,30 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                   <TableCell align="left">{e.stoneWeight?.toFixed(2)}</TableCell>
                   <TableCell align="left">{e.netWeight?.toFixed(2)}</TableCell>
                   <TableCell align="left">{e.purity}</TableCell>
-                  <TableCell align="left">{Math.round(e.netAmount)}</TableCell>
+                  <TableCell align="left">
+                    ₹{Math.round(
+                      (e.calculatedAmount !== undefined && e.calculatedAmount !== null && Number(e.calculatedAmount) > 0)
+                        ? Number(e.calculatedAmount)
+                        : ((data?.purchaseType === 'silver' ? data?.silverRate : data?.goldRate) > 0 && e.netWeight && e.purity)
+                        ? Math.round(((Number(e.netWeight) * Number(e.purity)) / 100) * Number(data?.purchaseType === 'silver' ? data?.silverRate : data?.goldRate))
+                        : (Number(e.netAmount || 0) - (Number(e.adjustment) || 0))
+                    ).toLocaleString('en-IN')}
+                  </TableCell>
+                  <TableCell align="left">
+                    ₹{Math.round(e.netAmount || 0).toLocaleString('en-IN')}
+                    {Boolean(e.adjustment) && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: 'block',
+                          color: e.adjustment > 0 ? 'success.main' : 'error.main',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {e.adjustment > 0 ? `+₹${Number(e.adjustment).toLocaleString('en-IN')}` : `-₹${Math.abs(Number(e.adjustment)).toLocaleString('en-IN')}`}
+                      </Typography>
+                    )}
+                  </TableCell>
                   <TableCell align="center">
                     {e.hasBill ? (
                       e.billProof ? (
@@ -424,12 +450,12 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
               ))}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={9} />
+                  <TableCell colSpan={10} />
                 </TableRow>
               )}
               {data?.ornaments?.length === 0 && (
                 <TableRow>
-                  <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                  <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
                     <Paper
                       sx={{
                         textAlign: 'center',
@@ -459,6 +485,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                   <TableCell align="left">
                     Total
                   </TableCell>
+                  <TableCell align="left">-</TableCell>
                   <TableCell align="left">
                     {data.ornaments.reduce((prev, cur) => prev + (+cur.quantity || 0), 0)}
                   </TableCell>
@@ -2263,6 +2290,9 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                       >
                         <Chip size="small" label={`Gender: ${data?.customer?.gender || 'N/A'}`} />
                         <Chip size="small" label={`Marital Status: ${data?.customer?.maritalStatus || 'N/A'}`} />
+                        {data?.customer?.employmentStatus && (
+                          <Chip size="small" label={`Employment: ${data?.customer?.employmentStatus}`} />
+                        )}
                         <Chip size="small" label={`Source: ${data?.customer?.source || 'N/A'}`} />
                       </Stack>
                     </Stack>
@@ -2544,7 +2574,38 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                             ₹{Math.round(data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0) || 0).toLocaleString('en-IN')}
                           </TableCell>
                         )}
-                        <TableCell align="left" colSpan={data?.saleType?.toLowerCase() === 'physical' ? 2 : 1}>
+                        {Boolean(
+                          data?.totalAdjustment ?? data?.adjustments ?? (
+                            data?.ornaments?.reduce((sum, orn) => sum + (Number(orn.adjustment) || (Number(orn.netAmount || 0) - Number(orn.calculatedAmount || orn.netAmount || 0))), 0)
+                          )
+                        ) && (
+                          <TableCell align="left">
+                            Adjustments:{' '}
+                            <Box
+                              component="span"
+                              sx={{
+                                fontWeight: 'bold',
+                                color:
+                                  (data?.totalAdjustment ?? data?.adjustments ?? (
+                                    data?.ornaments?.reduce((sum, orn) => sum + (Number(orn.adjustment) || (Number(orn.netAmount || 0) - Number(orn.calculatedAmount || orn.netAmount || 0))), 0)
+                                  )) > 0
+                                    ? 'success.main'
+                                    : 'error.main',
+                              }}
+                            >
+                              {(data?.totalAdjustment ?? data?.adjustments ?? (
+                                data?.ornaments?.reduce((sum, orn) => sum + (Number(orn.adjustment) || (Number(orn.netAmount || 0) - Number(orn.calculatedAmount || orn.netAmount || 0))), 0)
+                              )) > 0
+                                ? `+₹${Math.round(data?.totalAdjustment ?? data?.adjustments ?? (
+                                    data?.ornaments?.reduce((sum, orn) => sum + (Number(orn.adjustment) || (Number(orn.netAmount || 0) - Number(orn.calculatedAmount || orn.netAmount || 0))), 0)
+                                  )).toLocaleString('en-IN')}`
+                                : `-₹${Math.abs(Math.round(data?.totalAdjustment ?? data?.adjustments ?? (
+                                    data?.ornaments?.reduce((sum, orn) => sum + (Number(orn.adjustment) || (Number(orn.netAmount || 0) - Number(orn.calculatedAmount || orn.netAmount || 0))), 0)
+                                  ))).toLocaleString('en-IN')}`}
+                            </Box>
+                          </TableCell>
+                        )}
+                        <TableCell align="left" colSpan={1}>
                           Payable Amount: ₹{Math.abs(Math.round(data.payableAmount || 0)).toLocaleString('en-IN')}
                         </TableCell>
                       </TableRow>

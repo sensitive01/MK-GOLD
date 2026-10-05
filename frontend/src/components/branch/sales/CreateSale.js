@@ -385,6 +385,22 @@ function CreateSale(props) {
     });
   };
 
+  const totalAdjustments = Math.round(
+    ornaments?.reduce((prev, cur) => {
+      const adj =
+        cur.adjustment !== undefined && cur.adjustment !== null
+          ? Number(cur.adjustment)
+          : Number(cur.netAmount || 0) - Number(cur.calculatedAmount || cur.netAmount || 0);
+      return prev + (isNaN(adj) ? 0 : adj);
+    }, 0) ?? 0
+  );
+  const totalCalculatedAmount = Math.round(
+    ornaments?.reduce((prev, cur) => prev + Number(cur.calculatedAmount || cur.netAmount || 0), 0) ?? 0
+  );
+  payload.totalAdjustment = totalAdjustments;
+  payload.adjustments = totalAdjustments;
+  payload.totalCalculatedAmount = totalCalculatedAmount;
+
   payload.saleType = values.saleType;
   payload.purchaseType = values.purchaseType;
   payload.dop = values.dop;
@@ -916,12 +932,14 @@ function CreateSale(props) {
                     <TableHead>
                       <TableRow>
                         <TableCell align="left">Ornament Type</TableCell>
+                        <TableCell align="left">Source</TableCell>
                         <TableCell align="left">Quantity</TableCell>
                         <TableCell align="center">Photo</TableCell>
                         <TableCell align="left">Gross Weight</TableCell>
                         <TableCell align="left">Stone</TableCell>
                         <TableCell align="left">Net Weight</TableCell>
                         <TableCell align="left">Purity</TableCell>
+                        <TableCell align="left">Base Amount</TableCell>
                         <TableCell align="left">Net Amount</TableCell>
                         <TableCell align="center">Bill</TableCell>
                       </TableRow>
@@ -930,6 +948,7 @@ function CreateSale(props) {
                       {ornaments?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
                         <TableRow hover key={index} tabIndex={-1}>
                           <TableCell align="left">{sentenceCase(e.ornamentType || '')}</TableCell>
+                          <TableCell align="left">{e.source || '-'}</TableCell>
                           <TableCell align="left">{e.quantity}</TableCell>
                           <TableCell align="center">
                             {e.ornamentPhoto ? (
@@ -946,7 +965,30 @@ function CreateSale(props) {
                           <TableCell align="left">{e.stoneWeight}</TableCell>
                           <TableCell align="left">{e.netWeight}</TableCell>
                           <TableCell align="left">{e.purity}</TableCell>
-                          <TableCell align="left">{e.netAmount}</TableCell>
+                          <TableCell align="left">
+                            ₹{Math.round(
+                              (e.calculatedAmount !== undefined && e.calculatedAmount !== null && Number(e.calculatedAmount) > 0)
+                                ? Number(e.calculatedAmount)
+                                : ((values.purchaseType === 'silver' ? silverRate?.rate : goldRate?.rate) > 0 && e.netWeight && e.purity)
+                                ? Math.round(((Number(e.netWeight) * Number(e.purity)) / 100) * Number(values.purchaseType === 'silver' ? silverRate?.rate : goldRate?.rate))
+                                : (Number(e.netAmount || 0) - (Number(e.adjustment) || 0))
+                            ).toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell align="left">
+                            ₹{Math.round(e.netAmount || 0).toLocaleString('en-IN')}
+                            {Boolean(e.adjustment) && (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  display: 'block',
+                                  color: e.adjustment > 0 ? 'success.main' : 'error.main',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {e.adjustment > 0 ? `+₹${Number(e.adjustment).toLocaleString('en-IN')}` : `-₹${Math.abs(Number(e.adjustment)).toLocaleString('en-IN')}`}
+                              </Typography>
+                            )}
+                          </TableCell>
                           <TableCell align="center">
                             {e.hasBill ? (
                               <Chip size="small" color="primary" label={`Bill: ${e.billDate || 'Yes'}`} />
@@ -958,12 +1000,12 @@ function CreateSale(props) {
                       ))}
                       {emptyRows > 0 && (
                         <TableRow style={{ height: 53 * emptyRows }}>
-                          <TableCell colSpan={9} />
+                          <TableCell colSpan={11} />
                         </TableRow>
                       )}
                       {ornaments?.length === 0 && (
                         <TableRow>
-                          <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                          <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
                             <Paper
                               sx={{
                                 textAlign: 'center',
@@ -1005,6 +1047,19 @@ function CreateSale(props) {
                             {ornaments.reduce((prev, cur) => prev + (+cur.netWeight || 0), 0).toFixed(2)}
                           </TableCell>
                           <TableCell align="left">-</TableCell>
+                          <TableCell align="left">
+                            ₹{Math.round(
+                              ornaments.reduce((prev, cur) => {
+                                const rateVal = values.purchaseType === 'silver' ? silverRate?.rate : goldRate?.rate;
+                                const sysAmt = (cur.calculatedAmount !== undefined && cur.calculatedAmount !== null && Number(cur.calculatedAmount) > 0)
+                                  ? Number(cur.calculatedAmount)
+                                  : (rateVal > 0 && cur.netWeight && cur.purity)
+                                  ? Math.round(((Number(cur.netWeight) * Number(cur.purity)) / 100) * Number(rateVal))
+                                  : (Number(cur.netAmount || 0) - (Number(cur.adjustment) || 0));
+                                return prev + (Number(sysAmt) || 0);
+                              }, 0)
+                            ).toLocaleString('en-IN')}
+                          </TableCell>
                           <TableCell align="left">
                             ₹{Math.round(ornaments.reduce((prev, cur) => prev + (+cur.netAmount || 0), 0)).toLocaleString('en-IN')}
                           </TableCell>
@@ -1112,6 +1167,23 @@ function CreateSale(props) {
                 name="releaseAmount"
                 value={Math.round(selectedRelease?.reduce((prev, cur) => prev + +cur.payableAmount, 0)) ?? 0}
                 label={'Release Amount'}
+                fullWidth
+                InputProps={{
+                  readOnly: true,
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                name="adjustments"
+                value={
+                  totalAdjustments > 0
+                    ? `+₹${totalAdjustments.toLocaleString('en-IN')}`
+                    : totalAdjustments < 0
+                    ? `-₹${Math.abs(totalAdjustments).toLocaleString('en-IN')}`
+                    : '₹0'
+                }
+                label={'Adjustments'}
                 fullWidth
                 InputProps={{
                   readOnly: true,

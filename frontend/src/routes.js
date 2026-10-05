@@ -86,6 +86,7 @@ import AccountsBalancesheet from './pages/accounts/Balancesheet';
 import AccountsLeave from './pages/accounts/Leave';
 import BranchDashboardLayout from './layouts/dashboard/branch';
 import BullionDeskDashboardLayout from './layouts/dashboard/bullion_desk';
+import BullionDeskLeads from './pages/bullion_desk/Leads';
 import BranchDashboard from './pages/branch/Dashboard';
 import BranchFund from './pages/branch/Fund';
 import BranchExpense from './pages/branch/Expense';
@@ -113,6 +114,10 @@ import CampaignCreate from './pages/marketing/campaign/CampaignCreate';
 import CampaignView from './pages/marketing/campaign/CampaignView';
 import MarketingCalendar from './pages/marketing/Calendar.js';
 import MarketingLeads from './pages/marketing/Leads';
+
+import TelecallerTLDashboardLayout from './layouts/dashboard/telecaller_tl';
+import TelecallerTLDashboard from './pages/telecaller_tl/Dashboard';
+import TelecallerTLLeads from './pages/telecaller_tl/Leads';
 
 import AdminDeskDashboardLayout from './layouts/dashboard/admin_desk/AdminDeskDashboardLayout';
 import AdminDeskDashboard from './pages/admin_desk/Dashboard';
@@ -285,6 +290,7 @@ export default function Router() {
         { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/bullion-desk/dashboard" />, index: true },
         { path: 'dashboard', element: <BranchDashboard /> },
+        { path: 'leads', element: <BullionDeskLeads /> },
         { path: 'sale', element: <BranchSale /> },
         { path: 'leave', element: <BranchLeave /> },
         { path: 'attendance', element: <BranchAttendance /> },
@@ -446,6 +452,23 @@ export default function Router() {
         { path: 'campaigns/view/:id', element: <CampaignView /> },
         { path: 'calendar', element: <MarketingCalendar /> },
         { path: 'leads', element: <MarketingLeads /> },
+      ],
+    },
+    {
+      path: '/telecaller-tl',
+      element: (
+        <Protected>
+          <TelecallerTLDashboardLayout />
+        </Protected>
+      ),
+      children: [
+        { path: 'profile', element: <Profile /> },
+        { element: <Navigate to="/telecaller-tl/dashboard" />, index: true },
+        { path: 'dashboard', element: <TelecallerTLDashboard /> },
+        { path: 'attendance', element: <MarketingAttendance /> },
+        { path: 'leave', element: <MarketingLeave /> },
+        { path: 'expense', element: <MarketingExpense /> },
+        { path: 'leads', element: <TelecallerTLLeads /> },
       ],
     },
     {

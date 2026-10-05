@@ -113,17 +113,26 @@ async function generateExactInvoiceHtml(data) {
   }
   const uniqueOrnamentPhotos = Array.from(new Set(ornamentPhotos));
 
+  const currentRate = data?.purchaseType?.toLowerCase() === 'silver' ? Number(data?.silverRate || 0) : Number(data?.goldRate || 0);
+
   // 2. Table rows
   const tableRows = [];
   if (data?.ornaments && data.ornaments.length > 0) {
     data.ornaments.forEach((orn) => {
+      // Use system calculated amount in the ornament table
+      const systemAmount = (orn.calculatedAmount !== undefined && orn.calculatedAmount !== null && Number(orn.calculatedAmount) > 0)
+        ? Number(orn.calculatedAmount)
+        : (currentRate > 0 && orn.netWeight && orn.purity)
+        ? Math.round(((Number(orn.netWeight) * Number(orn.purity)) / 100) * Number(currentRate))
+        : (Number(orn.netAmount || 0) - (Number(orn.adjustment) || 0));
+
       tableRows.push({
         name: orn.ornamentType || 'Ornament',
         grossWeight: Number(orn.grossWeight) || 0,
         stoneWeight: Number(orn.stoneWeight) || 0,
         netWeight: Number(orn.netWeight) || 0,
         purity: Number(orn.purity) || 0,
-        value: Number(orn.netAmount) || 0,
+        value: systemAmount,
       });
     });
   } else if (data?.release && data.release.length > 0) {
@@ -166,6 +175,18 @@ async function generateExactInvoiceHtml(data) {
   const serviceChargesAmount = marginAmount;
   const serviceChargesPercent = marginPercent;
   const releaseChargesAmount = Math.round(data?.release?.reduce((prev, cur) => prev + (cur?.payableAmount || 0), 0) || 0);
+  const totalAdjustments = data?.totalAdjustment ?? data?.adjustments ?? (
+    data?.ornaments?.reduce((sum, orn) => {
+      let adj = orn.adjustment;
+      if (adj === undefined || adj === null) {
+        const sysVal = (currentRate > 0 && orn.netWeight && orn.purity)
+          ? Math.round(((Number(orn.netWeight) * Number(orn.purity)) / 100) * Number(currentRate))
+          : Number(orn.calculatedAmount || orn.netAmount || 0);
+        adj = Number(orn.netAmount || 0) - sysVal;
+      }
+      return sum + (Number(adj) || 0);
+    }, 0) || 0
+  );
 
   // 4. Preload images as Base64 Data URLs
   const logoPath = path.join(__dirname, '../assets/logo.png');
@@ -405,6 +426,14 @@ async function generateExactInvoiceHtml(data) {
                     <td style="border: 1px solid #000; padding: 6px; font-weight: bold; font-size: 12px;">Release Charges =</td>
                     <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: bold; font-size: 13px;">
                       &#8377; ${releaseChargesAmount.toLocaleString('en-IN')}
+                    </td>
+                  </tr>
+                ` : ''}
+                ${totalAdjustments ? `
+                  <tr>
+                    <td style="border: 1px solid #000; padding: 6px; font-weight: bold; font-size: 12px;">Adjustments =</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: bold; font-size: 13px; color: ${totalAdjustments < 0 ? '#d32f2f' : '#2e7d32'};">
+                      &#8377; ${totalAdjustments > 0 ? `+${Math.round(totalAdjustments).toLocaleString('en-IN')}` : `-${Math.abs(Math.round(totalAdjustments)).toLocaleString('en-IN')}`}
                     </td>
                   </tr>
                 ` : ''}

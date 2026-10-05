@@ -44,6 +44,11 @@ const navConfig = [
     path: '/bullion-desk/release',
     icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
   },
+  {
+    title: 'Leads',
+    path: '/bullion-desk/leads',
+    icon: icon('ic_user'),
+  },
 ];
 
 export default navConfig;

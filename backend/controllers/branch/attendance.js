@@ -101,7 +101,7 @@ async function getStats(req, res) {
     const branchId = req.user.branch?._id || req.user.branch;
     const type = req.user.userType?.toLowerCase();
     let employeeId = req.query.employeeId || null;
-    if (!employeeId && ["branch_executive", "telecalling", "finance", "accounts", "operations"].includes(type)) {
+    if (!employeeId && ["branch_executive", "telecalling", "telecaller_tl", "telecaller-tl", "finance", "accounts", "operations"].includes(type)) {
       employeeId = req.user.employee?._id || req.user.employee;
     }
 

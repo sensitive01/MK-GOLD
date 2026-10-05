@@ -22,9 +22,10 @@ async function findById(req, res) {
 async function create(req, res) {
   try {
     if (req.user) {
-      if (req.user.userType?.toLowerCase() !== 'telecalling') {
+      const ut = req.user.userType?.toLowerCase();
+      if (ut !== 'telecalling' && ut !== 'telecaller_tl' && ut !== 'telecaller-tl') {
         req.body.branch = req.user.branch?._id || req.user.branch;
-      } else {
+      } else if (ut === 'telecalling') {
         req.body.assignedTo = req.user._id;
       }
       req.body.createdBy = req.user._id;
@@ -98,7 +99,8 @@ async function bulkCreate(req, res) {
     // Attach branch and createdBy if available
     const enrichedLeads = leads.map(lead => {
       if (req.user) {
-        if (req.user.userType?.toLowerCase() !== 'telecalling') {
+        const ut = req.user.userType?.toLowerCase();
+        if (ut !== 'telecalling' && ut !== 'telecaller_tl' && ut !== 'telecaller-tl') {
           lead.branch = req.user.branch?._id || req.user.branch;
         }
         lead.createdBy = req.user._id;
@@ -158,6 +160,33 @@ async function getBranchExecutives(req, res) {
   }
 }
 
+async function moveToBusiness(req, res) {
+  try {
+    const data = await leadService.moveToBusiness(req.params.id, req.user);
+    res.json({ status: true, message: "Lead moved to business successfully!", data });
+  } catch (err) {
+    res.json({ status: false, message: err.message, data: {} });
+  }
+}
+
+async function tlApprove(req, res) {
+  try {
+    const data = await leadService.tlApprove(req.params.id, req.user);
+    res.json({ status: true, message: "Lead approved and moved to Bullion Desk successfully!", data });
+  } catch (err) {
+    res.json({ status: false, message: err.message, data: {} });
+  }
+}
+
+async function tlReject(req, res) {
+  try {
+    const data = await leadService.tlReject(req.params.id, req.body.reason || "", req.user);
+    res.json({ status: true, message: "Lead rejected successfully!", data });
+  } catch (err) {
+    res.json({ status: false, message: err.message, data: {} });
+  }
+}
+
 module.exports = {
   find,
   findById,
@@ -170,4 +199,7 @@ module.exports = {
   markExclusive,
   assignExecutive,
   getBranchExecutives,
+  moveToBusiness,
+  tlApprove,
+  tlReject,
 };

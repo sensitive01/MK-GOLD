@@ -116,6 +116,9 @@ branchRouter.post("/lead/delete/:id", lead.remove);
 branchRouter.post("/lead/disposition/:id", multer.single("uploadedFile"), lead.addDisposition);
 branchRouter.post("/lead/assign-executive/:id", lead.assignExecutive);
 branchRouter.get("/lead/branch-executives/:branchId", lead.getBranchExecutives);
+branchRouter.post("/lead/move-to-business/:id", lead.moveToBusiness);
+branchRouter.post("/lead/tl-approve/:id", lead.tlApprove);
+branchRouter.post("/lead/tl-reject/:id", lead.tlReject);
 
 branchRouter.post("/imported-lead/import", importedLead.importLeads);
 branchRouter.get("/imported-lead/get", importedLead.find);

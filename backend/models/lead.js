@@ -113,7 +113,7 @@ const leadSchema = new mongoose.Schema(
     ],
     leadSource: {
       type: String,
-      enum: ["admin", "marketing", "telecalling", "branch"],
+      enum: ["admin", "marketing", "telecalling", "telecaller_tl", "telecaller-tl", "branch"],
       default: "admin",
     },
     isExclusive: {
@@ -135,6 +135,37 @@ const leadSchema = new mongoose.Schema(
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "users",
+    },
+    isMovedToBusiness: {
+      type: Boolean,
+      default: false,
+    },
+    movedToBusinessAt: {
+      type: Date,
+    },
+    movedToBusinessBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users",
+    },
+    tlStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    tlApprovedAt: {
+      type: Date,
+    },
+    tlApprovedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users",
+    },
+    tlRejectionReason: {
+      type: String,
+      trim: true,
+    },
+    isMovedToBullionDesk: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }

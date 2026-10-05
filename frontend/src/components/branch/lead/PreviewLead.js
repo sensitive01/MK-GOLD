@@ -18,13 +18,17 @@ import {
   Paper,
   Button,
   Modal,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Stack,
   IconButton,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { getLeadById, addDisposition, assignExecutive, getBranchExecutives } from '../../../apis/branch/lead';
+import { getLeadById, addDisposition, assignExecutive, getBranchExecutives, moveToBusiness, tlApproveLead, tlRejectLead } from '../../../apis/branch/lead';
 import { getBranch } from '../../../apis/branch/branch';
 import global from '../../../utils/global';
 import moment from 'moment';
@@ -153,6 +157,110 @@ function PreviewLead(props) {
     setOpenAssignModal(true);
   };
 
+  const [openRejectDialog, setOpenRejectDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+
+  const handleTLApprove = async () => {
+    try {
+      const res = await tlApproveLead(props.id);
+      if (res && res.status) {
+        if (props.setNotify) {
+          props.setNotify({
+            open: true,
+            message: res.message || 'Lead approved and moved to Bullion Desk successfully!',
+            severity: 'success',
+          });
+        }
+        setData((prev) => ({ ...prev, tlStatus: 'approved', isMovedToBullionDesk: true, tlApprovedAt: new Date() }));
+        if (props.fetchData) {
+          props.fetchData();
+        }
+      } else if (props.setNotify) {
+        props.setNotify({
+          open: true,
+          message: res?.message || 'Failed to approve lead',
+          severity: 'error',
+        });
+      }
+    } catch (err) {
+      if (props.setNotify) {
+        props.setNotify({
+          open: true,
+          message: err.message || 'An error occurred',
+          severity: 'error',
+        });
+      }
+    }
+  };
+
+  const handleTLRejectConfirm = async () => {
+    try {
+      const res = await tlRejectLead(props.id, rejectReason);
+      if (res && res.status) {
+        if (props.setNotify) {
+          props.setNotify({
+            open: true,
+            message: res.message || 'Lead rejected successfully',
+            severity: 'info',
+          });
+        }
+        setData((prev) => ({ ...prev, tlStatus: 'rejected', tlRejectionReason: rejectReason, isMovedToBullionDesk: false, status: 'rejected' }));
+        setOpenRejectDialog(false);
+        setRejectReason('');
+        if (props.fetchData) {
+          props.fetchData();
+        }
+      } else if (props.setNotify) {
+        props.setNotify({
+          open: true,
+          message: res?.message || 'Failed to reject lead',
+          severity: 'error',
+        });
+      }
+    } catch (err) {
+      if (props.setNotify) {
+        props.setNotify({
+          open: true,
+          message: err.message || 'An error occurred',
+          severity: 'error',
+        });
+      }
+    }
+  };
+
+  const handleMoveToBusinessPreview = async () => {
+    try {
+      const res = await moveToBusiness(props.id);
+      if (res && res.status) {
+        if (props.setNotify) {
+          props.setNotify({
+            open: true,
+            message: res.message || 'Lead moved to business successfully!',
+            severity: 'success',
+          });
+        }
+        setData((prev) => ({ ...prev, isMovedToBusiness: true, movedToBusinessAt: new Date() }));
+        if (props.fetchData) {
+          props.fetchData();
+        }
+      } else if (props.setNotify) {
+        props.setNotify({
+          open: true,
+          message: res?.message || 'Failed to move lead to business',
+          severity: 'error',
+        });
+      }
+    } catch (err) {
+      if (props.setNotify) {
+        props.setNotify({
+          open: true,
+          message: err.message || 'An error occurred',
+          severity: 'error',
+        });
+      }
+    }
+  };
+
   const handleAssignSubmit = () => {
     if (!selectedBranchId || !selectedExecutiveId) return;
     setAssigning(true);
@@ -224,18 +332,128 @@ function PreviewLead(props) {
           </Typography>
         </Stack>
         <Stack direction="row" spacing={1.5} alignItems="center">
-          <Button
-            variant="contained"
-            onClick={handleOpenAssignModal}
-            startIcon={<PersonAddIcon sx={{ color: '#fff !important' }} />}
-            sx={{
-              bgcolor: '#8A1B9F',
-              color: '#fff',
-              '&:hover': { bgcolor: '#731485' },
-            }}
-          >
-            Assign Executive
-          </Button>
+          {!['telecalling', 'telecaller_tl', 'telecaller-tl'].includes(auth?.user?.userType) && (
+            <Button
+              variant="contained"
+              onClick={handleOpenAssignModal}
+              startIcon={<PersonAddIcon sx={{ color: '#fff !important' }} />}
+              sx={{
+                bgcolor: '#8A1B9F',
+                color: '#fff',
+                '&:hover': { bgcolor: '#731485' },
+              }}
+            >
+              Assign Executive
+            </Button>
+          )}
+          {auth?.user?.userType === 'telecalling' && (
+            data.isMovedToBusiness ? (
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 2,
+                  py: 0.8,
+                  borderRadius: 1,
+                  bgcolor: 'rgba(46, 125, 50, 0.12)',
+                  color: '#2e7d32',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                }}
+              >
+                <Iconify icon="eva:checkmark-circle-2-fill" sx={{ width: 18, height: 18 }} />
+                Moved to Business
+              </Box>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleMoveToBusinessPreview}
+                startIcon={<Iconify icon="eva:trending-up-fill" sx={{ color: '#ffffff !important' }} />}
+                sx={{
+                  bgcolor: '#8A1B9F',
+                  color: '#ffffff !important',
+                  '&:hover': { bgcolor: '#731485' },
+                  '& .MuiButton-startIcon': { color: '#ffffff !important' },
+                  '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
+                }}
+              >
+                Move To Business
+              </Button>
+            )
+          )}
+          {['telecaller_tl', 'telecaller-tl'].includes(auth?.user?.userType?.toLowerCase()) && (
+            data.tlStatus === 'approved' || data.isMovedToBullionDesk ? (
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 2,
+                  py: 0.8,
+                  borderRadius: 1,
+                  bgcolor: 'rgba(46, 125, 50, 0.12)',
+                  color: '#2e7d32',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                }}
+              >
+                <Iconify icon="eva:checkmark-circle-2-fill" sx={{ width: 18, height: 18 }} />
+                Approved & Moved to Bullion Desk
+              </Box>
+            ) : data.tlStatus === 'rejected' ? (
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 2,
+                  py: 0.8,
+                  borderRadius: 1,
+                  bgcolor: 'rgba(211, 47, 47, 0.12)',
+                  color: '#d32f2f',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                }}
+              >
+                <Iconify icon="eva:close-circle-fill" sx={{ width: 18, height: 18 }} />
+                Rejected by TL {data.tlRejectionReason ? `(${data.tlRejectionReason})` : ''}
+              </Box>
+            ) : (
+              <Stack direction="row" spacing={1.5}>
+                <Button
+                  variant="contained"
+                  onClick={handleTLApprove}
+                  startIcon={<Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: '#ffffff !important' }} />}
+                  sx={{
+                    bgcolor: '#2e7d32',
+                    color: '#ffffff !important',
+                    fontWeight: 600,
+                    '&:hover': { bgcolor: '#1b5e20' },
+                    '& .MuiButton-startIcon': { color: '#ffffff !important' },
+                    '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
+                  }}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => setOpenRejectDialog(true)}
+                  startIcon={<Iconify icon="eva:close-circle-fill" sx={{ color: '#ffffff !important' }} />}
+                  sx={{
+                    bgcolor: '#d32f2f',
+                    color: '#ffffff !important',
+                    fontWeight: 600,
+                    '&:hover': { bgcolor: '#c62828' },
+                    '& .MuiButton-startIcon': { color: '#ffffff !important' },
+                    '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
+                  }}
+                >
+                  Reject
+                </Button>
+              </Stack>
+            )
+          )}
           <Button
             variant="outlined"
             onClick={() => {
@@ -340,12 +558,14 @@ function PreviewLead(props) {
           </Typography>
         </Grid>
 
-        <Grid item xs={12} sm={data.type === 'pledged' ? 2 : 3}>
-          <Typography variant="subtitle2" sx={{ color: 'purple' }}>Assigned Executive</Typography>
-          <Typography variant="body1">
-            {data.assignedExecutive?.employee?.name || data.assignedExecutive?.username || data.assignedExecutiveName || '-'}
-          </Typography>
-        </Grid>
+        {!['telecalling', 'telecaller_tl', 'telecaller-tl'].includes(auth?.user?.userType) && (
+          <Grid item xs={12} sm={data.type === 'pledged' ? 2 : 3}>
+            <Typography variant="subtitle2" sx={{ color: 'purple' }}>Assigned Executive</Typography>
+            <Typography variant="body1">
+              {data.assignedExecutive?.employee?.name || data.assignedExecutive?.username || data.assignedExecutiveName || '-'}
+            </Typography>
+          </Grid>
+        )}
 
         <Grid item xs={12}><Divider /></Grid>
 
@@ -611,6 +831,30 @@ function PreviewLead(props) {
       </Modal>
 
       {/* Assign Executive Modal */}
+      <Dialog open={openRejectDialog} onClose={() => setOpenRejectDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ color: '#d32f2f', fontWeight: 'bold' }}>Reject Lead</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+            Are you sure you want to reject this lead? You can optionally enter a reason below.
+          </Typography>
+          <TextField
+            fullWidth
+            label="Rejection Reason (Optional)"
+            variant="outlined"
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            multiline
+            rows={3}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setOpenRejectDialog(false)}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleTLRejectConfirm}>
+            Confirm Reject
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Modal open={openAssignModal} onClose={() => setOpenAssignModal(false)}>
         <Box sx={modalStyle}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
@@ -684,7 +928,17 @@ function PreviewLead(props) {
                 loading={assigning}
                 disabled={!selectedBranchId || !selectedExecutiveId}
                 onClick={handleAssignSubmit}
-                sx={{ bgcolor: '#8A1B9F', color: '#fff', '&:hover': { bgcolor: '#731485' } }}
+                sx={{
+                  bgcolor: '#8A1B9F',
+                  color: '#ffffff !important',
+                  fontWeight: 600,
+                  px: 2.5,
+                  '&:hover': { bgcolor: '#731485' },
+                  '&.Mui-disabled': {
+                    bgcolor: 'rgba(138, 27, 159, 0.45)',
+                    color: 'rgba(255, 255, 255, 0.8) !important',
+                  },
+                }}
               >
                 Submit
               </LoadingButton>

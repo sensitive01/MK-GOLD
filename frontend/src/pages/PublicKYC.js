@@ -184,6 +184,7 @@ export default function PublicKYC() {
     dob: Yup.string().required('DOB is required'),
     gender: Yup.string().required('Gender is required'),
     maritalStatus: Yup.string().required('Marital Status is required'),
+    employmentStatus: Yup.string().required('Employment Status is required'),
     line1: Yup.string().required('Address Line 1 is required'),
     city: Yup.string().required('City is required'),
     state: Yup.string().required('State is required'),
@@ -208,6 +209,7 @@ export default function PublicKYC() {
       dob: null,
       gender: '',
       maritalStatus: '',
+      employmentStatus: '',
       source: '',
       status: 'active',
       isWhatsapp: false,
@@ -250,6 +252,7 @@ export default function PublicKYC() {
         dob: formValues.dob,
         gender: formValues.gender,
         maritalStatus: formValues.maritalStatus,
+        employmentStatus: formValues.employmentStatus,
         source: formValues.source,
         status: formValues.status,
         enqID: enquiryId,
@@ -849,6 +852,21 @@ export default function PublicKYC() {
                         </FormControl>
                       </Grid>
                       <Grid item xs={12} sm={6}>
+                        <FormControl required fullWidth error={touched.employmentStatus && Boolean(errors.employmentStatus)}>
+                          <InputLabel>Employment Status</InputLabel>
+                          <Select
+                            label="Employment Status"
+                            name="employmentStatus"
+                            value={values.employmentStatus}
+                            onBlur={handleBlur}
+                            onChange={handleChange}
+                          >
+                            <MenuItem value="Salaried">Salaried</MenuItem>
+                            <MenuItem value="Self Employed">Self Employed</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12}>
                         <FormControl required fullWidth error={touched.source && Boolean(errors.source)}>
                           <InputLabel>Source</InputLabel>
                           <Select
@@ -1107,6 +1125,7 @@ export default function PublicKYC() {
                             !values.dob || 
                             !values.gender || 
                             !values.maritalStatus || 
+                            !values.employmentStatus ||
                             !values.source ||
                             (values.isAlternateWhatsapp && values.alternatePhoneNumber?.length === 10 && !isAltOtpVerified)
                           )) ||
@@ -1123,7 +1142,7 @@ export default function PublicKYC() {
                         variant="contained" 
                         disabled={
                           loading || 
-                          !values.name || !values.phoneNumber || !values.dob || !values.gender || !values.maritalStatus || !values.source ||
+                          !values.name || !values.phoneNumber || !values.dob || !values.gender || !values.maritalStatus || !values.employmentStatus || !values.source ||
                           !values.chooseId || !values.idNo || !values.uploadId || !values.signature ||
                           !img ||
                           !values.line1 || !values.city || !values.state || !values.pincode

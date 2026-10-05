@@ -123,6 +123,7 @@ export default {
     { label: 'Assistant Branch Manager', value: 'assistant_branch_manager' }, // Added for 7.2
     // { label: 'Branch Executive', value: 'branch_executive' }, // Added for 7.3
     { label: 'Tele-Calling', value: 'telecalling' },
+    { label: 'Telecaller-TL', value: 'telecaller_tl' },
     { label: 'Transaction Executive', value: 'transaction_executive' },
     { label: 'Bullion Desk', value: 'bullion_desk' },
     { label: 'Marketing Team', value: 'marketing' },

@@ -75,6 +75,10 @@ async function find(query = {}, user = null) {
     await Branch.populate(docs, { path: "branch", select: "branchName" });
     await User.populate(docs, { path: "assignedExecutive", select: "username employee userType" });
     await Employee.populate(docs, { path: "assignedExecutive.employee", select: "name employeeId phoneNumber designation" });
+    await User.populate(docs, { path: "movedToBusinessBy", select: "username employee" });
+    await Employee.populate(docs, { path: "movedToBusinessBy.employee", select: "name employeeId" });
+    await User.populate(docs, { path: "tlApprovedBy", select: "username employee" });
+    await Employee.populate(docs, { path: "tlApprovedBy.employee", select: "name employeeId" });
     
     return docs;
   } catch (err) {
@@ -95,6 +99,16 @@ async function findById(id) {
         path: "dispositions.createdBy",
         populate: { path: "employee" },
       })
+      .populate({
+        path: "movedToBusinessBy",
+        select: "username employee",
+        populate: { path: "employee", select: "name employeeId" },
+      })
+      .populate({
+        path: "tlApprovedBy",
+        select: "username employee",
+        populate: { path: "employee", select: "name employeeId" },
+      })
       .lean();
     if (data) {
       data.lead = await FileUpload.findOne({
@@ -103,6 +117,91 @@ async function findById(id) {
       }).lean();
     }
     return data;
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function moveToBusiness(id, user = null) {
+  try {
+    const update = {
+      isMovedToBusiness: true,
+      movedToBusinessAt: new Date(),
+    };
+    if (user) {
+      update.movedToBusinessBy = user._id;
+      update.updatedBy = user._id;
+    }
+    const lead = await Lead.findByIdAndUpdate(
+      id,
+      { $set: update },
+      { new: true }
+    )
+      .populate("movedToBusinessBy", "username employee")
+      .populate({ path: "movedToBusinessBy", populate: { path: "employee", select: "name employeeId" } })
+      .populate({ path: "updatedBy", select: "username employee", populate: { path: "employee", select: "name" } })
+      .lean();
+
+    return lead;
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function tlApprove(id, user = null) {
+  try {
+    const update = {
+      tlStatus: "approved",
+      isMovedToBullionDesk: true,
+      tlApprovedAt: new Date(),
+    };
+    if (user) {
+      update.tlApprovedBy = user._id;
+      update.updatedBy = user._id;
+    }
+    const lead = await Lead.findByIdAndUpdate(
+      id,
+      { $set: update },
+      { new: true }
+    )
+      .populate("movedToBusinessBy", "username employee")
+      .populate({ path: "movedToBusinessBy", populate: { path: "employee", select: "name employeeId" } })
+      .populate("tlApprovedBy", "username employee")
+      .populate({ path: "tlApprovedBy", populate: { path: "employee", select: "name employeeId" } })
+      .populate({ path: "updatedBy", select: "username employee", populate: { path: "employee", select: "name" } })
+      .lean();
+
+    return lead;
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function tlReject(id, reason = "", user = null) {
+  try {
+    const update = {
+      tlStatus: "rejected",
+      tlRejectionReason: reason,
+      isMovedToBullionDesk: false,
+      status: "rejected",
+    };
+    if (user) {
+      update.tlApprovedBy = user._id;
+      update.updatedBy = user._id;
+    }
+    const lead = await Lead.findByIdAndUpdate(
+      id,
+      { $set: update },
+      { new: true }
+    )
+      .populate("movedToBusinessBy", "username employee")
+      .populate({ path: "movedToBusinessBy", populate: { path: "employee", select: "name employeeId" } })
+      .populate("tlApprovedBy", "username employee")
+      .populate({ path: "tlApprovedBy", populate: { path: "employee", select: "name employeeId" } })
+      .populate({ path: "updatedBy", select: "username employee", populate: { path: "employee", select: "name" } })
+      .lean();
+
+    return lead;
   } catch (err) {
     throw err;
   }
@@ -252,6 +351,8 @@ async function getLeadStats(user = null) {
           { assignedTo: { $exists: false } },
           { assignedTo: user._id }
         ];
+      } else if (userType === "telecaller_tl" || userType === "telecaller-tl") {
+        query.leadSource = { $in: ["telecalling", "marketing"] };
       } else if (userType === "marketing") {
       query.leadSource = "marketing";
     }
@@ -451,4 +552,7 @@ module.exports = {
   getNextTelecaller,
   assignExecutive,
   getBranchExecutives,
+  moveToBusiness,
+  tlApprove,
+  tlReject,
 };
