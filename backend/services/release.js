@@ -396,6 +396,12 @@ async function update(id, payload) {
 
           const netWeight = allOrnaments.reduce((sum, orn) => sum + (Number(orn.netWeight) || 0), 0);
           const netAmount = Math.round(allOrnaments.reduce((sum, orn) => sum + (Number(orn.netAmount) || 0), 0));
+          const totalCalculatedAmount = Math.round(
+            allOrnaments.reduce((sum, orn) => sum + (Number(orn.calculatedAmount != null ? orn.calculatedAmount : orn.netAmount) || 0), 0)
+          );
+          const totalAdjustment = Math.round(
+            allOrnaments.reduce((sum, orn) => sum + (Number(orn.adjustment) || 0), 0)
+          );
           const totalReleasePayable = updatedReleaseArray.reduce((sum, rel) => sum + (Number(rel.payableAmount) || 0), 0);
           const marginPercent = Number(sale.margin) || 0;
           const payableAmount = Math.round(netAmount - (netAmount * marginPercent) / 100) - totalReleasePayable;
@@ -403,6 +409,9 @@ async function update(id, payload) {
           setDataSales.netWeight = netWeight;
           setDataSales.netAmount = netAmount;
           setDataSales.payableAmount = payableAmount;
+          setDataSales.totalCalculatedAmount = totalCalculatedAmount;
+          setDataSales.totalAdjustment = totalAdjustment;
+          setDataSales.adjustments = totalAdjustment;
         }
 
         if (payload.financeCompleted !== undefined) {
@@ -474,6 +483,12 @@ async function updateWithLog(id, setData, logEntry) {
 
           const netWeight = allOrnaments.reduce((sum, orn) => sum + (Number(orn.netWeight) || 0), 0);
           const netAmount = Math.round(allOrnaments.reduce((sum, orn) => sum + (Number(orn.netAmount) || 0), 0));
+          const totalCalculatedAmount = Math.round(
+            allOrnaments.reduce((sum, orn) => sum + (Number(orn.calculatedAmount != null ? orn.calculatedAmount : orn.netAmount) || 0), 0)
+          );
+          const totalAdjustment = Math.round(
+            allOrnaments.reduce((sum, orn) => sum + (Number(orn.adjustment) || 0), 0)
+          );
           const totalReleasePayable = updatedReleaseArray.reduce((sum, rel) => sum + (Number(rel.payableAmount) || 0), 0);
           const marginPercent = Number(sale.margin) || 0;
           const payableAmount = Math.round(netAmount - (netAmount * marginPercent) / 100) - totalReleasePayable;
@@ -481,6 +496,9 @@ async function updateWithLog(id, setData, logEntry) {
           setDataSales.netWeight = netWeight;
           setDataSales.netAmount = netAmount;
           setDataSales.payableAmount = payableAmount;
+          setDataSales.totalCalculatedAmount = totalCalculatedAmount;
+          setDataSales.totalAdjustment = totalAdjustment;
+          setDataSales.adjustments = totalAdjustment;
         }
 
         if (setData.financeCompleted !== undefined) {

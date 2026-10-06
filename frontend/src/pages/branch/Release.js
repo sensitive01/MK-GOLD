@@ -1044,7 +1044,10 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
     stoneWeight: '',
     netWeight: '',
     purity: '',
+    calculatedAmount: '',
     netAmount: '',
+    adjustment: 0,
+    isManualAmount: false,
   });
 
   const [proofValues, setProofValues] = useState({
@@ -1073,25 +1076,35 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
       setProofDocuments([]);
       setShowOrnamentForm(false);
       setShowProofForm(false);
-      setOrnamentValues({ ornamentType: '', quantity: '', grossWeight: '', stoneWeight: '', netWeight: '', purity: '', netAmount: '' });
+      setOrnamentValues({
+        ornamentType: '',
+        quantity: '',
+        grossWeight: '',
+        stoneWeight: '',
+        netWeight: '',
+        purity: '',
+        calculatedAmount: '',
+        netAmount: '',
+        adjustment: 0,
+        isManualAmount: false,
+      });
       setProofValues({ documentType: '', documentNo: '', documentFile: '' });
 
-      if (auth.user?.branch?.address?.state) {
-        getGoldRateByState({
-          state: auth.user.branch.address.state,
-          type: 'gold',
-          date: moment().format('YYYY-MM-DD'),
-        }).then((data) => {
-          if (data.status) setGoldRate(data.data?.rate || 0);
-        });
-        getGoldRateByState({
-          state: auth.user.branch.address.state,
-          type: 'silver',
-          date: moment().format('YYYY-MM-DD'),
-        }).then((data) => {
-          if (data.status) setSilverRate(data.data?.rate || 0);
-        });
-      }
+      const branchState = auth.user?.branch?.address?.state || 'Tamil Nadu';
+      getGoldRateByState({
+        state: branchState,
+        type: 'gold',
+        date: moment().format('YYYY-MM-DD'),
+      }).then((data) => {
+        if (data.status) setGoldRate(data.data?.rate || 0);
+      });
+      getGoldRateByState({
+        state: branchState,
+        type: 'silver',
+        date: moment().format('YYYY-MM-DD'),
+      }).then((data) => {
+        if (data.status) setSilverRate(data.data?.rate || 0);
+      });
     }
   }, [open, auth.user?.branch?.address?.state]);
 
@@ -1122,11 +1135,18 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
       const calculatedNetWeight = Math.max(0, gWt - sWt);
       const calculatedNetAmount = Math.round(((calculatedNetWeight * pVal) / 100) * rate);
 
-      setOrnamentValues((prev) => ({
-        ...prev,
-        netWeight: calculatedNetWeight || '',
-        netAmount: calculatedNetAmount || '',
-      }));
+      setOrnamentValues((prev) => {
+        const isManual = prev.isManualAmount;
+        const currentNet = isManual ? (parseFloat(prev.netAmount) || 0) : calculatedNetAmount;
+        const currentAdj = isManual ? Math.round(currentNet - calculatedNetAmount) : 0;
+        return {
+          ...prev,
+          netWeight: calculatedNetWeight || '',
+          calculatedAmount: calculatedNetAmount || '',
+          netAmount: currentNet || '',
+          adjustment: currentAdj,
+        };
+      });
     }
   }, [
     ornamentValues.ornamentType,
@@ -1523,18 +1543,51 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                           size="small"
                           type="number"
                           value={ornamentValues.netAmount}
-                          onChange={(e) => setOrnamentValues({ ...ornamentValues, netAmount: e.target.value })}
+                          helperText={
+                            ornamentValues.isManualAmount && ornamentValues.adjustment !== 0
+                              ? `Base: ₹${Number(ornamentValues.calculatedAmount || 0).toLocaleString('en-IN')} | Adj: ${ornamentValues.adjustment > 0 ? `+₹${ornamentValues.adjustment.toLocaleString('en-IN')}` : `-₹${Math.abs(ornamentValues.adjustment).toLocaleString('en-IN')}`}`
+                              : `Base: ₹${Number(ornamentValues.calculatedAmount || 0).toLocaleString('en-IN')}`
+                          }
+                          onChange={(e) => {
+                            const manualVal = e.target.value;
+                            const numVal = manualVal === '' ? 0 : Number(manualVal);
+                            const calc = Number(ornamentValues.calculatedAmount || 0);
+                            const adj = manualVal === '' ? 0 : Math.round(numVal - calc);
+                            setOrnamentValues({
+                              ...ornamentValues,
+                              netAmount: manualVal,
+                              isManualAmount: true,
+                              adjustment: adj,
+                            });
+                          }}
                           fullWidth
                         />
                       </Grid>
                       <Grid item xs={12} md={3}>
-                        <Button variant="contained" fullWidth onClick={() => {
-                          if (ornamentValues.ornamentType && ornamentValues.netWeight) {
-                            setOrnaments([...ornaments, ornamentValues]);
-                            setOrnamentValues({ ornamentType: '', quantity: '', grossWeight: '', stoneWeight: '', netWeight: '', purity: '', netAmount: '' });
-                            setShowOrnamentForm(false);
-                          }
-                        }}>Add</Button>
+                        <Button
+                          variant="contained"
+                          fullWidth
+                          onClick={() => {
+                            if (ornamentValues.ornamentType && ornamentValues.netWeight) {
+                              setOrnaments([...ornaments, ornamentValues]);
+                              setOrnamentValues({
+                                ornamentType: '',
+                                quantity: '',
+                                grossWeight: '',
+                                stoneWeight: '',
+                                netWeight: '',
+                                purity: '',
+                                calculatedAmount: '',
+                                netAmount: '',
+                                adjustment: 0,
+                                isManualAmount: false,
+                              });
+                              setShowOrnamentForm(false);
+                            }
+                          }}
+                        >
+                          Add
+                        </Button>
                       </Grid>
                     </Grid>
                   </Box>
@@ -1547,6 +1600,8 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                         <TableCell>Type</TableCell>
                         <TableCell>Qty</TableCell>
                         <TableCell>Net Wt</TableCell>
+                        <TableCell>Base Amount</TableCell>
+                        <TableCell>Adjustments</TableCell>
                         <TableCell>Amount</TableCell>
                         <TableCell>Action</TableCell>
                       </TableRow>
@@ -1557,7 +1612,25 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                           <TableCell>{orn.ornamentType}</TableCell>
                           <TableCell>{orn.quantity}</TableCell>
                           <TableCell>{orn.netWeight}</TableCell>
-                          <TableCell>{orn.netAmount}</TableCell>
+                          <TableCell>₹{Number(orn.calculatedAmount != null ? orn.calculatedAmount : orn.netAmount || 0).toLocaleString('en-IN')}</TableCell>
+                          <TableCell>
+                            {orn.adjustment ? (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontWeight: 600,
+                                  color: orn.adjustment > 0 ? 'success.main' : 'error.main',
+                                }}
+                              >
+                                {orn.adjustment > 0
+                                  ? `+₹${Number(orn.adjustment).toLocaleString('en-IN')}`
+                                  : `-₹${Math.abs(Number(orn.adjustment)).toLocaleString('en-IN')}`}
+                              </Typography>
+                            ) : (
+                              '₹0'
+                            )}
+                          </TableCell>
+                          <TableCell>₹{Number(orn.netAmount || 0).toLocaleString('en-IN')}</TableCell>
                           <TableCell>
                             <IconButton color="error" size="small" onClick={() => setOrnaments(ornaments.filter((_, i) => i !== idx))}>
                               <Iconify icon="eva:trash-2-outline" />
@@ -1566,7 +1639,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                         </TableRow>
                       ))}
                       {ornaments.length === 0 && (
-                        <TableRow><TableCell colSpan={5} align="center">No ornaments added</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={7} align="center">No ornaments added</TableCell></TableRow>
                       )}
                     </TableBody>
                   </Table>
@@ -1673,6 +1746,57 @@ function ViewReleaseModal({ open, id, handleClose }) {
               <Typography variant="subtitle1" sx={{ mt: 2, display: 'block', fontWeight: 'bold' }}>Verification Status</Typography>
               <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>Current Status: {data.status}</Typography>
             </Grid>
+            {data.ornaments && data.ornaments.length > 0 && (
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" sx={{ mt: 1, mb: 1, fontWeight: 'bold' }}>
+                  Verified Ornaments
+                </Typography>
+                <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 250 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Type</TableCell>
+                        <TableCell>Qty</TableCell>
+                        <TableCell>Net Wt</TableCell>
+                        <TableCell>Base Amount</TableCell>
+                        <TableCell>Adjustments</TableCell>
+                        <TableCell>Amount</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {data.ornaments.map((orn, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell>{orn.ornamentType}</TableCell>
+                          <TableCell>{orn.quantity}</TableCell>
+                          <TableCell>{orn.netWeight}</TableCell>
+                          <TableCell>
+                            ₹{Number(orn.calculatedAmount != null ? orn.calculatedAmount : orn.netAmount || 0).toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell>
+                            {orn.adjustment ? (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontWeight: 600,
+                                  color: orn.adjustment > 0 ? 'success.main' : 'error.main',
+                                }}
+                              >
+                                {orn.adjustment > 0
+                                  ? `+₹${Number(orn.adjustment).toLocaleString('en-IN')}`
+                                  : `-₹${Math.abs(Number(orn.adjustment)).toLocaleString('en-IN')}`}
+                              </Typography>
+                            ) : (
+                              '₹0'
+                            )}
+                          </TableCell>
+                          <TableCell>₹{Number(orn.netAmount || 0).toLocaleString('en-IN')}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+            )}
           </Grid>
         )}
       </DialogContent>

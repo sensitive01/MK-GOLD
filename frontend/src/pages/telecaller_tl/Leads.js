@@ -37,7 +37,7 @@ import Scrollbar from '../../components/scrollbar';
 import { AttendanceListHead } from '../../sections/@dashboard/attendance';
 import LeadListToolbar from '../../sections/@dashboard/lead/LeadListToolbar';
 import LeadFilterSidebar from '../../sections/@dashboard/lead/LeadFilterSidebar';
-import { deleteLeadById, getLeads, bulkCreateLeads, markLeadsExclusive } from '../../apis/branch/lead';
+import { deleteLeadById, getLeads, bulkCreateLeads, markLeadsExclusive, tlApproveLead } from '../../apis/branch/lead';
 import global from '../../utils/global';
 
 // ----------------------------------------------------------------------
@@ -208,6 +208,35 @@ export default function TelecallerTLLeads({ title = "Telecaller-TL Business Lead
   useEffect(() => {
     fetchData();
   }, [fetchData, toggleContainer]);
+
+  const handleApprove = async (id) => {
+    try {
+      setOpenBackdrop(true);
+      const res = await tlApproveLead(id);
+      setOpenBackdrop(false);
+      if (res?.status) {
+        setNotify({
+          open: true,
+          message: 'Lead approved and moved to Bullion Desk successfully',
+          severity: 'success',
+        });
+        fetchData();
+      } else {
+        setNotify({
+          open: true,
+          message: res?.message || 'Failed to approve lead',
+          severity: 'error',
+        });
+      }
+    } catch (err) {
+      setOpenBackdrop(false);
+      setNotify({
+        open: true,
+        message: err.message || 'Something went wrong',
+        severity: 'error',
+      });
+    }
+  };
 
   const handleOpenMenu = (event) => {
     setOpen(event.currentTarget);
@@ -492,44 +521,35 @@ export default function TelecallerTLLeads({ title = "Telecaller-TL Business Lead
                               <Iconify icon="eva:checkmark-circle-2-fill" sx={{ width: 14, height: 14 }} />
                               Approved
                             </Box>
-                          ) : row.tlStatus === 'rejected' ? (
-                            <Box
-                              sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 0.5,
-                                px: 1.2,
-                                py: 0.4,
-                                borderRadius: 1,
-                                bgcolor: 'rgba(211, 47, 47, 0.12)',
-                                color: '#d32f2f',
-                                fontWeight: 600,
-                                fontSize: '0.75rem',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              <Iconify icon="eva:close-circle-fill" sx={{ width: 14, height: 14 }} />
-                              Rejected
-                            </Box>
                           ) : (
-                            <Box
+                            <Button
+                              variant="contained"
+                              size="small"
+                              startIcon={<Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: '#fff !important', width: 14, height: 14 }} />}
                               sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 0.5,
-                                px: 1.2,
-                                py: 0.4,
-                                borderRadius: 1,
-                                bgcolor: 'rgba(237, 108, 2, 0.12)',
-                                color: '#ed6c02',
+                                textTransform: 'none',
                                 fontWeight: 600,
                                 fontSize: '0.75rem',
-                                whiteSpace: 'nowrap',
+                                py: 0.4,
+                                px: 1.4,
+                                borderRadius: 1,
+                                color: '#fff !important',
+                                bgcolor: '#2e7d32',
+                                boxShadow: 'none',
+                                '&:hover': {
+                                  bgcolor: '#1b5e20',
+                                  boxShadow: 'none',
+                                },
+                                '& .MuiButton-startIcon': { color: '#ffffff !important' },
+                                '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApprove(row._id);
                               }}
                             >
-                              <Iconify icon="eva:clock-fill" sx={{ width: 14, height: 14 }} />
-                              Pending Review
-                            </Box>
+                              Approve
+                            </Button>
                           )}
                         </TableCell>
                         <TableCell
@@ -728,29 +748,7 @@ export default function TelecallerTLLeads({ title = "Telecaller-TL Business Lead
             <Typography variant="subtitle2">Follow Ups</Typography>
           </Card>
 
-          <Card
-            onClick={() => {
-              setPage(0);
-              setCurrentTab('rejected');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            sx={{
-              flex: 1,
-              p: 2.5,
-              textAlign: 'center',
-              bgcolor: '#fff1f0',
-              color: '#cf1322',
-              cursor: 'pointer',
-              outline: currentTab === 'rejected' ? '3px solid #cf1322' : 'none',
-              transform: currentTab === 'rejected' ? 'scale(1.03)' : 'none',
-              transition: 'all 0.2s',
-            }}
-          >
-            <Typography variant="h3">
-              {data?.filter((row) => row.tlStatus === 'rejected' || row.status === 'rejected').length || 0}
-            </Typography>
-            <Typography variant="subtitle2">Rejected</Typography>
-          </Card>
+
         </Box>
       </Container>
 

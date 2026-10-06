@@ -120,6 +120,9 @@ const Release = mongoose.model(
           netWeight: { type: Number },
           purity: { type: Number },
           netAmount: { type: Number },
+          calculatedAmount: { type: Number },
+          adjustment: { type: Number, default: 0 },
+          isManualAmount: { type: Boolean, default: false },
         },
       ],
       proofDocuments: [

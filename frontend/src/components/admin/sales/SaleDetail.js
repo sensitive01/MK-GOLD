@@ -222,12 +222,12 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
               ))}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={10} />
+                  <TableCell colSpan={11} />
                 </TableRow>
               )}
               {data?.ornaments?.length === 0 && (
                 <TableRow>
-                  <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
+                  <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                     <Paper
                       sx={{
                         textAlign: 'center',
@@ -272,6 +272,19 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                     {data.ornaments.reduce((prev, cur) => prev + (+cur.netWeight || 0), 0).toFixed(2)}
                   </TableCell>
                   <TableCell align="left">-</TableCell>
+                  <TableCell align="left">
+                    ₹{Math.round(
+                      data.ornaments.reduce((prev, cur) => {
+                        const rateVal = data?.purchaseType === 'silver' ? data?.silverRate : data?.goldRate;
+                        const sysAmt = (cur.calculatedAmount !== undefined && cur.calculatedAmount !== null && Number(cur.calculatedAmount) > 0)
+                          ? Number(cur.calculatedAmount)
+                          : (rateVal > 0 && cur.netWeight && cur.purity)
+                          ? Math.round(((Number(cur.netWeight) * Number(cur.purity)) / 100) * Number(rateVal))
+                          : (Number(cur.netAmount || 0) - (Number(cur.adjustment) || 0));
+                        return prev + (Number(sysAmt) || 0);
+                      }, 0)
+                    ).toLocaleString('en-IN')}
+                  </TableCell>
                   <TableCell align="left">
                     ₹{Math.round(data.ornaments.reduce((prev, cur) => prev + (+cur.netAmount || 0), 0)).toLocaleString('en-IN')}
                   </TableCell>

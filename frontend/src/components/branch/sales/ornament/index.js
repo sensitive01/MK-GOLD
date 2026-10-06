@@ -430,7 +430,7 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                 )}
                 {(!ornaments || ornaments.length === 0) && (
                   <TableRow>
-                    <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
+                    <TableCell align="center" colSpan={12} sx={{ py: 3 }}>
                       <Paper
                         sx={{
                           textAlign: 'center',

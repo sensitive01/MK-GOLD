@@ -401,57 +401,22 @@ function PreviewLead(props) {
                 <Iconify icon="eva:checkmark-circle-2-fill" sx={{ width: 18, height: 18 }} />
                 Approved & Moved to Bullion Desk
               </Box>
-            ) : data.tlStatus === 'rejected' ? (
-              <Box
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleTLApprove}
+                startIcon={<Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: '#ffffff !important' }} />}
                 sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                  px: 2,
-                  py: 0.8,
-                  borderRadius: 1,
-                  bgcolor: 'rgba(211, 47, 47, 0.12)',
-                  color: '#d32f2f',
+                  bgcolor: '#2e7d32',
+                  color: '#ffffff !important',
                   fontWeight: 600,
-                  fontSize: '0.85rem',
+                  '&:hover': { bgcolor: '#1b5e20' },
+                  '& .MuiButton-startIcon': { color: '#ffffff !important' },
+                  '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
                 }}
               >
-                <Iconify icon="eva:close-circle-fill" sx={{ width: 18, height: 18 }} />
-                Rejected by TL {data.tlRejectionReason ? `(${data.tlRejectionReason})` : ''}
-              </Box>
-            ) : (
-              <Stack direction="row" spacing={1.5}>
-                <Button
-                  variant="contained"
-                  onClick={handleTLApprove}
-                  startIcon={<Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: '#ffffff !important' }} />}
-                  sx={{
-                    bgcolor: '#2e7d32',
-                    color: '#ffffff !important',
-                    fontWeight: 600,
-                    '&:hover': { bgcolor: '#1b5e20' },
-                    '& .MuiButton-startIcon': { color: '#ffffff !important' },
-                    '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
-                  }}
-                >
-                  Approve
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={() => setOpenRejectDialog(true)}
-                  startIcon={<Iconify icon="eva:close-circle-fill" sx={{ color: '#ffffff !important' }} />}
-                  sx={{
-                    bgcolor: '#d32f2f',
-                    color: '#ffffff !important',
-                    fontWeight: 600,
-                    '&:hover': { bgcolor: '#c62828' },
-                    '& .MuiButton-startIcon': { color: '#ffffff !important' },
-                    '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
-                  }}
-                >
-                  Reject
-                </Button>
-              </Stack>
+                Approve
+              </Button>
             )
           )}
           <Button

@@ -246,31 +246,36 @@ function CreateSale(props) {
   });
 
   useEffect(() => {
-    setBranch(auth.user.branch);
-    if (auth.user.branch) {
-      const rateDate = values.dop ? moment(values.dop).format('YYYY-MM-DD') : moment().format('YYYY-MM-DD');
-      getGoldRateByState({
-        state: auth.user.branch.address.state,
-        type: 'gold',
-        date: rateDate,
-      }).then((data) => {
-        setGoldRate(data.data);
-      });
-      getGoldRateByState({
-        state: auth.user.branch.address.state,
-        type: 'silver',
-        date: rateDate,
-      }).then((data) => {
-        setSilverRate(data.data);
-      });
+    const currentBranch = auth.user?.branch || branch;
+    setBranch(currentBranch);
+    const branchState = auth.user?.branch?.address?.state || selectedAddress?.state || 'Tamil Nadu';
+    const rateDate = values.dop ? moment(values.dop).format('YYYY-MM-DD') : moment().format('YYYY-MM-DD');
 
-      getEmployee().then((res) => {
-        if (res?.data) {
-          setAssignees(res.data);
-        }
-      });
-    }
-  }, [auth.user.branch, auth.user.branch?.address?.state, values.dop]);
+    getGoldRateByState({
+      state: branchState,
+      type: 'gold',
+      date: rateDate,
+    }).then((data) => {
+      if (data?.data) {
+        setGoldRate(data.data);
+      }
+    });
+    getGoldRateByState({
+      state: branchState,
+      type: 'silver',
+      date: rateDate,
+    }).then((data) => {
+      if (data?.data) {
+        setSilverRate(data.data);
+      }
+    });
+
+    getEmployee().then((res) => {
+      if (res?.data) {
+        setAssignees(res.data);
+      }
+    });
+  }, [auth.user?.branch, auth.user?.branch?.address?.state, selectedAddress?.state, values.dop]);
 
   // Auto-populate ornaments and proofs when a completed release is selected for pledged bill
   useEffect(() => {
@@ -666,9 +671,9 @@ function CreateSale(props) {
               <Ornament
                 ornaments={ornaments}
                 setOrnaments={setOrnaments}
-                silverRate={payload.silverRate}
-                goldRate={payload.goldRate}
-                purchaseType={payload.purchaseType}
+                silverRate={silverRate?.rate ?? payload.silverRate ?? 0}
+                goldRate={goldRate?.rate ?? payload.goldRate ?? 0}
+                purchaseType={values.purchaseType || payload.purchaseType || 'gold'}
                 {...props}
               />
             )}
@@ -1005,7 +1010,7 @@ function CreateSale(props) {
                       )}
                       {ornaments?.length === 0 && (
                         <TableRow>
-                          <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
+                          <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                             <Paper
                               sx={{
                                 textAlign: 'center',
@@ -1033,6 +1038,7 @@ function CreateSale(props) {
                           }}
                         >
                           <TableCell align="left">Total</TableCell>
+                          <TableCell align="left">-</TableCell>
                           <TableCell align="left">
                             {ornaments.reduce((prev, cur) => prev + (+cur.quantity || 0), 0)}
                           </TableCell>
