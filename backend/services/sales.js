@@ -2315,11 +2315,11 @@ async function verifyFinancePayment(saleId, paymentId, payload, user) {
 
     if (!paymentFound) {
       sale.financePayments.push({
-        amount: 0,
+        amount: verifiedAmount || 1,
         proof: verifiedProof,
         isVerified: true,
         isVerificationOnly: true,
-        verifiedAmount: verifiedAmount,
+        verifiedAmount: verifiedAmount || 1,
         verifiedProof: verifiedProof,
         verifiedAt: new Date(),
         bank: payload.bank ? {

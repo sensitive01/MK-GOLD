@@ -57,6 +57,7 @@ const TABLE_HEAD = [
   { id: 'weight', label: 'Weight', alignRight: false },
 //  { id: 'status', label: 'Status', alignRight: false },
   { id: 'date', label: 'Date', alignRight: false },
+  { id: 'source', label: 'Source', alignRight: false },
   { id: 'editedBy', label: 'Agent', alignRight: false },
   { id: 'remarks', label: 'Remarks', alignRight: false },
   { id: 'disposition', label: 'Status', alignRight: false },
@@ -72,6 +73,9 @@ function descendingComparator(a, b, orderBy) {
   if (orderBy === 'editedBy') {
     aValue = (a.updatedBy?.employee?.name || a.updatedBy?.username || '').toLowerCase();
     bValue = (b.updatedBy?.employee?.name || b.updatedBy?.username || '').toLowerCase();
+  } else if (orderBy === 'source') {
+    aValue = (a.source || '').toLowerCase();
+    bValue = (b.source || '').toLowerCase();
   } else if (orderBy === 'disposition') {
     aValue = (a.dispositions?.length > 0 ? a.dispositions[a.dispositions.length - 1].status : '').toLowerCase();
     bValue = (b.dispositions?.length > 0 ? b.dispositions[b.dispositions.length - 1].status : '').toLowerCase();
@@ -115,6 +119,9 @@ function applySortFilter(array, comparator, query, filters, user) {
   if (filters) {
     if (filters.status && filters.status !== 'all') {
       filteredArray = filteredArray.filter((row) => row.status?.toLowerCase() === filters.status.toLowerCase());
+    }
+    if (filters.source && filters.source !== 'all') {
+      filteredArray = filteredArray.filter((row) => (row.source || '').trim().toLowerCase() === filters.source.trim().toLowerCase());
     }
     if (filters.category && filters.category.length > 0) {
       filteredArray = filteredArray.filter((row) => filters.category.includes(row.category?.toLowerCase()));
@@ -230,6 +237,7 @@ export default function Leads({ title = "Leads Management" }) {
     startDate: '',
     endDate: '',
     status: 'all',
+    source: 'all',
     category: [],
     type: [],
     isExclusive: 'all'
@@ -767,6 +775,7 @@ export default function Leads({ title = "Leads Management" }) {
             filters={filters}
             setFilters={setFilters}
             userType={auth.user?.userType}
+            sourceOptions={Array.from(new Set(data?.map((d) => d.source).filter(Boolean)))}
           />
         </Card>
 
@@ -877,6 +886,7 @@ export default function Leads({ title = "Leads Management" }) {
                            </Box>
                         </TableCell> */}
                         <TableCell align="left">{date ? moment(date).format('YYYY-MM-DD') : 'N/A'}</TableCell>
+                        <TableCell align="left">{row.source || '-'}</TableCell>
                         <TableCell align="left">{updatedBy?.employee?.name || updatedBy?.username || '-'}</TableCell>
                         <TableCell align="left" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={displayRemark || ''}>{displayRemark || '-'}</TableCell>
                         <TableCell align="left" sx={{ maxWidth: 150 }}>

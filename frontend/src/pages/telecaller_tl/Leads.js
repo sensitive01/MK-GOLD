@@ -48,6 +48,7 @@ const TABLE_HEAD = [
   { id: 'category', label: 'Category', alignRight: false },
   { id: 'type', label: 'Type', alignRight: false },
   { id: 'weight', label: 'Weight', alignRight: false },
+  { id: 'source', label: 'Source', alignRight: false },
   { id: 'movedDate', label: 'Moved Date', alignRight: false },
   { id: 'movedBy', label: 'Moved By (Telecaller)', alignRight: false },
   { id: 'tlStatus', label: 'TL Decision', alignRight: false },
@@ -63,6 +64,9 @@ function descendingComparator(a, b, orderBy) {
   if (orderBy === 'movedBy') {
     aValue = (a.movedToBusinessBy?.employee?.name || a.movedToBusinessBy?.username || a.updatedBy?.employee?.name || '').toLowerCase();
     bValue = (b.movedToBusinessBy?.employee?.name || b.movedToBusinessBy?.username || b.updatedBy?.employee?.name || '').toLowerCase();
+  } else if (orderBy === 'source') {
+    aValue = (a.source || '').toLowerCase();
+    bValue = (b.source || '').toLowerCase();
   } else if (orderBy === 'assignedExecutive') {
     aValue = (a.assignedExecutive?.employee?.name || a.assignedExecutiveName || '').toLowerCase();
     bValue = (b.assignedExecutive?.employee?.name || b.assignedExecutiveName || '').toLowerCase();
@@ -119,6 +123,9 @@ function applySortFilter(array, comparator, query, filters, currentTab) {
     }
     if (filters.status && filters.status !== 'all') {
       filteredArray = filteredArray.filter((row) => row.status?.toLowerCase() === filters.status.toLowerCase());
+    }
+    if (filters.source && filters.source !== 'all') {
+      filteredArray = filteredArray.filter((row) => (row.source || '').trim().toLowerCase() === filters.source.trim().toLowerCase());
     }
     if (filters.category && filters.category.length > 0) {
       filteredArray = filteredArray.filter((row) => filters.category.includes(row.category?.toLowerCase()));
@@ -190,6 +197,7 @@ export default function TelecallerTLLeads({ title = "Telecaller-TL Business Lead
     startDate: '',
     endDate: '',
     status: 'all',
+    source: 'all',
     category: [],
     type: [],
     isExclusive: 'all',
@@ -427,6 +435,7 @@ export default function TelecallerTLLeads({ title = "Telecaller-TL Business Lead
             onCloseFilter={() => setOpenFilter(false)}
             filters={filters}
             setFilters={setFilters}
+            sourceOptions={Array.from(new Set(data?.map((d) => d.source).filter(Boolean)))}
           />
 
           <Scrollbar>
@@ -500,6 +509,9 @@ export default function TelecallerTLLeads({ title = "Telecaller-TL Business Lead
                         </TableCell>
                         <TableCell align="left">
                           {row.weight ? `${row.weight} ${row.unit || 'gm'}` : 'N/A'}
+                        </TableCell>
+                        <TableCell align="left">
+                          {row.source || '-'}
                         </TableCell>
                         <TableCell align="left">
                           {row.movedToBusinessAt ? moment(row.movedToBusinessAt).format('YYYY-MM-DD') : moment(row.updatedAt).format('YYYY-MM-DD')}

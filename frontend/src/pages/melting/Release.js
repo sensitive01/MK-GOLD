@@ -70,7 +70,7 @@ const TABLE_HEAD = [
   { id: 'weight', label: 'Weight', alignRight: false },
   { id: 'pledgeAmount', label: 'Pledge Amount', alignRight: false },
   { id: 'pledgedDate', label: 'Pledged Date', alignRight: false },
-  { id: 'payableAmount', label: 'Payable Amount', alignRight: false },
+  { id: 'payableAmount', label: 'Total Release Amount', alignRight: false },
   { id: 'paymentType', label: 'Payment Type', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
@@ -834,7 +834,7 @@ function EditReleaseModal({ open, id, handleClose, fetchData }) {
   const schema = Yup.object({
     pledgeId: Yup.string().required('Pledge Id is required'),
     pledgeAmount: Yup.number().required('Pledge Amount is required'),
-    payableAmount: Yup.number().required('Payable Amount is required'),
+    payableAmount: Yup.number().required('Total Release Amount is required'),
     pledgedDate: Yup.date().required('Pledged Date is required'),
     releaseDate: Yup.date().required('Release Date is required'),
   });
@@ -919,7 +919,7 @@ function EditReleaseModal({ open, id, handleClose, fetchData }) {
             <Grid item xs={12} sm={6}>
               <TextField
                 name="payableAmount"
-                label="Payable Amount"
+                label="Total Release Amount"
                 type="number"
                 value={values.payableAmount}
                 onChange={handleChange}
@@ -1231,7 +1231,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
               <Typography variant="h6" gutterBottom color="primary">Payment Info</Typography>
               <TextField
                 name="amount"
-                label="Payment Amount"
+                label="Total Release Amount"
                 type="number"
                 value={values.amount}
                 onChange={handleChange}
@@ -1699,7 +1699,7 @@ function ViewReleaseModal({ open, id, handleClose }) {
               <Typography variant="body1">₹{data.pledgeAmount}</Typography>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <Typography variant="subtitle2" color="text.secondary">Payable Amount</Typography>
+              <Typography variant="subtitle2" color="text.secondary">Total Release Amount</Typography>
               <Typography variant="body1">₹{data.payableAmount}</Typography>
             </Grid>
             <Grid item xs={12} sm={6}>

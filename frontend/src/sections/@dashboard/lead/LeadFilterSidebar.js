@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { useMemo } from 'react';
 import {
   Box,
   Grid,
@@ -20,19 +21,44 @@ export const STATUS_OPTIONS = ['all', 'pending', 'converted', 'rejected'];
 export const CATEGORY_OPTIONS = ['all', 'gold', 'silver'];
 export const TYPE_OPTIONS = ['all', 'physical', 'pledged'];
 export const EXCLUSIVE_OPTIONS = ['all', 'exclusive'];
+export const DEFAULT_SOURCE_OPTIONS = [
+  'Google',
+  'Facebook',
+  'Instagram',
+  'Walk-in',
+  'Paper Ad',
+  'JustDial',
+  'Reference',
+  'Website',
+  'Other',
+];
 
 LeadFilterSidebar.propTypes = {
   filters: PropTypes.object,
   setFilters: PropTypes.func,
   userType: PropTypes.string,
   currentTab: PropTypes.string,
+  sourceOptions: PropTypes.array,
 };
 
-export default function LeadFilterSidebar({ filters, setFilters, userType, currentTab }) {
+export default function LeadFilterSidebar({ filters, setFilters, userType, currentTab, sourceOptions = [] }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
+
+  const allSources = useMemo(() => {
+    const map = new Map();
+    (sourceOptions || []).concat(DEFAULT_SOURCE_OPTIONS).forEach((s) => {
+      if (s && typeof s === 'string' && s.trim()) {
+        const key = s.trim().toLowerCase();
+        if (!map.has(key)) {
+          map.set(key, s.trim());
+        }
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  }, [sourceOptions]);
 
   return (
     <Box sx={{ p: 2, borderBottom: '1px solid #f0f0f0' }}>
@@ -80,6 +106,24 @@ export default function LeadFilterSidebar({ filters, setFilters, userType, curre
             </FormControl>
           </Grid>
         )}
+        <Grid item xs={12} sm={6} md={2}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Source</InputLabel>
+            <Select
+              name="source"
+              value={filters.source || 'all'}
+              label="Source"
+              onChange={handleChange}
+            >
+              <MenuItem value="all">All</MenuItem>
+              {allSources.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
         <Grid item xs={12} sm={6} md="auto">
           <Box sx={{ display: 'flex', flexDirection: 'column' }}>
             <Typography variant="caption" color="textSecondary">Category</Typography>
@@ -138,14 +182,14 @@ export default function LeadFilterSidebar({ filters, setFilters, userType, curre
           </Grid>
         )}
         <Grid item xs={12} sm={6} md="auto">
-          {(filters.startDate || filters.endDate || filters.status !== 'all' || (filters.category && filters.category.length > 0) || (filters.type && filters.type.length > 0) || filters.isExclusive !== 'all') && (
+          {(filters.startDate || filters.endDate || filters.status !== 'all' || (filters.source && filters.source !== 'all') || (filters.category && filters.category.length > 0) || (filters.type && filters.type.length > 0) || filters.isExclusive !== 'all') && (
             <Button
               variant="contained"
               color="error"
               startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
               onClick={() => {
                 setFilters({
-                  startDate: '', endDate: '', status: 'all', category: [], type: [], isExclusive: 'all'
+                  startDate: '', endDate: '', status: 'all', source: 'all', category: [], type: [], isExclusive: 'all'
                 });
               }}
               sx={{ height: 40, mt: { xs: 0, md: 'auto' } }}

@@ -26,6 +26,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
   const form = useRef();
   const [tabValue, setTabValue] = useState(0);
   const [uploadIdPreview, setUploadIdPreview] = useState(null);
+  const [uploadPanPreview, setUploadPanPreview] = useState(null);
   const [signaturePreview, setSignaturePreview] = useState(null);
 
   useEffect(() => {
@@ -84,6 +85,8 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
       chooseId: '',
       idNo: '',
       uploadId: {},
+      panCardNumber: '',
+      uploadPan: {},
     },
     validationSchema: schema,
     onSubmit: async (values) => {
@@ -109,6 +112,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         enqID: enquiryId,
         chooseId: values.chooseId,
         idNo: values.idNo,
+        panCardNumber: values.panCardNumber ? values.panCardNumber.trim().toUpperCase() : '',
       };
       createCustomer(payload).then((data) => {
         if (data.status === false) {
@@ -150,6 +154,19 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
             });
           }
 
+          if (values.uploadPan && values.uploadPan instanceof File) {
+            const formDataPan = new FormData();
+            formDataPan.append('uploadId', uploadId);
+            formDataPan.append('uploadName', uploadName);
+            formDataPan.append('uploadType', 'pan_card');
+            formDataPan.append('uploadedFile', values.uploadPan);
+            formDataPan.append('documentType', 'PAN Card');
+            formDataPan.append('documentNo', values.panCardNumber ? values.panCardNumber.trim().toUpperCase() : '');
+            createFile(formDataPan).then((res) => {
+              if (!res.status) console.error('PAN Card upload failed:', res.message);
+            });
+          }
+
           if (values.signature && values.signature instanceof File) {
             const formData1 = new FormData();
             formData1.append('uploadId', uploadId);
@@ -165,6 +182,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
           setImg(null);
           setTabValue(0);
           setUploadIdPreview(null);
+          setUploadPanPreview(null);
           setSignaturePreview(null);
           form.current.reset();
           resetForm();
@@ -390,7 +408,6 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                 >
                   <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
                   <MenuItem value="Driving License">Driving License</MenuItem>
-                  <MenuItem value="PAN Card">PAN Card</MenuItem>
                   <MenuItem value="Passport">Passport</MenuItem>
                   <MenuItem value="Ration Card">Ration Card</MenuItem>
                   <MenuItem value="Others">Others</MenuItem>
@@ -407,6 +424,55 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
                 onBlur={handleBlur}
                 onChange={handleChange}
               />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                name="panCardNumber"
+                value={values.panCardNumber}
+                error={touched.panCardNumber && errors.panCardNumber && true}
+                label={touched.panCardNumber && errors.panCardNumber ? errors.panCardNumber : 'PAN Card Number'}
+                placeholder="e.g. ABCDE1234F"
+                fullWidth
+                inputProps={{ style: { textTransform: 'uppercase' }, maxLength: 10 }}
+                onBlur={handleBlur}
+                onChange={(e) => {
+                  e.target.value = e.target.value.toUpperCase();
+                  handleChange(e);
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
+                  Upload PAN:
+                </Typography>
+                <TextField
+                  name="uploadPan"
+                  type={'file'}
+                  onBlur={handleBlur}
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    setValues({ ...values, uploadPan: file });
+                    if (file) {
+                      setUploadPanPreview(URL.createObjectURL(file));
+                    }
+                  }}
+                  size="small"
+                  fullWidth
+                />
+                {uploadPanPreview && (
+                  <IconButton
+                    component="a"
+                    href={uploadPanPreview}
+                    target="_blank"
+                    rel="noreferrer"
+                    color="secondary"
+                    title="View PAN Card"
+                  >
+                    <Iconify icon="mdi:eye" />
+                  </IconButton>
+                )}
+              </Stack>
             </Grid>
             <Grid item xs={12} md={6}>
               <Stack direction="row" alignItems="center" spacing={1}>

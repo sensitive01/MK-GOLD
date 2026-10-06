@@ -55,6 +55,7 @@ const TABLE_HEAD = [
   { id: 'mobile', label: 'Mobile', alignRight: false },
   { id: 'category', label: 'Category', alignRight: false },
   { id: 'type', label: 'Type', alignRight: false },
+  { id: 'source', label: 'Source', alignRight: false },
   { id: 'attachment', label: 'Attachment', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
@@ -64,7 +65,13 @@ const TABLE_HEAD = [
 // ----------------------------------------------------------------------
 
 function descendingComparator(a, b, orderBy) {
-  if (b[orderBy] < a[orderBy]) {
+  let aValue = a[orderBy];
+  let bValue = b[orderBy];
+  if (orderBy === 'source') {
+    aValue = (a.source || '').toLowerCase();
+    bValue = (b.source || '').toLowerCase();
+  }
+  if (bValue < aValue) {
     return -1;
   }
   if (b[orderBy] > a[orderBy]) {
@@ -123,6 +130,7 @@ export default function Leads({ title = "Leads Management" }) {
     startDate: '',
     endDate: '',
     status: 'all',
+    source: 'all',
     category: [],
     type: [],
     isExclusive: 'all'
@@ -370,6 +378,9 @@ export default function Leads({ title = "Leads Management" }) {
   }
   if (filters.category && filters.category.length > 0) {
     filteredData = filteredData.filter((row) => filters.category.includes(row.category));
+  }
+  if (filters.source && filters.source !== 'all') {
+    filteredData = filteredData.filter((row) => (row.source || '').trim().toLowerCase() === filters.source.trim().toLowerCase());
   }
   if (filters.type && filters.type.length > 0) {
     filteredData = filteredData.filter((row) => filters.type.includes(row.type));
@@ -626,6 +637,7 @@ export default function Leads({ title = "Leads Management" }) {
             filters={filters}
             setFilters={setFilters}
             userType={auth.user?.userType}
+            sourceOptions={Array.from(new Set(data?.map((d) => d.source).filter(Boolean)))}
           />
         </Card>
 
@@ -719,6 +731,7 @@ export default function Leads({ title = "Leads Management" }) {
                         </TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{category}</TableCell>
                         <TableCell align="left" sx={{ textTransform: 'capitalize' }}>{type}</TableCell>
+                        <TableCell align="left">{row.source || '-'}</TableCell>
                         <TableCell align="left">
                           {lead?.uploadedFile ? (
                             <img

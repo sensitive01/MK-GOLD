@@ -565,7 +565,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 <TableCell align="left">Weight (Grams)</TableCell>
                 <TableCell align="left">Pledge amount</TableCell>
                 <TableCell align="left">Pledged date</TableCell>
-                <TableCell align="left">Payable amount</TableCell>
+                <TableCell align="left">Total release amount</TableCell>
                 <TableCell align="left">Payment Type</TableCell>
               </TableRow>
             </TableHead>
@@ -714,6 +714,9 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
         const isStandaloneVerification = fp.isVerified && (fp.amount <= 1 || fp.comments === 'Verified Bank Payment Proof' || !fp.proof || fp.proof === effectiveVerifiedProof);
         const resolvedPaymentMode = isStandaloneVerification ? 'Bank Verification' : paymentMode;
         const resolvedComments = (isStandaloneVerification && (!fp.comments || fp.comments === '-')) ? 'Verified Bank Payment Proof' : (fp.comments || '-');
+        const resolvedAmount = isStandaloneVerification
+          ? (effectiveVerifiedAmount || fp.verifiedAmount || (Number(fp.amount) > 0 ? fp.amount : 1))
+          : fp.amount;
 
         // 1. Payment row
         paymentsList.push({
@@ -723,7 +726,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           bankDetails: bankDesc,
           fullBank,
           paymentType: resolvedPaymentMode,
-          amount: fp.amount,
+          amount: resolvedAmount,
           comments: resolvedComments,
           proof: fp.proof || effectiveVerifiedProof,
           isVerified: effectiveIsVerified,
@@ -894,16 +897,21 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
 
       if (isFinProof && p.uploadedFile && !seenProofs.has(p.uploadedFile)) {
         const isVerifiedDoc = p.uploadName === 'verified_bank_proof' || p.documentType === 'Verified Bank Payment Proof';
+        const isRel =
+          (p.documentType || '').toLowerCase().includes('release') ||
+          (p.uploadName || '').toLowerCase().includes('release') ||
+          (data?.saleType === 'pledged' && !data?.assigneeCompleted);
 
-        const cashRowIndex = paymentsList.findIndex(pay => 
-            (pay.paymentType?.toLowerCase().includes('cash') || pay.bankDetails?.toLowerCase() === 'cash') 
-            && !pay.proof && !pay.isVerificationRow
-        );
+        if (!isVerifiedDoc) {
+          const rowWithoutProof = paymentsList.find(
+            (pay) => !pay.proof && !pay.isVerificationRow && pay.stageKey === (isRel ? 'release' : 'sale')
+          ) || paymentsList.find((pay) => !pay.proof && !pay.isVerificationRow);
 
-        if (cashRowIndex !== -1 && !isVerifiedDoc && p.uploadName !== 'transit_proof') {
-           paymentsList[cashRowIndex].proof = p.uploadedFile;
-           seenProofs.add(p.uploadedFile);
-           return;
+          if (rowWithoutProof && p.uploadName !== 'transit_proof') {
+            rowWithoutProof.proof = p.uploadedFile;
+            seenProofs.add(p.uploadedFile);
+          }
+          return;
         }
 
         seenProofs.add(p.uploadedFile);
@@ -920,26 +928,19 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
         } else if (p.documentNo && p.documentNo !== 'N/A') {
           extractedBank = p.documentNo;
         }
-        const isRel =
-          (p.documentType || '').toLowerCase().includes('release') ||
-          (p.uploadName || '').toLowerCase().includes('release') ||
-          (data?.saleType === 'pledged' && !data?.assigneeCompleted);
-        const hasExtractedBank = extractedBank && extractedBank !== '-';
         paymentsList.push({
           id: p._id || `extra_fin_proof_${pIdx}`,
           stage: isRel ? 'Release' : 'Sale',
           stageKey: isRel ? 'release' : 'sale',
           bankDetails: extractedBank,
-          paymentType: isVerifiedDoc
-            ? 'Bank Verification'
-            : 'Finance Proof',
-          amount: extractedAmount || data?.payableAmount || data?.netAmount,
-          comments: isVerifiedDoc ? 'Verified Bank Payment Proof' : '-',
+          paymentType: 'Bank Verification',
+          amount: extractedAmount || 1,
+          comments: 'Verified Bank Payment Proof',
           proof: p.uploadedFile,
-          isVerified: isVerifiedDoc,
+          isVerified: true,
           createdAt: p.createdAt,
           raw: null,
-          isVerificationRow: isVerifiedDoc,
+          isVerificationRow: true,
         });
       }
     });

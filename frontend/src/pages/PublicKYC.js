@@ -98,6 +98,7 @@ export default function PublicKYC() {
   const form = useRef();
   
   const [uploadIdPreview, setUploadIdPreview] = useState(null);
+  const [uploadPanPreview, setUploadPanPreview] = useState(null);
   const [signaturePreview, setSignaturePreview] = useState(null);
 
   const capture = useCallback(() => {
@@ -217,6 +218,8 @@ export default function PublicKYC() {
       chooseId: '',
       idNo: '',
       uploadId: null,
+      panCardNumber: '',
+      uploadPan: null,
       signature: null,
       line1: '',
       line2: '',
@@ -258,6 +261,7 @@ export default function PublicKYC() {
         enqID: enquiryId,
         chooseId: formValues.chooseId,
         idNo: formValues.idNo,
+        panCardNumber: formValues.panCardNumber ? formValues.panCardNumber.trim().toUpperCase() : '',
       };
 
       try {
@@ -294,6 +298,18 @@ export default function PublicKYC() {
           formData.append('uploadedFile', formValues.uploadId);
           formData.append('documentType', formValues.chooseId);
           formData.append('documentNo', formValues.idNo);
+          await createFileKYC(formData);
+        }
+
+        // Upload PAN Card Proof
+        if (formValues.uploadPan) {
+          const formData = new FormData();
+          formData.append('uploadId', uploadId);
+          formData.append('uploadName', uploadName);
+          formData.append('uploadType', 'pan_card');
+          formData.append('uploadedFile', formValues.uploadPan);
+          formData.append('documentType', 'PAN Card');
+          formData.append('documentNo', formValues.panCardNumber ? formValues.panCardNumber.trim().toUpperCase() : '');
           await createFileKYC(formData);
         }
 
@@ -905,7 +921,6 @@ export default function PublicKYC() {
                           >
                             <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
                             <MenuItem value="Driving License">Driving License</MenuItem>
-                            <MenuItem value="PAN Card">PAN Card</MenuItem>
                             <MenuItem value="Passport">Passport</MenuItem>
                             <MenuItem value="Ration Card">Ration Card</MenuItem>
                             <MenuItem value="Others">Others</MenuItem>
@@ -924,6 +939,62 @@ export default function PublicKYC() {
                           onBlur={handleBlur}
                           onChange={handleChange}
                         />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          name="panCardNumber"
+                          value={values.panCardNumber}
+                          error={touched.panCardNumber && Boolean(errors.panCardNumber)}
+                          helperText={touched.panCardNumber && errors.panCardNumber}
+                          label="PAN Card Number"
+                          placeholder="e.g. ABCDE1234F"
+                          fullWidth
+                          inputProps={{ style: { textTransform: 'uppercase' }, maxLength: 10 }}
+                          onBlur={handleBlur}
+                          onChange={(e) => {
+                            e.target.value = e.target.value.toUpperCase();
+                            handleChange(e);
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                          Upload PAN Card Proof
+                        </Typography>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <TextField
+                            type="file"
+                            name="uploadPan"
+                            id="uploadPanInput"
+                            onBlur={handleBlur}
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              setValues({ ...values, uploadPan: file });
+                              if (file) setUploadPanPreview(URL.createObjectURL(file));
+                            }}
+                            size="small"
+                            fullWidth
+                            InputLabelProps={{ shrink: true }}
+                          />
+                          {uploadPanPreview && (
+                            <>
+                              <IconButton component="a" href={uploadPanPreview} target="_blank" color="primary">
+                                <Iconify icon="mdi:eye" />
+                              </IconButton>
+                              <IconButton
+                                color="error"
+                                onClick={() => {
+                                  setValues({ ...values, uploadPan: null });
+                                  setUploadPanPreview(null);
+                                  const el = document.getElementById('uploadPanInput');
+                                  if (el) el.value = '';
+                                }}
+                              >
+                                <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
+                              </IconButton>
+                            </>
+                          )}
+                        </Stack>
                       </Grid>
                       <Grid item xs={12} md={6}>
                         <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>

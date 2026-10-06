@@ -81,7 +81,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
   const schema = Yup.object({
     weight: Yup.string().required('Weight is required'),
     pledgeAmount: Yup.string().required('Pledge amount is required'),
-    payableAmount: Yup.string().required('Payable amount is required'),
+    payableAmount: Yup.string().required('Total release amount is required'),
     paymentType: Yup.string().required('Payment type is required'),
     pledgedDate: Yup.string().required('Pledged date is required'),
     pledgeId: Yup.string().required('Pledge id is required'),
@@ -336,7 +336,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
                   <TableCell align="left">Weight (Grams)</TableCell>
                   <TableCell align="left">Pledge amount</TableCell>
                   <TableCell align="left">Pledged date</TableCell>
-                  <TableCell align="left">Payable amount</TableCell>
+                  <TableCell align="left">Total release amount</TableCell>
                   <TableCell align="left">Payment Type</TableCell>
                   <TableCell align="left">Status</TableCell>
                   <TableCell align="left">Action</TableCell>
@@ -527,7 +527,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
                   type={'number'}
                   value={values.payableAmount}
                   error={touched.payableAmount && errors.payableAmount && true}
-                  label={touched.payableAmount && errors.payableAmount ? errors.payableAmount : 'Payable amount'}
+                  label={touched.payableAmount && errors.payableAmount ? errors.payableAmount : 'Total release amount'}
                   fullWidth
                   onBlur={handleBlur}
                   onChange={handleChange}

@@ -66,7 +66,7 @@ const TABLE_HEAD = [
   { id: 'weight', label: 'Weight', alignRight: false },
   { id: 'pledgeAmount', label: 'Pledge Amount', alignRight: false },
   { id: 'pledgedDate', label: 'Pledged Date', alignRight: false },
-  { id: 'payableAmount', label: 'Payable Amount', alignRight: false },
+  { id: 'payableAmount', label: 'Total Release Amount', alignRight: false },
   { id: 'paymentType', label: 'Payment Type', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
@@ -804,7 +804,7 @@ function EditReleaseModal({ open, id, handleClose, fetchData }) {
   const schema = Yup.object({
     pledgeId: Yup.string().required('Pledge Id is required'),
     pledgeAmount: Yup.number().required('Pledge Amount is required'),
-    payableAmount: Yup.number().required('Payable Amount is required'),
+    payableAmount: Yup.number().required('Total Release Amount is required'),
     pledgedDate: Yup.date().required('Pledged Date is required'),
     releaseDate: Yup.date().required('Release Date is required'),
   });
@@ -889,7 +889,7 @@ function EditReleaseModal({ open, id, handleClose, fetchData }) {
             <Grid item xs={12} sm={6}>
               <TextField
                 name="payableAmount"
-                label="Payable Amount"
+                label="Total Release Amount"
                 type="number"
                 value={values.payableAmount}
                 onChange={handleChange}
@@ -992,7 +992,7 @@ function ReleaseFinanceModal({ open, id, handleClose, fetchData, setNotify }) {
       comments: '',
     },
     validationSchema: Yup.object({
-      payableAmount: Yup.number().required('Payable amount is required'),
+      payableAmount: Yup.number().required('Total Release Amount is required'),
       paymentType: Yup.string().required('Payment type is required'),
     }),
     onSubmit: async (values) => {
@@ -1075,7 +1075,7 @@ function ReleaseFinanceModal({ open, id, handleClose, fetchData, setNotify }) {
             <Grid item xs={12} sm={6}>
               <TextField
                 name="payableAmount"
-                label="Payable Amount (₹)"
+                label="Total Release Amount (₹)"
                 type="number"
                 value={values.payableAmount}
                 onChange={handleChange}

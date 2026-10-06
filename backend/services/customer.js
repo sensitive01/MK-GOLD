@@ -96,6 +96,31 @@ async function find(query = {}) {
       },
       {
         $lookup: {
+          from: "fileuploads",
+          let: { customerId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }] },
+                    {
+                      $or: [
+                        { $eq: ["$uploadType", "pan_card"] },
+                        { $eq: ["$documentType", "PAN Card"] }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            { $sort: { createdAt: -1 } }
+          ],
+          as: "panCardProof",
+        },
+      },
+      {
+        $lookup: {
           from: "branches",
           localField: "branch",
           foreignField: "_id",
@@ -115,6 +140,7 @@ async function find(query = {}) {
           profileImage: { $first: "$profileImage" },
           idProof: { $first: "$idProof" },
           signatureImage: { $first: "$signatureImage" },
+          panCardProof: { $first: "$panCardProof" },
           branch: { $first: "$branch" },
         },
       }
@@ -202,6 +228,31 @@ async function findById(id) {
       },
       {
         $lookup: {
+          from: "fileuploads",
+          let: { customerId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }] },
+                    {
+                      $or: [
+                        { $eq: ["$uploadType", "pan_card"] },
+                        { $eq: ["$documentType", "PAN Card"] }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            { $sort: { createdAt: -1 } }
+          ],
+          as: "panCardProof",
+        },
+      },
+      {
+        $lookup: {
           from: "branches",
           localField: "branch",
           foreignField: "_id",
@@ -213,6 +264,7 @@ async function findById(id) {
           profileImage: { $first: "$profileImage" },
           idProof: { $first: "$idProof" },
           signatureImage: { $first: "$signatureImage" },
+          panCardProof: { $first: "$panCardProof" },
           branch: { $first: "$branch" },
         },
       },

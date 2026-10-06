@@ -152,6 +152,10 @@ const Customer = mongoose.model(
       idNo: {
         type: String,
       },
+      panCardNumber: {
+        type: String,
+        trim: true,
+      },
       enqID: {
         type: String,
       },

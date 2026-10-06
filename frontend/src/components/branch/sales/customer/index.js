@@ -123,6 +123,7 @@ function Customer(props) {
   const [fetchingEnquiry, setFetchingEnquiry] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
   const [uploadIdPreview, setUploadIdPreview] = useState(null);
+  const [uploadPanPreview, setUploadPanPreview] = useState(null);
   const [signaturePreview, setSignaturePreview] = useState(null);
   const webcamRef = useRef(null);
 
@@ -221,6 +222,7 @@ function Customer(props) {
           status: e.status || 'active',
           chooseId: e.chooseId || '',
           idNo: e.idNo || '',
+          panCardNumber: e.panCardNumber || '',
           enqID: e.enqID || enquiryId,
         });
         
@@ -238,6 +240,13 @@ function Customer(props) {
           setUploadIdPreview(idImg.startsWith('http') ? idImg : `${global.baseURL}/${idImg}`);
         } else {
           setUploadIdPreview(null);
+        }
+
+        if (e.panCardProof?.uploadedFile) {
+          const panImg = e.panCardProof.uploadedFile;
+          setUploadPanPreview(panImg.startsWith('http') ? panImg : `${global.baseURL}/${panImg}`);
+        } else {
+          setUploadPanPreview(null);
         }
 
         if (e.signatureImage?.uploadedFile) {
@@ -315,6 +324,8 @@ function Customer(props) {
       chooseId: '',
       idNo: '',
       uploadId: {},
+      panCardNumber: '',
+      uploadPan: {},
     },
     enableReinitialize: true,
     validationSchema: schema,
@@ -349,6 +360,7 @@ function Customer(props) {
         status: values.status,
         chooseId: values.chooseId,
         idNo: values.idNo,
+        panCardNumber: values.panCardNumber ? values.panCardNumber.trim().toUpperCase() : '',
         enqID: enquiryId,
       };
 
@@ -383,6 +395,16 @@ function Customer(props) {
                 formData.append('documentNo', values.idNo);
                 createFile(formData);
             }
+            if (values.uploadPan instanceof File) {
+                const formData = new FormData();
+                formData.append('uploadId', openId);
+                formData.append('uploadName', 'customer');
+                formData.append('uploadType', 'pan_card');
+                formData.append('uploadedFile', values.uploadPan);
+                formData.append('documentType', 'PAN Card');
+                formData.append('documentNo', values.panCardNumber ? values.panCardNumber.trim().toUpperCase() : '');
+                createFile(formData);
+            }
             if (values.signature instanceof File) {
                 const formData = new FormData();
                 formData.append('uploadId', openId);
@@ -395,6 +417,7 @@ function Customer(props) {
             fetchCustomer();
             setCustomerModal(false);
             setOpenId(null);
+            setUploadPanPreview(null);
             resetForm();
             findCustomer({ phoneNumber: data.data.phoneNumber, all: true }).then((res) => {
               if (res.data && res.data.length > 0) {
@@ -431,10 +454,17 @@ function Customer(props) {
             status: existingUser.status || 'active',
             chooseId: existingUser.chooseId || '',
             idNo: existingUser.idNo || '',
+            panCardNumber: existingUser.panCardNumber || '',
           });
           const profileImg = existingUser.profileImage?.file;
           if (profileImg) {
             setImg(`${global.baseURL}/${profileImg}`);
+          }
+          const panImg = existingUser.panCardProof?.uploadedFile;
+          if (panImg) {
+            setUploadPanPreview(panImg.startsWith('http') ? panImg : `${global.baseURL}/${panImg}`);
+          } else {
+            setUploadPanPreview(null);
           }
           setEnquiryId(existingUser.enqID || '');
           setOtpStatus('success');
@@ -475,6 +505,16 @@ function Customer(props) {
           formData.append('documentType', values.chooseId);
           formData.append('documentNo', values.idNo);
           createFile(formData);
+          if (values.uploadPan instanceof File) {
+            const formDataPan = new FormData();
+            formDataPan.append('uploadId', data.data.fileUpload.uploadId);
+            formDataPan.append('uploadName', data.data.fileUpload.uploadName);
+            formDataPan.append('uploadType', 'pan_card');
+            formDataPan.append('uploadedFile', values.uploadPan);
+            formDataPan.append('documentType', 'PAN Card');
+            formDataPan.append('documentNo', values.panCardNumber ? values.panCardNumber.trim().toUpperCase() : '');
+            createFile(formDataPan);
+          }
           const formData1 = new FormData();
           formData1.append('uploadId', data.data.fileUpload.uploadId);
           formData1.append('uploadName', data.data.fileUpload.uploadName);
@@ -484,6 +524,7 @@ function Customer(props) {
           fetchCustomer();
           setCustomerModal(false);
           setImg(null);
+          setUploadPanPreview(null);
           resetForm();
           const userObj = data.data.data || data.data;
           findCustomer({ phoneNumber: userObj.phoneNumber, all: true }).then((res) => {
@@ -520,6 +561,7 @@ function Customer(props) {
         status: e.status || 'active',
         chooseId: e.chooseId || '',
         idNo: e.idNo || '',
+        panCardNumber: e.panCardNumber || '',
         enqID: e.enqID || '',
       });
       setEnquiryId(e.enqID || '');
@@ -537,6 +579,13 @@ function Customer(props) {
         setUploadIdPreview(idImg.startsWith('http') ? idImg : `${global.baseURL}/${idImg}`);
       } else {
         setUploadIdPreview(null);
+      }
+
+      if (e.panCardProof?.uploadedFile) {
+        const panImg = e.panCardProof.uploadedFile;
+        setUploadPanPreview(panImg.startsWith('http') ? panImg : `${global.baseURL}/${panImg}`);
+      } else {
+        setUploadPanPreview(null);
       }
 
       if (e.signatureImage?.uploadedFile) {
@@ -617,6 +666,7 @@ function Customer(props) {
                 resetForm();
                 setImg(null);
                 setUploadIdPreview(null);
+                setUploadPanPreview(null);
                 setSignaturePreview(null);
                 setOtpStatus(null);
                 setAltOtpStatus(null);
@@ -690,6 +740,7 @@ function Customer(props) {
                               status: e.status || 'active',
                               chooseId: e.chooseId || '',
                               idNo: e.idNo || '',
+                              panCardNumber: e.panCardNumber || '',
                               enqID: e.enqID || '',
                             });
                             setEnquiryId(e.enqID || '');
@@ -707,6 +758,13 @@ function Customer(props) {
                               setUploadIdPreview(idImg.startsWith('http') ? idImg : `${global.baseURL}/${idImg}`);
                             } else {
                               setUploadIdPreview(null);
+                            }
+
+                            if (e.panCardProof?.uploadedFile) {
+                              const panImg = e.panCardProof.uploadedFile;
+                              setUploadPanPreview(panImg.startsWith('http') ? panImg : `${global.baseURL}/${panImg}`);
+                            } else {
+                              setUploadPanPreview(null);
                             }
 
                             if (e.signatureImage?.uploadedFile) {
@@ -950,10 +1008,17 @@ function Customer(props) {
                                 status: existingUser.status || 'active',
                                 chooseId: existingUser.chooseId || '',
                                 idNo: existingUser.idNo || '',
+                                panCardNumber: existingUser.panCardNumber || '',
                               });
                               const profileImg = existingUser.profileImage?.uploadedFile;
                               if (profileImg) {
                                 setImg(profileImg.startsWith('http') ? profileImg : `${global.baseURL}/${profileImg}`);
+                              }
+                              const panImg = existingUser.panCardProof?.uploadedFile;
+                              if (panImg) {
+                                setUploadPanPreview(panImg.startsWith('http') ? panImg : `${global.baseURL}/${panImg}`);
+                              } else {
+                                setUploadPanPreview(null);
                               }
                               setEnquiryId(existingUser.enqID || '');
                               setOtpStatus('success');
@@ -1180,7 +1245,6 @@ function Customer(props) {
                     >
                       <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
                       <MenuItem value="Driving License">Driving License</MenuItem>
-                      <MenuItem value="PAN Card">PAN Card</MenuItem>
                       <MenuItem value="Passport">Passport</MenuItem>
                       <MenuItem value="Ration Card">Ration Card</MenuItem>
                       <MenuItem value="Others">Others</MenuItem>
@@ -1197,6 +1261,57 @@ function Customer(props) {
                     onBlur={handleBlur}
                     onChange={handleChange}
                   />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    name="panCardNumber"
+                    value={values.panCardNumber}
+                    error={touched.panCardNumber && errors.panCardNumber && true}
+                    label={touched.panCardNumber && errors.panCardNumber ? errors.panCardNumber : 'PAN Card Number'}
+                    placeholder="e.g. ABCDE1234F"
+                    fullWidth
+                    inputProps={{ style: { textTransform: 'uppercase' }, maxLength: 10 }}
+                    onBlur={handleBlur}
+                    onChange={(e) => {
+                      e.target.value = e.target.value.toUpperCase();
+                      handleChange(e);
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
+                      Upload PAN:
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+                      <TextField
+                        name="uploadPan"
+                        type={'file'}
+                        onBlur={handleBlur}
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          setValues({ ...values, uploadPan: file });
+                          if (file) {
+                            setUploadPanPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        size="small"
+                        fullWidth
+                      />
+                      {uploadPanPreview && (
+                        <IconButton
+                          component="a"
+                          href={uploadPanPreview}
+                          target="_blank"
+                          rel="noreferrer"
+                          color="secondary"
+                          title="View PAN Card"
+                        >
+                          <Iconify icon="mdi:eye" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  </Stack>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>

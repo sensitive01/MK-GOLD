@@ -28,6 +28,7 @@ export default function CustomerDetail({ id }) {
 
   const [photo, setPhoto] = useState(null);
   const [signature, setSignature] = useState(null);
+  const [panCard, setPanCard] = useState(null);
   const [documents, setDocuments] = useState([]);
 
   useEffect(() => {
@@ -40,9 +41,11 @@ export default function CustomerDetail({ id }) {
         if (fileData.status) {
           const photoFile = fileData.data?.find((f) => f.uploadType === 'profile_image');
           const sigFile = fileData.data?.find((f) => f.uploadType === 'signature');
+          const panFile = fileData.data?.find((f) => f.uploadType === 'pan_card' || f.documentType === 'PAN Card');
           const docFiles = fileData.data?.filter((f) => f.uploadType === 'upload_id');
           setPhoto(photoFile);
           setSignature(sigFile);
+          setPanCard(panFile);
           setDocuments(docFiles);
         }
       });
@@ -225,7 +228,8 @@ export default function CustomerDetail({ id }) {
                       <TableCell align="left">Status: {sentenceCase(data?.status || '')}</TableCell>
                     </TableRow>
                     <TableRow tabIndex={-1}>
-                      <TableCell align="left" colSpan={4}>Alternate Phone Number: {global.maskPhoneNumber(data?.alternatePhoneNumber)}</TableCell>
+                      <TableCell align="left" colSpan={2}>Alternate Phone Number: {global.maskPhoneNumber(data?.alternatePhoneNumber)}</TableCell>
+                      <TableCell align="left" colSpan={2}>PAN Card Number: {data?.panCardNumber || 'N/A'}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -249,7 +253,7 @@ export default function CustomerDetail({ id }) {
                 Documents
               </Typography>
               <Grid container spacing={3}>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={3}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Profile Photo
                   </Typography>
@@ -260,7 +264,7 @@ export default function CustomerDetail({ id }) {
                     {data?.name?.charAt(0)}
                   </Avatar>
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={3}>
                   <Typography variant="subtitle2" color="text.secondary">
                     Signature
                   </Typography>
@@ -274,7 +278,7 @@ export default function CustomerDetail({ id }) {
                     <Typography variant="body2" color="text.secondary">No signature found</Typography>
                   )}
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={3}>
                   <Typography variant="subtitle2" color="text.secondary">
                     ID Document
                   </Typography>
@@ -296,6 +300,28 @@ export default function CustomerDetail({ id }) {
                     ))
                   ) : (
                     <Typography variant="body2" color="text.secondary">No ID document found</Typography>
+                  )}
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    PAN Card Proof
+                  </Typography>
+                  {panCard ? (
+                    <Card variant="outlined" sx={{ p: 1, mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" noWrap sx={{ maxWidth: 100 }}>
+                        {data?.panCardNumber || 'PAN Card'}
+                      </Typography>
+                      <Button
+                        size="small"
+                        href={panCard.uploadedFile.startsWith('http') ? panCard.uploadedFile : `${global.baseURL}/uploads/${panCard.uploadedFile}`}
+                        target="_blank"
+                        startIcon={<Iconify icon="mdi:eye" />}
+                      >
+                        View
+                      </Button>
+                    </Card>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">No PAN card found</Typography>
                   )}
                 </Grid>
               </Grid>
