@@ -62,18 +62,26 @@ async function create(req, res) {
     let createdData = await employeeService.create(req.body);
     res.json({
       status: true,
-      message: "",
+      message: "Employee created successfully!",
       data: {
         data: createdData,
         fileUpload: { uploadId: createdData._id, uploadName: "employee" },
       },
     });
   } catch (err) {
-    res.json({
-      status: false,
-      message: err.errors ?? err.message,
-      data: {},
-    });
+    if (err.code === 11000) {
+      res.json({
+        status: false,
+        message: "Employee ID or Phone Number already exists",
+        data: {},
+      });
+    } else {
+      res.json({
+        status: false,
+        message: err.errors ? Object.values(err.errors).map(e => e.message).join(", ") : (err.message || "Failed to create employee"),
+        data: {},
+      });
+    }
   }
 }
 

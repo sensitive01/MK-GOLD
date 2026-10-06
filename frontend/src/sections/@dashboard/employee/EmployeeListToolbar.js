@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 // @mui
 import { styled, alpha } from '@mui/material/styles';
-import { Toolbar, Tooltip, IconButton, Typography, OutlinedInput, InputAdornment } from '@mui/material';
+import { Toolbar, Tooltip, IconButton, Typography, OutlinedInput, InputAdornment, Button } from '@mui/material';
 // component
 import Iconify from '../../../components/iconify';
 import global from '../../../utils/global';
@@ -68,15 +68,18 @@ export default function EmployeeListToolbar({ handleDelete, numSelected, filterN
         />
       )}
 
-      {numSelected > 0 && global.canDelete(userType) ? (
-        <Tooltip title="Delete">
-          <IconButton
+      {numSelected > 0 ? (
+        <Tooltip title="Delete selected employee(s)">
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<Iconify icon="eva:trash-2-outline" />}
             onClick={() => {
               handleDelete();
             }}
           >
-            <Iconify icon="eva:trash-2-fill" />
-          </IconButton>
+            Delete {numSelected > 1 ? `(${numSelected})` : ''}
+          </Button>
         </Tooltip>
       ) : null}
     </StyledRoot>

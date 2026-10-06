@@ -106,6 +106,17 @@ function applySortFilter(array, comparator, query, filters, currentTab) {
   }
 
   if (filters) {
+    if (filters.startDate || filters.endDate) {
+      const start = filters.startDate ? new Date(filters.startDate).setHours(0, 0, 0, 0) : null;
+      const end = filters.endDate ? new Date(filters.endDate).setHours(23, 59, 59, 999) : null;
+      filteredArray = filteredArray.filter((row) => {
+        const itemDate = new Date(row.date || row.createdAt).getTime();
+        if (start && end) return itemDate >= start && itemDate <= end;
+        if (start) return itemDate >= start;
+        if (end) return itemDate <= end;
+        return true;
+      });
+    }
     if (filters.status && filters.status !== 'all') {
       filteredArray = filteredArray.filter((row) => row.status?.toLowerCase() === filters.status.toLowerCase());
     }
@@ -114,6 +125,9 @@ function applySortFilter(array, comparator, query, filters, currentTab) {
     }
     if (filters.type && filters.type.length > 0) {
       filteredArray = filteredArray.filter((row) => filters.type.includes(row.type?.toLowerCase()));
+    }
+    if (filters.isExclusive && filters.isExclusive !== 'all') {
+      filteredArray = filteredArray.filter((row) => row.isExclusive === true);
     }
   }
 

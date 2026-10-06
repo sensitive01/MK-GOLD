@@ -2790,7 +2790,8 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               const totalReleaseBankAmt = bReleases.reduce((sum, r) => sum + (+r.payableAmount || 0), 0);
               const totalReleaseAmt = (sale.release || []).reduce((sum, r) => sum + (+r.payableAmount || 0), 0);
               const targetTotal = bReleases.length > 0 ? totalReleaseBankAmt : totalReleaseAmt;
-              const existingReleasePayments = (sale.financePayments || []).filter((fp) => (fp.stage || 'release') === 'release');
+              const isVerificationPayment = (fp) => Boolean(fp?.isVerificationOnly || (fp?.isVerified && Number(fp?.amount) === 1) || Number(fp?.amount) === 0);
+              const existingReleasePayments = (sale.financePayments || []).filter((fp) => (fp.stage || 'release') === 'release' && !isVerificationPayment(fp));
               const alreadyPaidRelease = existingReleasePayments.reduce((sum, fp) => sum + (+fp.amount || 0), 0);
               const remRelease = Math.max(0, targetTotal - alreadyPaidRelease);
 
@@ -2807,7 +2808,8 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                 }
               }
             } else if (sale.paymentType === 'partial') {
-              const existingSalePayments = (sale.financePayments || []).filter((fp) => fp.stage === 'sale');
+              const isVerificationPayment = (fp) => Boolean(fp?.isVerificationOnly || (fp?.isVerified && Number(fp?.amount) === 1) || Number(fp?.amount) === 0);
+              const existingSalePayments = (sale.financePayments || []).filter((fp) => fp.stage === 'sale' && !isVerificationPayment(fp));
               const alreadyPaidCash = existingSalePayments
                 .filter((fp) => fp.paymentType === 'cash' || (!fp.bank?.bankId && !fp.bank?.accountNo && !fp.bank?.bankName))
                 .reduce((sum, fp) => sum + (+fp.amount || 0), 0);
@@ -2835,8 +2837,9 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                 }
               }
             } else {
+              const isVerificationPayment = (fp) => Boolean(fp?.isVerificationOnly || (fp?.isVerified && Number(fp?.amount) === 1) || Number(fp?.amount) === 0);
               const fullPayable = sale.payableAmount !== undefined && sale.payableAmount !== null ? sale.payableAmount : 0;
-              const existingSalePayments = (sale.financePayments || []).filter((fp) => fp.stage === 'sale');
+              const existingSalePayments = (sale.financePayments || []).filter((fp) => fp.stage === 'sale' && !isVerificationPayment(fp));
               const alreadyPaidSale = existingSalePayments.reduce((sum, fp) => sum + (+fp.amount || 0), 0);
               const remSale = Math.max(0, fullPayable - alreadyPaidSale);
 

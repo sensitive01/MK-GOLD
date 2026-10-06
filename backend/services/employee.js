@@ -242,6 +242,15 @@ async function count(query = {}) {
 
 async function create(payload) {
   try {
+    if (!payload.doj) {
+      payload.doj = new Date().toISOString().split("T")[0];
+    }
+    if (!payload.employmentType) {
+      payload.employmentType = "full-time";
+    }
+    if (!payload.branch || payload.branch === "") {
+      delete payload.branch;
+    }
     let goldRate = new Employee(payload);
     return await goldRate.save();
   } catch (err) {
@@ -251,6 +260,9 @@ async function create(payload) {
 
 async function update(id, payload) {
   try {
+    if (payload.branch === "" || payload.branch === null) {
+      payload.branch = undefined;
+    }
     return await Employee.findByIdAndUpdate(id, payload, {
       returnDocument: "after",
     }).exec();

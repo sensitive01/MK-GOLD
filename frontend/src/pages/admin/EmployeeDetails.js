@@ -424,7 +424,7 @@ export default function Employee() {
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
           <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Update Employee
+            Edit Employee
           </Typography>
           <Button
             variant="contained"

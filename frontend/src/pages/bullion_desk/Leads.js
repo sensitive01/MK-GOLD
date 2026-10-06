@@ -107,6 +107,19 @@ function applySortFilter(array, comparator, query, filters, currentTab) {
   }
 
   if (filters) {
+    if (filters.startDate || filters.endDate) {
+      const start = filters.startDate ? new Date(filters.startDate).setHours(0, 0, 0, 0) : null;
+      const end = filters.endDate ? new Date(filters.endDate).setHours(23, 59, 59, 999) : null;
+      filteredArray = filteredArray.filter((row) => {
+        const dateValue = row.tlApprovedAt || row.approvedDate || row.updatedAt || row.date || row.createdAt;
+        if (!dateValue) return true;
+        const itemDate = new Date(dateValue).getTime();
+        if (start && end) return itemDate >= start && itemDate <= end;
+        if (start) return itemDate >= start;
+        if (end) return itemDate <= end;
+        return true;
+      });
+    }
     if (filters.status && filters.status !== 'all') {
       filteredArray = filteredArray.filter((row) => row.status?.toLowerCase() === filters.status.toLowerCase());
     }
@@ -115,6 +128,9 @@ function applySortFilter(array, comparator, query, filters, currentTab) {
     }
     if (filters.type && filters.type.length > 0) {
       filteredArray = filteredArray.filter((row) => filters.type.includes(row.type?.toLowerCase()));
+    }
+    if (filters.isExclusive && filters.isExclusive !== 'all') {
+      filteredArray = filteredArray.filter((row) => row.isExclusive === true);
     }
   }
 
@@ -811,6 +827,27 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
         </Container>
       )}
 
+      {toggleContainer === true && toggleContainerType === 'update' && (
+        <Container maxWidth="xl">
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+            <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
+              Update Lead
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="mdi:arrow-left" />}
+              onClick={() => {
+                setToggleContainer(false);
+                setToggleContainerType('');
+              }}
+            >
+              Back
+            </Button>
+          </Stack>
+          <UpdateLead setToggleContainer={setToggleContainer} setNotify={setNotify} id={openId} />
+        </Container>
+      )}
+
       {/* Assign Executive Modal */}
       <Modal open={openAssignModal} onClose={() => setOpenAssignModal(false)}>
         <Box sx={style}>
@@ -899,6 +936,26 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
           },
         }}
       >
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
+            setToggleContainer(true);
+            setToggleContainerType('preview');
+          }}
+        >
+          <Iconify icon={'eva:eye-fill'} sx={{ mr: 2 }} />
+          Preview
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
+            setToggleContainer(true);
+            setToggleContainerType('update');
+          }}
+        >
+          <Iconify icon={'eva:edit-fill'} sx={{ mr: 2 }} />
+          Edit
+        </MenuItem>
         <MenuItem
           onClick={() => {
             const row = data.find((r) => r._id === openId);

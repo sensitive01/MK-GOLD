@@ -177,10 +177,15 @@ export default function Employee() {
   const isNotFound = !filteredData?.length && !!filterName;
 
   const handleDelete = () => {
-    deleteEmployeeById(openId).then(() => {
+    deleteEmployeeById(openId).then((res) => {
       fetchData();
       handleCloseDeleteModal();
       setSelected(selected?.filter((e) => e !== openId));
+      setNotify({
+        open: true,
+        message: res?.message || 'Employee deleted',
+        severity: 'success',
+      });
     });
   };
 
@@ -244,10 +249,7 @@ export default function Employee() {
       </Snackbar>
 
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Employee
-          </Typography>
+        <Stack direction="row" alignItems="center" justifyContent="flex-end" mb={5}>
           <Button
             variant="contained"
             startIcon={<Iconify icon="eva:plus-fill" />}
@@ -391,10 +393,7 @@ export default function Employee() {
         maxWidth="xl"
         sx={{ display: toggleContainer === true && toggleContainerType === 'create' ? 'block' : 'none' }}
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Create Employee
-          </Typography>
+        <Stack direction="row" alignItems="center" justifyContent="flex-end" mb={5}>
           <Button
             variant="contained"
             startIcon={<Iconify icon="mdi:arrow-left" />}
@@ -413,10 +412,7 @@ export default function Employee() {
         maxWidth="xl"
         sx={{ display: toggleContainer === true && toggleContainerType === 'update' ? 'block' : 'none' }}
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Update Employee
-          </Typography>
+        <Stack direction="row" alignItems="center" justifyContent="flex-end" mb={5}>
           <Button
             variant="contained"
             startIcon={<Iconify icon="mdi:arrow-left" />}

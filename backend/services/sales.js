@@ -1560,18 +1560,40 @@ async function update(id, payload) {
           (payload.newFinancePayment && payload.newFinancePayment.paymentType === 'bank') ||
           (payload.newFinancePayments && payload.newFinancePayments.some(p => p.paymentType === 'bank'));
         if (bankRequired) {
+          const Customer = require("../models/customer");
+          let customerDoc = null;
+          if (sale.customer) {
+            customerDoc = await Customer.findById(sale.customer).lean().exec();
+          }
+
           const targetSaleBankId = sale.bank?._id || sale.bank;
-          const saleAcct = sale.bank?.accountNo;
+          let saleBankDoc = null;
+          if (customerDoc && Array.isArray(customerDoc.bank)) {
+            saleBankDoc = customerDoc.bank.find(b => String(b._id) === String(targetSaleBankId));
+          }
+
+          const saleAcct = saleBankDoc?.accountNo || sale.bank?.accountNo;
           const saleId = targetSaleBankId;
+          const isCustomerBankVerified = Boolean(saleBankDoc?.isVerified);
+
+          const chosenBankId = payload.newFinancePayment?.bank?.bankId || payload.newFinancePayment?.bank?._id;
+          const chosenAcct = payload.newFinancePayment?.bank?.accountNo;
 
           const isSaleBankVerified = Boolean(
+            isCustomerBankVerified ||
             (sale.financePayments || []).some(
               (fp) => fp.isVerified && (
                 fp.stage === 'sale' ||
                 (saleId && String(fp.bank?.bankId || fp.bank?._id) === String(saleId)) ||
-                (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
+                (chosenBankId && String(fp.bank?.bankId || fp.bank?._id) === String(chosenBankId)) ||
+                (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct)) ||
+                (chosenAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(chosenAcct))
               )
-            ) || (sale.saleType === 'physical' && sale.isBankVerified && !(sale.financePayments || []).length)
+            ) ||
+            (sale.isBankVerified && (
+              sale.saleType === 'physical' ||
+              (sale.saleType === 'pledged' && (sale.financePayments || []).some(fp => fp.isVerified))
+            ))
           );
           if (!isSaleBankVerified) {
             throw new Error("Customer sale bank must be verified in Billing Summary before updating finance.");
@@ -1731,18 +1753,40 @@ async function updateWithLog(id, setData, logEntry) {
           (setData.newFinancePayment && setData.newFinancePayment.paymentType === 'bank') ||
           (setData.newFinancePayments && setData.newFinancePayments.some(p => p.paymentType === 'bank'));
         if (bankRequired) {
+          const Customer = require("../models/customer");
+          let customerDoc = null;
+          if (sale.customer) {
+            customerDoc = await Customer.findById(sale.customer).lean().exec();
+          }
+
           const targetSaleBankId = sale.bank?._id || sale.bank;
-          const saleAcct = sale.bank?.accountNo;
+          let saleBankDoc = null;
+          if (customerDoc && Array.isArray(customerDoc.bank)) {
+            saleBankDoc = customerDoc.bank.find(b => String(b._id) === String(targetSaleBankId));
+          }
+
+          const saleAcct = saleBankDoc?.accountNo || sale.bank?.accountNo;
           const saleId = targetSaleBankId;
+          const isCustomerBankVerified = Boolean(saleBankDoc?.isVerified);
+
+          const chosenBankId = setData.newFinancePayment?.bank?.bankId || setData.newFinancePayment?.bank?._id;
+          const chosenAcct = setData.newFinancePayment?.bank?.accountNo;
 
           const isSaleBankVerified = Boolean(
+            isCustomerBankVerified ||
             (sale.financePayments || []).some(
               (fp) => fp.isVerified && (
                 fp.stage === 'sale' ||
                 (saleId && String(fp.bank?.bankId || fp.bank?._id) === String(saleId)) ||
-                (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
+                (chosenBankId && String(fp.bank?.bankId || fp.bank?._id) === String(chosenBankId)) ||
+                (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct)) ||
+                (chosenAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(chosenAcct))
               )
-            ) || (sale.saleType === 'physical' && sale.isBankVerified && !(sale.financePayments || []).length)
+            ) ||
+            (sale.isBankVerified && (
+              sale.saleType === 'physical' ||
+              (sale.saleType === 'pledged' && (sale.financePayments || []).some(fp => fp.isVerified))
+            ))
           );
           if (!isSaleBankVerified) {
             throw new Error("Customer sale bank must be verified in Billing Summary before updating finance.");
@@ -2233,7 +2277,11 @@ async function verifyFinancePayment(saleId, paymentId, payload, user) {
           fp.verifiedAt = new Date();
           if (payload.stage) fp.stage = payload.stage;
           if (payload.bank && Object.keys(payload.bank).length > 0) {
-            fp.bank = { ...fp.bank, ...payload.bank };
+            fp.bank = {
+              ...fp.bank,
+              ...payload.bank,
+              bankId: payload.bank.bankId || payload.bank._id || fp.bank?.bankId,
+            };
           }
           paymentFound = true;
           // Remember which bank account was verified
@@ -2267,13 +2315,17 @@ async function verifyFinancePayment(saleId, paymentId, payload, user) {
 
     if (!paymentFound) {
       sale.financePayments.push({
-        amount: verifiedAmount,
+        amount: 0,
         proof: verifiedProof,
         isVerified: true,
+        isVerificationOnly: true,
         verifiedAmount: verifiedAmount,
         verifiedProof: verifiedProof,
         verifiedAt: new Date(),
-        bank: payload.bank || {},
+        bank: payload.bank ? {
+          ...payload.bank,
+          bankId: payload.bank.bankId || payload.bank._id,
+        } : {},
         stage: payload.stage || 'sale',
       });
       verifiedBankAccountNo = payload.bank?.accountNo;

@@ -9,17 +9,24 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import moment from 'moment';
 import { createEmployee, getNextEmployeeId } from '../../../apis/hr/employee';
+import { getDesignation } from '../../../apis/hr/designation';
 import { useEffect, useState } from 'react';
 import global from '../../../utils/global';
 
 function CreateEmployee(props) {
   const form = useRef();
   const [focusedField, setFocusedField] = useState(null);
+  const [designations, setDesignations] = useState([]);
 
   useEffect(() => {
     getNextEmployeeId().then((data) => {
       if (data.status) {
         setFieldValue('employeeId', data.data);
+      }
+    });
+    getDesignation({ status: 'active' }).then((data) => {
+      if (data && data.status) {
+        setDesignations(data.data || []);
       }
     });
   }, []);
@@ -41,6 +48,7 @@ function CreateEmployee(props) {
         excludeEmptyString: true,
       }),
     dob: Yup.string().required('DOB is required'),
+    doj: Yup.string().required('DOJ is required'),
     shiftStartTime: Yup.string().required('Login Time is required'),
     shiftEndTime: Yup.string().required('Logout Time is required'),
     status: Yup.string().required('Status is required'),
@@ -57,8 +65,11 @@ function CreateEmployee(props) {
       phoneNumber: '',
       alternatePhoneNumber: '',
       dob: moment()?.format("YYYY-MM-DD"),
+      doj: moment()?.format("YYYY-MM-DD"),
       shiftStartTime: moment()?.format("YYYY-MM-DD"),
       shiftEndTime: moment()?.format("YYYY-MM-DD"),
+      employmentType: 'full-time',
+      languages: [],
       status: 'active',
     },
     validationSchema: schema,
@@ -67,7 +78,7 @@ function CreateEmployee(props) {
         if (data.status === false) {
           props.setNotify({
             open: true,
-            message: 'Employee not created',
+            message: data.message || 'Employee not created',
             severity: 'error',
           });
         } else {
@@ -76,7 +87,7 @@ function CreateEmployee(props) {
           resetForm();
           props.setNotify({
             open: true,
-            message: 'Employee created',
+            message: data.message || 'Employee created',
             severity: 'success',
           });
 
@@ -110,7 +121,6 @@ function CreateEmployee(props) {
               onBlur={handleBlur}
               onChange={handleChange}
               value={values.employeeId}
-              disabled
             />
           </Grid>
           <Grid item xs={12} sm={4}>
@@ -154,14 +164,26 @@ function CreateEmployee(props) {
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={4}>
-            <TextField
-              name="designation"
-              error={touched.designation && errors.designation && true}
-              label={touched.designation && errors.designation ? errors.designation : 'Designation'}
-              fullWidth
-              onBlur={handleBlur}
-              onChange={handleChange}
-            />
+            <FormControl fullWidth error={touched.designation && errors.designation && true}>
+              <InputLabel id="designation-label">Select Designation</InputLabel>
+              <Select
+                labelId="designation-label"
+                id="designation-select"
+                label={touched.designation && errors.designation ? errors.designation : 'Select Designation'}
+                name="designation"
+                value={values.designation}
+                onBlur={handleBlur}
+                onChange={(e) => {
+                  setFieldValue('designation', e.target.value, true);
+                }}
+              >
+                {designations && designations?.length > 0 && designations?.map((item) => (
+                  <MenuItem key={item._id} value={item.name}>
+                    {item.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
           <Grid item xs={12} sm={4}>
             <TextField
@@ -219,6 +241,20 @@ function CreateEmployee(props) {
                 value={values.dob}
                 onChange={(value) => {
                   setFieldValue('dob', value, true);
+                }}
+                renderInput={(params) => <TextField {...params} fullWidth />}
+              />
+            </LocalizationProvider>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <LocalizationProvider dateAdapter={AdapterMoment} error={touched.doj && errors.doj && true}>
+              <DesktopDatePicker
+                label={touched.doj && errors.doj ? errors.doj : 'Select DOJ'}
+                inputFormat="MM/DD/YYYY"
+                name="doj"
+                value={values.doj}
+                onChange={(value) => {
+                  setFieldValue('doj', value, true);
                 }}
                 renderInput={(params) => <TextField {...params} fullWidth />}
               />

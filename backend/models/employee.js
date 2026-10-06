@@ -84,7 +84,7 @@ const Employee = mongoose.model(
       },
       doj: {
         type: String,
-        required: true,
+        default: () => new Date().toISOString().split("T")[0],
       },
       employmentType: {
         type: String,

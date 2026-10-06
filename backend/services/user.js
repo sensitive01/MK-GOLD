@@ -35,6 +35,27 @@ async function findById(id) {
 
 async function create(payload) {
   try {
+    if (!payload.branch || payload.branch === "") {
+      delete payload.branch;
+    }
+    const branchRoles = ['branch', 'assistant_branch_manager', 'branch_executive', 'transaction_executive'];
+    if (!payload.loginMethod) {
+      if (branchRoles.includes(payload.userType)) {
+        payload.loginMethod = 'otp';
+      } else {
+        payload.loginMethod = 'password';
+      }
+    }
+    if (payload.loginMethod === 'otp') {
+      payload.password = 'no-password';
+    }
+    if (!payload.username && payload.employee) {
+      const Employee = require("../models/employee");
+      const emp = await Employee.findById(payload.employee);
+      if (emp && emp.phoneNumber) {
+        payload.username = emp.phoneNumber;
+      }
+    }
     let goldRate = new User(payload);
     return await goldRate.save();
   } catch (err) {
@@ -47,9 +68,20 @@ async function update(id, payload) {
     const user = await User.findById(id);
     if (!user) throw new Error("User not found");
     
+    if (payload.branch === "" || payload.branch === null) {
+      user.branch = undefined;
+      delete payload.branch;
+    }
+    
     // Handle both camelCase and lowercase casing from different clients
     if (payload.loginmethod && !payload.loginMethod) {
       payload.loginMethod = payload.loginmethod;
+    }
+
+    if (payload.loginMethod === 'otp') {
+      payload.password = 'no-password';
+    } else if (!payload.password) {
+      delete payload.password;
     }
     
     // Explicitly update fields from payload

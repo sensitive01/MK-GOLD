@@ -28,15 +28,23 @@ async function create(req, res) {
   try {
     res.json({
       status: true,
-      message: "",
+      message: "User created successfully!",
       data: await userService.create(req.body),
     });
   } catch (err) {
-    res.json({
-      status: false,
-      message: err.errors ?? err.message,
-      data: {},
-    });
+    if (err.code === 11000) {
+      res.json({
+        status: false,
+        message: "Same User already exists or username is already taken",
+        data: {},
+      });
+    } else {
+      res.json({
+        status: false,
+        message: err.errors ? Object.values(err.errors).map(e => e.message).join(", ") : (err.message || "Failed to create user"),
+        data: {},
+      });
+    }
   }
 }
 
@@ -48,15 +56,23 @@ async function update(req, res) {
     }
     res.json({
       status: true,
-      message: "",
+      message: "User updated successfully!",
       data: await userService.update(req.params.id, payload),
     });
   } catch (err) {
-    res.json({
-      status: false,
-      message: err.errors ?? err.message,
-      data: {},
-    });
+    if (err.code === 11000) {
+      res.json({
+        status: false,
+        message: "Same User already exists or username is already taken",
+        data: {},
+      });
+    } else {
+      res.json({
+        status: false,
+        message: err.errors ? Object.values(err.errors).map(e => e.message).join(", ") : (err.message || "Failed to update user"),
+        data: {},
+      });
+    }
   }
 }
 

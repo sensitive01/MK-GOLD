@@ -47,7 +47,8 @@ async function updateEmployee(id, payload) {
 
 async function deleteEmployeeById(id) {
   try {
-    const response = await apiClient().post(`/api/v1.0/hr/employee/delete/${id}`);
+    const idParam = Array.isArray(id) ? id.join(',') : id;
+    const response = await apiClient().post(`/api/v1.0/hr/employee/delete/${idParam}`);
     return response.data;
   } catch (err) {
     return err;

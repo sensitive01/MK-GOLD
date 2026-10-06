@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import {
   Dialog,
@@ -30,12 +30,19 @@ export default function VerifyBankPaymentModal({
   verifyApi,
 }) {
   const theme = useTheme();
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState('1');
   const [amountError, setAmountError] = useState('');
   const [proofFile, setProofFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isPdf, setIsPdf] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setAmount('1');
+      setAmountError('');
+    }
+  }, [open]);
 
   const bankName = bank?.bankName || payment?.bank?.bankName || 'Bank';
   const accountNo = bank?.accountNo || payment?.bank?.accountNo || 'N/A';
@@ -44,7 +51,7 @@ export default function VerifyBankPaymentModal({
   const ifscCode = bank?.ifscCode || 'N/A';
 
   const handleReset = () => {
-    setAmount('');
+    setAmount('1');
     setAmountError('');
     setProofFile(null);
     if (previewUrl) {
@@ -74,7 +81,8 @@ export default function VerifyBankPaymentModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!amount || Number(amount) <= 0) {
+    const transferAmount = Number(amount || 1);
+    if (!transferAmount || transferAmount <= 0) {
       setAmountError('Please enter a valid amount');
       return;
     }
@@ -96,8 +104,8 @@ export default function VerifyBankPaymentModal({
         ? `${bankName} - ${accountNo}`
         : (bankName && bankName !== 'Bank' ? bankName : '');
       const docNo = bankLabel
-        ? `${bankLabel} | ₹${Number(amount).toLocaleString('en-IN')}`
-        : `₹${Number(amount).toLocaleString('en-IN')}`;
+        ? `${bankLabel} | ₹${transferAmount.toLocaleString('en-IN')}`
+        : `₹${transferAmount.toLocaleString('en-IN')}`;
 
       const formData = new FormData();
       formData.append('uploadedFile', proofFile);
@@ -121,7 +129,7 @@ export default function VerifyBankPaymentModal({
       }
 
       const res = await verifyFn(saleId, paymentIdentifier, {
-        amount: Number(amount),
+        amount: transferAmount,
         proof: uploadedProofPath,
         bank: bank || payment?.bank || {},
         stage: payment?.stage || 'sale',
@@ -235,24 +243,26 @@ export default function VerifyBankPaymentModal({
               </Stack>
             </Box>
 
-            {/* Amount Field (Starts Empty, No Autofill) */}
+            {/* Amount Field (Fixed at ₹ 1 for Bank Verification) */}
             <TextField
               name="amount"
               label="Payment Amount"
-              placeholder="Enter transfer amount"
               type="number"
               fullWidth
               required
-              value={amount}
-              onChange={(e) => {
-                setAmount(e.target.value);
-                if (amountError) setAmountError('');
-              }}
-              onFocus={(e) => e.target.select()}
+              value="1"
               error={Boolean(amountError)}
               helperText={amountError}
               InputProps={{
+                readOnly: true,
                 startAdornment: <Typography sx={{ mr: 1, color: 'text.secondary', fontWeight: 600 }}>₹</Typography>,
+              }}
+              sx={{
+                '& .MuiInputBase-input': {
+                  fontWeight: 600,
+                  cursor: 'not-allowed',
+                },
+                bgcolor: (t) => alpha(t.palette.action.disabledBackground, 0.04),
               }}
             />
 

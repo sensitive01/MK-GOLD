@@ -279,13 +279,37 @@ export default function AuditorAttendance() {
   };
 
   const handleExport = (fileData, fileName) => {
+    if (currentTab === 'consolidated_attendance') {
+      const exportData = (filteredData || data).map(row => ({
+        'Employee ID': row.employee?.employeeId || '-',
+        'Employee Name': row.employee?.name || '-',
+        'Branch Name': row.employee?.branchName || '-',
+        'Working Days': row.workingDays,
+        'Present': row.present,
+        'Absent': row.absent,
+        'Late Days': row.lateDays,
+        'Allowances': row.allowances,
+        'Deductions': row.deductions,
+        'Advance': row.advance,
+        'Salary': row.salary,
+        'Payable': row.payable
+      }));
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = { Sheets: { data: ws }, SheetNames: ['data'] };
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8',
+      });
+      FileSaver.saveAs(blob, `${fileName}.xlsx`);
+      return;
+    }
     const ws = XLSX.utils.json_to_sheet(fileData);
     const wb = { Sheets: { data: ws }, SheetNames: ['data'] };
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const data = new Blob([excelBuffer], {
+    const dataBlob = new Blob([excelBuffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8',
     });
-    FileSaver.saveAs(data, `${fileName}.xlsx`);
+    FileSaver.saveAs(dataBlob, `${fileName}.xlsx`);
   };
 
   const CONSOLIDATED_TABLE_HEAD = [
@@ -398,7 +422,16 @@ export default function AuditorAttendance() {
                   Filter
                 </Button>
                 <Button variant="contained" startIcon={<Iconify icon="carbon:document-export" />} onClick={() => {
-                  handleExport(data?.map(e => ({ EmployeeId: e?.employee?.employeeId, EmployeeName: e?.employee?.name, Date: e.createdAt })), 'Attendance');
+                  const exportRows = (filteredData || data)?.map(e => ({
+                    'Employee ID': e?.employee?.employeeId || '-',
+                    'Employee Name': e?.employee?.name || '-',
+                    'Branch': e?.employee?.branchName || e?.branch?.name || '-',
+                    'Date': moment(e?.attendanceDate || e?.loginTime || e?.createdAt).format('DD-MM-YYYY'),
+                    'Login Time': e?.loginTime ? moment(e.loginTime).format('DD-MM-YYYY hh:mm:ss A') : (e?.createdAt ? moment(e.createdAt).format('DD-MM-YYYY hh:mm:ss A') : '-'),
+                    'Logout Time': e?.logoutTime ? moment(e.logoutTime).format('DD-MM-YYYY hh:mm:ss A') : 'Not Logged out',
+                    'Status': 'Present'
+                  }));
+                  handleExport(exportRows, 'Attendance');
                 }}>
                   Export
                 </Button>

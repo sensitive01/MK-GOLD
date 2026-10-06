@@ -347,10 +347,10 @@ export default function Attendance() {
 
   const handleExport = (fileData, fileName) => {
     if (currentTab === 'consolidated_attendance') {
-      const exportData = data.map(row => ({
-        'Employee ID': row.employee?.employeeId,
-        'Employee Name': row.employee?.name,
-        'Branch Name': row.employee?.branchName,
+      const exportData = (filteredData || data).map(row => ({
+        'Employee ID': row.employee?.employeeId || '-',
+        'Employee Name': row.employee?.name || '-',
+        'Branch Name': row.employee?.branchName || '-',
         'Working Days': row.workingDays,
         'Present': row.present,
         'Absent': row.absent,
@@ -472,7 +472,25 @@ export default function Attendance() {
               ) : (
                 <>
                   <Button variant="contained" startIcon={<Iconify icon="material-symbols:filter-alt-off" />} onClick={() => setFilterOpen(true)} sx={{ float: 'right', mx: '10px' }}>Filter</Button>
-                  <Button variant="contained" startIcon={<Iconify icon="carbon:document-export" />} onClick={() => handleExport(data?.map(e => ({ EmployeeId: e?.employee?.employeeId, EmployeeName: e?.employee?.name, Date: e.createdAt })), 'Attendance')} sx={{ float: 'right' }}>Export</Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<Iconify icon="carbon:document-export" />}
+                    onClick={() => {
+                      const exportRows = (filteredData || data)?.map(e => ({
+                        'Employee ID': e?.employee?.employeeId || '-',
+                        'Employee Name': e?.employee?.name || '-',
+                        'Branch': e?.employee?.branchName || e?.branch?.name || '-',
+                        'Date': moment(e?.attendanceDate || e?.loginTime || e?.createdAt).format('DD-MM-YYYY'),
+                        'Login Time': e?.loginTime ? moment(e.loginTime).format('DD-MM-YYYY hh:mm:ss A') : (e?.createdAt ? moment(e.createdAt).format('DD-MM-YYYY hh:mm:ss A') : '-'),
+                        'Logout Time': e?.logoutTime ? moment(e.logoutTime).format('DD-MM-YYYY hh:mm:ss A') : 'Not Logged out',
+                        'Status': 'Present'
+                      }));
+                      handleExport(exportRows, 'Attendance');
+                    }}
+                    sx={{ float: 'right' }}
+                  >
+                    Export
+                  </Button>
 
                   <p style={{ color: '#fff' }}>From Date: {values.fromDate ? values.fromDate.format('YYYY-MM-DD') : ''}, To Date: {values.toDate ? values.toDate.format('YYYY-MM-DD') : ''}</p>
 

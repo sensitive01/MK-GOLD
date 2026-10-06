@@ -12,6 +12,7 @@ const fileUpload = require("../controllers/hr/fileupload");
 const attendance = require("../controllers/hr/attendance");
 const payprocess = require("../controllers/hr/payprocess");
 const expense = require("../controllers/hr/expense");
+const designation = require("../controllers/admin/designation");
 const { isHr } = require("../middlewares/authorization");
 const multer = require("../config/multer");
 
@@ -46,7 +47,7 @@ hrRouter.get("/employee/get-next-id", employee.getNextEmployeeId);
 hrRouter.get("/employee/get/:id", employee.findById);
 hrRouter.post("/employee/create", employee.create);
 hrRouter.post("/employee/update/:id", employee.update);
-// hrRouter.post("/employee/delete/:id", employee.remove);
+hrRouter.post("/employee/delete/:id", employee.remove);
 
 hrRouter.get("/attendance/get", attendance.find);
 hrRouter.post("/attendance/get", attendance.find);
@@ -88,6 +89,9 @@ hrRouter.get("/expense/get/:id", expense.findById);
 hrRouter.post("/expense/create", expense.create);
 hrRouter.post("/expense/update/:id", expense.update);
 // hrRouter.post("/expense/delete/:id", expense.remove);
+
+hrRouter.get("/designation/get", designation.find);
+hrRouter.post("/designation/get", designation.find);
 
 router.use(
   function (req, res, next) {

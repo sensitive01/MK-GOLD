@@ -52,15 +52,38 @@ async function find(query = {}, user = null) {
       }
     }
 
-    if (query.createdAt && "$gte" in query.createdAt) {
-      query.createdAt["$gte"] = new Date(
-        new Date(query.createdAt["$gte"]).toISOString().replace(/T.*Z/, "T00:00:00Z")
-      );
-    }
-    if (query.createdAt && "$lte" in query.createdAt) {
-      query.createdAt["$lte"] = new Date(
-        new Date(query.createdAt["$lte"]).toISOString().replace(/T.*Z/, "T23:59:59Z")
-      );
+    if (query.createdAt && ("$gte" in query.createdAt || "$lte" in query.createdAt)) {
+      const gteVal = query.createdAt["$gte"];
+      const lteVal = query.createdAt["$lte"];
+      const dateFilter = {};
+      if (gteVal) {
+        let startOfDay;
+        if (typeof gteVal === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(gteVal.trim())) {
+          startOfDay = new Date(`${gteVal.trim()}T00:00:00+05:30`);
+        } else {
+          const d = new Date(gteVal);
+          d.setHours(0, 0, 0, 0);
+          startOfDay = d;
+        }
+        dateFilter["$gte"] = startOfDay;
+      }
+      if (lteVal) {
+        let endOfDay;
+        if (typeof lteVal === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(lteVal.trim())) {
+          endOfDay = new Date(`${lteVal.trim()}T23:59:59.999+05:30`);
+        } else {
+          const d = new Date(lteVal);
+          d.setHours(23, 59, 59, 999);
+          endOfDay = d;
+        }
+        dateFilter["$lte"] = endOfDay;
+      }
+      delete query.createdAt;
+      query.$or = [
+        { attendanceDate: dateFilter },
+        { createdAt: dateFilter },
+        { loginTime: dateFilter }
+      ];
     }
     return await Attendance.collection.aggregate([
       { $match: query },
