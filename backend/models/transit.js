@@ -106,6 +106,17 @@ const transitSchema = new mongoose.Schema({
         enum: ['yes', 'no'],
         default: 'no'
     },
+    isMovedToMelting: {
+        type: Boolean,
+        default: false
+    },
+    movedToMeltingAt: {
+        type: Date
+    },
+    movedToMeltingBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'users'
+    },
     adminReceivedAt: {
         type: Date
     },

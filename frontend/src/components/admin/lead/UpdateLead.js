@@ -16,11 +16,19 @@ import { useState, useEffect } from 'react';
 import { getLeadById, updateLead } from '../../../apis/admin/lead';
 import { createFile } from '../../../apis/admin/fileupload';
 import global from '../../../utils/global';
+import CustomerDocumentsInput from '../../branch/lead/CustomerDocumentsInput';
 
 function UpdateLead(props) {
-  const [file, setFile] = useState(null);
+  const [docEntries, setDocEntries] = useState([
+    { id: 1, type: 'Aadhar card', file: null, preview: '' },
+  ]);
+  const [existingDocuments, setExistingDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentImage, setCurrentImage] = useState('');
+
+  const handleRemoveExistingDoc = (idx) => {
+    setExistingDocuments((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const schema = Yup.object({
     name: Yup.string().required('Name is required'),
@@ -48,7 +56,23 @@ function UpdateLead(props) {
     },
     validationSchema: schema,
     onSubmit: (values) => {
-      updateLead(props.id, values).then(async (data) => {
+      const formData = new FormData();
+      Object.keys(values).forEach((key) => {
+        if (values[key] !== null && values[key] !== undefined && values[key] !== '') {
+          formData.append(key, values[key]);
+        }
+      });
+
+      formData.append('existingDocuments', JSON.stringify(existingDocuments));
+
+      docEntries.forEach((entry) => {
+        if (entry.file) {
+          formData.append('uploadedFiles', entry.file);
+          formData.append('documentTypes', entry.type || 'Document');
+        }
+      });
+
+      updateLead(props.id, formData).then(async (data) => {
         if (data.status === false) {
           props.setNotify({
             open: true,
@@ -56,18 +80,6 @@ function UpdateLead(props) {
             severity: 'error',
           });
         } else {
-          if (file) {
-            try {
-              const formData = new FormData();
-              formData.append('uploadId', props.id);
-              formData.append('uploadName', 'lead');
-              formData.append('uploadType', 'lead');
-              formData.append('uploadedFile', file);
-              await createFile(formData);
-            } catch (error) {
-              console.error('File upload failed:', error);
-            }
-          }
           props.setToggleContainer(false);
           props.setNotify({
             open: true,
@@ -97,6 +109,9 @@ function UpdateLead(props) {
             releaseAmount: data.data.releaseAmount || 0,
             pledgedAmount: data.data.pledgedAmount || 0,
           });
+          if (data.data.documents && Array.isArray(data.data.documents)) {
+            setExistingDocuments(data.data.documents);
+          }
           if (data.data.lead?.uploadedFile) {
             setCurrentImage(
               data.data.lead.uploadedFile.startsWith('http')
@@ -267,30 +282,15 @@ function UpdateLead(props) {
                   onChange={formik.handleChange}
                 />
               </Grid>
-              <Grid item xs={12}>
-                {currentImage && (
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Current Attachment
-                    </Typography>
-                    <img
-                      src={currentImage}
-                      alt="current attachment"
-                      style={{ width: '200px', borderRadius: '8px', border: '1px solid #ccc' }}
-                    />
-                  </Box>
-                )}
-                <Typography variant="subtitle2" gutterBottom>
-                  Updated Attachment (Leave blank to keep current)
-                </Typography>
-                <input
-                  type="file"
-                  onChange={(e) => setFile(e.target.files[0])}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}
-                />
-              </Grid>
-            </>
-          )}
+              </>
+            )}
+
+            <CustomerDocumentsInput
+              docEntries={docEntries}
+              setDocEntries={setDocEntries}
+              existingDocuments={existingDocuments}
+              onRemoveExistingDoc={handleRemoveExistingDoc}
+            />
 
           <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
             <LoadingButton size="large" type="submit" variant="contained" sx={{ px: 8 }}>

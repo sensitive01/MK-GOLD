@@ -128,6 +128,24 @@ async function tlRejectLead(id, reason = '') {
   }
 }
 
+async function bullionApproveLead(id) {
+  try {
+    const response = await apiClient().post(`/api/v1.0/branch/lead/bullion-approve/${id}`);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+async function bullionRejectLead(id, reason = '') {
+  try {
+    const response = await apiClient().post(`/api/v1.0/branch/lead/bullion-reject/${id}`, { reason });
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
 export {
   getLeads,
   getLeadById,
@@ -143,4 +161,6 @@ export {
   moveToBusiness,
   tlApproveLead,
   tlRejectLead,
+  bullionApproveLead,
+  bullionRejectLead,
 };

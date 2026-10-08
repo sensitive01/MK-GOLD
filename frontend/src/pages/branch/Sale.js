@@ -107,6 +107,7 @@ function applySortFilter(array, comparator, query) {
     const q = query.trim().toLowerCase();
     results = filter(results, (row) => {
       const billId = String(row.billId || '').toLowerCase();
+      const articleNumber = String(row.articleNumber || '').toLowerCase();
       const customerName = String(row.customer?.name || '').toLowerCase();
       const phoneNumber = String(row.customer?.phoneNumber || '').toLowerCase();
       const branchName = String(row.branch?.branchName || '').toLowerCase();
@@ -118,6 +119,7 @@ function applySortFilter(array, comparator, query) {
 
       return (
         billId.includes(q) ||
+        articleNumber.includes(q) ||
         customerName.includes(q) ||
         phoneNumber.includes(q) ||
         branchName.includes(q) ||
@@ -507,7 +509,17 @@ export default function Sale() {
                 handleOpenDeleteModal();
               }}
             >
-              <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap">
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                alignItems={{ xs: 'stretch', sm: 'center' }}
+                spacing={1.5}
+                flexWrap="wrap"
+                sx={{
+                  width: '100%',
+                  gap: 1.5,
+                  justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                }}
+              >
                 {(values.fromDate || values.toDate || values.branch) && (
                   <Button
                     variant="contained"
@@ -515,122 +527,127 @@ export default function Sale() {
                     color="error"
                     startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
                     onClick={handleClearFilter}
-                    sx={{ height: 40 }}
+                    sx={{ height: 40, width: { xs: '100%', sm: 'auto' } }}
                   >
                     Clear Filter
                   </Button>
                 )}
-                <LocalizationProvider dateAdapter={AdapterMoment}>
-                  <DesktopDatePicker
-                    label="From Date"
-                    inputFormat="DD-MM-YYYY"
-                    value={values.fromDate}
-                    onChange={(val) => handleDateChange('fromDate', val)}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        size="small"
-                        InputLabelProps={{
-                          ...params.InputLabelProps,
-                          shrink: true,
-                          sx: {
-                            color: '#637381',
-                            fontWeight: 500,
-                            bgcolor: '#ffffff',
-                            px: 0.5,
-                            '&.Mui-focused': {
-                              color: 'primary.main',
+                <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                  <LocalizationProvider dateAdapter={AdapterMoment}>
+                    <DesktopDatePicker
+                      label="From Date"
+                      inputFormat="DD-MM-YYYY"
+                      value={values.fromDate}
+                      onChange={(val) => handleDateChange('fromDate', val)}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          size="small"
+                          InputLabelProps={{
+                            ...params.InputLabelProps,
+                            shrink: true,
+                            sx: {
+                              color: '#637381',
+                              fontWeight: 500,
+                              bgcolor: '#ffffff',
+                              px: 0.5,
+                              '&.Mui-focused': {
+                                color: 'primary.main',
+                              },
                             },
-                          },
-                        }}
-                        inputProps={{
-                          ...params.inputProps,
-                          placeholder: 'dd-mm-yyyy',
-                        }}
-                        sx={{
-                          width: { xs: 140, sm: 165 },
-                          '& .MuiOutlinedInput-root': {
-                            height: 40,
-                            color: '#212B36',
-                            fontWeight: 500,
-                            bgcolor: '#ffffff',
-                            borderRadius: 1,
-                            '& fieldset': {
-                              borderColor: '#cfd8dc',
+                          }}
+                          inputProps={{
+                            ...params.inputProps,
+                            placeholder: 'dd-mm-yyyy',
+                          }}
+                          sx={{
+                            flex: { xs: 1, sm: 'none' },
+                            width: { xs: '100%', sm: 165 },
+                            '& .MuiOutlinedInput-root': {
+                              height: 40,
+                              color: '#212B36',
+                              fontWeight: 500,
+                              bgcolor: '#ffffff',
+                              borderRadius: 1,
+                              '& fieldset': {
+                                borderColor: '#cfd8dc',
+                              },
+                              '&:hover fieldset': {
+                                borderColor: '#90a4ae',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: 'primary.main',
+                              },
                             },
-                            '&:hover fieldset': {
-                              borderColor: '#90a4ae',
+                            '& .MuiSvgIcon-root, & .MuiIconButton-root': {
+                              color: '#212B36',
                             },
-                            '&.Mui-focused fieldset': {
-                              borderColor: 'primary.main',
+                          }}
+                        />
+                      )}
+                    />
+                  </LocalizationProvider>
+                  <LocalizationProvider dateAdapter={AdapterMoment}>
+                    <DesktopDatePicker
+                      label="To Date"
+                      inputFormat="DD-MM-YYYY"
+                      value={values.toDate}
+                      onChange={(val) => handleDateChange('toDate', val)}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          size="small"
+                          InputLabelProps={{
+                            ...params.InputLabelProps,
+                            shrink: true,
+                            sx: {
+                              color: '#637381',
+                              fontWeight: 500,
+                              bgcolor: '#ffffff',
+                              px: 0.5,
+                              '&.Mui-focused': {
+                                color: 'primary.main',
+                              },
                             },
-                          },
-                          '& .MuiSvgIcon-root, & .MuiIconButton-root': {
-                            color: '#212B36',
-                          },
-                        }}
-                      />
-                    )}
-                  />
-                </LocalizationProvider>
-                <LocalizationProvider dateAdapter={AdapterMoment}>
-                  <DesktopDatePicker
-                    label="To Date"
-                    inputFormat="DD-MM-YYYY"
-                    value={values.toDate}
-                    onChange={(val) => handleDateChange('toDate', val)}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        size="small"
-                        InputLabelProps={{
-                          ...params.InputLabelProps,
-                          shrink: true,
-                          sx: {
-                            color: '#637381',
-                            fontWeight: 500,
-                            bgcolor: '#ffffff',
-                            px: 0.5,
-                            '&.Mui-focused': {
-                              color: 'primary.main',
+                          }}
+                          inputProps={{
+                            ...params.inputProps,
+                            placeholder: 'dd-mm-yyyy',
+                          }}
+                          sx={{
+                            flex: { xs: 1, sm: 'none' },
+                            width: { xs: '100%', sm: 165 },
+                            '& .MuiOutlinedInput-root': {
+                              height: 40,
+                              color: '#212B36',
+                              fontWeight: 500,
+                              bgcolor: '#ffffff',
+                              borderRadius: 1,
+                              '& fieldset': {
+                                borderColor: '#cfd8dc',
+                              },
+                              '&:hover fieldset': {
+                                borderColor: '#90a4ae',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: 'primary.main',
+                              },
                             },
-                          },
-                        }}
-                        inputProps={{
-                          ...params.inputProps,
-                          placeholder: 'dd-mm-yyyy',
-                        }}
-                        sx={{
-                          width: { xs: 140, sm: 165 },
-                          '& .MuiOutlinedInput-root': {
-                            height: 40,
-                            color: '#212B36',
-                            fontWeight: 500,
-                            bgcolor: '#ffffff',
-                            borderRadius: 1,
-                            '& fieldset': {
-                              borderColor: '#cfd8dc',
+                            '& .MuiSvgIcon-root, & .MuiIconButton-root': {
+                              color: '#212B36',
                             },
-                            '&:hover fieldset': {
-                              borderColor: '#90a4ae',
-                            },
-                            '&.Mui-focused fieldset': {
-                              borderColor: 'primary.main',
-                            },
-                          },
-                          '& .MuiSvgIcon-root, & .MuiIconButton-root': {
-                            color: '#212B36',
-                          },
-                        }}
-                      />
-                    )}
-                  />
-                </LocalizationProvider>
+                          }}
+                        />
+                      )}
+                    />
+                  </LocalizationProvider>
+                </Stack>
                 {canFilterBranch && (
                   <FormControl
                     size="small"
                     sx={{
-                      minWidth: 150,
+                      width: { xs: '100%', sm: 'auto' },
+                      minWidth: { xs: '100%', sm: 160 },
                       '& .MuiOutlinedInput-root': {
                         height: 40,
                         color: '#212B36',
@@ -707,7 +724,7 @@ export default function Sale() {
                   />
                   <TableBody>
                     {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row, index) => {
-                      const { _id, billId, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
+                      const { _id, billId, articleNumber, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
                       const selectedData = selected.indexOf(_id) !== -1;
                       const isPledged = saleType?.toLowerCase() !== 'physical';
                       const isReleasePending = isPledged && (
@@ -1204,7 +1221,7 @@ function Status(props) {
       const isReleaseFinance = isPledged && (!assigneeCompleted || isReleasePending);
       content = (
         <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
-          {isReleaseFinance ? 'Finance Pay Release' : 'Finance Update'}
+          {isReleaseFinance ? 'Finance Pay Release' : 'Process Funds'}
         </Button>
       );
     } else {

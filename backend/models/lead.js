@@ -83,6 +83,24 @@ const leadSchema = new mongoose.Schema(
     attachment: {
       type: String,
     },
+    documents: [
+      {
+        documentType: {
+          type: String,
+        },
+        documentFile: {
+          type: String,
+        },
+        uploadedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "users",
+        },
+        uploadedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     status: {
       type: String,
       enum: ["pending", "converted", "rejected"],
@@ -107,6 +125,17 @@ const leadSchema = new mongoose.Schema(
         attachment: {
           type: String,
         },
+        attachments: [
+          {
+            type: String,
+          },
+        ],
+        documents: [
+          {
+            documentType: String,
+            documentFile: String,
+          },
+        ],
         callbackDate: String,
         callbackTime: String,
       },
@@ -166,6 +195,29 @@ const leadSchema = new mongoose.Schema(
     isMovedToBullionDesk: {
       type: Boolean,
       default: false,
+    },
+    bullionStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    bullionApprovedAt: {
+      type: Date,
+    },
+    bullionApprovedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users",
+    },
+    bullionRejectedAt: {
+      type: Date,
+    },
+    bullionRejectedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users",
+    },
+    bullionRejectionReason: {
+      type: String,
+      trim: true,
     },
   },
   { timestamps: true }

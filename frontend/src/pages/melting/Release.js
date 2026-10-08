@@ -29,6 +29,7 @@ import {
   Typography,
   Divider,
   Link,
+  InputAdornment,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
@@ -68,6 +69,7 @@ const TABLE_HEAD = [
   { id: 'pledgeId', label: 'Pledge Id', alignRight: false },
   { id: 'pledgedIn', label: 'Pledged In', alignRight: false },
   { id: 'weight', label: 'Weight', alignRight: false },
+  { id: 'averagePurity', label: 'Average Purity', alignRight: false },
   { id: 'pledgeAmount', label: 'Pledge Amount', alignRight: false },
   { id: 'pledgedDate', label: 'Pledged Date', alignRight: false },
   { id: 'payableAmount', label: 'Total Release Amount', alignRight: false },
@@ -496,6 +498,7 @@ export default function Release() {
                         <TableCell align="left">{pledgeId}</TableCell>
                         <TableCell align="left">{sentenceCase(pledgedIn)}</TableCell>
                         <TableCell align="left">{weight}</TableCell>
+                        <TableCell align="left">{row.averagePurity != null && row.averagePurity !== '' ? `${row.averagePurity}%` : '-'}</TableCell>
                         <TableCell align="left">{pledgeAmount}</TableCell>
                         <TableCell align="left">{moment(pledgedDate).format('YYYY-MM-DD')}</TableCell>
                         <TableCell align="left">{payableAmount}</TableCell>
@@ -1515,7 +1518,105 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                         />
                       </Grid>
                       <Grid item xs={6} md={3}>
-                        <TextField label="Purity" size="small" type="number" value={ornamentValues.purity} onChange={(e) => setOrnamentValues({ ...ornamentValues, purity: e.target.value })} fullWidth />
+                        <TextField
+                          label="Purity"
+                          size="small"
+                          type="number"
+                          value={ornamentValues.purity}
+                          onChange={(e) => {
+                            const pVal = e.target.value;
+                            const numPurity = pVal === '' ? 0 : Number(pVal);
+                            const gWt = parseFloat(ornamentValues.grossWeight) || 0;
+                            const sWt = parseFloat(ornamentValues.stoneWeight) || 0;
+                            const netWt = parseFloat(ornamentValues.netWeight) || Math.max(0, gWt - sWt);
+                            const isSilver = ['Anklets', 'Toe Ring'].includes(ornamentValues.ornamentType);
+                            const rate = isSilver ? silverRate : goldRate;
+
+                            if (pVal !== '' && netWt > 0 && rate > 0) {
+                              const calcAmt = Math.round(((netWt * numPurity) / 100) * rate);
+                              setOrnamentValues({
+                                ...ornamentValues,
+                                purity: pVal,
+                                netAmount: calcAmt > 0 ? calcAmt : '',
+                                calculatedAmount: calcAmt,
+                                adjustment: 0,
+                                isManualAmount: false,
+                              });
+                              prevCalcRef.current = {
+                                ...prevCalcRef.current,
+                                purity: pVal,
+                              };
+                            } else {
+                              setOrnamentValues({
+                                ...ornamentValues,
+                                purity: pVal,
+                                isManualAmount: false,
+                              });
+                            }
+                          }}
+                          InputProps={{
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <Stack direction="row" alignItems="center" spacing={0.5}>
+                                  <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                                    %
+                                  </Typography>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color="primary"
+                                    sx={{
+                                      fontSize: '0.65rem',
+                                      height: 22,
+                                      py: 0,
+                                      px: 0.5,
+                                      textTransform: 'none',
+                                      fontWeight: 600,
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                    onClick={() => {
+                                      const gWt = parseFloat(ornamentValues.grossWeight) || 0;
+                                      const sWt = parseFloat(ornamentValues.stoneWeight) || 0;
+                                      const netWt = parseFloat(ornamentValues.netWeight) || Math.max(0, gWt - sWt);
+                                      const amt = parseFloat(ornamentValues.netAmount) || 0;
+                                      const isSilver = ['Anklets', 'Toe Ring'].includes(ornamentValues.ornamentType);
+                                      const rate = isSilver ? silverRate : goldRate;
+                                      if (netWt > 0 && rate > 0 && amt > 0) {
+                                        const calcP = parseFloat(((amt * 100) / (netWt * rate)).toFixed(2));
+                                        setOrnamentValues({
+                                          ...ornamentValues,
+                                          purity: calcP > 0 ? calcP : '',
+                                          calculatedAmount: amt,
+                                          adjustment: 0,
+                                          isManualAmount: false,
+                                        });
+                                        prevCalcRef.current = {
+                                          ...prevCalcRef.current,
+                                          purity: calcP,
+                                        };
+                                      } else if (!netWt) {
+                                        alert('Please enter Gross Weight first to determine Net Weight.');
+                                      } else if (!amt) {
+                                        alert('Please enter Net Amount to calculate Purity.');
+                                      }
+                                    }}
+                                  >
+                                    Calc Purity
+                                  </Button>
+                                </Stack>
+                              </InputAdornment>
+                            ),
+                          }}
+                          helperText={
+                            parseFloat(ornamentValues.purity) > 100
+                              ? 'Warning: Purity exceeds 100%'
+                              : ''
+                          }
+                          FormHelperTextProps={{
+                            sx: { color: parseFloat(ornamentValues.purity) > 100 ? 'error.main' : 'primary.main' },
+                          }}
+                          fullWidth
+                        />
                       </Grid>
                       <Grid item xs={12} md={3}>
                         <TextField
@@ -1524,19 +1625,23 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                           type="number"
                           value={ornamentValues.netAmount}
                           helperText={
-                            ornamentValues.isManualAmount && ornamentValues.adjustment !== 0
-                              ? `Base: ₹${Number(ornamentValues.calculatedAmount || 0).toLocaleString('en-IN')} | Adj: ${ornamentValues.adjustment > 0 ? `+₹${ornamentValues.adjustment.toLocaleString('en-IN')}` : `-₹${Math.abs(ornamentValues.adjustment).toLocaleString('en-IN')}`}`
-                              : `Base: ₹${Number(ornamentValues.calculatedAmount || 0).toLocaleString('en-IN')}`
+                            ornamentValues.adjustment !== 0 ? (
+                              <Typography component="span" variant="caption" sx={{ fontWeight: 600, color: ornamentValues.adjustment > 0 ? 'success.main' : 'error.main' }}>
+                                Base: ₹{Number(ornamentValues.calculatedAmount || 0).toLocaleString('en-IN')} | Adj: {ornamentValues.adjustment > 0 ? `+₹${ornamentValues.adjustment.toLocaleString('en-IN')}` : `-₹${Math.abs(ornamentValues.adjustment).toLocaleString('en-IN')}`}
+                              </Typography>
+                            ) : (
+                              `Base: ₹${Number(ornamentValues.calculatedAmount || 0).toLocaleString('en-IN')}`
+                            )
                           }
                           onChange={(e) => {
                             const manualVal = e.target.value;
                             const numVal = manualVal === '' ? 0 : Number(manualVal);
-                            const calc = Number(ornamentValues.calculatedAmount || 0);
-                            const adj = manualVal === '' ? 0 : Math.round(numVal - calc);
+                            const base = Number(ornamentValues.calculatedAmount || 0);
+                            const adj = manualVal === '' ? 0 : Math.round(numVal - base);
                             setOrnamentValues({
                               ...ornamentValues,
                               netAmount: manualVal,
-                              isManualAmount: true,
+                              isManualAmount: manualVal !== '',
                               adjustment: adj,
                             });
                           }}

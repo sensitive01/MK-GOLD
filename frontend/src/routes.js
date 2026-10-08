@@ -84,6 +84,8 @@ import AccountsExpense from './pages/accounts/Expense';
 import AccountsSale from './pages/accounts/Sale';
 import AccountsBalancesheet from './pages/accounts/Balancesheet';
 import AccountsLeave from './pages/accounts/Leave';
+import AccountsSellGold from './pages/accounts/SellGold';
+import AccountsVendor from './pages/accounts/Vendor';
 import BranchDashboardLayout from './layouts/dashboard/branch';
 import BullionDeskDashboardLayout from './layouts/dashboard/bullion_desk';
 import BullionDeskLeads from './pages/bullion_desk/Leads';
@@ -246,6 +248,8 @@ export default function Router() {
         { path: 'fund', element: <AccountsFund /> },
         { path: 'expense', element: <AccountsExpense /> },
         { path: 'sale', element: <AccountsSale /> },
+        { path: 'sell-gold', element: <AccountsSellGold /> },
+        { path: 'vendor', element: <AccountsVendor /> },
         { path: 'balancesheet', element: <AccountsBalancesheet /> },
         { path: 'leave', element: <AccountsLeave /> },
         { path: 'attendance', element: <BranchAttendance /> },
@@ -501,6 +505,9 @@ export default function Router() {
         { path: 'gold-transit', element: <StoreGoldTransit /> },
         { path: 'transit-outwards', element: <StoreTransitOutwards /> },
         { path: 'transit-sales/:id', element: <AdminTransitSales /> },
+        { path: 'attendance', element: <BranchAttendance /> },
+        { path: 'leave', element: <BranchLeave /> },
+        { path: 'leaves', element: <BranchLeave /> },
       ],
     },
     {

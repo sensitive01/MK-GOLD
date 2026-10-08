@@ -1,5 +1,7 @@
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import DescriptionIcon from '@mui/icons-material/Description';
 import SvgColor from '../../../../components/svg-color';
 
 // ----------------------------------------------------------------------
@@ -21,6 +23,16 @@ const navConfig = [
     title: 'Transit Outwards',
     path: '/store/transit-outwards',
     icon: <FlightTakeoffIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Attendance',
+    path: '/store/attendance',
+    icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Leaves',
+    path: '/store/leave',
+    icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
   },
 ];
 

@@ -1348,6 +1348,54 @@ async function aggregate(query = {}) {
   }
 }
 
+async function generateArticleNumber(branchId) {
+  try {
+    // 1. Try 3-digit numbers first (100-999)
+    let attempts3 = 0;
+    while (attempts3 < 200) {
+      const candidate = String(Math.floor(100 + Math.random() * 900));
+      const exists = await Sales.exists({ articleNumber: candidate });
+      if (!exists) {
+        return candidate;
+      }
+      attempts3++;
+    }
+
+    // 2. Expand to 4-digit numbers (1000-9999)
+    let attempts4 = 0;
+    while (attempts4 < 500) {
+      const candidate = String(Math.floor(1000 + Math.random() * 9000));
+      const exists = await Sales.exists({ articleNumber: candidate });
+      if (!exists) {
+        return candidate;
+      }
+      attempts4++;
+    }
+
+    // 3. Fallback: timestamp-based unique digits
+    return Date.now().toString().slice(-6);
+  } catch (err) {
+    console.error("Error generating article number:", err);
+    return String(Math.floor(100 + Math.random() * 900));
+  }
+}
+
+async function assignArticleNumbersToSales(saleIds) {
+  try {
+    if (!saleIds || !saleIds.length) return;
+    for (const saleId of saleIds) {
+      const sale = await Sales.findById(saleId).exec();
+      if (sale && !sale.articleNumber) {
+        const articleNumber = await generateArticleNumber(sale.branch);
+        await Sales.findByIdAndUpdate(saleId, { $set: { articleNumber } }).exec();
+        console.log(`Assigned articleNumber ${articleNumber} to sale ${sale.billId || sale._id} upon transit completion`);
+      }
+    }
+  } catch (err) {
+    console.error("Error assigning article numbers after transit completion:", err);
+  }
+}
+
 async function create(payload) {
   try {
     const Customer = require("../models/customer");
@@ -1371,6 +1419,15 @@ async function create(payload) {
     const isBankPayment = payload.paymentType === 'bank' || (payload.paymentType === 'partial' && Number(payload.bankAmount) > 0);
     if (isBankPayment && !payload.bank) {
       throw new Error("Customer bank is mandatory for bank payment. Please mark a bank for sale.");
+    }
+
+    if (payload.bank) {
+      const selectedBankId = payload.bank?._id || payload.bank;
+      const bankDoc = (customer.bank || []).find((b) => String(b._id) === String(selectedBankId));
+      if (bankDoc && ((bankDoc.accountType || '').toLowerCase() === 'virtual' || bankDoc.isVerified)) {
+        payload.isBankVerified = true;
+        payload.bankVerifiedAt = new Date();
+      }
     }
 
     if (!payload.address && customer.address.length > 0) {
@@ -1537,18 +1594,38 @@ async function update(id, payload) {
           bankRequired = true;
         }
 
+        let rels = sale.release || [];
+        if (rels.length > 0 && (typeof rels[0] === 'string' || mongoose.Types.ObjectId.isValid(String(rels[0])) || !rels[0].paymentType)) {
+          const ReleaseModel = require("../models/release");
+          const relIds = rels.map(r => r._id || r);
+          rels = await ReleaseModel.find({ _id: { $in: relIds } }).lean().exec();
+        }
+
         if (!bankRequired) {
-          let rels = sale.release || [];
-          if (rels.length > 0 && (typeof rels[0] === 'string' || mongoose.Types.ObjectId.isValid(String(rels[0])) || !rels[0].paymentType)) {
-            const ReleaseModel = require("../models/release");
-            const relIds = rels.map(r => r._id || r);
-            rels = await ReleaseModel.find({ _id: { $in: relIds } }).lean().exec();
-          }
           bankRequired = rels.some(r => r.paymentType === 'bank' || r.bank);
         }
 
         if (bankRequired) {
+          const Customer = require("../models/customer");
+          let customerDoc = null;
+          if (sale.customer) {
+            customerDoc = await Customer.findById(sale.customer).lean().exec();
+          }
+
+          const customerBanks = customerDoc?.bank || [];
+          const isRelVirtual = rels.some((r) => {
+            const targetBankId = r.bank?._id || r.bank;
+            const matchedBank = customerBanks.find(
+              (b) =>
+                (targetBankId && String(b._id) === String(targetBankId)) ||
+                (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+            );
+            const acctType = (matchedBank?.accountType || r.bank?.accountType || '').toLowerCase();
+            return acctType === 'virtual' || Boolean(matchedBank?.isVerified);
+          }) || (customerBanks.some((b) => (b.accountType || '').toLowerCase() === 'virtual') && bankRequired);
+
           const isReleaseBankVerified = Boolean(
+            isRelVirtual ||
             (sale.financePayments || []).some(fp => fp.isVerified && fp.stage === 'release')
           );
           if (!isReleaseBankVerified) {
@@ -1573,8 +1650,8 @@ async function update(id, payload) {
           }
 
           const saleAcct = saleBankDoc?.accountNo || sale.bank?.accountNo;
-          const saleId = targetSaleBankId;
-          const isCustomerBankVerified = Boolean(saleBankDoc?.isVerified);
+          const isVirtualBank = (saleBankDoc?.accountType || '').toLowerCase() === 'virtual';
+          const isCustomerBankVerified = Boolean(saleBankDoc?.isVerified) || isVirtualBank;
 
           const chosenBankId = payload.newFinancePayment?.bank?.bankId || payload.newFinancePayment?.bank?._id;
           const chosenAcct = payload.newFinancePayment?.bank?.accountNo;
@@ -1683,7 +1760,15 @@ async function update(id, payload) {
       }
     }
 
-    if (updatedSale && ['physical', 'pledged'].includes(updatedSale.saleType) && updatedSale.status === 'completed' && !updatedSale.invoiceSent) {
+    if (
+      updatedSale &&
+      ['physical', 'pledged'].includes(updatedSale.saleType) &&
+      updatedSale.status === 'completed' &&
+      !updatedSale.invoiceSent &&
+      !payload?.skipWhatsApp &&
+      !payload?.isAdminUpdate &&
+      !payload?.isFinanceReupdate
+    ) {
       setImmediate(() => {
         triggerCompletedInvoiceWhatsApp(updatedSale._id);
       });
@@ -1730,18 +1815,38 @@ async function updateWithLog(id, setData, logEntry) {
           bankRequired = true;
         }
 
+        let rels = sale.release || [];
+        if (rels.length > 0 && (typeof rels[0] === 'string' || mongoose.Types.ObjectId.isValid(String(rels[0])) || !rels[0].paymentType)) {
+          const ReleaseModel = require("../models/release");
+          const relIds = rels.map(r => r._id || r);
+          rels = await ReleaseModel.find({ _id: { $in: relIds } }).lean().exec();
+        }
+
         if (!bankRequired) {
-          let rels = sale.release || [];
-          if (rels.length > 0 && (typeof rels[0] === 'string' || mongoose.Types.ObjectId.isValid(String(rels[0])) || !rels[0].paymentType)) {
-            const ReleaseModel = require("../models/release");
-            const relIds = rels.map(r => r._id || r);
-            rels = await ReleaseModel.find({ _id: { $in: relIds } }).lean().exec();
-          }
           bankRequired = rels.some(r => r.paymentType === 'bank' || r.bank);
         }
 
         if (bankRequired) {
+          const Customer = require("../models/customer");
+          let customerDoc = null;
+          if (sale.customer) {
+            customerDoc = await Customer.findById(sale.customer).lean().exec();
+          }
+
+          const customerBanks = customerDoc?.bank || [];
+          const isRelVirtual = rels.some((r) => {
+            const targetBankId = r.bank?._id || r.bank;
+            const matchedBank = customerBanks.find(
+              (b) =>
+                (targetBankId && String(b._id) === String(targetBankId)) ||
+                (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+            );
+            const acctType = (matchedBank?.accountType || r.bank?.accountType || '').toLowerCase();
+            return acctType === 'virtual' || Boolean(matchedBank?.isVerified);
+          }) || (customerBanks.some((b) => (b.accountType || '').toLowerCase() === 'virtual') && bankRequired);
+
           const isReleaseBankVerified = Boolean(
+            isRelVirtual ||
             (sale.financePayments || []).some(fp => fp.isVerified && fp.stage === 'release')
           );
           if (!isReleaseBankVerified) {
@@ -1766,8 +1871,8 @@ async function updateWithLog(id, setData, logEntry) {
           }
 
           const saleAcct = saleBankDoc?.accountNo || sale.bank?.accountNo;
-          const saleId = targetSaleBankId;
-          const isCustomerBankVerified = Boolean(saleBankDoc?.isVerified);
+          const isVirtualBank = (saleBankDoc?.accountType || '').toLowerCase() === 'virtual';
+          const isCustomerBankVerified = Boolean(saleBankDoc?.isVerified) || isVirtualBank;
 
           const chosenBankId = setData.newFinancePayment?.bank?.bankId || setData.newFinancePayment?.bank?._id;
           const chosenAcct = setData.newFinancePayment?.bank?.accountNo;
@@ -1841,6 +1946,16 @@ async function updateWithLog(id, setData, logEntry) {
       paymentsToAdd = [newFp];
     }
 
+    if (setData.isFinanceReupdate) {
+      if (paymentsToAdd.length > 0) {
+        const existingReleasePayments = (sale.financePayments || []).filter(fp => fp.stage === 'release');
+        setData.financePayments = [...existingReleasePayments, ...paymentsToAdd];
+        delete pushOps.financePayments;
+      }
+      setData.invoiceSent = false;
+      setData.invoicePdfUrl = "";
+    }
+
     const updatedSale = await Sales.findByIdAndUpdate(
       id,
       {
@@ -1911,7 +2026,15 @@ async function updateWithLog(id, setData, logEntry) {
       }
     }
 
-    if (updatedSale && ['physical', 'pledged'].includes(updatedSale.saleType) && updatedSale.status === 'completed' && !updatedSale.invoiceSent) {
+    if (
+      updatedSale &&
+      ['physical', 'pledged'].includes(updatedSale.saleType) &&
+      updatedSale.status === 'completed' &&
+      !updatedSale.invoiceSent &&
+      !setData?.skipWhatsApp &&
+      !setData?.isAdminUpdate &&
+      !setData?.isFinanceReupdate
+    ) {
       setImmediate(() => {
         triggerCompletedInvoiceWhatsApp(updatedSale._id);
       });
@@ -2140,6 +2263,10 @@ async function triggerCompletedInvoiceWhatsApp(saleId) {
     }
     if (sale.invoiceSent) {
       console.log(`[WhatsApp Invoice] Skipped sale ${sale.billId || saleId}: invoice already sent`);
+      return;
+    }
+    if (sale.skipWhatsApp || sale.isAdminUpdate || sale.isFinanceReupdate) {
+      console.log(`[WhatsApp Invoice] Skipped sale ${sale.billId || saleId}: WhatsApp bill sending skipped for admin/re-updated bill`);
       return;
     }
 
@@ -2414,4 +2541,6 @@ module.exports = {
   branchConsolidatedSaleReport,
   adminConsolidatedSaleReport,
   triggerCompletedInvoiceWhatsApp,
+  generateArticleNumber,
+  assignArticleNumbersToSales,
 };

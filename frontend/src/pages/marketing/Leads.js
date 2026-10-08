@@ -1034,7 +1034,13 @@ export default function Leads({ title = "Leads Management" }) {
               Back
             </Button>
           </Stack>
-          <UpdateLead setToggleContainer={setToggleContainer} id={openId} setNotify={setNotify} />
+          <UpdateLead
+            setToggleContainer={setToggleContainer}
+            setToggleContainerType={setToggleContainerType}
+            fetchData={fetchData}
+            id={openId}
+            setNotify={setNotify}
+          />
         </Container>
       )}
 

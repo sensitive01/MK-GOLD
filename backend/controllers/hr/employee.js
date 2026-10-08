@@ -59,6 +59,10 @@ async function findById(req, res) {
 
 async function create(req, res) {
   try {
+    if (req.body.salary !== undefined && req.body.salary !== '') {
+      const parsedSalary = Number(req.body.salary);
+      req.body.salary = isNaN(parsedSalary) ? 0 : parsedSalary;
+    }
     let createdData = await employeeService.create(req.body);
     res.json({
       status: true,
@@ -88,20 +92,32 @@ async function create(req, res) {
 async function update(req, res) {
   try {
     const payload = req.body;
+    if (payload.salary !== undefined && payload.salary !== '') {
+      const parsedSalary = Number(payload.salary);
+      payload.salary = isNaN(parsedSalary) ? 0 : parsedSalary;
+    }
     if (req.user && req.user._id) {
       payload.lastEditedBy = req.user._id;
     }
     res.json({
       status: true,
-      message: "",
+      message: "Employee updated successfully",
       data: await employeeService.update(req.params.id, payload),
     });
   } catch (err) {
-    res.json({
-      status: false,
-      message: err.errors ?? err.message,
-      data: {},
-    });
+    if (err.code === 11000) {
+      res.json({
+        status: false,
+        message: "Employee ID or Phone Number already exists",
+        data: {},
+      });
+    } else {
+      res.json({
+        status: false,
+        message: err.errors ? Object.values(err.errors).map(e => e.message).join(", ") : (err.message || "Failed to update employee"),
+        data: {},
+      });
+    }
   }
 }
 

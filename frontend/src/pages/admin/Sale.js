@@ -110,7 +110,13 @@ function applySortFilter(array, comparator, query) {
     return a[1] - b[1];
   });
   if (query) {
-    return filter(array, (row) => row.customer?.phoneNumber.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    const q = query.toLowerCase().trim();
+    return filter(array, (row) =>
+      row.customer?.phoneNumber?.toLowerCase().includes(q) ||
+      String(row.billId || '').toLowerCase().includes(q) ||
+      String(row.articleNumber || '').toLowerCase().includes(q) ||
+      row.customer?.name?.toLowerCase().includes(q)
+    );
   }
   return stabilizedThis?.map((el) => el[0]);
 }
@@ -470,7 +476,7 @@ export default function Sale() {
               />
               <TableBody>
                 {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row, index) => {
-                  const { _id, billId, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
+                  const { _id, billId, articleNumber, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
                   const selectedData = selected.indexOf(_id) !== -1;
                   const isPledged = saleType?.toLowerCase() !== 'physical';
                   const isReleasePending = isPledged && (
@@ -566,7 +572,7 @@ export default function Sale() {
                             Release Pending
                           </Typography>
                         ) : (
-                          <>&#8377; {netAmount}</>
+                          <>&#8377; {row.payableAmount != null && Number(row.payableAmount) > 0 ? Math.round(row.payableAmount) : netAmount}</>
                         )}
                       </TableCell>
                       <TableCell align="left" onClick={(e) => e.stopPropagation()}>
@@ -1040,7 +1046,19 @@ function Status(props) {
       if (isReleaseFinance) {
         const rels = row?.release || [];
         isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+        const customerBanks = row?.customer?.bank || [];
+        const isRelVirtual = rels.some((r) => {
+          const targetBankId = r.bank?._id || r.bank;
+          const matchedBank = customerBanks.find(
+            (b) =>
+              (targetBankId && String(b._id) === String(targetBankId)) ||
+              (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+          );
+          const acctType = (matchedBank?.accountType || r.bank?.accountType || '').toLowerCase();
+          return acctType === 'virtual' || Boolean(matchedBank?.isVerified);
+        }) || (customerBanks.some((b) => (b.accountType || '').toLowerCase() === 'virtual') && isBankRequired);
         const isRelVerified = Boolean(
+          isRelVirtual ||
           (row?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
         );
         isBankPending = isBankRequired && !isRelVerified;
@@ -1054,7 +1072,11 @@ function Status(props) {
         ) || (typeof row?.bank === 'object' && row?.bank?.accountNo ? row?.bank : null);
         const saleAcct = matchedSaleBank?.accountNo || row?.bank?.accountNo;
         const saleId = matchedSaleBank?._id || targetSaleBankId;
+        const isVirtualBank = (matchedSaleBank?.accountType || row?.bank?.accountType || '').toLowerCase() === 'virtual';
+        const isBankDocVerified = Boolean(matchedSaleBank?.isVerified || row?.bank?.isVerified);
         const isSaleVerified = Boolean(
+          isVirtualBank ||
+          isBankDocVerified ||
           (row?.financePayments || []).some(
             (fp) => fp.isVerified && (
               fp.stage === 'sale' ||
@@ -1158,7 +1180,7 @@ function Status(props) {
             handleVerify('finance');
           }}
         >
-          Update Finance
+          Process Funds
         </Button>
       </Stack>
     );
@@ -1174,7 +1196,19 @@ function Status(props) {
       if (isReleaseFinance) {
         const rels = row?.release || [];
         isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+        const customerBanks = row?.customer?.bank || [];
+        const isRelVirtual = rels.some((r) => {
+          const targetBankId = r.bank?._id || r.bank;
+          const matchedBank = customerBanks.find(
+            (b) =>
+              (targetBankId && String(b._id) === String(targetBankId)) ||
+              (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+          );
+          const acctType = (matchedBank?.accountType || r.bank?.accountType || '').toLowerCase();
+          return acctType === 'virtual' || Boolean(matchedBank?.isVerified);
+        }) || (customerBanks.some((b) => (b.accountType || '').toLowerCase() === 'virtual') && isBankRequired);
         const isRelVerified = Boolean(
+          isRelVirtual ||
           (row?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
         );
         isBankPendingVerification = isBankRequired && !isRelVerified;
@@ -1188,7 +1222,11 @@ function Status(props) {
         ) || (typeof row?.bank === 'object' && row?.bank?.accountNo ? row?.bank : null);
         const saleAcct = matchedSaleBank?.accountNo || row?.bank?.accountNo;
         const saleId = matchedSaleBank?._id || targetSaleBankId;
+        const isVirtualBank = (matchedSaleBank?.accountType || row?.bank?.accountType || '').toLowerCase() === 'virtual';
+        const isBankDocVerified = Boolean(matchedSaleBank?.isVerified || row?.bank?.isVerified);
         const isSaleVerified = Boolean(
+          isVirtualBank ||
+          isBankDocVerified ||
           (row?.financePayments || []).some(
             (fp) => fp.isVerified && (
               fp.stage === 'sale' ||
@@ -1214,7 +1252,7 @@ function Status(props) {
                   cursor: 'not-allowed',
                 }}
               >
-                {isReleaseFinance ? 'Finance Pay Release' : 'Finance Update'}
+                {isReleaseFinance ? 'Finance Pay Release' : 'Process Funds'}
               </Button>
             </span>
           </Tooltip>
@@ -1222,7 +1260,7 @@ function Status(props) {
       } else {
         content = (
           <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
-            {isReleaseFinance ? 'Finance Pay Release' : 'Finance Update'}
+            {isReleaseFinance ? 'Finance Pay Release' : 'Process Funds'}
           </Button>
         );
       }
@@ -1451,14 +1489,14 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
   }, [id, open]);
 
   const schema = Yup.object({
-    amount: Yup.number().when([], {
+    amount: Yup.number().typeError('Amount must be a number').when([], {
       is: () => type !== 'finance' || saleDetails?.paymentType !== 'partial',
       then: (s) => s.required('Amount is required'),
       otherwise: (s) => s.nullable(),
     }),
-    cashAmount: Yup.number().nullable(),
-    bankAmount: Yup.number().nullable(),
-    comments: Yup.string().required('Comments are required'),
+    cashAmount: Yup.number().typeError('Cash amount must be a number').nullable(),
+    bankAmount: Yup.number().typeError('Bank amount must be a number').nullable(),
+    comments: Yup.string().nullable(),
     isCompleted: Yup.boolean(),
   });
 
@@ -1475,43 +1513,63 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     },
     validationSchema: schema,
     onSubmit: async (values) => {
-      if (type === 'assignee' && !saleDetails.financeCompleted) {
-        alert('Cannot verify Assignee stage: Finance verification must be completed first!');
-        return;
-      }
+      try {
+        if (type === 'assignee' && !saleDetails?.financeCompleted) {
+          alert('Cannot verify Assignee stage: Finance verification must be completed first!');
+          return;
+        }
 
-      if (type === 'finance') {
-        const isPledged = (saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged';
-        if (isPledgedStage) {
-          const rels = saleDetails?.release || [];
-          const bankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
-          const isRelVerified = Boolean(
-            (saleDetails?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
-          );
-          if (bankRequired && !isRelVerified) {
-            alert('Release bank has not been verified yet. Please verify the Release Bank in the Billing Summary before paying release.');
-            return;
-          }
-        } else {
-          const isPartial = saleDetails?.paymentType === 'partial';
-          const bankRequired = saleDetails?.paymentType === 'bank' || (isPartial && Number(values.bankAmount || saleDetails?.bankAmount) > 0);
-          const targetSaleBankId = saleDetails?.bank?._id || saleDetails?.bank;
-          const saleAcct = saleDetails?.bank?.accountNo;
-          const isSaleVerified = Boolean(
-            (saleDetails?.financePayments || []).some(
-              (fp) => fp.isVerified && (
-                fp.stage === 'sale' ||
-                (targetSaleBankId && String(fp.bank?.bankId || fp.bank?._id) === String(targetSaleBankId)) ||
-                (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
-              )
-            )
-          );
-          if (bankRequired && !isSaleVerified) {
-            alert('Customer sale bank has not been verified yet. Please verify the bank in the Billing Summary before updating finance.');
-            return;
+        if (type === 'finance' && saleDetails?.status !== 'completed') {
+          const isPledged = (saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged';
+          const isPledgedStageCheck = isPledged && !saleDetails?.assigneeCompleted;
+          if (isPledgedStageCheck) {
+            const rels = saleDetails?.release || [];
+            const bankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+            const customerBanks = saleDetails?.customer?.bank || [];
+            const isRelVirtual = rels.some((r) => {
+              const targetBankId = r.bank?._id || r.bank;
+              const matchedBank = customerBanks.find(
+                (b) =>
+                  (targetBankId && String(b._id) === String(targetBankId)) ||
+                  (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+              );
+              const acctType = (matchedBank?.accountType || r.bank?.accountType || '').toLowerCase();
+              return acctType === 'virtual' || Boolean(matchedBank?.isVerified);
+            }) || (customerBanks.some((b) => (b.accountType || '').toLowerCase() === 'virtual') && bankRequired);
+            const isRelVerified = Boolean(
+              isRelVirtual ||
+              (saleDetails?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
+            );
+            if (bankRequired && !isRelVerified) {
+              alert('Release bank has not been verified yet. Please verify the Release Bank in the Billing Summary before paying release.');
+              return;
+            }
+          } else {
+            const isPartial = saleDetails?.paymentType === 'partial';
+            const bankRequired = saleDetails?.paymentType === 'bank' || (isPartial && Number(values.bankAmount || saleDetails?.bankAmount) > 0);
+            const targetSaleBankId = saleDetails?.bank?._id || saleDetails?.bank;
+            const targetSaleBank = (saleDetails?.customer?.bank || []).find((b) => String(b._id) === String(targetSaleBankId)) || (typeof saleDetails?.bank === 'object' ? saleDetails?.bank : null);
+            const saleAcct = targetSaleBank?.accountNo || saleDetails?.bank?.accountNo;
+            const isVirtualBank = (targetSaleBank?.accountType || saleDetails?.bank?.accountType || '').toLowerCase() === 'virtual';
+            const isBankDocVerified = Boolean(targetSaleBank?.isVerified || saleDetails?.bank?.isVerified);
+            const isSaleVerified = Boolean(
+              isVirtualBank ||
+              isBankDocVerified ||
+              (saleDetails?.financePayments || []).some(
+                (fp) => fp.isVerified && (
+                  fp.stage === 'sale' ||
+                  (targetSaleBankId && String(fp.bank?.bankId || fp.bank?._id) === String(targetSaleBankId)) ||
+                  (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
+                )
+              ) ||
+              (saleDetails?.saleType === 'physical' && saleDetails?.isBankVerified)
+            );
+            if (bankRequired && !isSaleVerified) {
+              alert('Customer sale bank has not been verified yet. Please verify the bank in the Billing Summary before updating finance.');
+              return;
+            }
           }
         }
-      }
 
       setLoading(true);
 
@@ -1554,8 +1612,13 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           }
 
           payload.newFinancePayments = newPayments;
-          payload.financeAmount = (saleDetails?.financeAmount || 0) + cashNum + bankNum;
-          payload.payableAmount = saleDetails?.payableAmount;
+          const totalAmt = cashNum + bankNum;
+          payload.financeAmount = saleDetails?.status === 'completed' ? totalAmt : ((saleDetails?.financeAmount || 0) + totalAmt);
+          payload.payableAmount = saleDetails?.status === 'completed' ? totalAmt : saleDetails?.payableAmount;
+          payload.netAmount = saleDetails?.status === 'completed' ? totalAmt : saleDetails?.netAmount;
+          payload.cashAmount = cashNum;
+          payload.bankAmount = bankNum;
+          payload.paymentType = 'partial';
           payload.financeComments = values.comments;
           if (values.proof) payload.financeProof = values.proof;
         } else {
@@ -1563,13 +1626,21 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
             .filter((fp) => fp.stage === 'sale')
             .reduce((sum, fp) => sum + (+fp.amount || 0), 0);
           const enteredAmt = values.amount !== '' ? Number(values.amount) : 0;
-          payload.financeAmount = saleDetails?.status === 'completed'
-            ? (values.amount !== '' ? Number(values.amount) : undefined)
-            : (prevPaid + enteredAmt);
-          payload.payableAmount = saleDetails?.payableAmount;
+          const isCompletedSale = saleDetails?.status === 'completed';
+          payload.financeAmount = isCompletedSale ? enteredAmt : (prevPaid + enteredAmt);
+          payload.payableAmount = isCompletedSale ? enteredAmt : (saleDetails?.payableAmount ?? enteredAmt);
+          payload.netAmount = isCompletedSale ? enteredAmt : (saleDetails?.netAmount ?? enteredAmt);
+          const selectedPt = values.paymentType || (saleDetails?.paymentType === 'cash' ? 'cash' : 'bank');
+          payload.paymentType = selectedPt;
+          if (selectedPt === 'cash') {
+            payload.cashAmount = enteredAmt;
+            payload.bankAmount = 0;
+          } else {
+            payload.bankAmount = enteredAmt;
+            payload.cashAmount = 0;
+          }
           payload.financeComments = values.comments;
           payload.financeProof = values.proof;
-          const selectedPt = values.paymentType || (saleDetails?.paymentType === 'cash' ? 'cash' : 'bank');
           payload.newFinancePayment = {
             amount: enteredAmt,
             paymentType: selectedPt,
@@ -1584,12 +1655,43 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           };
         }
 
-        if (values.isCompleted || saleDetails?.status === 'completed' || saleDetails?.financeCompleted) {
+        // When updating a completed bill or when admin manages funds, sync valuation adjustments & ornaments
+        if (saleDetails?.status === 'completed' || isAdmin) {
+          payload.skipWhatsApp = true;
+          payload.isAdminUpdate = true;
+          const finalTotal = values.paymentType === 'partial'
+            ? ((values.cashAmount !== '' ? Number(values.cashAmount) : 0) + (values.bankAmount !== '' ? Number(values.bankAmount) : 0))
+            : (values.amount !== '' ? Number(values.amount) : 0);
+
+          if (finalTotal > 0) {
+            payload.payableAmount = finalTotal;
+            payload.netAmount = finalTotal;
+            payload.financeAmount = finalTotal;
+
+            const baseCalc = saleDetails?.totalCalculatedAmount || (saleDetails?.ornaments || []).reduce((sum, o) => sum + Number(o.calculatedAmount || o.netAmount || 0), 0);
+            if (baseCalc > 0) {
+              const newAdj = finalTotal - baseCalc;
+              payload.totalAdjustment = newAdj;
+              payload.adjustments = newAdj;
+            }
+
+            if (Array.isArray(saleDetails?.ornaments) && saleDetails.ornaments.length === 1) {
+              const singleOrn = { ...saleDetails.ornaments[0] };
+              singleOrn.netAmount = finalTotal;
+              const calcSys = Number(singleOrn.calculatedAmount) || finalTotal;
+              singleOrn.adjustment = finalTotal - calcSys;
+              payload.ornaments = [singleOrn];
+            }
+          }
+        }
+
+        if (values.isCompleted || saleDetails?.status === 'completed' || saleDetails?.financeCompleted || isAdmin) {
           payload.financeCompleted = true;
           payload.financeCompletedAt = saleDetails?.financeCompletedAt || new Date();
           if (saleDetails?.status === 'completed') {
             payload.status = 'completed';
             payload.isFinanceReupdate = true;
+            payload.skipWhatsApp = true;
           } else {
             const isPhys = (saleDetails?.saleType || saleType || '').toLowerCase() === 'physical';
             const isAssigneeDone = Boolean(saleDetails?.assigneeCompleted ?? assigneeCompleted);
@@ -1628,8 +1730,13 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           alert(data.message || 'Verification failed. Please ensure prior stages are approved.');
         }
       });
-    },
-  });
+    } catch (err) {
+      console.error('Error during verification submit:', err);
+      setLoading(false);
+      alert(err?.message || 'Submission error');
+    }
+  },
+});
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -1662,7 +1769,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     }
 
     setLoading(true);
-    const payload = {};
+    const payload = { skipWhatsApp: true, isAdminUpdate: true };
 
     if (type === 'finance') {
       if (action === 'approve') {
@@ -1775,6 +1882,31 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     ? (saleDetails?.release || []).filter((r) => String(r?.paymentType || '').toLowerCase() === 'bank')
     : [];
   const hasBankRelease = bankReleases.length > 0;
+
+  const customerBanks = saleDetails?.customer?.bank || [];
+  let isEffectiveBankVerified = false;
+  if (isPledgedReleaseStage) {
+    const rels = saleDetails?.release || [];
+    const isRelVirtual = rels.some((r) => {
+      const targetBankId = r.bank?._id || r.bank;
+      const matchedBank = customerBanks.find(
+        (b) =>
+          (targetBankId && String(b._id) === String(targetBankId)) ||
+          (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+      );
+      const acctType = (matchedBank?.accountType || r.bank?.accountType || '').toLowerCase();
+      return acctType === 'virtual' || Boolean(matchedBank?.isVerified);
+    }) || (customerBanks.some((b) => (b.accountType || '').toLowerCase() === 'virtual') && hasBankRelease);
+    isEffectiveBankVerified = Boolean(
+      isRelVirtual ||
+      (saleDetails?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
+    );
+  } else {
+    const targetSaleBankId = saleDetails?.bank?._id || saleDetails?.bank;
+    const targetSaleBank = customerBanks.find((b) => String(b._id) === String(targetSaleBankId)) || (typeof saleDetails?.bank === 'object' ? saleDetails?.bank : null);
+    const isVirtualSaleBank = (targetSaleBank?.accountType || saleDetails?.bank?.accountType || '').toLowerCase() === 'virtual';
+    isEffectiveBankVerified = Boolean(saleDetails?.isBankVerified || isVirtualSaleBank || targetSaleBank?.isVerified);
+  }
 
   // ---------------- OTHER USERS VIEW (Form Entry) ----------------
   return (
@@ -2116,7 +2248,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               ((saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged' && !(saleDetails?.assigneeCompleted ?? assigneeCompleted)
                 ? (saleDetails?.release || []).some((r) => r.paymentType === 'bank' || r.bank)
                 : (saleDetails?.paymentType === 'bank' || (saleDetails?.paymentType === 'partial' && Number(saleDetails?.bankAmount) > 0))
-              ) && !saleDetails?.isBankVerified
+              ) && !isEffectiveBankVerified
             ) && (
               <Grid item xs={12}>
                 <MuiAlert severity="error" sx={{ mb: 1 }}>
@@ -2125,16 +2257,25 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               </Grid>
             )}
 
-            <Grid item xs={12}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Checkbox
-                  name="isCompleted"
-                  checked={values.isCompleted}
-                  onChange={handleChange}
-                />
-                <Typography variant="body2">Mark as completed (Moves to next stage)</Typography>
-              </Stack>
-            </Grid>
+            {!isAdmin && (
+              <Grid item xs={12}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Checkbox
+                    name="isCompleted"
+                    checked={values.isCompleted}
+                    onChange={handleChange}
+                  />
+                  <Typography variant="body2">Mark as completed (Moves to next stage)</Typography>
+                </Stack>
+              </Grid>
+            )}
+            {Object.keys(errors).length > 0 && (
+              <Grid item xs={12}>
+                <MuiAlert severity="error">
+                  Please check the fields: {Object.values(errors).join(', ')}
+                </MuiAlert>
+              </Grid>
+            )}
           </Grid>
         </DialogContent>
         <DialogActions>
@@ -2144,11 +2285,11 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
             variant="contained"
             loading={loading}
             disabled={
-              type === 'finance' && (
+              type === 'finance' && saleDetails?.status !== 'completed' && (
                 ((saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged' && !(saleDetails?.assigneeCompleted ?? assigneeCompleted)
                   ? (saleDetails?.release || []).some((r) => r.paymentType === 'bank' || r.bank)
                   : (saleDetails?.paymentType === 'bank' || (saleDetails?.paymentType === 'partial' && Number(saleDetails?.bankAmount) > 0))
-                ) && !saleDetails?.isBankVerified
+                ) && !isEffectiveBankVerified
               )
             }
             sx={{ color: '#fff' }}

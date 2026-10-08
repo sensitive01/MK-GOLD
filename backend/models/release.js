@@ -18,6 +18,9 @@ const Release = mongoose.model(
         type: Number,
         required: true,
       },
+      averagePurity: {
+        type: Number,
+      },
       pledgeAmount: {
         type: Number,
         required: true,

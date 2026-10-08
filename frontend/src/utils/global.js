@@ -117,7 +117,7 @@ export default {
     { label: 'Subadmin', value: 'subadmin' },
     // { label: 'Operations', value: 'operations' },
     { label: 'Finance', value: 'finance' },
-    // { label: 'Accounts', value: 'accounts' },
+    { label: 'Accounts', value: 'accounts' },
     { label: 'HR', value: 'hr' },
     { label: 'Branch / Branch Manager', value: 'branch' },
     { label: 'Assistant Branch Manager', value: 'assistant_branch_manager' }, // Added for 7.2

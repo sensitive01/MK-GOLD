@@ -1,6 +1,12 @@
 const mongoose = require("mongoose");
 
 const meltingSchema = new mongoose.Schema({
+    batchNumber: {
+        type: String,
+        unique: true,
+        sparse: true,
+        trim: true
+    },
     transitIds: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Transits',

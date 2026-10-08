@@ -77,6 +77,8 @@ export default function StoreDashboard() {
   const quickLinks = [
     { title: 'Transit', path: '/store/gold-transit', icon: 'mdi:truck-delivery', bgColor: '#FFD700' },
     { title: 'Transit Outwards', path: '/store/transit-outwards', icon: 'mdi:send', bgColor: '#fff' },
+    { title: 'Attendance', path: '/store/attendance', icon: 'mdi:clock-check', bgColor: '#FFD700' },
+    { title: 'Leaves', path: '/store/leave', icon: 'mdi:calendar-remove', bgColor: '#fff' },
     { title: 'Profile', path: '/store/profile', icon: 'mdi:account-circle', bgColor: '#FFD700' },
   ];
 
@@ -266,7 +268,7 @@ export default function StoreDashboard() {
 
         <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }} sx={{ mb: 4 }}>
           {quickLinks.map((link) => (
-            <Grid item xs={6} sm={6} md={3} key={link.title}>
+            <Grid item xs={6} sm={4} md={2.4} key={link.title}>
               <Link
                 onClick={() => navigate(link.path)}
                 underline="none"

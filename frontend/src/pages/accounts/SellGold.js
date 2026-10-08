@@ -4,9 +4,9 @@ import { Helmet } from 'react-helmet-async';
 import { Box, Container, Tab, Tabs, Typography, Card } from '@mui/material';
 
 // Import the actual page components
-import Melting from './Melting';
-import Vendor from './Vendor';
-import SoldGoldRecords from './SoldGoldRecords';
+import Melting from '../melting/Melting';
+import Vendor from '../melting/Vendor';
+import SoldGoldRecords from '../melting/SoldGoldRecords';
 
 // ----------------------------------------------------------------------
 
@@ -56,7 +56,7 @@ export default function SellGold() {
   return (
     <>
       <Helmet>
-        <title> Sell Gold | MK Gold </title>
+        <title> Sell Gold | Accounts </title>
       </Helmet>
 
       <Container maxWidth="xl">

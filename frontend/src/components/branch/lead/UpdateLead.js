@@ -18,30 +18,39 @@ import { getBranch } from '../../../apis/branch/branch';
 import { createFile } from '../../../apis/branch/fileupload';
 import global from '../../../utils/global';
 import moment from 'moment';
+import CustomerDocumentsInput from './CustomerDocumentsInput';
 
 function UpdateLead(props) {
-  const [file, setFile] = useState(null);
+  const [docEntries, setDocEntries] = useState([
+    { id: 1, type: 'Aadhar card', file: null, preview: '' },
+  ]);
+  const [existingDocuments, setExistingDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentImage, setCurrentImage] = useState('');
   const [branches, setBranches] = useState([]);
 
+  const handleRemoveExistingDoc = (idx) => {
+    setExistingDocuments((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const schema = Yup.object({
     name: Yup.string(),
-    mobile: Yup.string().required('Mobile is required').matches(/^[0-9]{10}$/, 'Must be 10 digits'),
-    date: Yup.date().required('Date is required'),
-    source: Yup.string().required('Source is required'),
+    mobile: Yup.string()
+      .required('Mobile is required')
+      .matches(/^[0-9+ -]{10,15}$/, 'Invalid mobile number'),
+    date: Yup.date().nullable(),
+    source: Yup.string().nullable(),
     city: Yup.string().max(255),
     state: Yup.string().max(255),
     category: Yup.string().max(255).required('Category is required'),
-    weight: Yup.number().min(0, 'Weight must be greater than or equal to 0'),
+    weight: Yup.number()
+      .nullable()
+      .transform((val, orig) => (orig === '' || orig === null || orig === undefined ? null : val))
+      .min(0, 'Weight must be greater than or equal to 0'),
     unit: Yup.string().required('Unit is required'),
     type: Yup.string().required('Type is required'),
     status: Yup.string().max(255).required('Status is required'),
-    branch: Yup.string().when('status', {
-      is: 'converted',
-      then: Yup.string().required('Branch is required when status is converted'),
-      otherwise: Yup.string().nullable(),
-    }),
+    branch: Yup.string().nullable(),
   });
 
   const formik = useFormik({
@@ -69,37 +78,76 @@ function UpdateLead(props) {
     validationSchema: schema,
     onSubmit: (values) => {
       const payload = { ...values };
-      if (payload.branch === '') {
+      if (!payload.branch || payload.branch === '') {
         delete payload.branch;
       }
-      updateLead(props.id, payload).then(async (data) => {
-        if (data.status === false) {
-          props.setNotify({
-            open: true,
-            message: data.message || 'Lead not updated',
-            severity: 'error',
-          });
-        } else {
-          if (file) {
-            try {
-              const formData = new FormData();
-              formData.append('uploadId', props.id);
-              formData.append('uploadName', 'lead');
-              formData.append('uploadType', 'lead');
-              formData.append('uploadedFile', file);
-              await createFile(formData);
-            } catch (error) {
-              console.error('File upload failed:', error);
-            }
-          }
-          props.setToggleContainer(false);
-          props.setNotify({
-            open: true,
-            message: 'Lead updated successfully!',
-            severity: 'success',
-          });
+      if (payload.weight === '' || payload.weight === null || isNaN(Number(payload.weight))) {
+        delete payload.weight;
+      } else {
+        payload.weight = Number(payload.weight);
+      }
+      if (payload.releaseAmount === '' || payload.releaseAmount === null || isNaN(Number(payload.releaseAmount))) {
+        payload.releaseAmount = 0;
+      } else {
+        payload.releaseAmount = Number(payload.releaseAmount);
+      }
+      if (payload.pledgedAmount === '' || payload.pledgedAmount === null || isNaN(Number(payload.pledgedAmount))) {
+        payload.pledgedAmount = 0;
+      } else {
+        payload.pledgedAmount = Number(payload.pledgedAmount);
+      }
+      if (!payload.date || payload.date === '') {
+        delete payload.date;
+      }
+
+      const formData = new FormData();
+      Object.keys(payload).forEach((key) => {
+        if (payload[key] !== null && payload[key] !== undefined && payload[key] !== '') {
+          formData.append(key, payload[key]);
         }
       });
+
+      formData.append('existingDocuments', JSON.stringify(existingDocuments));
+
+      docEntries.forEach((entry) => {
+        if (entry.file) {
+          formData.append('uploadedFiles', entry.file);
+          formData.append('documentTypes', entry.type || 'Document');
+        }
+      });
+
+      updateLead(props.id, formData)
+        .then(async (data) => {
+          if (!data || data.status === false) {
+            props.setNotify({
+              open: true,
+              message: data?.message || 'Lead not updated',
+              severity: 'error',
+            });
+          } else {
+            if (props.setToggleContainer) {
+              props.setToggleContainer(false);
+            }
+            if (props.setToggleContainerType) {
+              props.setToggleContainerType('');
+            }
+            if (props.fetchData) {
+              props.fetchData();
+            }
+            props.setNotify({
+              open: true,
+              message: 'Lead updated successfully!',
+              severity: 'success',
+            });
+          }
+        })
+        .catch((err) => {
+          props.setNotify({
+            open: true,
+            message: err?.response?.data?.message || err?.message || 'Error updating lead',
+            severity: 'error',
+          });
+        });
     },
   });
 
@@ -129,6 +177,9 @@ function UpdateLead(props) {
             leadSource: data.data.leadSource || 'admin',
             branch: data.data.branch?._id || data.data.branch || '',
           });
+          if (data.data.documents && Array.isArray(data.data.documents)) {
+            setExistingDocuments(data.data.documents);
+          }
           if (data.data.lead?.uploadedFile) {
             setCurrentImage(
               data.data.lead.uploadedFile.startsWith('http')
@@ -387,30 +438,12 @@ function UpdateLead(props) {
             </>
           )}
 
-          {formik.values.type === 'pledged' && (
-            <Grid item xs={12}>
-              {currentImage && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Current Attachment
-                  </Typography>
-                  <img
-                    src={currentImage}
-                    alt="current attachment"
-                    style={{ width: '200px', borderRadius: '8px', border: '1px solid #ccc' }}
-                  />
-                </Box>
-              )}
-              <Typography variant="subtitle2" gutterBottom>
-                Updated Attachment (Leave blank to keep current)
-              </Typography>
-              <input
-                type="file"
-                onChange={(e) => setFile(e.target.files[0])}
-                style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}
-              />
-            </Grid>
-          )}
+          <CustomerDocumentsInput
+            docEntries={docEntries}
+            setDocEntries={setDocEntries}
+            existingDocuments={existingDocuments}
+            onRemoveExistingDoc={handleRemoveExistingDoc}
+          />
 
           <Grid item xs={12}>
             <TextField
@@ -426,7 +459,23 @@ function UpdateLead(props) {
           </Grid>
 
           <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-            <LoadingButton size="large" type="submit" variant="contained" sx={{ px: 8 }}>
+            <LoadingButton
+              size="large"
+              type="submit"
+              variant="contained"
+              sx={{ px: 8 }}
+              loading={formik.isSubmitting}
+              onClick={() => {
+                if (formik.errors && Object.keys(formik.errors).length > 0) {
+                  const firstErrorKey = Object.keys(formik.errors)[0];
+                  props.setNotify({
+                    open: true,
+                    message: formik.errors[firstErrorKey],
+                    severity: 'warning',
+                  });
+                }
+              }}
+            >
               Update Lead
             </LoadingButton>
           </Grid>

@@ -67,7 +67,7 @@ export default function SellGold() {
         <Card sx={{ p: 2 }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={value} onChange={handleChange} aria-label="sell gold tabs" variant="scrollable" scrollButtons="auto">
-              <Tab label="Melting" {...a11yProps(0)} />
+              <Tab label="Completed Melting" {...a11yProps(0)} />
               <Tab label="Vendors" {...a11yProps(1)} />
               <Tab label="Gatty Sales" {...a11yProps(2)} />
             </Tabs>
@@ -75,7 +75,7 @@ export default function SellGold() {
         </Card>
 
         <CustomTabPanel value={value} index={0}>
-          <Melting />
+          <Melting onlyCompleted={true} />
         </CustomTabPanel>
         
         <CustomTabPanel value={value} index={1}>

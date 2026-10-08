@@ -22,6 +22,8 @@ import {
   CircularProgress,
   IconButton,
   Tooltip,
+  Chip,
+  InputAdornment,
 } from '@mui/material';
 import { sentenceCase } from 'change-case';
 import { LoadingButton } from '@mui/lab';
@@ -44,12 +46,12 @@ const style = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: { xs: '95%', sm: '90%', md: 800 },
-  maxWidth: 800,
-  maxHeight: '94vh',
+  width: { xs: '95%', sm: '90%', md: 840 },
+  maxWidth: 840,
+  maxHeight: '92vh',
   bgcolor: 'background.paper',
-  boxShadow: 24,
-  p: { xs: 2, sm: 3, md: 4 },
+  boxShadow: '0 20px 48px rgba(0, 0, 0, 0.18)',
+  p: { xs: 2.5, sm: 3.5 },
   borderRadius: 2,
   overflow: 'auto',
 };
@@ -71,12 +73,17 @@ const CreateBankModal = ({
 
   // Form validation
   const schema = Yup.object({
+    accountType: Yup.string().required('Account Type is required'),
     accountNo: Yup.string().required('Account no is required'),
     accountHolderName: Yup.string().required('Account holder name is required'),
     ifscCode: Yup.string().required('IFSC code is required'),
     bankName: Yup.string().required('Bank name is required'),
     branch: Yup.string().required('Branch is required'),
-    proofType: Yup.string().required('Proof Type is required'),
+    proofType: Yup.string().when('accountType', {
+      is: (val) => val === 'virtual',
+      then: (s) => s.nullable().notRequired(),
+      otherwise: (s) => s.required('Proof Type is required'),
+    }),
   });
 
   const {
@@ -92,6 +99,7 @@ const CreateBankModal = ({
     isSubmitting,
   } = useFormik({
     initialValues: {
+      accountType: 'savings',
       accountNo: '',
       accountHolderName: '',
       ifscCode: '',
@@ -103,8 +111,15 @@ const CreateBankModal = ({
     validationSchema: schema,
     onSubmit: async (values, { setSubmitting }) => {
       try {
+        const isVirtual = values.accountType === 'virtual';
+        const finalValues = {
+          ...values,
+          proofType: values.proofType || (isVirtual ? 'Virtual Account' : ''),
+          isVerified: isVirtual ? true : false,
+        };
+
         if (bankToEdit) {
-          const res = await updateBank(selectedUser._id, bankToEdit._id, values);
+          const res = await updateBank(selectedUser._id, bankToEdit._id, finalValues);
           if (res.status === false) {
             setNotify({
               open: true,
@@ -118,7 +133,7 @@ const CreateBankModal = ({
               formData.append('uploadName', 'customer_bank');
               formData.append('uploadType', 'proof');
               formData.append('uploadedFile', values.proofFile);
-              formData.append('documentType', values.proofType);
+              formData.append('documentType', finalValues.proofType || 'Virtual Account');
               await createFile(formData);
             }
 
@@ -145,7 +160,7 @@ const CreateBankModal = ({
             });
           }
         } else {
-          const data = await createBank({ customerId: selectedUser._id, ...values });
+          const data = await createBank({ customerId: selectedUser._id, ...finalValues });
           if (data.status === false) {
             setNotify({
               open: true,
@@ -153,14 +168,16 @@ const CreateBankModal = ({
               severity: 'error',
             });
           } else {
-            const formData = new FormData();
-            formData.append('uploadId', data.data.fileUpload.uploadId);
-            formData.append('uploadName', data.data.fileUpload.uploadName);
-            formData.append('uploadType', 'proof');
-            formData.append('uploadedFile', values.proofFile);
-            formData.append('documentType', values.proofType);
+            if (values.proofFile && values.proofFile instanceof File) {
+              const formData = new FormData();
+              formData.append('uploadId', data.data.fileUpload.uploadId);
+              formData.append('uploadName', data.data.fileUpload.uploadName);
+              formData.append('uploadType', 'proof');
+              formData.append('uploadedFile', values.proofFile);
+              formData.append('documentType', finalValues.proofType || 'Virtual Account');
 
-            await createFile(formData);
+              await createFile(formData);
+            }
             const bankData = await getBankById(selectedUser._id);
             setData(bankData.data);
             window.dispatchEvent(new CustomEvent('bankUpdated'));
@@ -171,7 +188,7 @@ const CreateBankModal = ({
             setBankModal(false);
             setNotify({
               open: true,
-              message: 'Bank created',
+              message: isVirtual ? 'Virtual Bank created and auto-verified' : 'Bank created successfully',
               severity: 'success',
             });
           }
@@ -189,12 +206,13 @@ const CreateBankModal = ({
     if (bankModal) {
       if (bankToEdit) {
         setValues({
+          accountType: bankToEdit.accountType || 'savings',
           accountNo: bankToEdit.accountNo || '',
           accountHolderName: bankToEdit.accountHolderName || '',
           ifscCode: bankToEdit.ifscCode || '',
           bankName: bankToEdit.bankName || '',
           branch: bankToEdit.branch || '',
-          proofType: bankToEdit.proof?.documentType || 'Passbook',
+          proofType: bankToEdit.proof?.documentType || (bankToEdit.accountType === 'virtual' ? 'Virtual Account' : 'Passbook'),
           proofFile: {},
         });
         if (bankToEdit.proof?.uploadedFile) {
@@ -289,18 +307,27 @@ const CreateBankModal = ({
       aria-describedby="modal-modal-description"
     >
       <Box sx={style}>
-        <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 3 }}>
-          {bankToEdit ? 'Edit Bank Details' : 'Add Bank'}
-          <Button
-            sx={{ color: '#222', float: 'right' }}
-            startIcon={<CloseIcon />}
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
+            {bankToEdit ? 'Edit Bank Details' : 'Add Bank'}
+          </Typography>
+          <IconButton
+            size="small"
             onClick={() => {
               setBankModal(false);
               setBankProofPreview(null);
               if (setBankToEdit) setBankToEdit(null);
             }}
-          />
-        </Typography>
+            sx={{
+              color: 'text.secondary',
+              bgcolor: 'action.hover',
+              '&:hover': { bgcolor: 'action.selected', color: 'text.primary' },
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Stack>
+
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -308,8 +335,33 @@ const CreateBankModal = ({
           }}
           autoComplete="off"
         >
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={4}>
+          <Grid container spacing={2.5}>
+            {/* Row 1: Account Type, Account No, IFSC Code (+ Verify) */}
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth>
+                <InputLabel id="account-type-label">Account Type</InputLabel>
+                <Select
+                  labelId="account-type-label"
+                  id="accountType"
+                  label="Account Type"
+                  name="accountType"
+                  value={values.accountType || 'savings'}
+                  onBlur={handleBlur}
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (e.target.value === 'virtual' && !values.proofType) {
+                      setFieldValue('proofType', 'Virtual Account');
+                    }
+                  }}
+                >
+                  <MenuItem value="savings">Savings account</MenuItem>
+                  <MenuItem value="current">Current account</MenuItem>
+                  <MenuItem value="virtual">Virtual account</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
               <TextField
                 name="accountNo"
                 value={values.accountNo}
@@ -321,7 +373,8 @@ const CreateBankModal = ({
                 autoComplete="new-password"
               />
             </Grid>
-            <Grid item xs={12} md={5}>
+
+            <Grid item xs={12} sm={4}>
               <TextField
                 name="ifscCode"
                 value={values.ifscCode}
@@ -331,23 +384,36 @@ const CreateBankModal = ({
                 onBlur={handleBlur}
                 onChange={handleChange}
                 inputProps={{ style: { textTransform: 'uppercase' }, autoComplete: 'new-password' }}
+                InputProps={{
+                  endAdornment: values.accountType !== 'virtual' ? (
+                    <InputAdornment position="end">
+                      <LoadingButton
+                        type="button"
+                        variant="contained"
+                        size="small"
+                        loading={isVerifying}
+                        onClick={handleVerifyAccount}
+                        startIcon={<Iconify icon="mdi:bank-check" width={16} />}
+                        sx={{
+                          py: 0.6,
+                          px: 1.2,
+                          minWidth: 'auto',
+                          fontSize: '0.75rem',
+                          textTransform: 'none',
+                          boxShadow: 'none',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Verify
+                      </LoadingButton>
+                    </InputAdornment>
+                  ) : null,
+                }}
               />
             </Grid>
-            <Grid item xs={12} md={3} sx={{ display: 'flex', alignItems: 'center' }}>
-              <LoadingButton
-                type="button"
-                fullWidth
-                variant="outlined"
-                size="large"
-                loading={isVerifying}
-                onClick={handleVerifyAccount}
-                startIcon={<Iconify icon="mdi:bank-check" />}
-                sx={{ height: 56 }}
-              >
-                Verify
-              </LoadingButton>
-            </Grid>
-            <Grid item xs={12} md={4}>
+
+            {/* Row 2: Account Holder Name, Bank Name, Branch */}
+            <Grid item xs={12} sm={4}>
               <TextField
                 name="accountHolderName"
                 value={values.accountHolderName}
@@ -363,7 +429,8 @@ const CreateBankModal = ({
                 autoComplete="new-password"
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+
+            <Grid item xs={12} sm={4}>
               <TextField
                 name="bankName"
                 value={values.bankName}
@@ -375,7 +442,8 @@ const CreateBankModal = ({
                 autoComplete="new-password"
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+
+            <Grid item xs={12} sm={4}>
               <TextField
                 name="branch"
                 value={values.branch}
@@ -387,7 +455,9 @@ const CreateBankModal = ({
                 autoComplete="new-password"
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+
+            {/* Row 3: Select Proof Type, Attach Bank Proof */}
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth error={touched.proofType && errors.proofType && true}>
                 <InputLabel id="select-label">Select Proof Type</InputLabel>
                 <Select
@@ -395,10 +465,13 @@ const CreateBankModal = ({
                   id="select"
                   label={touched.proofType && errors.proofType ? errors.proofType : 'Select Proof Type'}
                   name="proofType"
-                  value={values.proofType}
+                  value={values.proofType || (values.accountType === 'virtual' ? 'Virtual Account' : '')}
                   onBlur={handleBlur}
                   onChange={handleChange}
                 >
+                  {values.accountType === 'virtual' && (
+                    <MenuItem value="Virtual Account">Virtual Account</MenuItem>
+                  )}
                   <MenuItem value="Passbook">Passbook</MenuItem>
                   <MenuItem value="Cheque Leaf">Cheque Leaf</MenuItem>
                   <MenuItem value="Bank Statement">Bank Statement</MenuItem>
@@ -406,57 +479,126 @@ const CreateBankModal = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={8}>
-              <Box sx={{ border: '1px dashed #ccc', p: 1, borderRadius: 1, position: 'relative' }}>
-                <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                  Attach Bank Proof:
-                </Typography>
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <TextField
+
+            <Grid item xs={12} sm={6}>
+              <Box
+                sx={{
+                  height: 56,
+                  border: '1px solid',
+                  borderColor: touched.proofFile && errors.proofFile ? 'error.main' : 'rgba(0, 0, 0, 0.23)',
+                  borderRadius: 1,
+                  px: 1.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  bgcolor: 'background.paper',
+                  transition: 'border-color 0.2s',
+                  '&:hover': {
+                    borderColor: 'text.primary',
+                  },
+                }}
+              >
+                <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flexGrow: 1 }}>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    size="small"
+                    startIcon={<Iconify icon="eva:cloud-upload-fill" width={18} />}
+                    sx={{
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      py: 0.6,
+                      px: 1.5,
+                      fontSize: '0.75rem',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Attach Proof
+                    <input
+                      type="file"
+                      hidden
                       name="proofFile"
-                      type={'file'}
-                      error={touched.proofFile && errors.proofFile && true}
-                      onBlur={handleBlur}
+                      accept="image/*,application/pdf"
                       onChange={handleFileUpload}
-                      required={!bankToEdit && !bankProofPreview}
-                      fullWidth
                     />
-                  </Box>
-                  {bankProofPreview && (
+                  </Button>
+                  <Typography
+                    variant="body2"
+                    noWrap
+                    sx={{
+                      color: values.proofFile?.name ? 'text.primary' : 'text.disabled',
+                      fontSize: '0.8125rem',
+                    }}
+                  >
+                    {values.proofFile?.name ||
+                      (bankProofPreview
+                        ? 'Existing proof attached'
+                        : values.accountType === 'virtual'
+                        ? 'Optional (Virtual Account)'
+                        : 'No file chosen')}
+                  </Typography>
+                </Stack>
+                {bankProofPreview && (
+                  <Tooltip title="View Bank Proof">
                     <IconButton
                       component="a"
                       href={bankProofPreview}
                       target="_blank"
                       rel="noreferrer"
-                      color="secondary"
-                      title="View Bank Proof"
+                      size="small"
+                      color="primary"
+                      sx={{ ml: 1, flexShrink: 0 }}
                     >
-                      <Iconify icon="mdi:eye" />
+                      <Iconify icon="mdi:eye" width={20} />
                     </IconButton>
-                  )}
-                </Stack>
+                  </Tooltip>
+                )}
               </Box>
+              {touched.proofFile && errors.proofFile && (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5, display: 'block' }}>
+                  {errors.proofFile}
+                </Typography>
+              )}
             </Grid>
-            <Grid item xs={12}>
-              <LoadingButton size="large" type="submit" variant="contained" loading={isSubmitting} startIcon={<SaveIcon />}>
-                {bankToEdit ? 'Update Bank Details' : 'Save Bank Details'}
-              </LoadingButton>
-              <Button
-                type="button"
-                size="large"
-                variant="contained"
-                color="error"
-                sx={{ ml: 2 }}
-                startIcon={<CloseIcon />}
-                onClick={() => {
-                  setBankModal(false);
-                  setBankProofPreview(null);
-                  if (setBankToEdit) setBankToEdit(null);
-                }}
-              >
-                Cancel
-              </Button>
+
+            {/* Actions */}
+            <Grid item xs={12} sx={{ mt: 1 }}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <LoadingButton
+                  size="large"
+                  type="submit"
+                  variant="contained"
+                  loading={isSubmitting}
+                  startIcon={<SaveIcon />}
+                  sx={{
+                    px: 3.5,
+                    py: 1.2,
+                    fontWeight: 700,
+                  }}
+                >
+                  {bankToEdit ? 'Update Bank Details' : 'Save Bank Details'}
+                </LoadingButton>
+                <Button
+                  type="button"
+                  size="large"
+                  variant="contained"
+                  color="error"
+                  startIcon={<CloseIcon />}
+                  onClick={() => {
+                    setBankModal(false);
+                    setBankProofPreview(null);
+                    if (setBankToEdit) setBankToEdit(null);
+                  }}
+                  sx={{
+                    px: 3.5,
+                    py: 1.2,
+                    fontWeight: 700,
+                  }}
+                >
+                  Cancel
+                </Button>
+              </Stack>
             </Grid>
           </Grid>
         </form>
@@ -582,6 +724,7 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank, paymentT
                 <TableRow>
                   <TableCell align="left" />
                   <TableCell align="left">Bank</TableCell>
+                  <TableCell align="left">Type</TableCell>
                   <TableCell align="left">Account No</TableCell>
                   <TableCell align="left">Account Holder Name</TableCell>
                   <TableCell align="left">Branch</TableCell>
@@ -597,6 +740,18 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank, paymentT
                       <Checkbox checked={selectedBank?._id === e._id} onChange={() => handleSelect(e)} />
                     </TableCell>
                     <TableCell align="left">{sentenceCase(e.bankName)}</TableCell>
+                    <TableCell align="left">
+                      {e.accountType?.toLowerCase() === 'virtual' ? (
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Chip label="Virtual" size="small" sx={{ bgcolor: '#ede7f6', color: '#7b1fa2', fontWeight: 700 }} />
+                          <Chip label="Verified" size="small" color="success" sx={{ fontWeight: 600, height: 20, fontSize: '0.68rem' }} />
+                        </Stack>
+                      ) : e.accountType?.toLowerCase() === 'current' ? (
+                        <Chip label="Current" size="small" variant="outlined" sx={{ fontWeight: 600 }} />
+                      ) : (
+                        <Chip label="Savings" size="small" variant="outlined" sx={{ fontWeight: 600 }} />
+                      )}
+                    </TableCell>
                     <TableCell align="left">{e.accountNo}</TableCell>
                     <TableCell align="left">{sentenceCase(e.accountHolderName)}</TableCell>
                     <TableCell align="left">{sentenceCase(e.branch)}</TableCell>
@@ -626,6 +781,10 @@ function Bank({ setNotify, selectedUser, selectedBank, setSelectedBank, paymentT
                             <img src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />
                           </a>
                         )
+                      ) : e.accountType?.toLowerCase() === 'virtual' ? (
+                        <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                          Not required (Virtual)
+                        </Typography>
                       ) : 'N/A'}
                     </TableCell>
                     <TableCell align="left">

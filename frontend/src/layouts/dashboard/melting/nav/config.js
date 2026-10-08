@@ -28,16 +28,16 @@ const navConfig = [
     path: '/melting/melting',
     icon: <AccountBalanceWalletIcon sx={{ width: 1, height: 1 }} />,
   },
-  {
-    title: 'Sell Gold',
-    path: '/melting/sell-gold',
-    icon: <LocalOfferIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Vendor',
-    path: '/melting/vendor',
-    icon: icon('ic_user'),
-  },
+  // {
+  //   title: 'Sell Gold',
+  //   path: '/melting/sell-gold',
+  //   icon: <LocalOfferIcon sx={{ width: 1, height: 1 }} />,
+  // },
+  // {
+  //   title: 'Vendor',
+  //   path: '/melting/vendor',
+  //   icon: icon('ic_user'),
+  // },
   {
     title: 'Billing',
     path: '/melting/sale',

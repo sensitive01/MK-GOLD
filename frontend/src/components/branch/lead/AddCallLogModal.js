@@ -20,6 +20,7 @@ import { LoadingButton } from '@mui/lab';
 import { useState, useEffect } from 'react';
 import { addDisposition } from '../../../apis/branch/lead';
 import { getBranch } from '../../../apis/branch/branch';
+export { LEAD_DOCUMENT_TYPES } from './CustomerDocumentsInput';
 
 const DISPOSITIONS = [
   'RNR',
@@ -36,11 +37,11 @@ const DISPOSITIONS = [
 export default function AddCallLogModal({ open, onClose, leadId, onSuccess }) {
   const [addingLog, setAddingLog] = useState(false);
   const [branches, setBranches] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
   const [logForm, setLogForm] = useState({
     status: '',
     remark: '',
     branch: '',
-    uploadedFile: null,
     callbackDate: '',
     callbackTime: '',
   });
@@ -52,16 +53,28 @@ export default function AddCallLogModal({ open, onClose, leadId, onSuccess }) {
           setBranches(res.data || []);
         }
       });
+      setUploadedFiles([]);
       setLogForm({
         status: '',
         remark: '',
         branch: '',
-        uploadedFile: null,
         callbackDate: '',
         callbackTime: '',
       });
     }
   }, [open]);
+
+  const handleFilesSelect = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const selected = Array.from(e.target.files);
+      setUploadedFiles((prev) => [...prev, ...selected]);
+    }
+    e.target.value = '';
+  };
+
+  const handleRemoveFile = (index) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleAddLog = () => {
     if (!logForm.status) return;
@@ -71,7 +84,12 @@ export default function AddCallLogModal({ open, onClose, leadId, onSuccess }) {
     formData.append('status', logForm.status);
     formData.append('remark', logForm.remark);
     if (logForm.branch) formData.append('branch', logForm.branch);
-    if (logForm.uploadedFile) formData.append('uploadedFile', logForm.uploadedFile);
+    if (uploadedFiles.length > 0) {
+      uploadedFiles.forEach((file) => {
+        formData.append('uploadedFiles', file);
+        formData.append('documentTypes', 'Proof');
+      });
+    }
     if (logForm.status === 'Callback' || logForm.status === 'Planning to Visit' || logForm.status === 'Follow Up' || logForm.status === 'Business Closed') {
       if (logForm.callbackDate) formData.append('callbackDate', logForm.callbackDate);
       if (logForm.callbackTime) formData.append('callbackTime', logForm.callbackTime);
@@ -195,36 +213,98 @@ export default function AddCallLogModal({ open, onClose, leadId, onSuccess }) {
             />
           </Grid>
           <Grid item xs={12}>
-            {logForm.uploadedFile ? (
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  p: 1,
-                  px: 2,
-                }}
-              >
-                <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {logForm.uploadedFile.name}
-                </Typography>
-                <IconButton size="small" onClick={() => setLogForm({ ...logForm, uploadedFile: null })} color="error" sx={{ ml: 1 }}>
-                  <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
-                </IconButton>
-              </Box>
-            ) : (
-              <Button variant="outlined" component="label" fullWidth sx={{ textTransform: 'none' }}>
-                Upload Photo
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  onChange={(e) => setLogForm({ ...logForm, uploadedFile: e.target.files[0] })}
-                />
-              </Button>
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              sx={{ textTransform: 'none', py: 1 }}
+            >
+              {uploadedFiles.length > 0 ? '+ Upload More Proofs' : 'Upload Proofs'}
+              <input
+                type="file"
+                hidden
+                multiple
+                accept="image/*,application/pdf,.pdf"
+                onChange={handleFilesSelect}
+              />
+            </Button>
+
+            {uploadedFiles.length > 0 && (
+              <Stack spacing={1} sx={{ mt: 1.5, maxHeight: 180, overflowY: 'auto' }}>
+                {uploadedFiles.map((file, idx) => (
+                  <Box
+                    key={`${file.name}-${idx}`}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      p: 0.8,
+                      px: 1.5,
+                      bgcolor: 'background.neutral',
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+                      {file.type?.includes('pdf') || file.name?.toLowerCase().endsWith('.pdf') ? (
+                        <Box
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 0.5,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: 'error.lighter',
+                            color: 'error.main',
+                            fontWeight: 700,
+                            fontSize: '0.65rem',
+                          }}
+                        >
+                          PDF
+                        </Box>
+                      ) : (
+                        <Box
+                          component="img"
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            objectFit: 'cover',
+                            borderRadius: 0.5,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: '#fff',
+                          }}
+                        />
+                      )}
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        >
+                          {file.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {(file.size / 1024).toFixed(1)} KB
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRemoveFile(idx)}
+                      color="error"
+                      sx={{ ml: 1 }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ))}
+              </Stack>
             )}
           </Grid>
         </Grid>

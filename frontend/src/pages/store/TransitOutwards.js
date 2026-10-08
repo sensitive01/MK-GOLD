@@ -12,7 +12,6 @@ import {
   CircularProgress,
   Container,
   Grid,
-  IconButton,
   Paper,
   Stack,
   Table,
@@ -31,17 +30,18 @@ import {
   Select,
   MenuItem,
   TextField,
-  Tooltip,
+  Snackbar,
+  Alert,
+  Portal,
 } from '@mui/material';
+import { LoadingButton } from '@mui/lab';
 
 // Components
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 import { TransitListHead, TransitListToolbar } from '../../sections/@dashboard/transit';
-import { findTransit } from '../../apis/admin/transit';
-import { findMelting } from '../../apis/admin/melting';
-import { getTransitMeltingStatus } from '../../utils/transit';
+import { findTransit, updateTransitStatus } from '../../apis/admin/transit';
 
 // ----------------------------------------------------------------------
 
@@ -53,8 +53,8 @@ const TABLE_HEAD = [
   { id: 'totalGrossWeight', label: 'Gross Wt (g)', alignRight: false },
   { id: 'totalNetWeight', label: 'Net Wt (g)', alignRight: false },
   { id: 'deliveryBy', label: 'Dispatched By', alignRight: false },
-  { id: 'meltingStatus', label: 'Melting Status', alignRight: false },
-  { id: 'createdAt', label: 'Outward Date', alignRight: false },
+  { id: 'status', label: 'Status', alignRight: false },
+  { id: 'createdAt', label: 'Date', alignRight: false },
   { id: 'actions', label: 'Action', alignRight: true },
 ];
 
@@ -68,27 +68,6 @@ function getComparator(order, orderBy) {
   return order === 'desc'
     ? (a, b) => descendingComparator(a, b, orderBy)
     : (a, b) => -descendingComparator(a, b, orderBy);
-}
-
-function getMeltingStageInfo(row) {
-  const melt = row?.meltRecord;
-  if (!melt) {
-    if (getTransitMeltingStatus(row) === 'melted') {
-      return { stage: 'completed', label: 'Melt Completed', color: '#7b1fa2' };
-    }
-    return { stage: 'added', label: 'Added to Melt', color: 'info' };
-  }
-
-  if (melt.status === 'sold') {
-    return { stage: 'sold', label: 'Bar Sold', color: 'success' };
-  }
-  if (melt.status === 'melt_updated') {
-    return { stage: 'completed', label: 'Melt Completed', color: '#7b1fa2' };
-  }
-  if (melt.status === 'in_melt' || melt.isPreMeltCompleted) {
-    return { stage: 'in_melt', label: 'In Melting', color: '#ed6c02' };
-  }
-  return { stage: 'added', label: 'Added to Melt', color: 'info' };
 }
 
 function applySortFilter(array, comparator, query, filters) {
@@ -113,7 +92,12 @@ function applySortFilter(array, comparator, query, filters) {
 
   if (filters) {
     if (filters.status && filters.status !== 'all') {
-      filteredData = filteredData.filter((row) => getMeltingStageInfo(row).stage === filters.status);
+      filteredData = filteredData.filter((row) => {
+        const isMoved = row.isMovedToMelting || row.status === 'moved_to_melting';
+        if (filters.status === 'moved_to_melting') return isMoved;
+        if (filters.status === 'in_store') return !isMoved;
+        return true;
+      });
     }
     if (filters.branch && filters.branch !== 'all') {
       filteredData = filteredData.filter((row) => row.branch?.branchName === filters.branch);
@@ -153,55 +137,33 @@ export default function StoreTransitOutwards() {
     branch: 'all',
   });
 
+  // Move to Melting confirmation modal state
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [transitToMove, setTransitToMove] = useState(null);
+  const [moveNotes, setMoveNotes] = useState('');
+  const [movingLoading, setMovingLoading] = useState(false);
+
+  const [notify, setNotify] = useState({ open: false, message: '', severity: 'success' });
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Concurrently fetch transits and melting batches
-      const [transitRes, meltingRes] = await Promise.all([
-        findTransit({}),
-        findMelting({}),
-      ]);
-
+      const transitRes = await findTransit({});
       const transits = transitRes?.data || [];
-      const melts = meltingRes?.data || [];
 
-      // Build a map of transits that are associated with melting batches
-      const meltingMap = new Map();
-      melts.forEach((m) => {
-        if (m.transitIds && Array.isArray(m.transitIds)) {
-          m.transitIds.forEach((t) => {
-            const key = typeof t === 'object' ? t?._id?.toString() : t?.toString();
-            if (key) meltingMap.set(key, m);
-            if (t?.transitId) meltingMap.set(t.transitId, m);
-          });
-        }
-        if (m.transitId) {
-          const key = typeof m.transitId === 'object' ? m.transitId?._id?.toString() : m.transitId?.toString();
-          if (key) meltingMap.set(key, m);
-          if (m.transitId?.transitId) meltingMap.set(m.transitId.transitId, m);
-        }
+      // Transits that have arrived and were received in Store custody:
+      const storeReceivedTransits = transits.filter((t) => {
+        return (
+          t.storeReceived === true ||
+          t.status === 'moved' ||
+          t.status === 'moved_to_melting' ||
+          t.isMovedToMelting === true
+        );
       });
 
-      // Filter transits that were added to melting
-      const outwardsTransits = transits.filter((t) => {
-        const idKey = t._id ? t._id.toString() : '';
-        const transitIdKey = t.transitId || '';
-        const inMeltingBatch = meltingMap.has(idKey) || meltingMap.has(transitIdKey);
-        const meltingStatus = getTransitMeltingStatus(t);
-        return inMeltingBatch || meltingStatus === 'melted' || meltingStatus === 'partial' || t.isMelted || t.status === 'melted';
-      }).map((t) => {
-        const idKey = t._id ? t._id.toString() : '';
-        const transitIdKey = t.transitId || '';
-        const meltRecord = meltingMap.get(idKey) || meltingMap.get(transitIdKey);
-        return {
-          ...t,
-          meltRecord,
-        };
-      });
-
-      setData(outwardsTransits);
+      setData(storeReceivedTransits);
     } catch (err) {
-      console.error('Error fetching outwards transits:', err);
+      console.error('Error fetching store outwards transits:', err);
     } finally {
       setLoading(false);
     }
@@ -232,20 +194,68 @@ export default function StoreTransitOutwards() {
   };
 
   const handleClearFilters = () => {
-    setFilters({ fromDate: '', toDate: '', branch: 'all' });
+    setFilters({ fromDate: '', toDate: '', status: 'all', branch: 'all' });
   };
 
-  const isFilterApplied = !!(filters.fromDate || filters.toDate || filters.branch !== 'all');
+  const isFilterApplied = !!(filters.fromDate || filters.toDate || filters.status !== 'all' || filters.branch !== 'all');
 
   const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName, filters);
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
   const isNotFound = !filteredData?.length && !!filterName;
 
   // KPI calculations
-  const totalOutwardsCount = data.length;
+  const totalReceivedCount = data.length;
+  const inStoreCount = data.filter((t) => !t.isMovedToMelting && t.status !== 'moved_to_melting').length;
+  const movedToMeltingCount = data.filter((t) => t.isMovedToMelting || t.status === 'moved_to_melting').length;
   const totalOrnamentsCount = data.reduce((acc, curr) => acc + (Number(curr.numberOfOrnaments) || 0), 0);
   const totalGrossWeight = data.reduce((acc, curr) => acc + (Number(curr.totalGrossWeight) || 0), 0).toFixed(2);
   const totalNetWeight = data.reduce((acc, curr) => acc + (Number(curr.totalNetWeight) || 0), 0).toFixed(2);
+
+  // Handle open Move dialog
+  const handleOpenMoveDialog = (transit) => {
+    setTransitToMove(transit);
+    setMoveNotes('');
+    setMoveDialogOpen(true);
+  };
+
+  // Confirm Move to Melting
+  const handleConfirmMoveToMelting = async () => {
+    if (!transitToMove?._id) return;
+    setMovingLoading(true);
+    try {
+      const res = await updateTransitStatus(transitToMove._id, {
+        action: 'move_to_melting',
+        notes: moveNotes,
+      });
+
+      if (res?.status) {
+        setNotify({
+          open: true,
+          message: res.message || `Transit ${transitToMove.transitId} moved to Melting successfully!`,
+          severity: 'success',
+        });
+        setMoveDialogOpen(false);
+        setTransitToMove(null);
+        setMoveNotes('');
+        fetchData();
+      } else {
+        setNotify({
+          open: true,
+          message: res?.message || 'Failed to move transit to Melting',
+          severity: 'error',
+        });
+      }
+    } catch (err) {
+      console.error('Error moving transit to melting:', err);
+      setNotify({
+        open: true,
+        message: err.message || 'Error moving transit to melting',
+        severity: 'error',
+      });
+    } finally {
+      setMovingLoading(false);
+    }
+  };
 
   return (
     <>
@@ -271,7 +281,7 @@ export default function StoreTransitOutwards() {
               Transit Outwards
             </Typography>
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)', mt: 0.5 }}>
-              Track gold transits transferred from store custody to melting
+              Manage received transits and dispatch them to the Melting Department
             </Typography>
           </div>
 
@@ -286,6 +296,25 @@ export default function StoreTransitOutwards() {
                 Clear Filter
               </Button>
             )}
+
+            {/* Top Move to Melting button commented out as requested; move action is on each row */}
+            {/* 
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:layers-fill" />}
+              onClick={() => setOpenBatchWizard(true)}
+              sx={{
+                bgcolor: '#fff',
+                color: '#7b1fa2',
+                fontWeight: 700,
+                boxShadow: 2,
+                '&:hover': { bgcolor: '#f3e5f5' },
+              }}
+            >
+              Move to Melting
+            </Button> 
+            */}
+
             <Button
               variant="contained"
               startIcon={<Iconify icon="eva:funnel-fill" />}
@@ -314,14 +343,14 @@ export default function StoreTransitOutwards() {
                   flexShrink: 0,
                 }}
               >
-                <Iconify icon="mdi:fire" width={28} />
+                <Iconify icon="carbon:delivery-parcel" width={28} />
               </Box>
               <div>
                 <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                  {totalOutwardsCount}
+                  {inStoreCount}
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Transits in Melting
+                  In Store (Ready for Melting)
                 </Typography>
               </div>
             </Card>
@@ -342,14 +371,14 @@ export default function StoreTransitOutwards() {
                   flexShrink: 0,
                 }}
               >
-                <Iconify icon="mdi:gold" width={28} />
+                <Iconify icon="mdi:fire" width={28} />
               </Box>
               <div>
                 <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                  {totalNetWeight} g
+                  {movedToMeltingCount}
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'rgba(0,0,0,0.7)', fontWeight: 500 }}>
-                  Total Net Gold Outwards
+                  Moved to Melting
                 </Typography>
               </div>
             </Card>
@@ -370,14 +399,14 @@ export default function StoreTransitOutwards() {
                   flexShrink: 0,
                 }}
               >
-                <Iconify icon="mdi:scale-balance" width={28} />
+                <Iconify icon="mdi:gold" width={28} />
               </Box>
               <div>
                 <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                  {totalGrossWeight} g
+                  {totalNetWeight} g
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Total Gross Weight
+                  Total Net Gold (Gross: {totalGrossWeight}g)
                 </Typography>
               </div>
             </Card>
@@ -405,7 +434,7 @@ export default function StoreTransitOutwards() {
                   {totalOrnamentsCount}
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Total Ornaments Dispatched
+                  Total Ornaments
                 </Typography>
               </div>
             </Card>
@@ -418,6 +447,7 @@ export default function StoreTransitOutwards() {
             {[
               filters.fromDate ? `From Date: ${filters.fromDate}` : null,
               filters.toDate ? `To Date: ${filters.toDate}` : null,
+              filters.status !== 'all' ? `Status: ${filters.status === 'moved_to_melting' ? 'Moved to Melting' : 'In Store'}` : null,
               filters.branch !== 'all' ? `Branch: ${filters.branch}` : null,
             ]
               .filter(Boolean)
@@ -459,11 +489,11 @@ export default function StoreTransitOutwards() {
                         totalNetWeight,
                         deliveryBy,
                         createdAt,
-                        meltRecord,
+                        status,
+                        isMovedToMelting,
                       } = row;
 
-                      const meltingStatus = getTransitMeltingStatus(row);
-                      const isSold = meltRecord?.status === 'sold';
+                      const isAlreadyMoved = isMovedToMelting === true || status === 'moved_to_melting';
 
                       return (
                         <TableRow
@@ -471,7 +501,9 @@ export default function StoreTransitOutwards() {
                           key={_id}
                           tabIndex={-1}
                           sx={{ cursor: 'pointer' }}
-                          onClick={() => navigate(`/store/transit-sales/${_id}`)}
+                          onClick={() => {
+                            navigate(`/store/transit-sales/${_id}`);
+                          }}
                         >
                           <TableCell align="left">
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1a237e' }}>
@@ -502,17 +534,22 @@ export default function StoreTransitOutwards() {
                           <TableCell align="left">{sentenceCase(deliveryBy || 'N/A')}</TableCell>
 
                           <TableCell align="left">
-                            {(() => {
-                              const info = getMeltingStageInfo(row);
-                              if (info.color === 'success' || info.color === 'info') {
-                                return <Label color={info.color}>{info.label}</Label>;
-                              }
-                              return (
-                                <Label sx={{ bgcolor: info.color, color: '#fff', fontWeight: 600 }}>
-                                  {info.label}
+                            {isAlreadyMoved ? (
+                              <Stack spacing={0.5} alignItems="flex-start">
+                                <Label color="secondary" sx={{ fontWeight: 600 }}>
+                                  Moved to Melting
                                 </Label>
-                              );
-                            })()}
+                                {row.meltingBatch?.batchNumber && (
+                                  <Typography variant="caption" sx={{ color: '#7b1fa2', fontWeight: 700 }}>
+                                    Batch: {row.meltingBatch.batchNumber}
+                                  </Typography>
+                                )}
+                              </Stack>
+                            ) : (
+                              <Label color="success" sx={{ fontWeight: 600 }}>
+                                In Store
+                              </Label>
+                            )}
                           </TableCell>
 
                           <TableCell align="left">
@@ -523,14 +560,45 @@ export default function StoreTransitOutwards() {
                           </TableCell>
 
                           <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                            <Tooltip title="View Transit Sales">
-                              <IconButton
-                                color="primary"
-                                onClick={() => navigate(`/store/transit-sales/${_id}`)}
-                              >
-                                <Iconify icon="carbon:view-filled" width={20} />
-                              </IconButton>
-                            </Tooltip>
+                            <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                              {isAlreadyMoved ? (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="inherit"
+                                  disabled
+                                  startIcon={<Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: 'secondary.main' }} />}
+                                  sx={{
+                                    fontWeight: 700,
+                                    fontSize: '0.75rem',
+                                    textTransform: 'none',
+                                    whiteSpace: 'nowrap',
+                                    bgcolor: '#f5f5f5',
+                                    color: '#616161 !important',
+                                  }}
+                                >
+                                  Moved to Melting
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  startIcon={<Iconify icon="mdi:fire" sx={{ color: '#ffffff !important' }} />}
+                                  onClick={() => handleOpenMoveDialog(row)}
+                                  sx={{
+                                    bgcolor: '#7b1fa2',
+                                    color: '#fff',
+                                    fontWeight: 700,
+                                    fontSize: '0.75rem',
+                                    textTransform: 'none',
+                                    whiteSpace: 'nowrap',
+                                    '&:hover': { bgcolor: '#6a1b9a' },
+                                  }}
+                                >
+                                  Move to Melting
+                                </Button>
+                              )}
+                            </Stack>
                           </TableCell>
                         </TableRow>
                       );
@@ -546,12 +614,12 @@ export default function StoreTransitOutwards() {
                     <TableRow>
                       <TableCell align="center" colSpan={10} sx={{ py: 5 }}>
                         <Paper sx={{ textAlign: 'center', boxShadow: 'none' }}>
-                          <Iconify icon="mdi:fire-off" width={48} sx={{ color: 'text.disabled', mb: 1 }} />
+                          <Iconify icon="carbon:delivery-parcel" width={48} sx={{ color: 'text.disabled', mb: 1 }} />
                           <Typography variant="h6" color="text.secondary">
-                            No transits in melting
+                            No received transits in store
                           </Typography>
                           <Typography variant="body2" color="text.disabled">
-                            Transits transferred to melting will be displayed here automatically.
+                            Transits received into store custody will appear here ready to be moved to melting.
                           </Typography>
                         </Paper>
                       </TableCell>
@@ -580,7 +648,7 @@ export default function StoreTransitOutwards() {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data.length}
+            count={filteredData.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
@@ -613,17 +681,15 @@ export default function StoreTransitOutwards() {
               onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
             />
             <FormControl fullWidth size="small">
-              <InputLabel>Melting Stage</InputLabel>
+              <InputLabel>Status</InputLabel>
               <Select
                 value={filters.status || 'all'}
-                label="Melting Stage"
+                label="Status"
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
               >
-                <MenuItem value="all">All Stages</MenuItem>
-                <MenuItem value="added">Added to Melt</MenuItem>
-                <MenuItem value="in_melt">In Melting</MenuItem>
-                <MenuItem value="completed">Melt Completed</MenuItem>
-                <MenuItem value="sold">Bar Sold</MenuItem>
+                <MenuItem value="all">All Transits</MenuItem>
+                <MenuItem value="in_store">In Store (Not Moved)</MenuItem>
+                <MenuItem value="moved_to_melting">Moved to Melting</MenuItem>
               </Select>
             </FormControl>
             <FormControl fullWidth size="small">
@@ -648,6 +714,131 @@ export default function StoreTransitOutwards() {
           <Button onClick={() => setFilterOpen(false)} variant="contained">Apply</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Confirm Move to Melting Dialog */}
+      <Dialog
+        open={moveDialogOpen}
+        onClose={() => {
+          if (!movingLoading) {
+            setMoveDialogOpen(false);
+            setTransitToMove(null);
+            setMoveNotes('');
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Iconify icon="mdi:fire" width={28} sx={{ color: '#7b1fa2' }} />
+          Move Transit to Melting
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          {transitToMove && (
+            <Stack spacing={2.5} sx={{ mt: 1 }}>
+              <Alert severity="info">
+                Moving this transit will transfer custody from <strong>Store</strong> to the <strong>Melting Department</strong>. It will immediately show in the Melting login for melting batch processing.
+              </Alert>
+
+              <Paper variant="outlined" sx={{ p: 2, bgcolor: '#fafafa', borderRadius: 1.5 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      Transit ID
+                    </Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1a237e' }}>
+                      {transitToMove.transitId}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      Origin Branch
+                    </Typography>
+                    <Typography variant="subtitle2">
+                      {transitToMove.branch?.branchName || 'N/A'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      Packets / Ornaments
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {transitToMove.numberOfPackets} pkts / {transitToMove.numberOfOrnaments} orns
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      Gross / Net Weight
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#d84315' }}>
+                      {transitToMove.totalGrossWeight}g Gross / {transitToMove.totalNetWeight}g Net
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Outward Notes / Dispatch Remarks (Optional)"
+                placeholder="Enter any instructions or notes for the melting team..."
+                value={moveNotes}
+                onChange={(e) => setMoveNotes(e.target.value)}
+              />
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button
+            onClick={() => {
+              setMoveDialogOpen(false);
+              setTransitToMove(null);
+              setMoveNotes('');
+            }}
+            color="inherit"
+            disabled={movingLoading}
+          >
+            Cancel
+          </Button>
+          <LoadingButton
+            variant="contained"
+            loading={movingLoading}
+            onClick={handleConfirmMoveToMelting}
+            startIcon={<Iconify icon="mdi:fire" />}
+            sx={{
+              bgcolor: '#7b1fa2',
+              color: '#fff',
+              fontWeight: 700,
+              '&:hover': { bgcolor: '#6a1b9a' },
+            }}
+          >
+            Confirm Move to Melting
+          </LoadingButton>
+        </DialogActions>
+      </Dialog>
+
+      {/* Notification Snackbar */}
+      <Portal>
+        <Snackbar
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          open={notify.open}
+          onClose={() => setNotify({ ...notify, open: false })}
+          autoHideDuration={4000}
+          sx={{
+            zIndex: 99999,
+            top: { xs: '75px !important', sm: '100px !important' },
+          }}
+        >
+          <Alert
+            onClose={() => setNotify({ ...notify, open: false })}
+            severity={notify.severity}
+            sx={{ width: '100%', color: '#fff', fontWeight: 600 }}
+            variant="filled"
+          >
+            {notify.message}
+          </Alert>
+        </Snackbar>
+      </Portal>
     </>
   );
 }

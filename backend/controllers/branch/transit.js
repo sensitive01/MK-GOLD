@@ -44,9 +44,10 @@ exports.deleteTransitById = async (req,res)=>{
 
 exports.findTransitData = async (req,res)=>{
     try{
-        let query = req.body || {};
-        if (req.user?.branch?._id) {
-            query.branch = req.user.branch._id;
+        let query = (req.method === 'POST' ? req.body : req.query) || {};
+        const branchId = req.user?.branch?._id || req.user?.branch;
+        if (branchId) {
+            query.branch = branchId;
         }
         console.log("Transit Query:", query);
         const findData = await transitModel.find(query)

@@ -16,6 +16,7 @@ import {
     Modal,
     Paper,
     Popover,
+    Portal,
     Snackbar,
     Stack,
     Table,
@@ -226,27 +227,33 @@ export default function Employee() {
         <title> Employee | MK Gold </title>
       </Helmet>
 
-      <Snackbar
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-        open={notify.open}
-        onClose={() => {
-          setNotify({ ...notify, open: false });
-        }}
-        autoHideDuration={3000}
-      >
-        <Alert
+      <Portal>
+        <Snackbar
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          open={notify.open}
           onClose={() => {
             setNotify({ ...notify, open: false });
           }}
-          severity={notify.severity}
-          sx={{ width: '100%', color: 'white' }}
+          autoHideDuration={4000}
+          sx={{
+            zIndex: 99999,
+            top: { xs: '75px !important', sm: '100px !important' },
+          }}
         >
-          {notify.message}
-        </Alert>
-      </Snackbar>
+          <Alert
+            onClose={() => {
+              setNotify({ ...notify, open: false });
+            }}
+            severity={notify.severity}
+            sx={{ width: '100%', color: 'white', fontWeight: 600 }}
+          >
+            {notify.message}
+          </Alert>
+        </Snackbar>
+      </Portal>
 
       <Container maxWidth="xl" sx={{ display: toggleContainer === true ? 'none' : 'block' }}>
         <Stack direction="row" alignItems="center" justifyContent="flex-end" mb={5}>

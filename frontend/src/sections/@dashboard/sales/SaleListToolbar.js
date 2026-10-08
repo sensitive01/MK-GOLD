@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 // @mui
 import { styled, alpha } from '@mui/material/styles';
-import { Toolbar, Tooltip, IconButton, Typography, OutlinedInput, InputAdornment } from '@mui/material';
+import { Toolbar, Tooltip, IconButton, Typography, OutlinedInput, InputAdornment, Box } from '@mui/material';
 // component
 import Iconify from '../../../components/iconify';
 import global from '../../../utils/global';
@@ -9,14 +9,19 @@ import global from '../../../utils/global';
 // ----------------------------------------------------------------------
 
 const StyledRoot = styled(Toolbar)(({ theme }) => ({
-  height: 96,
+  height: 'auto',
+  minHeight: 88,
   display: 'flex',
   justifyContent: 'space-between',
-  padding: theme.spacing(0, 1, 0, 3),
-  [theme.breakpoints.down('sm')]: {
-    height: 'auto',
+  alignItems: 'center',
+  padding: theme.spacing(1.5, 3),
+  gap: theme.spacing(2),
+  [theme.breakpoints.down('md')]: {
+    minHeight: 'auto',
+    flexDirection: 'column',
+    alignItems: 'stretch',
     padding: theme.spacing(1.5),
-    gap: theme.spacing(1),
+    gap: theme.spacing(1.5),
   },
 }));
 
@@ -30,7 +35,7 @@ const StyledSearch = styled(OutlinedInput)(({ theme }) => ({
     width: 320,
     boxShadow: theme.customShadows.z8,
   },
-  [theme.breakpoints.down('sm')]: {
+  [theme.breakpoints.down('md')]: {
     width: '100%',
     '&.Mui-focused': {
       width: '100%',
@@ -57,7 +62,6 @@ export default function SaleListToolbar({ handleDelete, numSelected, filterName,
   return (
     <StyledRoot
       sx={{
-        padding: (theme) => ({ xs: theme.spacing(1.5), sm: theme.spacing(0, 3) }),
         ...(numSelected > 0 && {
           color: 'primary.main',
           bgcolor: 'primary.lighter',
@@ -91,9 +95,11 @@ export default function SaleListToolbar({ handleDelete, numSelected, filterName,
             <Iconify icon="eva:trash-2-fill" />
           </IconButton>
         </Tooltip>
-      ) : (
-        children || null
-      )}
+      ) : children ? (
+        <Box sx={{ width: { xs: '100%', md: 'auto' } }}>
+          {children}
+        </Box>
+      ) : null}
     </StyledRoot>
   );
 }

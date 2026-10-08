@@ -9,6 +9,12 @@ const Sales = mongoose.model(
         unique: true,
         required: true,
       },
+      articleNumber: {
+        type: String,
+        unique: true,
+        sparse: true,
+        trim: true,
+      },
       employee: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "employees",

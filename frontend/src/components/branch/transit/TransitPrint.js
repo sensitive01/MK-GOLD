@@ -38,9 +38,18 @@ export default function TransitPrint({ id, open, onClose }) {
         grossWeight = sale.netWeight || 0; // fallback
       }
 
+      const formatArticleNumber = (art) => {
+        if (!art) return '-';
+        const str = String(art).trim();
+        const lastPart = str.includes('-') ? str.split('-').pop() : str;
+        const match = lastPart.match(/\d{3,}/) || str.match(/\d{3,}/) || str.match(/\d+/);
+        return match ? match[0] : (lastPart || str);
+      };
+
       tableRows.push({
         sno: index + 1,
         billId: sale.billId || '',
+        articleNumber: formatArticleNumber(sale.articleNumber),
         customerName: sale.customer?.name || '',
         type: sale.purchaseType || '',
         saleType: sale.saleType || '',
@@ -139,6 +148,7 @@ export default function TransitPrint({ id, open, onClose }) {
                 <tr style={{ backgroundColor: '#f2f2f2' }}>
                   <th style={{ border: '1px solid #000', padding: '6px', fontSize: '11px', textAlign: 'center' }}>S.No</th>
                   <th style={{ border: '1px solid #000', padding: '6px', fontSize: '11px', textAlign: 'center' }}>Bill ID</th>
+                  <th style={{ border: '1px solid #000', padding: '6px', fontSize: '11px', textAlign: 'center' }}>Article No</th>
                   <th style={{ border: '1px solid #000', padding: '6px', fontSize: '11px', textAlign: 'left' }}>Customer Name</th>
                   <th style={{ border: '1px solid #000', padding: '6px', fontSize: '11px', textAlign: 'center' }}>Type</th>
                   <th style={{ border: '1px solid #000', padding: '6px', fontSize: '11px', textAlign: 'center' }}>Physical/Released</th>
@@ -154,6 +164,7 @@ export default function TransitPrint({ id, open, onClose }) {
                   <tr key={index}>
                     <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px' }}>{row.sno}</td>
                     <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px' }}>{row.billId}</td>
+                    <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px' }}>{row.articleNumber}</td>
                     <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', fontSize: '11px' }}>{row.customerName}</td>
                     <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px', textTransform: 'capitalize' }}>{row.type}</td>
                     <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px', textTransform: 'capitalize' }}>{row.saleType}</td>
@@ -165,7 +176,7 @@ export default function TransitPrint({ id, open, onClose }) {
                   </tr>
                 ))}
                 <tr style={{ fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>
-                  <td colSpan={5} style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontSize: '11px' }}>Total</td>
+                  <td colSpan={6} style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontSize: '11px' }}>Total</td>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px' }}>{totalOrnaments}</td>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px' }}>{totalGrossWeight.toFixed(3)}</td>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '11px' }}>{totalNetWeight.toFixed(3)}</td>

@@ -48,6 +48,9 @@ export default function BankDetailCard({
     }, 2000);
   };
 
+  const isVirtual = bank?.accountType?.toLowerCase() === 'virtual';
+  const effectiveVerified = Boolean(isVerified || isVirtual);
+
   const rawProofUrl = bank?.proof?.uploadedFile || verifiedProof || '';
   const isHttpUrl = rawProofUrl.startsWith('http');
   const proofUrl = rawProofUrl ? (isHttpUrl ? rawProofUrl : `${global.baseURL}/${rawProofUrl}`) : '';
@@ -141,9 +144,25 @@ export default function BankDetailCard({
                       <Iconify icon="mdi:bank" width={24} height={24} />
                     </Box>
                     <Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-                        {bank?.bankName || 'Bank Account Details'}
-                      </Typography>
+                      <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                          {bank?.bankName || 'Bank Account Details'}
+                        </Typography>
+                        {isVirtual ? (
+                          <Chip
+                            label="Virtual"
+                            size="small"
+                            sx={{ bgcolor: '#ede7f6', color: '#7b1fa2', fontWeight: 700, height: 20, fontSize: '0.7rem' }}
+                          />
+                        ) : bank?.accountType ? (
+                          <Chip
+                            label={sentenceCase(bank.accountType)}
+                            size="small"
+                            variant="outlined"
+                            sx={{ height: 20, fontSize: '0.7rem' }}
+                          />
+                        ) : null}
+                      </Stack>
                       <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                         {bank?.branch ? `Branch: ${bank.branch}` : 'Payment Disbursement Details'}
                       </Typography>
@@ -151,7 +170,7 @@ export default function BankDetailCard({
                   </Stack>
 
                   <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                    {onEditClick && !isVerified && (
+                    {onEditClick && !effectiveVerified && (
                       <Button
                         variant="outlined"
                         color="primary"
@@ -170,10 +189,10 @@ export default function BankDetailCard({
                       </Button>
                     )}
 
-                    {isVerified ? (
+                    {effectiveVerified ? (
                       <Chip
                         icon={<Iconify icon="eva:checkmark-circle-2-fill" width={16} />}
-                        label={amount ? "Payment Processed" : "Bank Verified"}
+                        label={isVirtual ? "Virtual (Auto-Verified)" : (amount ? "Payment Processed" : "Bank Verified")}
                         size="small"
                         color="success"
                         sx={{

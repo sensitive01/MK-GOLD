@@ -29,6 +29,13 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Tooltip,
+  Chip,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
@@ -41,7 +48,7 @@ import Scrollbar from '../../components/scrollbar';
 import { AttendanceListHead } from '../../sections/@dashboard/attendance';
 import LeadListToolbar from '../../sections/@dashboard/lead/LeadListToolbar';
 import LeadFilterSidebar from '../../sections/@dashboard/lead/LeadFilterSidebar';
-import { deleteLeadById, getLeads, assignExecutive, getBranchExecutives } from '../../apis/branch/lead';
+import { deleteLeadById, getLeads, assignExecutive, getBranchExecutives, bullionApproveLead, bullionRejectLead } from '../../apis/branch/lead';
 import { getBranch } from '../../apis/branch/branch';
 import global from '../../utils/global';
 
@@ -141,13 +148,31 @@ function applySortFilter(array, comparator, query, filters, currentTab) {
     }
   }
 
-  if (currentTab === 'unassigned') {
-    filteredArray = filteredArray.filter((row) => !row.assignedExecutive && !row.assignedExecutiveName);
+  if (currentTab === 'pending') {
+    filteredArray = filteredArray.filter(
+      (row) =>
+        (!row.bullionStatus || row.bullionStatus === 'pending') &&
+        !row.assignedExecutive &&
+        !row.assignedExecutiveName &&
+        row.status !== 'rejected' &&
+        row.bullionStatus !== 'rejected'
+    );
+  } else if (currentTab === 'unassigned') {
+    filteredArray = filteredArray.filter(
+      (row) =>
+        !row.assignedExecutive &&
+        !row.assignedExecutiveName &&
+        (row.bullionStatus === 'approved' || (!row.bullionStatus && row.tlStatus === 'approved')) &&
+        row.status !== 'rejected' &&
+        row.bullionStatus !== 'rejected'
+    );
   } else if (currentTab === 'assigned') {
-    filteredArray = filteredArray.filter((row) => row.assignedExecutive || row.assignedExecutiveName);
+    filteredArray = filteredArray.filter(
+      (row) => (row.assignedExecutive || row.assignedExecutiveName) && row.status !== 'rejected' && row.bullionStatus !== 'rejected'
+    );
   } else if (currentTab === 'follow_ups') {
     filteredArray = filteredArray.filter((row) => {
-      if (row.status === 'rejected' || row.status === 'converted') return false;
+      if (row.status === 'rejected' || row.bullionStatus === 'rejected' || row.status === 'converted') return false;
       if (!row.dispositions || row.dispositions.length === 0) return false;
       const lastDisp = row.dispositions[row.dispositions.length - 1].status;
       return ['Callback', 'Follow Up', 'Planning to Visit', 'Visited Branch'].includes(lastDisp);
@@ -155,7 +180,7 @@ function applySortFilter(array, comparator, query, filters, currentTab) {
   } else if (currentTab === 'converted') {
     filteredArray = filteredArray.filter((row) => row.status === 'converted');
   } else if (currentTab === 'rejected') {
-    filteredArray = filteredArray.filter((row) => row.status === 'rejected');
+    filteredArray = filteredArray.filter((row) => row.status === 'rejected' || row.bullionStatus === 'rejected');
   }
 
   return filteredArray;
@@ -202,6 +227,13 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
   const [selectedExecutiveId, setSelectedExecutiveId] = useState('');
   const [loadingExecutives, setLoadingExecutives] = useState(false);
   const [assigning, setAssigning] = useState(false);
+
+  // Bullion Approve & Reject Modal states
+  const [openRejectModal, setOpenRejectModal] = useState(false);
+  const [rejectingLead, setRejectingLead] = useState(null);
+  const [rejectComment, setRejectComment] = useState('');
+  const [rejectError, setRejectError] = useState(false);
+  const [submittingReject, setSubmittingReject] = useState(false);
 
   const [openFilter, setOpenFilter] = useState(false);
   const [filters, setFilters] = useState({
@@ -306,6 +338,87 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
         setAssigning(false);
         setNotify({ open: true, message: 'An error occurred', severity: 'error' });
       });
+  };
+
+  const handleApproveLead = async (id) => {
+    try {
+      setOpenBackdrop(true);
+      const res = await bullionApproveLead(id);
+      setOpenBackdrop(false);
+      if (res?.status) {
+        setNotify({
+          open: true,
+          message: 'Lead approved by Bullion Desk! You can now assign an executive.',
+          severity: 'success',
+        });
+        fetchData();
+      } else {
+        setNotify({
+          open: true,
+          message: res?.message || 'Failed to approve lead',
+          severity: 'error',
+        });
+      }
+    } catch (err) {
+      setOpenBackdrop(false);
+      setNotify({
+        open: true,
+        message: err.message || 'Error approving lead',
+        severity: 'error',
+      });
+    }
+  };
+
+  const handleOpenRejectModal = (lead) => {
+    setRejectingLead(lead);
+    setRejectComment('');
+    setRejectError(false);
+    setOpenRejectModal(true);
+  };
+
+  const handleCloseRejectModal = () => {
+    if (!submittingReject) {
+      setOpenRejectModal(false);
+      setRejectingLead(null);
+      setRejectComment('');
+      setRejectError(false);
+    }
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectComment.trim()) {
+      setRejectError(true);
+      return;
+    }
+    try {
+      setSubmittingReject(true);
+      const res = await bullionRejectLead(rejectingLead._id, rejectComment.trim());
+      setSubmittingReject(false);
+      if (res?.status) {
+        setOpenRejectModal(false);
+        setRejectingLead(null);
+        setRejectComment('');
+        setNotify({
+          open: true,
+          message: 'Lead rejected successfully',
+          severity: 'info',
+        });
+        fetchData();
+      } else {
+        setNotify({
+          open: true,
+          message: res?.message || 'Failed to reject lead',
+          severity: 'error',
+        });
+      }
+    } catch (err) {
+      setSubmittingReject(false);
+      setNotify({
+        open: true,
+        message: err.message || 'Error rejecting lead',
+        severity: 'error',
+      });
+    }
   };
 
   const handleOpenMenu = (event) => {
@@ -554,7 +667,28 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
                           {row.tlApprovedAt ? moment(row.tlApprovedAt).format('YYYY-MM-DD') : moment(row.updatedAt).format('YYYY-MM-DD')}
                         </TableCell>
                         <TableCell align="left" onClick={(e) => e.stopPropagation()}>
-                          {row.assignedExecutive?.employee?.name || row.assignedExecutiveName ? (
+                          {row.status === 'rejected' || row.bullionStatus === 'rejected' ? (
+                            <Tooltip title={row.bullionRejectionReason || row.tlRejectionReason || 'Lead was rejected'}>
+                              <Box
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  px: 1.2,
+                                  py: 0.4,
+                                  borderRadius: 1,
+                                  bgcolor: '#ffebee',
+                                  color: '#d32f2f',
+                                  fontWeight: 600,
+                                  fontSize: '0.75rem',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                <Iconify icon="eva:close-circle-fill" sx={{ width: 14, height: 14 }} />
+                                Rejected
+                              </Box>
+                            </Tooltip>
+                          ) : row.assignedExecutive?.employee?.name || row.assignedExecutiveName ? (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Typography variant="body2" sx={{ fontWeight: 600, color: '#1967d2' }}>
                                 {row.assignedExecutive?.employee?.name || row.assignedExecutiveName}
@@ -570,7 +704,7 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
                                 <Iconify icon="eva:edit-fill" sx={{ width: 16, height: 16, color: 'text.secondary' }} />
                               </IconButton>
                             </Box>
-                          ) : (
+                          ) : row.bullionStatus === 'approved' ? (
                             <Button
                               variant="outlined"
                               size="small"
@@ -589,6 +723,59 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
                             >
                               Assign Executive
                             </Button>
+                          ) : (
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: '#fff !important', width: 14, height: 14 }} />}
+                                sx={{
+                                  textTransform: 'none',
+                                  fontWeight: 600,
+                                  fontSize: '0.75rem',
+                                  py: 0.4,
+                                  px: 1.2,
+                                  borderRadius: 1,
+                                  color: '#fff !important',
+                                  bgcolor: '#2e7d32',
+                                  boxShadow: 'none',
+                                  whiteSpace: 'nowrap',
+                                  '&:hover': {
+                                    bgcolor: '#1b5e20',
+                                    boxShadow: 'none',
+                                  },
+                                  '& .MuiButton-startIcon': { color: '#ffffff !important' },
+                                  '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleApproveLead(row._id);
+                                }}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                startIcon={<Iconify icon="eva:close-circle-fill" sx={{ width: 14, height: 14 }} />}
+                                sx={{
+                                  textTransform: 'none',
+                                  fontWeight: 600,
+                                  fontSize: '0.75rem',
+                                  py: 0.4,
+                                  px: 1.2,
+                                  borderRadius: 1,
+                                  whiteSpace: 'nowrap',
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenRejectModal(row);
+                                }}
+                              >
+                                Reject
+                              </Button>
+                            </Stack>
                           )}
                         </TableCell>
                         <TableCell
@@ -696,6 +883,7 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
             }}
             sx={{
               flex: 1,
+              minWidth: 150,
               p: 2.5,
               textAlign: 'center',
               bgcolor: '#e8f0fe',
@@ -713,11 +901,44 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
           <Card
             onClick={() => {
               setPage(0);
+              setCurrentTab('pending');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            sx={{
+              flex: 1,
+              minWidth: 150,
+              p: 2.5,
+              textAlign: 'center',
+              bgcolor: '#fff8e1',
+              color: '#b78103',
+              cursor: 'pointer',
+              outline: currentTab === 'pending' ? '3px solid #b78103' : 'none',
+              transform: currentTab === 'pending' ? 'scale(1.03)' : 'none',
+              transition: 'all 0.2s',
+            }}
+          >
+            <Typography variant="h3">
+              {data?.filter(
+                (row) =>
+                  (!row.bullionStatus || row.bullionStatus === 'pending') &&
+                  !row.assignedExecutive &&
+                  !row.assignedExecutiveName &&
+                  row.status !== 'rejected' &&
+                  row.bullionStatus !== 'rejected'
+              ).length || 0}
+            </Typography>
+            <Typography variant="subtitle2">Pending Approval</Typography>
+          </Card>
+
+          <Card
+            onClick={() => {
+              setPage(0);
               setCurrentTab('unassigned');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             sx={{
               flex: 1,
+              minWidth: 150,
               p: 2.5,
               textAlign: 'center',
               bgcolor: '#ffe7d9',
@@ -729,9 +950,16 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
             }}
           >
             <Typography variant="h3">
-              {data?.filter((row) => !row.assignedExecutive && !row.assignedExecutiveName).length || 0}
+              {data?.filter(
+                (row) =>
+                  !row.assignedExecutive &&
+                  !row.assignedExecutiveName &&
+                  (row.bullionStatus === 'approved' || (!row.bullionStatus && row.tlStatus === 'approved')) &&
+                  row.status !== 'rejected' &&
+                  row.bullionStatus !== 'rejected'
+              ).length || 0}
             </Typography>
-            <Typography variant="subtitle2">Unassigned Executive</Typography>
+            <Typography variant="subtitle2">Ready to Assign</Typography>
           </Card>
 
           <Card
@@ -742,6 +970,7 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
             }}
             sx={{
               flex: 1,
+              minWidth: 150,
               p: 2.5,
               textAlign: 'center',
               bgcolor: '#e6f7ff',
@@ -753,7 +982,7 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
             }}
           >
             <Typography variant="h3">
-              {data?.filter((row) => row.assignedExecutive || row.assignedExecutiveName).length || 0}
+              {data?.filter((row) => (row.assignedExecutive || row.assignedExecutiveName) && row.status !== 'rejected' && row.bullionStatus !== 'rejected').length || 0}
             </Typography>
             <Typography variant="subtitle2">Assigned Executive</Typography>
           </Card>
@@ -766,6 +995,7 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
             }}
             sx={{
               flex: 1,
+              minWidth: 150,
               p: 2.5,
               textAlign: 'center',
               bgcolor: '#e4f8dd',
@@ -778,7 +1008,7 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
           >
             <Typography variant="h3">
               {data?.filter((row) => {
-                if (row.status === 'rejected' || row.status === 'converted') return false;
+                if (row.status === 'rejected' || row.bullionStatus === 'rejected' || row.status === 'converted') return false;
                 if (!row.dispositions || row.dispositions.length === 0) return false;
                 const lastDisp = row.dispositions[row.dispositions.length - 1].status;
                 return ['Callback', 'Follow Up', 'Planning to Visit', 'Visited Branch'].includes(lastDisp);
@@ -790,11 +1020,37 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
           <Card
             onClick={() => {
               setPage(0);
+              setCurrentTab('rejected');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            sx={{
+              flex: 1,
+              minWidth: 150,
+              p: 2.5,
+              textAlign: 'center',
+              bgcolor: '#ffebee',
+              color: '#d32f2f',
+              cursor: 'pointer',
+              outline: currentTab === 'rejected' ? '3px solid #d32f2f' : 'none',
+              transform: currentTab === 'rejected' ? 'scale(1.03)' : 'none',
+              transition: 'all 0.2s',
+            }}
+          >
+            <Typography variant="h3">
+              {data?.filter((row) => row.status === 'rejected' || row.bullionStatus === 'rejected').length || 0}
+            </Typography>
+            <Typography variant="subtitle2">Rejected</Typography>
+          </Card>
+
+          <Card
+            onClick={() => {
+              setPage(0);
               setCurrentTab('converted');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             sx={{
               flex: 1,
+              minWidth: 150,
               p: 2.5,
               textAlign: 'center',
               bgcolor: '#fff3d6',
@@ -856,7 +1112,13 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
               Back
             </Button>
           </Stack>
-          <UpdateLead setToggleContainer={setToggleContainer} setNotify={setNotify} id={openId} />
+          <UpdateLead
+            setToggleContainer={setToggleContainer}
+            setToggleContainerType={setToggleContainerType}
+            fetchData={fetchData}
+            setNotify={setNotify}
+            id={openId}
+          />
         </Container>
       )}
 
@@ -929,6 +1191,62 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
           </Stack>
         </Box>
       </Modal>
+
+      {/* Reject Lead Dialog */}
+      <Dialog
+        open={openRejectModal}
+        onClose={handleCloseRejectModal}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ color: '#d32f2f', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Iconify icon="eva:alert-circle-fill" sx={{ width: 24, height: 24 }} />
+          Reject Lead
+        </DialogTitle>
+        <DialogContent dividers>
+          {rejectingLead && (
+            <Box sx={{ mb: 2.5, p: 1.5, bgcolor: '#fbfbfb', border: '1px solid #eee', borderRadius: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                {rejectingLead.name} ({global.maskPhoneNumber(rejectingLead.mobile)})
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Category: <b>{rejectingLead.category || '-'}</b> | Type: <b>{rejectingLead.type || '-'}</b> | Weight: <b>{rejectingLead.weight ? `${rejectingLead.weight} gm` : '-'}</b>
+              </Typography>
+            </Box>
+          )}
+          <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: 'text.primary' }}>
+            Enter Rejection Reason / Remarks <span style={{ color: '#d32f2f' }}>*</span>
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            autoFocus
+            placeholder="Please enter the reason for rejecting this lead (e.g., unreachable, out of branch range, cancelled by customer)..."
+            value={rejectComment}
+            onChange={(e) => {
+              setRejectComment(e.target.value);
+              if (e.target.value.trim()) setRejectError(false);
+            }}
+            error={rejectError}
+            helperText={rejectError ? 'Please enter a comment/reason before rejecting' : ''}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={handleCloseRejectModal} color="inherit" disabled={submittingReject}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmReject}
+            disabled={submittingReject}
+            startIcon={submittingReject ? <CircularProgress size={16} color="inherit" /> : <Iconify icon="eva:close-circle-fill" />}
+          >
+            {submittingReject ? 'Rejecting...' : 'Confirm Reject'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Popover
         open={Boolean(open)}

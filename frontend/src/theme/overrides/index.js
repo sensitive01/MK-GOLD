@@ -10,6 +10,7 @@ import Typography from './Typography';
 import Autocomplete from './Autocomplete';
 import Switch from './Switch';
 import Alert from './Alert';
+import Snackbar from './Snackbar';
 
 // ----------------------------------------------------------------------
 
@@ -25,6 +26,8 @@ export default function ComponentsOverrides(theme) {
     Typography(theme),
     Autocomplete(theme),
     Switch(theme),
-    Alert(theme)
+    Alert(theme),
+    Snackbar(theme)
   );
 }
+

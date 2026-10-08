@@ -35,3 +35,13 @@ export const deleteMelting = async (id) => {
     return err;
   }
 };
+
+export const getNextBatchNumber = async () => {
+  try {
+    const response = await apiClient().get('/api/v1.0/admin/melting/next-batch-number');
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+};
+

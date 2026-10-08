@@ -18,9 +18,12 @@ import { createLead } from '../../../apis/branch/lead';
 import { createFile } from '../../../apis/branch/fileupload';
 import { getUser } from '../../../apis/branch/user';
 import global from '../../../utils/global';
+import CustomerDocumentsInput from './CustomerDocumentsInput';
 
 function CreateLead(props) {
-  const [file, setFile] = useState(null);
+  const [docEntries, setDocEntries] = useState([
+    { id: 1, type: 'Aadhar card', file: null, preview: '' },
+  ]);
   const [focusedField, setFocusedField] = useState(null);
   const [telecallers, setTelecallers] = useState([]);
 
@@ -77,10 +80,21 @@ function CreateLead(props) {
     },
     validationSchema: schema,
     onSubmit: (values) => {
-      const payload = {
-        ...values,
-      };
-      createLead(payload).then(async (data) => {
+      const formData = new FormData();
+      Object.keys(values).forEach((key) => {
+        if (values[key] !== null && values[key] !== undefined && values[key] !== '') {
+          formData.append(key, values[key]);
+        }
+      });
+
+      docEntries.forEach((entry) => {
+        if (entry.file) {
+          formData.append('uploadedFiles', entry.file);
+          formData.append('documentTypes', entry.type || 'Document');
+        }
+      });
+
+      createLead(formData).then(async (data) => {
         if (data.status === false) {
           props.setNotify({
             open: true,
@@ -88,21 +102,9 @@ function CreateLead(props) {
             severity: 'error',
           });
         } else {
-          if (file) {
-            try {
-              const formData = new FormData();
-              formData.append('uploadId', data.data.fileUpload.uploadId);
-              formData.append('uploadName', data.data.fileUpload.uploadName);
-              formData.append('uploadType', 'lead');
-              formData.append('uploadedFile', file);
-              await createFile(formData);
-            } catch (error) {
-              console.error('File upload failed:', error);
-            }
-          }
           props.setToggleContainer(false);
           resetForm();
-          setFile(null);
+          setDocEntries([{ id: Date.now(), type: 'Aadhar card', file: null, preview: '' }]);
           props.setNotify({
             open: true,
             message: 'Lead created successfully!',
@@ -355,18 +357,10 @@ function CreateLead(props) {
             </>
           )}
 
-          {values.type === 'pledged' && (
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>
-                Attachment
-              </Typography>
-              <input
-                type="file"
-                onChange={(e) => setFile(e.target.files[0])}
-                style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}
-              />
-            </Grid>
-          )}
+          <CustomerDocumentsInput
+            docEntries={docEntries}
+            setDocEntries={setDocEntries}
+          />
 
           <Grid item xs={12}>
             <TextField

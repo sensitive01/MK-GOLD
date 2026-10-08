@@ -1,5 +1,6 @@
 const transitModel = require("../../models/transit");
 const salesModel = require("../../models/sales");
+const { assignArticleNumbersToSales } = require("../../services/sales");
 
 exports.findTransitData = async (req, res) => {
     try {
@@ -12,6 +13,7 @@ exports.findTransitData = async (req, res) => {
             .populate('adminProof')
             .populate('storeReceivedBy', 'username')
             .populate('adminReceivedBy', 'username')
+            .populate('movedToMeltingBy', 'username')
             .populate({
                 path: 'saleIds',
                 populate: [
@@ -94,6 +96,40 @@ exports.updateTransitStatus = async (req, res) => {
         const updatePayload = {};
         const userType = req.user?.userType?.toLowerCase();
 
+        if (action === 'move_to_melting') {
+            const updatePayload = {
+                status: 'moved_to_melting',
+                isMovedToMelting: true,
+                movedToMeltingAt: new Date(),
+                movedToMeltingBy: req.user?._id,
+            };
+            const logEntry = {
+                actionBy: req.user?._id,
+                userType: req.user?.userType || 'store',
+                action: 'move_to_melting',
+                deviation: 'no',
+                status: 'moved_to_melting',
+                notes: req.body.notes || 'Moved from Store to Melting department',
+                createdAt: new Date()
+            };
+            const updateData = await transitModel.findByIdAndUpdate(
+                req.params.id,
+                {
+                    $set: updatePayload,
+                    $push: { deviationLogs: logEntry }
+                },
+                { new: true }
+            );
+            if (updateData?.saleIds?.length) {
+                await assignArticleNumbersToSales(updateData.saleIds);
+            }
+            return res.json({
+                status: true,
+                message: "Transit successfully moved to Melting department!",
+                data: updateData
+            });
+        }
+
         if (action === 'store_receive' || userType === 'store') {
             // Store receipt flow
             const finalDeviations = deviations || 'no';
@@ -140,6 +176,7 @@ exports.updateTransitStatus = async (req, res) => {
                     { _id: { $in: updateData.saleIds } },
                     { status: 'moved' }
                 );
+                await assignArticleNumbersToSales(updateData.saleIds);
             }
 
             return res.json({
@@ -187,6 +224,7 @@ exports.updateTransitStatus = async (req, res) => {
                     { _id: { $in: updateData.saleIds } },
                     { status: 'moved' }
                 );
+                await assignArticleNumbersToSales(updateData.saleIds);
             }
 
             return res.json({
@@ -215,6 +253,7 @@ exports.updateTransitStatus = async (req, res) => {
                 { _id: { $in: updateData.saleIds } },
                 { status: 'moved' }
             );
+            await assignArticleNumbersToSales(updateData.saleIds);
         }
 
         res.json({

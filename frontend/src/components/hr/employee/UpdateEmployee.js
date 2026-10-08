@@ -21,7 +21,9 @@ function UpdateEmployee(props) {
     gender: Yup.string().required('Gender is required'),
     email: Yup.string().email('Invalid email'),
     designation: Yup.string().required('Designation is required'),
-    salary: Yup.string().required('Salary is required'),
+    salary: Yup.string()
+      .required('Salary is required')
+      .test('is-valid-salary', 'Salary must be a valid number', (val) => val !== '' && val !== null && val !== undefined && !isNaN(val) && Number(val) >= 0),
     employeeId: Yup.string().required('Employee Id is required'),
     phoneNumber: Yup.string()
       .required('Phone is required')
@@ -182,7 +184,8 @@ function UpdateEmployee(props) {
           <Grid item xs={12} sm={4}>
             <TextField
               name="salary"
-              number="number"
+              type="number"
+              value={values.salary ?? ''}
               error={touched.salary && errors.salary && true}
               label={touched.salary && errors.salary ? errors.salary : 'Salary'}
               fullWidth

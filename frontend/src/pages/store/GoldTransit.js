@@ -558,6 +558,8 @@ export default function StoreGoldTransit() {
                         statusBadge = <Label color="warning">Pending Receipt</Label>;
                       } else if (deviations === 'yes' || status === 'submitted') {
                         statusBadge = <Label color="error">Moved (Deviation Flagged)</Label>;
+                      } else if (row.isMovedToMelting || status === 'moved_to_melting') {
+                        statusBadge = <Label color="secondary" sx={{ fontWeight: 600 }}>Moved to Melting</Label>;
                       } else if (status === 'moved') {
                         statusBadge = <Label color="success">Moved in Store</Label>;
                       } else {

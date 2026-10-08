@@ -26,6 +26,8 @@ import {
   Stack,
   Avatar,
   Chip,
+  Link,
+  Divider,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -300,10 +302,25 @@ function CreateSale(props) {
         }
 
         const allReleaseProofs = selectedRelease.reduce((acc, rel) => {
+          const docs = [];
           if (rel?.proofDocuments && Array.isArray(rel.proofDocuments) && rel.proofDocuments.length > 0) {
-            return [...acc, ...rel.proofDocuments];
+            docs.push(...rel.proofDocuments);
           }
-          return acc;
+          if (rel?.financeProof) {
+            docs.push({
+              documentType: 'Bank Release Slip / Finance Proof',
+              documentNo: rel.pledgeId || '',
+              documentFile: rel.financeProof,
+            });
+          }
+          if (rel?.assigneeProof) {
+            docs.push({
+              documentType: 'Assignee Settlement Proof',
+              documentNo: rel.pledgeId || '',
+              documentFile: rel.assigneeProof,
+            });
+          }
+          return [...acc, ...docs];
         }, []);
 
         if (allReleaseProofs.length > 0) {
@@ -327,6 +344,7 @@ function CreateSale(props) {
     netAmount: Math.round(ornaments?.reduce((prev, cur) => prev + +cur.netAmount, 0) ?? 0),
     payableAmount: 0,
     bank: selectedBank?._id,
+    isBankVerified: Boolean(selectedBank?.accountType === 'virtual' || selectedBank?.isVerified),
     status: 'bullion pending',
     assignee: selectedRelease?.[0]?.assignee || undefined, // Automatically take from the first selected release
   };
@@ -925,6 +943,72 @@ function CreateSale(props) {
                 }}
               />
             </Grid>
+            {values.saleType === 'pledged' && selectedRelease && selectedRelease.length > 0 && (
+              <>
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Iconify icon="mdi:bank-outline" sx={{ color: 'primary.main' }} />
+                    Release Details:
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Scrollbar>
+                    <TableContainer sx={{ minWidth: 800, mb: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                      <Table size="small">
+                        <TableHead sx={{ bgcolor: 'background.neutral' }}>
+                          <TableRow>
+                            <TableCell align="left">Pledge ID</TableCell>
+                            <TableCell align="left">Pledged In</TableCell>
+                            <TableCell align="left">Branch</TableCell>
+                            <TableCell align="left">Pledged Date</TableCell>
+                            <TableCell align="left">Release Date</TableCell>
+                            <TableCell align="left">Pledged Weight</TableCell>
+                            <TableCell align="left">Avg Purity</TableCell>
+                            <TableCell align="left">Pledge Amount</TableCell>
+                            <TableCell align="left">Release Amount</TableCell>
+                            <TableCell align="left">Assignee</TableCell>
+                            <TableCell align="center">Status</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {selectedRelease.map((rel, idx) => (
+                            <TableRow hover key={rel._id || idx}>
+                              <TableCell align="left" sx={{ fontWeight: 600 }}>{rel.pledgeId || '-'}</TableCell>
+                              <TableCell align="left">{sentenceCase(rel.pledgedIn || '') || '-'}</TableCell>
+                              <TableCell align="left">{rel.pledgedBranch || '-'}</TableCell>
+                              <TableCell align="left">{rel.pledgedDate ? (moment.isMoment(rel.pledgedDate) ? rel.pledgedDate.format('YYYY-MM-DD') : moment(rel.pledgedDate).format('YYYY-MM-DD')) : '-'}</TableCell>
+                              <TableCell align="left">{rel.releaseDate ? (moment.isMoment(rel.releaseDate) ? rel.releaseDate.format('YYYY-MM-DD') : moment(rel.releaseDate).format('YYYY-MM-DD')) : '-'}</TableCell>
+                              <TableCell align="left">{rel.weight ? `${rel.weight} gm` : '-'}</TableCell>
+                              <TableCell align="left">{rel.averagePurity != null && rel.averagePurity !== '' ? `${rel.averagePurity}%` : '-'}</TableCell>
+                              <TableCell align="left">₹{Number(rel.pledgeAmount || 0).toLocaleString('en-IN')}</TableCell>
+                              <TableCell align="left" sx={{ fontWeight: 700, color: 'error.main' }}>₹{Number(rel.payableAmount || 0).toLocaleString('en-IN')}</TableCell>
+                              <TableCell align="left">{rel.assignee?.employee?.name || rel.assignee?.name || (typeof rel.assignee === 'string' ? rel.assignee : '-')}</TableCell>
+                              <TableCell align="center">
+                                <Chip size="small" color="info" label="Release Completed" />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                        {selectedRelease.length > 1 && (
+                          <TableFooter>
+                            <TableRow sx={{ bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04) }}>
+                              <TableCell colSpan={7} sx={{ fontWeight: 700 }}>Total</TableCell>
+                              <TableCell sx={{ fontWeight: 700 }}>
+                                ₹{selectedRelease.reduce((acc, r) => acc + Number(r.pledgeAmount || 0), 0).toLocaleString('en-IN')}
+                              </TableCell>
+                              <TableCell sx={{ fontWeight: 700, color: 'error.main' }}>
+                                ₹{selectedRelease.reduce((acc, r) => acc + Number(r.payableAmount || 0), 0).toLocaleString('en-IN')}
+                              </TableCell>
+                              <TableCell colSpan={2} />
+                            </TableRow>
+                          </TableFooter>
+                        )}
+                      </Table>
+                    </TableContainer>
+                  </Scrollbar>
+                </Grid>
+              </>
+            )}
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom sx={{ mt: 1, mb: 1 }}>
                 Ornaments:
@@ -1307,6 +1391,255 @@ function CreateSale(props) {
                 </Grid>
               </>
             )}
+
+            {values.saleType === 'pledged' && (
+              <Grid item xs={12}>
+                <Card
+                  sx={{
+                    p: 2.5,
+                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.03),
+                    border: '1px solid',
+                    borderColor: (theme) => alpha(theme.palette.primary.main, 0.2),
+                    borderRadius: 2,
+                  }}
+                >
+                  <Typography
+                    variant="subtitle1"
+                    sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}
+                  >
+                    <Iconify icon="mdi:calculator-variant-outline" sx={{ color: 'primary.main' }} />
+                    Pledged Settlement & Payout Breakdown:
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6} md={2.4}>
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          bgcolor: 'background.paper',
+                          borderRadius: 1.5,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          Gross Gold Valuation
+                        </Typography>
+                        <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 700 }}>
+                          ₹{Number(payload.netAmount || 0).toLocaleString('en-IN')}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={2.4}>
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          bgcolor: 'background.paper',
+                          borderRadius: 1.5,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          (-) Release Paid to Bank
+                        </Typography>
+                        <Typography variant="h6" sx={{ color: 'error.main', fontWeight: 700 }}>
+                          ₹{Number(
+                            Math.round(selectedRelease?.reduce((prev, cur) => prev + +cur.payableAmount, 0)) || 0
+                          ).toLocaleString('en-IN')}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={2.4}>
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          bgcolor: 'background.paper',
+                          borderRadius: 1.5,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          (-) Margin ({values.margin || 0}%)
+                        </Typography>
+                        <Typography variant="h6" sx={{ color: 'warning.main', fontWeight: 700 }}>
+                          ₹{Number(
+                            Math.round((payload.netAmount * (values.margin || 0)) / 100)
+                          ).toLocaleString('en-IN')}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={2.4}>
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          bgcolor: 'background.paper',
+                          borderRadius: 1.5,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          Adjustments
+                        </Typography>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            fontWeight: 700,
+                            color:
+                              totalAdjustments > 0
+                                ? 'success.main'
+                                : totalAdjustments < 0
+                                ? 'error.main'
+                                : 'text.primary',
+                          }}
+                        >
+                          {totalAdjustments > 0
+                            ? `+₹${totalAdjustments.toLocaleString('en-IN')}`
+                            : totalAdjustments < 0
+                            ? `-₹${Math.abs(totalAdjustments).toLocaleString('en-IN')}`
+                            : '₹0'}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={2.4}>
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          bgcolor: (theme) => alpha(theme.palette.success.main, 0.08),
+                          borderRadius: 1.5,
+                          border: '1px solid',
+                          borderColor: (theme) => alpha(theme.palette.success.main, 0.3),
+                        }}
+                      >
+                        <Typography variant="caption" sx={{ color: 'success.dark', fontWeight: 600 }}>
+                          (=) Net Payout to Customer
+                        </Typography>
+                        <Typography variant="h6" sx={{ color: 'success.main', fontWeight: 800 }}>
+                          ₹{Number(
+                            payload.netAmount -
+                              (selectedRelease?.reduce((prev, cur) => prev + +cur.payableAmount, 0) ?? 0) -
+                              Math.round((payload.netAmount * payload.margin) / 100)
+                          ).toLocaleString('en-IN')}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Card>
+              </Grid>
+            )}
+
+            {proofDocument && proofDocument.length > 0 && (
+              <Grid item xs={12}>
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  sx={{ mt: 1, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}
+                >
+                  <Iconify icon="mdi:file-document-multiple-outline" sx={{ color: 'primary.main' }} />
+                  Attached Proof Documents & Release Slips:
+                </Typography>
+                <Grid container spacing={2}>
+                  {proofDocument.map((doc, idx) => {
+                    const file = doc?.documentFile;
+                    const isFileObject = file instanceof File || file instanceof Blob;
+                    let previewSrc = '';
+                    let isImage = false;
+                    if (isFileObject) {
+                      isImage = Boolean(file.type && file.type.match(/image\/.*/));
+                      previewSrc = isImage ? URL.createObjectURL(file) : '/assets/doc.svg';
+                    } else if (typeof file === 'string') {
+                      isImage = Boolean(file.match(/\.(jpeg|jpg|gif|png|webp|svg)/i));
+                      previewSrc = getFileUrl(file);
+                    }
+
+                    return (
+                      <Grid item xs={12} sm={6} md={4} key={idx}>
+                        <Card
+                          sx={{
+                            p: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: 'background.neutral',
+                          }}
+                        >
+                          {isImage && previewSrc ? (
+                            <Box
+                              component="img"
+                              src={previewSrc}
+                              alt={doc.documentType || 'proof'}
+                              sx={{
+                                width: 64,
+                                height: 64,
+                                objectFit: 'cover',
+                                borderRadius: 1,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                bgcolor: '#fff',
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              sx={{
+                                width: 64,
+                                height: 64,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: 1,
+                                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+                                color: 'primary.main',
+                              }}
+                            >
+                              <Iconify icon="mdi:file-document-outline" width={36} height={36} />
+                            </Box>
+                          )}
+                          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                            <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600 }}>
+                              {sentenceCase(doc.documentType || 'Document')}
+                            </Typography>
+                            {doc.documentNo && (
+                              <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                Doc No: {doc.documentNo}
+                              </Typography>
+                            )}
+                            {previewSrc && !isFileObject && (
+                              <Link
+                                href={previewSrc}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                variant="caption"
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  mt: 0.5,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                View Document <Iconify icon="eva:external-link-fill" width={14} height={14} />
+                              </Link>
+                            )}
+                            {isFileObject && (
+                              <Chip
+                                size="small"
+                                label="Uploaded file"
+                                variant="outlined"
+                                sx={{ mt: 0.5, height: 20, fontSize: '0.7rem' }}
+                              />
+                            )}
+                          </Box>
+                        </Card>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </Grid>
+            )}
+
             <Grid item xs={12} sx={{ display: 'flex', flexDirection: { xs: 'column-reverse', sm: 'row' }, gap: 2, justifyContent: 'flex-start' }}>
               <LoadingButton
                 size="large"

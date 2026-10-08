@@ -5,6 +5,7 @@ import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
 import SellIcon from '@mui/icons-material/Sell';
 import RequestPageIcon from '@mui/icons-material/RequestPage';
 import TimeToLeaveIcon from '@mui/icons-material/TimeToLeave';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -42,6 +43,16 @@ const navConfig = [
     title: 'Billing',
     path: '/accounts/sale',
     icon: <SellIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Sell Gold',
+    path: '/accounts/sell-gold',
+    icon: <LocalOfferIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Vendor',
+    path: '/accounts/vendor',
+    icon: icon('ic_user'),
   },
   {
     title: 'Balancesheet',

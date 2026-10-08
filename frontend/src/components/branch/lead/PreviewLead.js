@@ -24,11 +24,15 @@ import {
   DialogActions,
   Stack,
   IconButton,
+  Chip,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import CloseIcon from '@mui/icons-material/Close';
 import { LoadingButton } from '@mui/lab';
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { getLeadById, addDisposition, assignExecutive, getBranchExecutives, moveToBusiness, tlApproveLead, tlRejectLead } from '../../../apis/branch/lead';
+import CustomerDocumentsGallery from './CustomerDocumentsGallery';
+import { getLeadById, addDisposition, assignExecutive, getBranchExecutives, moveToBusiness, tlApproveLead, tlRejectLead, bullionApproveLead, bullionRejectLead } from '../../../apis/branch/lead';
 import { getBranch } from '../../../apis/branch/branch';
 import global from '../../../utils/global';
 import moment from 'moment';
@@ -85,10 +89,11 @@ function PreviewLead(props) {
     status: '',
     remark: '',
     branch: '',
-    uploadedFile: null,
     callbackDate: '',
     callbackTime: '',
   });
+
+  const [callLogFiles, setCallLogFiles] = useState([]);
 
   const fetchData = () => {
     if (props.id) {
@@ -116,6 +121,18 @@ function PreviewLead(props) {
     }
   }, [props.autoOpenLogModal]);
 
+  const handleCallLogFilesSelect = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const selected = Array.from(e.target.files);
+      setCallLogFiles((prev) => [...prev, ...selected]);
+    }
+    e.target.value = '';
+  };
+
+  const handleRemoveCallLogFile = (index) => {
+    setCallLogFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleAddLog = () => {
     if (!logForm.status) return;
     setAddingLog(true);
@@ -124,15 +141,28 @@ function PreviewLead(props) {
     formData.append('status', logForm.status);
     formData.append('remark', logForm.remark);
     if (logForm.branch) formData.append('branch', logForm.branch);
-    if (logForm.uploadedFile) formData.append('uploadedFile', logForm.uploadedFile);
-    if (logForm.status === 'Callback' || logForm.status === 'Planning to Visit' || logForm.status === 'Follow Up' || logForm.status === 'Business Closed') {
+
+    if (callLogFiles.length > 0) {
+      callLogFiles.forEach((file) => {
+        formData.append('uploadedFiles', file);
+        formData.append('documentTypes', 'Proof');
+      });
+    }
+
+    if (
+      logForm.status === 'Callback' ||
+      logForm.status === 'Planning to Visit' ||
+      logForm.status === 'Follow Up' ||
+      logForm.status === 'Business Closed'
+    ) {
       if (logForm.callbackDate) formData.append('callbackDate', logForm.callbackDate);
       if (logForm.callbackTime) formData.append('callbackTime', logForm.callbackTime);
     }
 
     addDisposition(props.id, formData).then((res) => {
       if (res.status) {
-        setLogForm({ status: '', remark: '', branch: '', uploadedFile: null, callbackDate: '', callbackTime: '' });
+        setLogForm({ status: '', remark: '', branch: '', callbackDate: '', callbackTime: '' });
+        setCallLogFiles([]);
         fetchData();
         setOpenModal(false);
       }
@@ -218,6 +248,89 @@ function PreviewLead(props) {
         });
       }
     } catch (err) {
+      if (props.setNotify) {
+        props.setNotify({
+          open: true,
+          message: err.message || 'An error occurred',
+          severity: 'error',
+        });
+      }
+    }
+  };
+
+  const [openBullionRejectDialog, setOpenBullionRejectDialog] = useState(false);
+  const [bullionRejectReason, setBullionRejectReason] = useState('');
+  const [submittingBullionReject, setSubmittingBullionReject] = useState(false);
+
+  const handleBullionApprove = async () => {
+    try {
+      const res = await bullionApproveLead(props.id);
+      if (res && res.status) {
+        if (props.setNotify) {
+          props.setNotify({
+            open: true,
+            message: 'Lead approved by Bullion Desk! You can now assign an executive.',
+            severity: 'success',
+          });
+        }
+        setData((prev) => ({ ...prev, bullionStatus: 'approved', bullionApprovedAt: new Date() }));
+        if (props.fetchData) {
+          props.fetchData();
+        }
+      } else if (props.setNotify) {
+        props.setNotify({
+          open: true,
+          message: res?.message || 'Failed to approve lead',
+          severity: 'error',
+        });
+      }
+    } catch (err) {
+      if (props.setNotify) {
+        props.setNotify({
+          open: true,
+          message: err.message || 'An error occurred',
+          severity: 'error',
+        });
+      }
+    }
+  };
+
+  const handleBullionRejectConfirm = async () => {
+    if (!bullionRejectReason.trim()) {
+      return;
+    }
+    try {
+      setSubmittingBullionReject(true);
+      const res = await bullionRejectLead(props.id, bullionRejectReason.trim());
+      setSubmittingBullionReject(false);
+      if (res && res.status) {
+        if (props.setNotify) {
+          props.setNotify({
+            open: true,
+            message: 'Lead rejected successfully',
+            severity: 'info',
+          });
+        }
+        setData((prev) => ({
+          ...prev,
+          bullionStatus: 'rejected',
+          bullionRejectionReason: bullionRejectReason.trim(),
+          status: 'rejected',
+        }));
+        setOpenBullionRejectDialog(false);
+        setBullionRejectReason('');
+        if (props.fetchData) {
+          props.fetchData();
+        }
+      } else if (props.setNotify) {
+        props.setNotify({
+          open: true,
+          message: res?.message || 'Failed to reject lead',
+          severity: 'error',
+        });
+      }
+    } catch (err) {
+      setSubmittingBullionReject(false);
       if (props.setNotify) {
         props.setNotify({
           open: true,
@@ -320,6 +433,12 @@ function PreviewLead(props) {
 
   const branchNameDisplay = data.status === 'converted' && data.branch ? branches.find(b => b._id === (data.branch?._id || data.branch))?.branchName : null;
 
+  const userType = auth?.user?.userType?.toLowerCase();
+  const isRejected = data.status === 'rejected' || data.bullionStatus === 'rejected' || data.tlStatus === 'rejected';
+  const isBullionDesk = ['bullion_desk', 'bullion-desk'].includes(userType);
+  const isTelecallerRole = ['telecalling', 'telecaller_tl', 'telecaller-tl'].includes(userType);
+  const canAssignExecutive = !isTelecallerRole && !isRejected && (!isBullionDesk || data.bullionStatus === 'approved');
+
   return (
     <Card sx={{ p: 4, my: 4 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
@@ -332,7 +451,7 @@ function PreviewLead(props) {
           </Typography>
         </Stack>
         <Stack direction="row" spacing={1.5} alignItems="center">
-          {!['telecalling', 'telecaller_tl', 'telecaller-tl'].includes(auth?.user?.userType) && (
+          {canAssignExecutive && (
             <Button
               variant="contained"
               onClick={handleOpenAssignModal}
@@ -417,6 +536,75 @@ function PreviewLead(props) {
               >
                 Approve
               </Button>
+            )
+          )}
+          {['bullion_desk', 'bullion-desk'].includes(auth?.user?.userType?.toLowerCase()) && (
+            data.status === 'rejected' || data.bullionStatus === 'rejected' ? (
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 2,
+                  py: 0.8,
+                  borderRadius: 1,
+                  bgcolor: '#ffebee',
+                  color: '#d32f2f',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                }}
+              >
+                <Iconify icon="eva:close-circle-fill" sx={{ width: 18, height: 18 }} />
+                Rejected
+              </Box>
+            ) : data.bullionStatus === 'approved' ? (
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 2,
+                  py: 0.8,
+                  borderRadius: 1,
+                  bgcolor: 'rgba(46, 125, 50, 0.12)',
+                  color: '#2e7d32',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                }}
+              >
+                <Iconify icon="eva:checkmark-circle-2-fill" sx={{ width: 18, height: 18 }} />
+                Bullion Approved
+              </Box>
+            ) : (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Button
+                  variant="contained"
+                  onClick={handleBullionApprove}
+                  startIcon={<Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: '#ffffff !important' }} />}
+                  sx={{
+                    bgcolor: '#2e7d32',
+                    color: '#ffffff !important',
+                    fontWeight: 600,
+                    '&:hover': { bgcolor: '#1b5e20' },
+                    '& .MuiButton-startIcon': { color: '#ffffff !important' },
+                    '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
+                  }}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => {
+                    setBullionRejectReason('');
+                    setOpenBullionRejectDialog(true);
+                  }}
+                  startIcon={<Iconify icon="eva:close-circle-fill" />}
+                  sx={{ fontWeight: 600 }}
+                >
+                  Reject
+                </Button>
+              </Stack>
             )
           )}
           <Button
@@ -539,17 +727,7 @@ function PreviewLead(props) {
           <Typography variant="body1">{data.remarks || 'N/A'}</Typography>
         </Grid>
 
-        {currentImage && (
-          <Grid item xs={12}>
-            <Divider sx={{ mb: 2 }} />
-            <Typography variant="subtitle2" color="textSecondary" gutterBottom>Attachment</Typography>
-            <img
-              src={currentImage}
-              alt="attachment"
-              style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '8px' }}
-            />
-          </Grid>
-        )}
+        <CustomerDocumentsGallery data={data} />
 
         {auth?.user?.userType !== 'marketing' && (
           <Grid item xs={12}>
@@ -585,11 +763,58 @@ function PreviewLead(props) {
                         )}
                       </TableCell>
                       <TableCell>
-                        {log.attachment ? (
-                          <a href={log.attachment.startsWith('http') ? log.attachment : `${global.baseURL}/${log.attachment}`} target="_blank" rel="noreferrer">
-                            View
-                          </a>
-                        ) : '-'}
+                        {(() => {
+                          if (log.documents && log.documents.length > 0) {
+                            return (
+                              <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                                {log.documents.map((d, idx) => {
+                                  const url = d.documentFile?.startsWith('http')
+                                    ? d.documentFile
+                                    : `${global.baseURL}/${d.documentFile}`;
+                                  return (
+                                    <Chip
+                                      key={idx}
+                                      size="small"
+                                      label={d.documentType || `Doc ${idx + 1}`}
+                                      component="a"
+                                      href={url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      clickable
+                                      color="primary"
+                                      variant="outlined"
+                                      sx={{ m: 0.25, fontSize: '0.72rem', cursor: 'pointer' }}
+                                    />
+                                  );
+                                })}
+                              </Stack>
+                            );
+                          }
+                          const files = log.attachments && log.attachments.length > 0
+                            ? log.attachments
+                            : log.attachment ? [log.attachment] : [];
+                          if (files.length === 0) return '-';
+                          if (files.length === 1) {
+                            const url = files[0].startsWith('http') ? files[0] : `${global.baseURL}/${files[0]}`;
+                            return (
+                              <a href={url} target="_blank" rel="noreferrer">
+                                View
+                              </a>
+                            );
+                          }
+                          return (
+                            <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                              {files.map((file, idx) => {
+                                const url = file.startsWith('http') ? file : `${global.baseURL}/${file}`;
+                                return (
+                                  <a key={idx} href={url} target="_blank" rel="noreferrer" style={{ marginRight: '6px' }}>
+                                    View {idx + 1}
+                                  </a>
+                                );
+                              })}
+                            </Stack>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         {log.createdBy?.employee
@@ -670,13 +895,61 @@ function PreviewLead(props) {
               </Grid>
               
               <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="textSecondary">Attachment</Typography>
+                <Typography variant="subtitle2" color="textSecondary">Attachments</Typography>
                 <Typography variant="body1">
-                  {selectedLog.attachment ? (
-                    <a href={selectedLog.attachment.startsWith('http') ? selectedLog.attachment : `${global.baseURL}/${selectedLog.attachment}`} target="_blank" rel="noreferrer">
-                      View Attachment
-                    </a>
-                  ) : 'N/A'}
+                  {(() => {
+                    if (selectedLog.documents && selectedLog.documents.length > 0) {
+                      return (
+                        <Stack direction="row" spacing={1} flexWrap="wrap">
+                          {selectedLog.documents.map((d, idx) => {
+                            const url = d.documentFile?.startsWith('http')
+                              ? d.documentFile
+                              : `${global.baseURL}/${d.documentFile}`;
+                            return (
+                              <Button
+                                key={idx}
+                                variant="outlined"
+                                size="small"
+                                href={url}
+                                target="_blank"
+                                rel="noreferrer"
+                                component="a"
+                                startIcon={<Iconify icon="mdi:file-document-outline" />}
+                                sx={{ textTransform: 'none', my: 0.5 }}
+                              >
+                                {d.documentType || `Document #${idx + 1}`}
+                              </Button>
+                            );
+                          })}
+                        </Stack>
+                      );
+                    }
+                    const files = (selectedLog.attachments && selectedLog.attachments.length > 0)
+                      ? selectedLog.attachments
+                      : (selectedLog.attachment ? [selectedLog.attachment] : []);
+                    if (files.length === 0) return 'N/A';
+                    return (
+                      <Stack direction="row" spacing={1} flexWrap="wrap">
+                        {files.map((file, idx) => {
+                          const url = file.startsWith('http') ? file : `${global.baseURL}/${file}`;
+                          return (
+                            <Button
+                              key={idx}
+                              variant="outlined"
+                              size="small"
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              component="a"
+                              sx={{ textTransform: 'none', my: 0.5 }}
+                            >
+                              Attachment {files.length > 1 ? `#${idx + 1}` : ''}
+                            </Button>
+                          );
+                        })}
+                      </Stack>
+                    );
+                  })()}
                 </Typography>
               </Grid>
 
@@ -757,25 +1030,98 @@ function PreviewLead(props) {
               />
             </Grid>
           <Grid item xs={12}>
-            {logForm.uploadedFile ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, px: 2 }}>
-                <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {logForm.uploadedFile.name}
-                </Typography>
-                <IconButton size="small" onClick={() => setLogForm({ ...logForm, uploadedFile: null })} color="error" sx={{ ml: 1 }}>
-                  <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
-                </IconButton>
-              </Box>
-            ) : (
-              <Button variant="outlined" component="label" fullWidth sx={{ textTransform: 'none' }}>
-                Upload Photo
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  onChange={(e) => setLogForm({ ...logForm, uploadedFile: e.target.files[0] })}
-                />
-              </Button>
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              sx={{ textTransform: 'none', py: 1 }}
+            >
+              {callLogFiles.length > 0 ? '+ Upload More Proofs' : 'Upload Proofs'}
+              <input
+                type="file"
+                hidden
+                multiple
+                accept="image/*,application/pdf,.pdf"
+                onChange={handleCallLogFilesSelect}
+              />
+            </Button>
+
+            {callLogFiles.length > 0 && (
+              <Stack spacing={1} sx={{ mt: 1.5, maxHeight: 180, overflowY: 'auto' }}>
+                {callLogFiles.map((file, idx) => (
+                  <Box
+                    key={`${file.name}-${idx}`}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      p: 0.8,
+                      px: 1.5,
+                      bgcolor: 'background.neutral',
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+                      {file.type?.includes('pdf') || file.name?.toLowerCase().endsWith('.pdf') ? (
+                        <Box
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 0.5,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: 'error.lighter',
+                            color: 'error.main',
+                            fontWeight: 700,
+                            fontSize: '0.65rem',
+                          }}
+                        >
+                          PDF
+                        </Box>
+                      ) : (
+                        <Box
+                          component="img"
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            objectFit: 'cover',
+                            borderRadius: 0.5,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: '#fff',
+                          }}
+                        />
+                      )}
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        >
+                          {file.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {(file.size / 1024).toFixed(1)} KB
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRemoveCallLogFile(idx)}
+                      color="error"
+                      sx={{ ml: 1 }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ))}
+              </Stack>
             )}
           </Grid>
             <Grid item xs={12}>
@@ -816,6 +1162,37 @@ function PreviewLead(props) {
           <Button onClick={() => setOpenRejectDialog(false)}>Cancel</Button>
           <Button variant="contained" color="error" onClick={handleTLRejectConfirm}>
             Confirm Reject
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bullion Desk Reject Dialog */}
+      <Dialog open={openBullionRejectDialog} onClose={() => setOpenBullionRejectDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ color: '#d32f2f', fontWeight: 'bold' }}>Reject Lead (Bullion Desk)</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+            Please enter remarks/reason for rejecting this lead.
+          </Typography>
+          <TextField
+            fullWidth
+            label="Rejection Reason"
+            variant="outlined"
+            value={bullionRejectReason}
+            onChange={(e) => setBullionRejectReason(e.target.value)}
+            multiline
+            rows={3}
+            autoFocus
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setOpenBullionRejectDialog(false)} disabled={submittingBullionReject}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleBullionRejectConfirm}
+            disabled={submittingBullionReject || !bullionRejectReason.trim()}
+          >
+            {submittingBullionReject ? 'Rejecting...' : 'Confirm Reject'}
           </Button>
         </DialogActions>
       </Dialog>

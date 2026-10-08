@@ -206,13 +206,14 @@ export default function Transit() {
         },
       }
     ) => {
-      if (!query.branch) query.branch = branch?._id || branch;
+      const currentBranch = auth.user?.branch?._id || auth.user?.branch || branch?._id || branch;
+      if (currentBranch) query.branch = currentBranch;
       findTransit(query).then((data) => {
         setData(Array.isArray(data?.data) ? data.data : []);
         setOpenBackdrop(false);
       });
     },
-    [branch?._id || branch]
+    [auth.user?.branch, branch]
   );
 
   useEffect(() => {

@@ -15,6 +15,14 @@ async function create(req, res) {
   try {
     const payload = req.body;
     payload.createdBy = req.user?._id;
+    if (!payload.batchNumber || (typeof payload.batchNumber === 'string' && !payload.batchNumber.trim())) {
+      payload.batchNumber = await service.generateUniqueBatchNumber();
+    } else {
+      const exists = await require('../../models/melting').exists({ batchNumber: payload.batchNumber });
+      if (exists) {
+        payload.batchNumber = await service.generateUniqueBatchNumber();
+      }
+    }
     const data = await service.create(payload);
 
     // Update sales status for the selected ornaments
@@ -80,4 +88,13 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { find, create, update, remove };
+async function getNextBatchNumber(req, res) {
+  try {
+    const batchNumber = await service.generateUniqueBatchNumber();
+    res.json({ status: true, data: { batchNumber } });
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
+  }
+}
+
+module.exports = { find, create, update, remove, getNextBatchNumber };

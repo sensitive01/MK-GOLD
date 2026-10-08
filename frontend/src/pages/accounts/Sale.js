@@ -111,6 +111,7 @@ function applySortFilter(array, comparator, query) {
     const q = query.trim().toLowerCase();
     results = filter(results, (row) => {
       const billId = String(row.billId || '').toLowerCase();
+      const articleNumber = String(row.articleNumber || '').toLowerCase();
       const customerName = String(row.customer?.name || '').toLowerCase();
       const phoneNumber = String(row.customer?.phoneNumber || '').toLowerCase();
       const branchName = String(row.branch?.branchName || '').toLowerCase();
@@ -122,6 +123,7 @@ function applySortFilter(array, comparator, query) {
 
       return (
         billId.includes(q) ||
+        articleNumber.includes(q) ||
         customerName.includes(q) ||
         phoneNumber.includes(q) ||
         branchName.includes(q) ||
@@ -437,7 +439,17 @@ export default function Sale() {
               handleOpenDeleteModal();
             }}
           >
-            <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap">
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              spacing={1.5}
+              flexWrap="wrap"
+              sx={{
+                width: '100%',
+                gap: 1.5,
+                justifyContent: { xs: 'flex-start', md: 'flex-end' },
+              }}
+            >
               {(values.fromDate || values.toDate || values.branch) && (
                 <Button
                   variant="contained"
@@ -445,121 +457,126 @@ export default function Sale() {
                   color="error"
                   startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
                   onClick={handleClearFilter}
-                  sx={{ height: 40 }}
+                  sx={{ height: 40, width: { xs: '100%', sm: 'auto' } }}
                 >
                   Clear Filter
                 </Button>
               )}
-              <LocalizationProvider dateAdapter={AdapterMoment}>
-                <DesktopDatePicker
-                  label="From Date"
-                  inputFormat="DD-MM-YYYY"
-                  value={values.fromDate}
-                  onChange={(val) => handleDateChange('fromDate', val)}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      size="small"
-                      InputLabelProps={{
-                        ...params.InputLabelProps,
-                        shrink: true,
-                        sx: {
-                          color: '#637381',
-                          fontWeight: 500,
-                          bgcolor: '#ffffff',
-                          px: 0.5,
-                          '&.Mui-focused': {
-                            color: 'primary.main',
+              <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                <LocalizationProvider dateAdapter={AdapterMoment}>
+                  <DesktopDatePicker
+                    label="From Date"
+                    inputFormat="DD-MM-YYYY"
+                    value={values.fromDate}
+                    onChange={(val) => handleDateChange('fromDate', val)}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        size="small"
+                        InputLabelProps={{
+                          ...params.InputLabelProps,
+                          shrink: true,
+                          sx: {
+                            color: '#637381',
+                            fontWeight: 500,
+                            bgcolor: '#ffffff',
+                            px: 0.5,
+                            '&.Mui-focused': {
+                              color: 'primary.main',
+                            },
                           },
-                        },
-                      }}
-                      inputProps={{
-                        ...params.inputProps,
-                        placeholder: 'dd-mm-yyyy',
-                      }}
-                      sx={{
-                        width: { xs: 140, sm: 165 },
-                        '& .MuiOutlinedInput-root': {
-                          height: 40,
-                          color: '#212B36',
-                          fontWeight: 500,
-                          bgcolor: '#ffffff',
-                          borderRadius: 1,
-                          '& fieldset': {
-                            borderColor: '#cfd8dc',
+                        }}
+                        inputProps={{
+                          ...params.inputProps,
+                          placeholder: 'dd-mm-yyyy',
+                        }}
+                        sx={{
+                          flex: { xs: 1, sm: 'none' },
+                          width: { xs: '100%', sm: 165 },
+                          '& .MuiOutlinedInput-root': {
+                            height: 40,
+                            color: '#212B36',
+                            fontWeight: 500,
+                            bgcolor: '#ffffff',
+                            borderRadius: 1,
+                            '& fieldset': {
+                              borderColor: '#cfd8dc',
+                            },
+                            '&:hover fieldset': {
+                              borderColor: '#90a4ae',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: 'primary.main',
+                            },
                           },
-                          '&:hover fieldset': {
-                            borderColor: '#90a4ae',
+                          '& .MuiSvgIcon-root, & .MuiIconButton-root': {
+                            color: '#212B36',
                           },
-                          '&.Mui-focused fieldset': {
-                            borderColor: 'primary.main',
+                        }}
+                      />
+                    )}
+                  />
+                </LocalizationProvider>
+                <LocalizationProvider dateAdapter={AdapterMoment}>
+                  <DesktopDatePicker
+                    label="To Date"
+                    inputFormat="DD-MM-YYYY"
+                    value={values.toDate}
+                    onChange={(val) => handleDateChange('toDate', val)}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        size="small"
+                        InputLabelProps={{
+                          ...params.InputLabelProps,
+                          shrink: true,
+                          sx: {
+                            color: '#637381',
+                            fontWeight: 500,
+                            bgcolor: '#ffffff',
+                            px: 0.5,
+                            '&.Mui-focused': {
+                              color: 'primary.main',
+                            },
                           },
-                        },
-                        '& .MuiSvgIcon-root, & .MuiIconButton-root': {
-                          color: '#212B36',
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </LocalizationProvider>
-              <LocalizationProvider dateAdapter={AdapterMoment}>
-                <DesktopDatePicker
-                  label="To Date"
-                  inputFormat="DD-MM-YYYY"
-                  value={values.toDate}
-                  onChange={(val) => handleDateChange('toDate', val)}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      size="small"
-                      InputLabelProps={{
-                        ...params.InputLabelProps,
-                        shrink: true,
-                        sx: {
-                          color: '#637381',
-                          fontWeight: 500,
-                          bgcolor: '#ffffff',
-                          px: 0.5,
-                          '&.Mui-focused': {
-                            color: 'primary.main',
+                        }}
+                        inputProps={{
+                          ...params.inputProps,
+                          placeholder: 'dd-mm-yyyy',
+                        }}
+                        sx={{
+                          flex: { xs: 1, sm: 'none' },
+                          width: { xs: '100%', sm: 165 },
+                          '& .MuiOutlinedInput-root': {
+                            height: 40,
+                            color: '#212B36',
+                            fontWeight: 500,
+                            bgcolor: '#ffffff',
+                            borderRadius: 1,
+                            '& fieldset': {
+                              borderColor: '#cfd8dc',
+                            },
+                            '&:hover fieldset': {
+                              borderColor: '#90a4ae',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: 'primary.main',
+                            },
                           },
-                        },
-                      }}
-                      inputProps={{
-                        ...params.inputProps,
-                        placeholder: 'dd-mm-yyyy',
-                      }}
-                      sx={{
-                        width: { xs: 140, sm: 165 },
-                        '& .MuiOutlinedInput-root': {
-                          height: 40,
-                          color: '#212B36',
-                          fontWeight: 500,
-                          bgcolor: '#ffffff',
-                          borderRadius: 1,
-                          '& fieldset': {
-                            borderColor: '#cfd8dc',
+                          '& .MuiSvgIcon-root, & .MuiIconButton-root': {
+                            color: '#212B36',
                           },
-                          '&:hover fieldset': {
-                            borderColor: '#90a4ae',
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: 'primary.main',
-                          },
-                        },
-                        '& .MuiSvgIcon-root, & .MuiIconButton-root': {
-                          color: '#212B36',
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </LocalizationProvider>
+                        }}
+                      />
+                    )}
+                  />
+                </LocalizationProvider>
+              </Stack>
               <FormControl
                 size="small"
                 sx={{
-                  minWidth: 150,
+                  width: { xs: '100%', sm: 'auto' },
+                  minWidth: { xs: '100%', sm: 160 },
                   '& .MuiOutlinedInput-root': {
                     height: 40,
                     color: '#212B36',
@@ -635,7 +652,7 @@ export default function Sale() {
                 />
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row, index) => {
-                    const { _id, billId, saleType, netAmount, branch, purchaseType, status, createdAt } = row;
+                    const { _id, billId, articleNumber, saleType, netAmount, branch, purchaseType, status, createdAt } = row;
                     const selectedData = selected.indexOf(_id) !== -1;
                     const isPledged = saleType?.toLowerCase() !== 'physical';
                     const isReleasePending = isPledged && (
@@ -1057,7 +1074,19 @@ function Status(props) {
       if (isReleaseFinance) {
         const rels = row?.release || [];
         isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+        const customerBanks = row?.customer?.bank || [];
+        const isRelVirtual = rels.some((r) => {
+          const targetBankId = r.bank?._id || r.bank;
+          const matchedBank = customerBanks.find(
+            (b) =>
+              (targetBankId && String(b._id) === String(targetBankId)) ||
+              (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+          );
+          const acctType = (matchedBank?.accountType || r.bank?.accountType || '').toLowerCase();
+          return acctType === 'virtual' || Boolean(matchedBank?.isVerified);
+        }) || (customerBanks.some((b) => (b.accountType || '').toLowerCase() === 'virtual') && isBankRequired);
         const isRelVerified = Boolean(
+          isRelVirtual ||
           (row?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
         );
         isBankPending = isBankRequired && !isRelVerified;
@@ -1071,7 +1100,11 @@ function Status(props) {
         ) || (typeof row?.bank === 'object' && row?.bank?.accountNo ? row?.bank : null);
         const saleAcct = matchedSaleBank?.accountNo || row?.bank?.accountNo;
         const saleId = matchedSaleBank?._id || targetSaleBankId;
+        const isVirtualBank = (matchedSaleBank?.accountType || row?.bank?.accountType || '').toLowerCase() === 'virtual';
+        const isBankDocVerified = Boolean(matchedSaleBank?.isVerified || row?.bank?.isVerified);
         const isSaleVerified = Boolean(
+          isVirtualBank ||
+          isBankDocVerified ||
           (row?.financePayments || []).some(
             (fp) => fp.isVerified && (
               fp.stage === 'sale' ||
@@ -1152,7 +1185,7 @@ function Status(props) {
             handleVerify('finance');
           }}
         >
-          Update Finance
+          Process Funds
         </Button>
       </Stack>
     );
@@ -1168,7 +1201,19 @@ function Status(props) {
       if (isReleaseFinance) {
         const rels = row?.release || [];
         isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+        const customerBanks = row?.customer?.bank || [];
+        const isRelVirtual = rels.some((r) => {
+          const targetBankId = r.bank?._id || r.bank;
+          const matchedBank = customerBanks.find(
+            (b) =>
+              (targetBankId && String(b._id) === String(targetBankId)) ||
+              (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+          );
+          const acctType = (matchedBank?.accountType || r.bank?.accountType || '').toLowerCase();
+          return acctType === 'virtual' || Boolean(matchedBank?.isVerified);
+        }) || (customerBanks.some((b) => (b.accountType || '').toLowerCase() === 'virtual') && isBankRequired);
         const isRelVerified = Boolean(
+          isRelVirtual ||
           (row?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
         );
         isBankPendingVerification = isBankRequired && !isRelVerified;
@@ -1182,7 +1227,11 @@ function Status(props) {
         ) || (typeof row?.bank === 'object' && row?.bank?.accountNo ? row?.bank : null);
         const saleAcct = matchedSaleBank?.accountNo || row?.bank?.accountNo;
         const saleId = matchedSaleBank?._id || targetSaleBankId;
+        const isVirtualBank = (matchedSaleBank?.accountType || row?.bank?.accountType || '').toLowerCase() === 'virtual';
+        const isBankDocVerified = Boolean(matchedSaleBank?.isVerified || row?.bank?.isVerified);
         const isSaleVerified = Boolean(
+          isVirtualBank ||
+          isBankDocVerified ||
           (row?.financePayments || []).some(
             (fp) => fp.isVerified && (
               fp.stage === 'sale' ||
@@ -1208,7 +1257,7 @@ function Status(props) {
                   cursor: 'not-allowed',
                 }}
               >
-                {isReleaseFinance ? 'Finance Pay Release' : 'Finance Update'}
+                {isReleaseFinance ? 'Finance Pay Release' : 'Process Funds'}
               </Button>
             </span>
           </Tooltip>
@@ -1216,7 +1265,7 @@ function Status(props) {
       } else {
         content = (
           <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
-            {isReleaseFinance ? 'Finance Pay Release' : 'Finance Update'}
+            {isReleaseFinance ? 'Finance Pay Release' : 'Process Funds'}
           </Button>
         );
       }
@@ -1318,7 +1367,19 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         if (isPledgedStage) {
           const rels = saleDetails?.release || [];
           const bankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+          const customerBanks = saleDetails?.customer?.bank || [];
+          const isRelVirtual = rels.some((r) => {
+            const targetBankId = r.bank?._id || r.bank;
+            const matchedBank = customerBanks.find(
+              (b) =>
+                (targetBankId && String(b._id) === String(targetBankId)) ||
+                (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+            );
+            const acctType = (matchedBank?.accountType || r.bank?.accountType || '').toLowerCase();
+            return acctType === 'virtual' || Boolean(matchedBank?.isVerified);
+          }) || (customerBanks.some((b) => (b.accountType || '').toLowerCase() === 'virtual') && bankRequired);
           const isRelVerified = Boolean(
+            isRelVirtual ||
             (saleDetails?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
           );
           if (bankRequired && !isRelVerified) {
@@ -1332,8 +1393,11 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           const customerBanks = saleDetails?.customer?.bank || [];
           const saleBankDoc = customerBanks.find((b) => String(b._id) === String(targetSaleBankId));
           const saleAcct = saleBankDoc?.accountNo || saleDetails?.bank?.accountNo;
+          const isVirtualBank = (saleBankDoc?.accountType || saleDetails?.bank?.accountType || '').toLowerCase() === 'virtual';
+          const isBankDocVerified = Boolean(saleBankDoc?.isVerified || saleDetails?.bank?.isVerified);
           const isSaleVerified = Boolean(
-            saleBankDoc?.isVerified ||
+            isVirtualBank ||
+            isBankDocVerified ||
             (saleDetails?.financePayments || []).some(
               (fp) => fp.isVerified && (
                 fp.stage === 'sale' ||
@@ -1482,7 +1546,32 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
   const bankRequired = isPledgedReleaseStage
     ? (saleDetails?.release || []).some((r) => r.paymentType === 'bank' || r.bank)
     : (saleDetails?.paymentType === 'bank' || (saleDetails?.paymentType === 'partial' && Number(saleDetails?.bankAmount) > 0));
-  const isBankPendingVerification = type === 'finance' && bankRequired && !saleDetails?.isBankVerified;
+
+  const customerBanks = saleDetails?.customer?.bank || [];
+  let isEffectiveBankVerified = false;
+  if (isPledgedReleaseStage) {
+    const rels = saleDetails?.release || [];
+    const isRelVirtual = rels.some((r) => {
+      const targetBankId = r.bank?._id || r.bank;
+      const matchedBank = customerBanks.find(
+        (b) =>
+          (targetBankId && String(b._id) === String(targetBankId)) ||
+          (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+      );
+      const acctType = (matchedBank?.accountType || r.bank?.accountType || '').toLowerCase();
+      return acctType === 'virtual' || Boolean(matchedBank?.isVerified);
+    }) || (customerBanks.some((b) => (b.accountType || '').toLowerCase() === 'virtual') && bankRequired);
+    isEffectiveBankVerified = Boolean(
+      isRelVirtual ||
+      (saleDetails?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
+    );
+  } else {
+    const targetSaleBankId = saleDetails?.bank?._id || saleDetails?.bank;
+    const targetSaleBank = customerBanks.find((b) => String(b._id) === String(targetSaleBankId)) || (typeof saleDetails?.bank === 'object' ? saleDetails?.bank : null);
+    const isVirtualSaleBank = (targetSaleBank?.accountType || saleDetails?.bank?.accountType || '').toLowerCase() === 'virtual';
+    isEffectiveBankVerified = Boolean(saleDetails?.isBankVerified || isVirtualSaleBank || targetSaleBank?.isVerified);
+  }
+  const isBankPendingVerification = type === 'finance' && bankRequired && !isEffectiveBankVerified;
 
   useEffect(() => {
     if (open && id) {

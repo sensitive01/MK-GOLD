@@ -54,7 +54,13 @@ function applySortFilter(array, comparator, query) {
     return a[1] - b[1];
   });
   if (query) {
-    return filter(array, (row) => row.customer?.phoneNumber.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    const q = query.toLowerCase().trim();
+    return filter(array, (row) =>
+      row.customer?.phoneNumber?.toLowerCase().includes(q) ||
+      String(row.billId || '').toLowerCase().includes(q) ||
+      String(row.articleNumber || '').toLowerCase().includes(q) ||
+      row.customer?.name?.toLowerCase().includes(q)
+    );
   }
   return stabilizedThis?.map((el) => el[0]);
 }
@@ -154,7 +160,7 @@ export default function Sale({
                 </TableHead>
                 <TableBody>
                   {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const { _id, billId, saleType, netAmount, branch, purchaseType, status, createdAt } = row;
+                    const { _id, billId, articleNumber, saleType, netAmount, branch, purchaseType, status, createdAt } = row;
 
                     return (
                       <TableRow hover key={_id} tabIndex={-1}>

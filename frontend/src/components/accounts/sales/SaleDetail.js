@@ -75,7 +75,19 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
       if (isReleaseFinance) {
         const rels = data?.release || [];
         isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+        const customerBanks = data?.customer?.bank || [];
+        const isRelVirtual = rels.some((r) => {
+          const targetBankId = r.bank?._id || r.bank;
+          const matchedBank = customerBanks.find(
+            (b) =>
+              (targetBankId && String(b._id) === String(targetBankId)) ||
+              (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+          );
+          const acctType = (matchedBank?.accountType || r.bank?.accountType || '').toLowerCase();
+          return acctType === 'virtual' || Boolean(matchedBank?.isVerified);
+        }) || (customerBanks.some((b) => (b.accountType || '').toLowerCase() === 'virtual') && isBankRequired);
         const isRelVerified = Boolean(
+          isRelVirtual ||
           (data?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
         );
         isBankPending = isBankRequired && !isRelVerified;
@@ -89,7 +101,11 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
         ) || (typeof data?.bank === 'object' && data?.bank?.accountNo ? data?.bank : null);
         const saleAcct = matchedSaleBank?.accountNo || data?.bank?.accountNo;
         const saleId = matchedSaleBank?._id || targetSaleBankId;
+        const isVirtualBank = (matchedSaleBank?.accountType || data?.bank?.accountType || '').toLowerCase() === 'virtual';
+        const isBankDocVerified = Boolean(matchedSaleBank?.isVerified || data?.bank?.isVerified);
         const isSaleVerified = Boolean(
+          isVirtualBank ||
+          isBankDocVerified ||
           (data?.financePayments || []).some(
             (fp) => fp.isVerified && (
               fp.stage === 'sale' ||
@@ -366,6 +382,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 <TableCell align="left">Pledge Id</TableCell>
                 <TableCell align="left">Pledged In</TableCell>
                 <TableCell align="left">Weight (Grams)</TableCell>
+                <TableCell align="left">Average Purity (%)</TableCell>
                 <TableCell align="left">Pledge amount</TableCell>
                 <TableCell align="left">Pledged date</TableCell>
                 <TableCell align="left">Total release amount</TableCell>
@@ -378,6 +395,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                   <TableCell align="left">{e.pledgeId || '-'}</TableCell>
                   <TableCell align="left">{sentenceCase(e.pledgedIn || '') || '-'}</TableCell>
                   <TableCell align="left">{e.weight != null && !isNaN(e.weight) ? Number(e.weight).toFixed(2) : '-'}</TableCell>
+                  <TableCell align="left">{e.averagePurity != null && !isNaN(e.averagePurity) && e.averagePurity !== '' ? `${e.averagePurity}%` : '-'}</TableCell>
                   <TableCell align="left">{e.pledgeAmount != null && !isNaN(e.pledgeAmount) ? Math.round(e.pledgeAmount) : '-'}</TableCell>
                   <TableCell align="left">{e.pledgedDate ? moment(e.pledgedDate).format('YYYY-MM-DD') : '-'}</TableCell>
                   <TableCell align="left">{e.payableAmount != null && !isNaN(e.payableAmount) ? Math.round(e.payableAmount) : '-'}</TableCell>
@@ -386,12 +404,12 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
               ))}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={9} />
+                  <TableCell colSpan={8} />
                 </TableRow>
               )}
               {data?.release?.length === 0 && (
                 <TableRow>
-                  <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                  <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
                     <Paper
                       sx={{
                         textAlign: 'center',
@@ -423,6 +441,13 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                   </TableCell>
                   <TableCell align="left">
                     {data.release.reduce((prev, cur) => prev + (+cur.weight || 0), 0).toFixed(2)}
+                  </TableCell>
+                  <TableCell align="left">
+                    {(() => {
+                      const totalW = data.release.reduce((p, c) => p + (+c.weight || 0), 0);
+                      const fineW = data.release.reduce((p, c) => p + ((+c.weight || 0) * (+c.averagePurity || 0)), 0);
+                      return totalW > 0 && fineW > 0 ? `${(fineW / totalW).toFixed(2)}%` : '-';
+                    })()}
                   </TableCell>
                   <TableCell align="left">
                     ₹{Math.round(data.release.reduce((prev, cur) => prev + (+cur.pledgeAmount || 0), 0)).toLocaleString('en-IN')}
@@ -1731,7 +1756,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
       <Stack
         direction="row"
         spacing={1.5}
-        alignItems="center"
+        alignItems="stretch"
         justifyContent={{ xs: 'center', lg: 'flex-end' }}
         sx={{
           flexWrap: 'wrap',
@@ -1781,7 +1806,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 },
               }}
             >
-              <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1} sx={{ minHeight: 24 }}>
                 <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
                   <Iconify
                     icon={isSignature ? 'fluent:signature-24-filled' : 'mdi:card-account-details-outline'}
@@ -2029,13 +2054,13 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 <Stack
                   direction={{ xs: 'column', lg: 'row' }}
                   spacing={{ xs: 2, sm: 2.5 }}
-                  alignItems={{ xs: 'center', lg: 'center' }}
+                  alignItems={{ xs: 'center', lg: 'flex-start' }}
                   justifyContent="space-between"
                 >
                   <Stack
                     direction={{ xs: 'column', sm: 'row' }}
                     spacing={{ xs: 2, sm: 2.5 }}
-                    alignItems="center"
+                    alignItems={{ xs: 'center', sm: 'flex-start' }}
                     sx={{ flexGrow: 1, width: { xs: '100%', lg: 'auto' } }}
                   >
                     <Avatar
@@ -2043,8 +2068,21 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                         ? data.customer.profileImage.uploadedFile
                         : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`) : null}
                       alt={data?.customer?.name}
-                      sx={{ width: { xs: 75, sm: 90 }, height: { xs: 75, sm: 90 }, flexShrink: 0 }}
-                    />
+                      sx={{
+                        width: { xs: 72, sm: 84 },
+                        height: { xs: 72, sm: 84 },
+                        flexShrink: 0,
+                        bgcolor: 'primary.main',
+                        color: '#fff',
+                        fontSize: '1.75rem',
+                        fontWeight: 700,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        border: '2px solid',
+                        borderColor: 'divider',
+                      }}
+                    >
+                      {(data?.customer?.name || 'C').charAt(0).toUpperCase()}
+                    </Avatar>
                     <Stack
                       spacing={0.75}
                       sx={{
@@ -2053,7 +2091,9 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                         textAlign: { xs: 'center', sm: 'left' },
                       }}
                     >
-                      <Typography variant="h5" sx={{ fontWeight: 700 }}>{data?.customer?.name || 'N/A'}</Typography>
+                      <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.2 }}>
+                        {data?.customer?.name || 'N/A'}
+                      </Typography>
                       <Stack
                         direction={{ xs: 'column', sm: 'row' }}
                         spacing={{ xs: 0.75, sm: 2 }}
@@ -2061,13 +2101,15 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                         justifyContent={{ xs: 'center', sm: 'flex-start' }}
                         sx={{ color: 'text.secondary', flexWrap: 'wrap' }}
                       >
+                        {data?.customer?.email && (
+                          <Stack direction="row" spacing={0.5} alignItems="center">
+                            <Iconify icon="eva:email-fill" width={16} sx={{ color: 'primary.main', flexShrink: 0 }} />
+                            <Typography variant="body2">{data?.customer?.email}</Typography>
+                          </Stack>
+                        )}
                         <Stack direction="row" spacing={0.5} alignItems="center">
-                          <Iconify icon="eva:email-fill" width={18} />
-                          <Typography variant="body2">{data?.customer?.email || 'N/A'}</Typography>
-                        </Stack>
-                        <Stack direction="row" spacing={0.5} alignItems="center">
-                          <Iconify icon="eva:phone-fill" width={18} />
-                          <Typography variant="body2">
+                          <Iconify icon="eva:phone-fill" width={16} sx={{ color: 'primary.main', flexShrink: 0 }} />
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
                             {isAdmin || visiblePhoneField === 'primary'
                               ? data?.customer?.phoneNumber || 'N/A'
                               : global.maskPhoneNumber(data?.customer?.phoneNumber) || data?.customer?.phoneNumber || 'N/A'}
@@ -2083,12 +2125,12 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                           )}
                         </Stack>
                         <Stack direction="row" spacing={0.5} alignItems="center">
-                          <Iconify icon="eva:phone-outline" width={18} />
+                          <Iconify icon="eva:phone-outline" width={16} sx={{ color: 'text.disabled', flexShrink: 0 }} />
                           <Typography variant="body2">
                             Alt: {(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
                               ? (isAdmin || visiblePhoneField === 'alt'
-                                ? (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
-                                : (global.maskPhoneNumber(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) || (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)))
+                                  ? (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
+                                  : (global.maskPhoneNumber(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) || (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)))
                               : 'N/A'}
                           </Typography>
                           {!isAdmin && (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) && (
@@ -2112,12 +2154,12 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                           justifyContent: { xs: 'center', sm: 'flex-start' },
                         }}
                       >
-                        <Chip size="small" label={`Gender: ${data?.customer?.gender || 'N/A'}`} />
-                        <Chip size="small" label={`Marital Status: ${data?.customer?.maritalStatus || 'N/A'}`} />
+                        <Chip size="small" variant="outlined" label={`Gender: ${data?.customer?.gender || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
+                        <Chip size="small" variant="outlined" label={`Marital Status: ${data?.customer?.maritalStatus || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
                         {data?.customer?.employmentStatus && (
-                          <Chip size="small" label={`Employment: ${data?.customer?.employmentStatus}`} />
+                          <Chip size="small" variant="outlined" label={`Employment: ${data?.customer?.employmentStatus}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
                         )}
-                        <Chip size="small" label={`Source: ${data?.customer?.source || 'N/A'}`} />
+                        <Chip size="small" variant="outlined" label={`Source: ${data?.customer?.source || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
                       </Stack>
                     </Stack>
                   </Stack>
@@ -2243,7 +2285,10 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                       </Typography>
                       <Stack spacing={2}>
                         {releaseBanks.map((rb) => {
+                          const isRelVirtual = rb.fullBank?.accountType?.toLowerCase() === 'virtual';
                           const isRelVerified = Boolean(
+                            isRelVirtual ||
+                            rb.fullBank?.isVerified ||
                             (data?.financePayments || []).some(
                               (fp) => fp.isVerified && (
                                 fp.stage === 'release' ||
@@ -2285,7 +2330,10 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                         Sale Bank Detail (Customer Account):
                       </Typography>
                       {(() => {
+                        const isSaleVirtual = fullSaleBank?.accountType?.toLowerCase() === 'virtual';
                         const isSaleVerified = Boolean(
+                          isSaleVirtual ||
+                          fullSaleBank?.isVerified ||
                           (data?.financePayments || []).some(
                             (fp) => fp.isVerified && (
                               fp.stage === 'sale' ||
@@ -2324,24 +2372,27 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                         Disbursed Bank Details ({additionalFinanceBanks.length} Account{additionalFinanceBanks.length > 1 ? 's' : ''}):
                       </Typography>
                       <Stack spacing={2}>
-                        {additionalFinanceBanks.map((fb, idx) => (
-                          <BankDetailCard
-                            key={fb.payment?._id || idx}
-                            bank={fb.fullBank}
-                            paymentType={data?.paymentType}
-                            amount={fb.amount}
-                            isVerified={fb.isVerified}
-                            verifiedAmount={fb.verifiedAmount}
-                            verifiedProof={fb.verifiedProof}
-                            onVerifyClick={fb.isVerified ? undefined : () => {
-                              setSelectedVerifyTarget({
-                                payment: fb.payment,
-                                bank: fb.fullBank,
-                              });
-                              setOpenVerifyBankModal(true);
-                            }}
-                          />
-                        ))}
+                        {additionalFinanceBanks.map((fb, idx) => {
+                          const isFbVerified = Boolean(fb.fullBank?.accountType?.toLowerCase() === 'virtual' || fb.fullBank?.isVerified || fb.isVerified);
+                          return (
+                            <BankDetailCard
+                              key={fb.payment?._id || idx}
+                              bank={fb.fullBank}
+                              paymentType={data?.paymentType}
+                              amount={fb.amount}
+                              isVerified={isFbVerified}
+                              verifiedAmount={fb.verifiedAmount}
+                              verifiedProof={fb.verifiedProof}
+                              onVerifyClick={isFbVerified ? undefined : () => {
+                                setSelectedVerifyTarget({
+                                  payment: fb.payment,
+                                  bank: fb.fullBank,
+                                });
+                                setOpenVerifyBankModal(true);
+                              }}
+                            />
+                          );
+                        })}
                       </Stack>
                     </Grid>
                   )}
@@ -2381,7 +2432,14 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 <Table>
                   <TableBody>
                     <TableRow tabIndex={-1}>
-                      <TableCell align="left">Bill Id: {data?.billId}</TableCell>
+                      <TableCell align="left">
+                        Bill Id: {data?.billId}
+                        {data?.articleNumber && (
+                          <Box component="span" sx={{ display: 'block', color: 'primary.main', fontWeight: 600, fontSize: '0.8125rem', mt: 0.5 }}>
+                            Article No: {data.articleNumber}
+                          </Box>
+                        )}
+                      </TableCell>
                       <TableCell align="left">Branch: {sentenceCase(data.branch?.branchName ?? '')}</TableCell>
                       <TableCell align="left">Sale Type: {sentenceCase(data.saleType ?? '')}</TableCell>
                       <TableCell align="left">Payment Type: {sentenceCase(data.paymentType ?? '')}</TableCell>
@@ -2477,7 +2535,19 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
               if (isReleaseFinance) {
                 const rels = data?.release || [];
                 isBankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+                const customerBanks = data?.customer?.bank || [];
+                const isRelVirtual = rels.some((r) => {
+                  const targetBankId = r.bank?._id || r.bank;
+                  const matchedBank = customerBanks.find(
+                    (b) =>
+                      (targetBankId && String(b._id) === String(targetBankId)) ||
+                      (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+                  );
+                  const acctType = (matchedBank?.accountType || r.bank?.accountType || '').toLowerCase();
+                  return acctType === 'virtual' || Boolean(matchedBank?.isVerified);
+                }) || (customerBanks.some((b) => (b.accountType || '').toLowerCase() === 'virtual') && isBankRequired);
                 const isRelVerified = Boolean(
+                  isRelVirtual ||
                   (data?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
                 );
                 isBankPendingVerification = isBankRequired && !isRelVerified;
@@ -2491,7 +2561,11 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 ) || (typeof data?.bank === 'object' && data?.bank?.accountNo ? data?.bank : null);
                 const saleAcct = matchedSaleBank?.accountNo || data?.bank?.accountNo;
                 const saleId = matchedSaleBank?._id || targetSaleBankId;
+                const isVirtualBank = (matchedSaleBank?.accountType || data?.bank?.accountType || '').toLowerCase() === 'virtual';
+                const isBankDocVerified = Boolean(matchedSaleBank?.isVerified || data?.bank?.isVerified);
                 const isSaleVerified = Boolean(
+                  isVirtualBank ||
+                  isBankDocVerified ||
                   (data?.financePayments || []).some(
                     (fp) => fp.isVerified && (
                       fp.stage === 'sale' ||
@@ -2503,7 +2577,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 isBankPendingVerification = isBankRequired && !isSaleVerified;
               }
 
-              const buttonText = isReleaseFinance ? 'Finance Pay Release' : 'Update Finance';
+              const buttonText = isReleaseFinance ? 'Finance Pay Release' : 'Process Funds';
 
               return (
                 <Grid item xs={12}>
@@ -2645,7 +2719,19 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         if (isReleaseStage) {
           const rels = saleDetails?.release || [];
           const bankRequired = rels.some((r) => r.paymentType === 'bank' || r.bank);
+          const customerBanks = saleDetails?.customer?.bank || [];
+          const isRelVirtual = rels.some((r) => {
+            const targetBankId = r.bank?._id || r.bank;
+            const matchedBank = customerBanks.find(
+              (b) =>
+                (targetBankId && String(b._id) === String(targetBankId)) ||
+                (b.accountNo && r.bank?.accountNo && b.accountNo === r.bank.accountNo)
+            );
+            const acctType = (matchedBank?.accountType || r.bank?.accountType || '').toLowerCase();
+            return acctType === 'virtual' || Boolean(matchedBank?.isVerified);
+          }) || (customerBanks.some((b) => (b.accountType || '').toLowerCase() === 'virtual') && bankRequired);
           const isRelVerified = Boolean(
+            isRelVirtual ||
             (saleDetails?.financePayments || []).some((fp) => fp.isVerified && fp.stage === 'release')
           );
           if (bankRequired && !isRelVerified) {
@@ -2656,15 +2742,21 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           const isPartial = saleDetails?.paymentType === 'partial';
           const bankRequired = saleDetails?.paymentType === 'bank' || (isPartial && Number(values.bankAmount || saleDetails?.bankAmount) > 0);
           const targetSaleBankId = saleDetails?.bank?._id || saleDetails?.bank;
-          const saleAcct = saleDetails?.bank?.accountNo;
+          const targetSaleBank = (saleDetails?.customer?.bank || []).find((b) => String(b._id) === String(targetSaleBankId)) || (typeof saleDetails?.bank === 'object' ? saleDetails?.bank : null);
+          const saleAcct = targetSaleBank?.accountNo || saleDetails?.bank?.accountNo;
+          const isVirtualBank = (targetSaleBank?.accountType || saleDetails?.bank?.accountType || '').toLowerCase() === 'virtual';
+          const isBankDocVerified = Boolean(targetSaleBank?.isVerified || saleDetails?.bank?.isVerified);
           const isSaleVerified = Boolean(
+            isVirtualBank ||
+            isBankDocVerified ||
             (saleDetails?.financePayments || []).some(
               (fp) => fp.isVerified && (
                 fp.stage === 'sale' ||
                 (targetSaleBankId && String(fp.bank?.bankId || fp.bank?._id) === String(targetSaleBankId)) ||
                 (saleAcct && fp.bank?.accountNo && String(fp.bank.accountNo) === String(saleAcct))
               )
-            )
+            ) ||
+            (saleDetails?.saleType === 'physical' && saleDetails?.isBankVerified)
           );
           if (bankRequired && !isSaleVerified) {
             alert('Customer sale bank has not been verified yet. Please verify the bank in the Billing Summary before updating finance.');

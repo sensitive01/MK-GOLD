@@ -838,7 +838,13 @@ export default function TelecallerTLLeads({ title = "Telecaller-TL Business Lead
               Back
             </Button>
           </Stack>
-          <UpdateLead setToggleContainer={setToggleContainer} setNotify={setNotify} id={openId} />
+          <UpdateLead
+            setToggleContainer={setToggleContainer}
+            setToggleContainerType={setToggleContainerType}
+            fetchData={fetchData}
+            setNotify={setNotify}
+            id={openId}
+          />
         </Container>
       )}
 

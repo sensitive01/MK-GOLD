@@ -687,11 +687,66 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                   error={touched.purity && errors.purity && true}
                   label={touched.purity && errors.purity ? errors.purity : 'Purity (%)'}
                   InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                            %
+                          </Typography>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="primary"
+                              sx={{
+                                fontSize: '0.7rem',
+                                height: 24,
+                                py: 0,
+                                px: 0.75,
+                                ml: 0.5,
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                whiteSpace: 'nowrap',
+                              }}
+                              onClick={() => {
+                                const netWt = parseFloat(values.netWeight) || 0;
+                                const amt = parseFloat(values.netAmount) || 0;
+                                const rate = purchaseType === 'gold' ? goldRate : purchaseType === 'silver' ? silverRate : 0;
+                                if (netWt > 0 && rate > 0 && amt > 0) {
+                                  const calcP = parseFloat(((amt * 100) / (netWt * rate)).toFixed(2));
+                                  setFieldValue('purity', calcP > 0 ? calcP : '');
+                                  setFieldValue('calculatedAmount', amt);
+                                  setFieldValue('adjustment', 0);
+                                  setFieldValue('isManualAmount', false);
+                                  prevCalcRef.current = { netWeight: values.netWeight, purity: calcP, rate };
+                                } else if (!netWt) {
+                                  alert('Please enter Gross Weight first to determine Net Weight.');
+                                } else if (!amt) {
+                                  alert('Please enter Net Amount to calculate Purity.');
+                                }
+                              }}
+                            >
+                              Calc Purity
+                            </Button>
+                        </Stack>
+                      </InputAdornment>
+                    ),
+                  }}
+                  helperText={
+                    parseFloat(values.purity) > 100
+                      ? 'Warning: Purity exceeds 100%'
+                      : values.netAmount && !values.purity
+                      ? "Click 'Calc Purity' to generate from Net Amount"
+                      : ''
+                  }
+                  FormHelperTextProps={{
+                    sx: { color: parseFloat(values.purity) > 100 ? 'error.main' : 'primary.main' },
                   }}
                   fullWidth
                   onBlur={handleBlur}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    setFieldValue('purity', e.target.value);
+                    setFieldValue('isManualAmount', false);
+                  }}
                 />
               </Grid>
 
@@ -706,9 +761,24 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                     startAdornment: <InputAdornment position="start">₹</InputAdornment>,
                   }}
                   helperText={
-                    values.isManualAmount && values.adjustment !== 0
-                      ? `Rate: ₹${purchaseType === 'gold' ? goldRate : silverRate} | Base: ₹${Number(values.calculatedAmount || 0).toLocaleString('en-IN')} | Adj: ${values.adjustment > 0 ? `+₹${values.adjustment.toLocaleString('en-IN')}` : `-₹${Math.abs(values.adjustment).toLocaleString('en-IN')}`}`
-                      : `Rate: ₹${purchaseType === 'gold' ? goldRate : silverRate}`
+                    values.adjustment !== 0 ? (
+                      <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mt: 0.25, flexWrap: 'wrap' }}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          Rate: ₹{purchaseType === 'gold' ? goldRate : silverRate} | Base: ₹{Number(values.calculatedAmount || 0).toLocaleString('en-IN')}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontWeight: 700,
+                            color: values.adjustment > 0 ? 'success.main' : 'error.main',
+                          }}
+                        >
+                          | Adj: {values.adjustment > 0 ? `+₹${Number(values.adjustment).toLocaleString('en-IN')}` : `-₹${Math.abs(Number(values.adjustment)).toLocaleString('en-IN')}`}
+                        </Typography>
+                      </Stack>
+                    ) : (
+                      `Rate: ₹${purchaseType === 'gold' ? goldRate : silverRate} | Base: ₹${Number(values.calculatedAmount || 0).toLocaleString('en-IN')}`
+                    )
                   }
                   fullWidth
                   onBlur={handleBlur}
@@ -718,7 +788,7 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                     const calc = Number(values.calculatedAmount || 0);
                     const adj = manualVal === '' ? 0 : Math.round(numVal - calc);
                     setFieldValue('netAmount', manualVal);
-                    setFieldValue('isManualAmount', true);
+                    setFieldValue('isManualAmount', Boolean(manualVal !== '' && adj !== 0));
                     setFieldValue('adjustment', adj);
                   }}
                 />

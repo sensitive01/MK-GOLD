@@ -15,9 +15,12 @@ import { useState } from 'react';
 import { createLead } from '../../../apis/admin/lead';
 import { createFile } from '../../../apis/admin/fileupload';
 import global from '../../../utils/global';
+import CustomerDocumentsInput from '../../branch/lead/CustomerDocumentsInput';
 
 function CreateLead(props) {
-  const [file, setFile] = useState(null);
+  const [docEntries, setDocEntries] = useState([
+    { id: 1, type: 'Aadhar card', file: null, preview: '' },
+  ]);
   const [focusedField, setFocusedField] = useState(null);
 
   const schema = Yup.object({
@@ -52,7 +55,21 @@ function CreateLead(props) {
     },
     validationSchema: schema,
     onSubmit: (values) => {
-      createLead(values).then(async (data) => {
+      const formData = new FormData();
+      Object.keys(values).forEach((key) => {
+        if (values[key] !== null && values[key] !== undefined && values[key] !== '') {
+          formData.append(key, values[key]);
+        }
+      });
+
+      docEntries.forEach((entry) => {
+        if (entry.file) {
+          formData.append('uploadedFiles', entry.file);
+          formData.append('documentTypes', entry.type || 'Document');
+        }
+      });
+
+      createLead(formData).then(async (data) => {
         if (data.status === false) {
           props.setNotify({
             open: true,
@@ -60,21 +77,9 @@ function CreateLead(props) {
             severity: 'error',
           });
         } else {
-          if (file) {
-            try {
-              const formData = new FormData();
-              formData.append('uploadId', data.data.fileUpload.uploadId);
-              formData.append('uploadName', data.data.fileUpload.uploadName);
-              formData.append('uploadType', 'lead');
-              formData.append('uploadedFile', file);
-              await createFile(formData);
-            } catch (error) {
-              console.error('File upload failed:', error);
-            }
-          }
           props.setToggleContainer(false);
           resetForm();
-          setFile(null);
+          setDocEntries([{ id: Date.now(), type: 'Aadhar card', file: null, preview: '' }]);
           props.setNotify({
             open: true,
             message: 'Lead created successfully!',
@@ -244,18 +249,13 @@ function CreateLead(props) {
                   onChange={handleChange}
                 />
               </Grid>
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Attachment
-                </Typography>
-                <input
-                  type="file"
-                  onChange={(e) => setFile(e.target.files[0])}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}
-                />
-              </Grid>
-            </>
-          )}
+              </>
+            )}
+
+            <CustomerDocumentsInput
+              docEntries={docEntries}
+              setDocEntries={setDocEntries}
+            />
 
           <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
             <LoadingButton size="large" type="submit" variant="contained" sx={{ px: 8 }}>

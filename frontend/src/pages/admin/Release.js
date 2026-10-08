@@ -64,6 +64,7 @@ const TABLE_HEAD = [
   { id: 'pledgeId', label: 'Pledge Id', alignRight: false },
   { id: 'pledgedIn', label: 'Pledged In', alignRight: false },
   { id: 'weight', label: 'Weight', alignRight: false },
+  { id: 'averagePurity', label: 'Average Purity', alignRight: false },
   { id: 'pledgeAmount', label: 'Pledge Amount', alignRight: false },
   { id: 'pledgedDate', label: 'Pledged Date', alignRight: false },
   { id: 'payableAmount', label: 'Total Release Amount', alignRight: false },
@@ -518,6 +519,7 @@ export default function Release() {
                         <TableCell align="left">{pledgeId}</TableCell>
                         <TableCell align="left">{sentenceCase(pledgedIn)}</TableCell>
                         <TableCell align="left">{weight}</TableCell>
+                        <TableCell align="left">{row.averagePurity != null && row.averagePurity !== '' ? `${row.averagePurity}%` : '-'}</TableCell>
                         <TableCell align="left">{pledgeAmount}</TableCell>
                         <TableCell align="left">{moment(pledgedDate).format('YYYY-MM-DD')}</TableCell>
                         <TableCell align="left">{payableAmount}</TableCell>

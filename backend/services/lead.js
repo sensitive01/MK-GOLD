@@ -79,6 +79,10 @@ async function find(query = {}, user = null) {
     await Employee.populate(docs, { path: "movedToBusinessBy.employee", select: "name employeeId" });
     await User.populate(docs, { path: "tlApprovedBy", select: "username employee" });
     await Employee.populate(docs, { path: "tlApprovedBy.employee", select: "name employeeId" });
+    await User.populate(docs, { path: "bullionApprovedBy", select: "username employee" });
+    await Employee.populate(docs, { path: "bullionApprovedBy.employee", select: "name employeeId" });
+    await User.populate(docs, { path: "bullionRejectedBy", select: "username employee" });
+    await Employee.populate(docs, { path: "bullionRejectedBy.employee", select: "name employeeId" });
     
     return docs;
   } catch (err) {
@@ -106,6 +110,21 @@ async function findById(id) {
       })
       .populate({
         path: "tlApprovedBy",
+        select: "username employee",
+        populate: { path: "employee", select: "name employeeId" },
+      })
+      .populate({
+        path: "bullionApprovedBy",
+        select: "username employee",
+        populate: { path: "employee", select: "name employeeId" },
+      })
+      .populate({
+        path: "bullionRejectedBy",
+        select: "username employee",
+        populate: { path: "employee", select: "name employeeId" },
+      })
+      .populate({
+        path: "documents.uploadedBy",
         select: "username employee",
         populate: { path: "employee", select: "name employeeId" },
       })
@@ -207,6 +226,73 @@ async function tlReject(id, reason = "", user = null) {
   }
 }
 
+async function bullionApprove(id, user = null) {
+  try {
+    const update = {
+      bullionStatus: "approved",
+      bullionApprovedAt: new Date(),
+    };
+    if (user) {
+      update.bullionApprovedBy = user._id;
+      update.updatedBy = user._id;
+    }
+    const lead = await Lead.findByIdAndUpdate(
+      id,
+      { $set: update },
+      { new: true }
+    )
+      .populate("bullionApprovedBy", "username employee")
+      .populate({ path: "bullionApprovedBy", populate: { path: "employee", select: "name employeeId" } })
+      .populate({ path: "updatedBy", select: "username employee", populate: { path: "employee", select: "name" } })
+      .lean();
+
+    return lead;
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function bullionReject(id, reason = "", user = null) {
+  try {
+    const update = {
+      bullionStatus: "rejected",
+      bullionRejectionReason: reason,
+      bullionRejectedAt: new Date(),
+      status: "rejected",
+    };
+    if (user) {
+      update.bullionRejectedBy = user._id;
+      update.updatedBy = user._id;
+    }
+
+    const dispositionEntry = {
+      status: "rejected",
+      remark: reason ? `Rejected by Bullion Desk: ${reason}` : "Rejected by Bullion Desk",
+      createdAt: new Date(),
+    };
+    if (user) {
+      dispositionEntry.createdBy = user._id;
+    }
+
+    const lead = await Lead.findByIdAndUpdate(
+      id,
+      {
+        $set: update,
+        $push: { dispositions: dispositionEntry },
+      },
+      { new: true }
+    )
+      .populate("bullionRejectedBy", "username employee")
+      .populate({ path: "bullionRejectedBy", populate: { path: "employee", select: "name employeeId" } })
+      .populate({ path: "updatedBy", select: "username employee", populate: { path: "employee", select: "name" } })
+      .lean();
+
+    return lead;
+  } catch (err) {
+    throw err;
+  }
+}
+
 async function getNextTelecaller() {
   try {
     const User = require("../models/user");
@@ -267,12 +353,39 @@ async function create(data) {
 async function update(id, data, user = null) {
   try {
     const lead = await Lead.findById(id);
+    if (!lead) {
+      throw new Error("Lead not found");
+    }
     if (user) {
       if (user.userType?.toLowerCase() === 'telecalling' && !lead.assignedTo) {
         data.assignedTo = user._id;
       }
       data.updatedBy = user._id;
     }
+
+    // Clean up empty ObjectIds and numbers to avoid Mongoose CastErrors
+    if (!data.branch || data.branch === "" || data.branch === "null" || !mongoose.Types.ObjectId.isValid(data.branch)) {
+      delete data.branch;
+    }
+    if (data.weight === "" || data.weight === null || isNaN(Number(data.weight))) {
+      delete data.weight;
+    } else {
+      data.weight = Number(data.weight);
+    }
+    if (data.releaseAmount === "" || data.releaseAmount === null || isNaN(Number(data.releaseAmount))) {
+      data.releaseAmount = 0;
+    } else {
+      data.releaseAmount = Number(data.releaseAmount);
+    }
+    if (data.pledgedAmount === "" || data.pledgedAmount === null || isNaN(Number(data.pledgedAmount))) {
+      data.pledgedAmount = 0;
+    } else {
+      data.pledgedAmount = Number(data.pledgedAmount);
+    }
+    if (!data.date || data.date === "") {
+      delete data.date;
+    }
+
     return await Lead.findByIdAndUpdate(id, data, { new: true });
   } catch (err) {
     throw err;
@@ -293,6 +406,15 @@ async function remove(id) {
 async function addDisposition(id, payload, user = null) {
   try {
     const update = { $push: { dispositions: payload } };
+    if (payload.documents && payload.documents.length > 0) {
+      const docsWithMeta = payload.documents.map((d) => ({
+        documentType: d.documentType,
+        documentFile: d.documentFile,
+        uploadedBy: user?._id || payload.createdBy,
+        uploadedAt: new Date(),
+      }));
+      update.$push.documents = { $each: docsWithMeta };
+    }
     if ((payload.status === "Visited Branch" || payload.status === "Planning to Visit" || payload.status === "Business Closed") && payload.branch) {
       update.$set = { branch: payload.branch };
     }
@@ -489,9 +611,16 @@ async function assignExecutive(id, payload, user = null) {
   try {
     const updateData = {};
     if (payload.branch) updateData.branch = payload.branch;
-    if (payload.assignedExecutive) updateData.assignedExecutive = payload.assignedExecutive;
+    if (payload.assignedExecutive) {
+      updateData.assignedExecutive = payload.assignedExecutive;
+      updateData.bullionStatus = "approved";
+      updateData.bullionApprovedAt = new Date();
+    }
     if (payload.assignedExecutiveName) updateData.assignedExecutiveName = payload.assignedExecutiveName;
-    if (user) updateData.updatedBy = user._id;
+    if (user) {
+      updateData.updatedBy = user._id;
+      if (!updateData.bullionApprovedBy) updateData.bullionApprovedBy = user._id;
+    }
 
     return await Lead.findByIdAndUpdate(
       id,
@@ -555,4 +684,6 @@ module.exports = {
   moveToBusiness,
   tlApprove,
   tlReject,
+  bullionApprove,
+  bullionReject,
 };

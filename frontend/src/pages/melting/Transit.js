@@ -488,6 +488,8 @@ export default function Transit() {
                             <Label sx={{ bgcolor: '#7b1fa2', color: '#fff', fontWeight: 600 }}>Melted</Label>
                           ) : getTransitMeltingStatus(row) === 'partial' ? (
                             <Label color="info">Partially Melted</Label>
+                          ) : row.isMovedToMelting || status === 'moved_to_melting' ? (
+                            <Label color="secondary" sx={{ fontWeight: 600 }}>Ready for Melting</Label>
                           ) : (
                             <Label color={status?.toLowerCase() === 'moved' ? 'success' : 'warning'}>
                               {sentenceCase(status || '')}

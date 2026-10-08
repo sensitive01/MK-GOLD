@@ -218,6 +218,11 @@ export default function SalePrint({ id }) {
                 <p style={{ margin: 0, fontSize: '12px' }}>
                   <strong>Invoice No.:</strong> {data?.billId || ''}
                 </p>
+                {data?.articleNumber && (
+                  <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>
+                    <strong>Article No.:</strong> {data.articleNumber}
+                  </p>
+                )}
                 <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>
                   <strong>Date & Time:</strong> {data?.createdAt ? moment(data?.createdAt).format('YYYY-MM-DD HH:mm:ss') : ''}
                 </p>

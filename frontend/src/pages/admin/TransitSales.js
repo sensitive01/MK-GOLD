@@ -1,6 +1,6 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
-import { forwardRef, useEffect, useRef, useState, useCallback } from 'react';
+import { forwardRef, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 // @mui
@@ -71,8 +71,17 @@ import TransitPrint from '../../components/branch/transit/TransitPrint';
 
 // ----------------------------------------------------------------------
 
+const formatArticleNumber = (art) => {
+  if (!art) return '-';
+  const str = String(art).trim();
+  const lastPart = str.includes('-') ? str.split('-').pop() : str;
+  const match = lastPart.match(/\d{3,}/) || str.match(/\d{3,}/) || str.match(/\d+/);
+  return match ? match[0] : (lastPart || str);
+};
+
 const TABLE_HEAD = [
   { id: 'billId', label: 'Bill Id', alignRight: false },
+  { id: 'articleNumber', label: 'Article No', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: 'customer', label: 'Customer', alignRight: false },
   { id: 'branchId', label: 'Branch Id', alignRight: false },
@@ -110,7 +119,13 @@ function applySortFilter(array, comparator, query) {
     return a[1] - b[1];
   });
   if (query) {
-    return filter(array, (row) => row.customer?.phoneNumber.toLowerCase().indexOf(query.toLowerCase()) !== -1);
+    const q = query.toLowerCase().trim();
+    return filter(array, (row) =>
+      row.customer?.phoneNumber?.toLowerCase().includes(q) ||
+      String(row.billId || '').toLowerCase().includes(q) ||
+      String(row.articleNumber || '').toLowerCase().includes(q) ||
+      row.customer?.name?.toLowerCase().includes(q)
+    );
   }
   return stabilizedThis?.map((el) => el[0]);
 }
@@ -124,6 +139,11 @@ export default function TransitSales() {
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType;
   const isAdmin = userType?.toLowerCase() === 'admin';
+  const isStore = userType?.toLowerCase() === 'store' || window.location.pathname.startsWith('/store');
+  const tableHead = useMemo(() => {
+    if (isStore) return TABLE_HEAD;
+    return TABLE_HEAD.filter((col) => col.id !== 'articleNumber');
+  }, [isStore]);
   const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
@@ -698,7 +718,7 @@ export default function TransitSales() {
               <SaleListHead
                 order={order}
                 orderBy={orderBy}
-                headLabel={TABLE_HEAD}
+                headLabel={tableHead}
                 rowCount={data?.length || 0}
                 numSelected={selected?.length}
                 onRequestSort={handleRequestSort}
@@ -706,7 +726,7 @@ export default function TransitSales() {
               />
               <TableBody>
                 {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                  const { _id, billId, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
+                  const { _id, billId, articleNumber, saleType, netAmount, branch: rowBranch, purchaseType, status, createdAt } = row;
                   const selectedData = selected.indexOf(_id) !== -1;
 
                   return (
@@ -736,6 +756,11 @@ export default function TransitSales() {
                         />
                       </TableCell>
                       <TableCell align="left">{billId}</TableCell>
+                      {isStore && (
+                        <TableCell align="left" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                          {formatArticleNumber(articleNumber)}
+                        </TableCell>
+                      )}
                       <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
                       <TableCell align="left">
                         {row.customer ? (
@@ -768,7 +793,7 @@ export default function TransitSales() {
                       <TableCell align="left">{rowBranch?.branchName || '-'}</TableCell>
                       <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
                       <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
-                      <TableCell align="left">&#8377; {netAmount}</TableCell>
+                      <TableCell align="left">&#8377; {row.payableAmount != null && Number(row.payableAmount) > 0 ? Math.round(row.payableAmount) : netAmount}</TableCell>
                       <TableCell align="left" onClick={(e) => e.stopPropagation()}>
                         <Status
                           status={status}
@@ -1421,7 +1446,7 @@ function Status(props) {
     if (userType === 'finance' || userType === 'accounts') {
       content = (
         <Button variant="contained" size="small" onClick={() => handleVerify('finance')}>
-          Update Finance
+          Process Funds
         </Button>
       );
     } else {
@@ -1564,14 +1589,14 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
   }, [id, open]);
 
   const schema = Yup.object({
-    amount: Yup.number().when([], {
+    amount: Yup.number().typeError('Amount must be a number').when([], {
       is: () => type !== 'finance' || saleDetails?.paymentType !== 'partial',
       then: (s) => s.required('Amount is required'),
       otherwise: (s) => s.nullable(),
     }),
-    cashAmount: Yup.number().nullable(),
-    bankAmount: Yup.number().nullable(),
-    comments: Yup.string().required('Comments are required'),
+    cashAmount: Yup.number().typeError('Cash amount must be a number').nullable(),
+    bankAmount: Yup.number().typeError('Bank amount must be a number').nullable(),
+    comments: Yup.string().nullable(),
     isCompleted: Yup.boolean(),
   });
 
@@ -1587,13 +1612,14 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     },
     validationSchema: schema,
     onSubmit: async (values) => {
-      // Strict sequence guard:
-      if (type === 'assignee' && values.isCompleted && saleDetails && !saleDetails.financeCompleted) {
-        alert('Cannot verify Assignee stage: Finance verification must be completed first!');
-        return;
-      }
+      try {
+        // Strict sequence guard:
+        if (type === 'assignee' && values.isCompleted && saleDetails && !saleDetails.financeCompleted) {
+          alert('Cannot verify Assignee stage: Finance verification must be completed first!');
+          return;
+        }
 
-      setLoading(true);
+        setLoading(true);
 
       const payload = {};
       if (type === 'finance') {
@@ -1634,19 +1660,39 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           }
 
           payload.newFinancePayments = newPayments;
-          payload.financeAmount = (saleDetails?.financeAmount || 0) + cashNum + bankNum;
-          payload.payableAmount = saleDetails?.payableAmount;
+          const totalAmt = cashNum + bankNum;
+          payload.financeAmount = saleDetails?.status === 'completed' ? totalAmt : ((saleDetails?.financeAmount || 0) + totalAmt);
+          payload.payableAmount = saleDetails?.status === 'completed' ? totalAmt : saleDetails?.payableAmount;
+          payload.netAmount = saleDetails?.status === 'completed' ? totalAmt : saleDetails?.netAmount;
+          payload.cashAmount = cashNum;
+          payload.bankAmount = bankNum;
+          payload.paymentType = 'partial';
           payload.financeComments = values.comments;
           if (values.proof) payload.financeProof = values.proof;
         } else {
-          payload.financeAmount = values.amount !== '' ? Number(values.amount) : undefined;
-          payload.payableAmount = saleDetails?.payableAmount;
+          const prevPaid = (saleDetails?.financePayments || [])
+            .filter((fp) => fp.stage === 'sale')
+            .reduce((sum, fp) => sum + (+fp.amount || 0), 0);
+          const enteredAmt = values.amount !== '' ? Number(values.amount) : 0;
+          const isCompletedSale = saleDetails?.status === 'completed';
+          payload.financeAmount = isCompletedSale ? enteredAmt : (prevPaid + enteredAmt);
+          payload.payableAmount = isCompletedSale ? enteredAmt : (saleDetails?.payableAmount ?? enteredAmt);
+          payload.netAmount = isCompletedSale ? enteredAmt : (saleDetails?.netAmount ?? enteredAmt);
+          const selectedPt = values.paymentType || (saleDetails?.paymentType === 'cash' ? 'cash' : 'bank');
+          payload.paymentType = selectedPt;
+          if (selectedPt === 'cash') {
+            payload.cashAmount = enteredAmt;
+            payload.bankAmount = 0;
+          } else {
+            payload.bankAmount = enteredAmt;
+            payload.cashAmount = 0;
+          }
           payload.financeComments = values.comments;
           payload.financeProof = values.proof;
           payload.newFinancePayment = {
-            amount: values.amount !== '' ? Number(values.amount) : 0,
-            paymentType: saleDetails?.paymentType === 'cash' ? 'cash' : 'bank',
-            bank: selectedBank ? {
+            amount: enteredAmt,
+            paymentType: selectedPt,
+            bank: selectedPt === 'bank' && selectedBank ? {
               bankId: selectedBank._id,
               bankName: selectedBank.bankName,
               accountNo: selectedBank.accountNo,
@@ -1657,11 +1703,45 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           };
         }
 
-        if (values.isCompleted) {
+        // When updating a completed bill or when admin manages funds, sync valuation adjustments & ornaments
+        if (saleDetails?.status === 'completed' || isAdmin) {
+          const finalTotal = values.paymentType === 'partial'
+            ? ((values.cashAmount !== '' ? Number(values.cashAmount) : 0) + (values.bankAmount !== '' ? Number(values.bankAmount) : 0))
+            : (values.amount !== '' ? Number(values.amount) : 0);
+
+          if (finalTotal > 0) {
+            payload.payableAmount = finalTotal;
+            payload.netAmount = finalTotal;
+            payload.financeAmount = finalTotal;
+
+            const baseCalc = saleDetails?.totalCalculatedAmount || (saleDetails?.ornaments || []).reduce((sum, o) => sum + Number(o.calculatedAmount || o.netAmount || 0), 0);
+            if (baseCalc > 0) {
+              const newAdj = finalTotal - baseCalc;
+              payload.totalAdjustment = newAdj;
+              payload.adjustments = newAdj;
+            }
+
+            if (Array.isArray(saleDetails?.ornaments) && saleDetails.ornaments.length === 1) {
+              const singleOrn = { ...saleDetails.ornaments[0] };
+              singleOrn.netAmount = finalTotal;
+              const calcSys = Number(singleOrn.calculatedAmount) || finalTotal;
+              singleOrn.adjustment = finalTotal - calcSys;
+              payload.ornaments = [singleOrn];
+            }
+          }
+        }
+
+        if (values.isCompleted || saleDetails?.status === 'completed' || saleDetails?.financeCompleted || isAdmin) {
           payload.financeCompleted = true;
-          payload.financeCompletedAt = new Date();
-          const isPhys = saleType === 'physical';
-          payload.status = (isPhys || assigneeCompleted) ? 'completed' : 'release pending';
+          payload.financeCompletedAt = saleDetails?.financeCompletedAt || new Date();
+          if (saleDetails?.status === 'completed' || isAdmin) {
+            payload.status = 'completed';
+            payload.isFinanceReupdate = true;
+          } else {
+            const isPhys = (saleDetails?.saleType || saleType || '').toLowerCase() === 'physical';
+            const isAssigneeDone = Boolean(saleDetails?.assigneeCompleted ?? assigneeCompleted);
+            payload.status = (isPhys || isAssigneeDone) ? 'completed' : 'release pending';
+          }
         }
       } else if (type === 'fund transfer') {
         payload.fundTransferAmount = values.amount;
@@ -1695,8 +1775,13 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           alert(data.message || 'Verification failed. Please ensure prior stages are approved.');
         }
       });
-    },
-  });
+    } catch (err) {
+      console.error('Error during verification submit:', err);
+      setLoading(false);
+      alert(err?.message || 'Submission error');
+    }
+  },
+});
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -2096,16 +2181,25 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
               </Grid>
             )}
 
-            <Grid item xs={12}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Checkbox
-                  name="isCompleted"
-                  checked={values.isCompleted}
-                  onChange={handleChange}
-                />
-                <Typography variant="body2">Mark as completed (Moves to next stage)</Typography>
-              </Stack>
-            </Grid>
+            {!isAdmin && (
+              <Grid item xs={12}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Checkbox
+                    name="isCompleted"
+                    checked={values.isCompleted}
+                    onChange={handleChange}
+                  />
+                  <Typography variant="body2">Mark as completed (Moves to next stage)</Typography>
+                </Stack>
+              </Grid>
+            )}
+            {Object.keys(errors).length > 0 && (
+              <Grid item xs={12}>
+                <MuiAlert severity="error">
+                  Please check the fields: {Object.values(errors).join(', ')}
+                </MuiAlert>
+              </Grid>
+            )}
           </Grid>
         </DialogContent>
         <DialogActions>

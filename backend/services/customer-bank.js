@@ -25,13 +25,17 @@ async function create(payload) {
     const QREnquiry = require("../models/qrEnquiry");
     const customer = await Customer.findById(payload.customerId).exec();
 
+    const rawType = (payload.accountType || 'savings').toLowerCase();
+    const isVirtual = rawType === 'virtual';
     const data = {
       accountNo: payload.accountNo,
       accountHolderName: payload.accountHolderName,
       ifscCode: payload.ifscCode,
       bankName: payload.bankName,
       branch: payload.branch,
+      accountType: rawType,
       createdBy: payload.createdBy,
+      isVerified: isVirtual ? true : Boolean(payload.isVerified),
     };
     const updatedCustomer = await Customer.findByIdAndUpdate(
       payload.customerId,
@@ -95,6 +99,12 @@ async function update(customerId, id, payload) {
     if (payload.ifscCode !== undefined) bank.ifscCode = payload.ifscCode;
     if (payload.bankName !== undefined) bank.bankName = payload.bankName;
     if (payload.branch !== undefined) bank.branch = payload.branch;
+    if (payload.accountType !== undefined) {
+      bank.accountType = payload.accountType.toLowerCase();
+      if (bank.accountType === 'virtual') {
+        bank.isVerified = true;
+      }
+    }
     if (payload.updatedBy !== undefined) bank.updatedBy = payload.updatedBy;
 
     await customer.save();

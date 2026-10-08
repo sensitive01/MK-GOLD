@@ -141,6 +141,11 @@ const Customer = mongoose.model(
             type: Boolean,
             default: false,
           },
+          accountType: {
+            type: String,
+            enum: ['savings', 'current', 'virtual', 'Savings', 'Current', 'Virtual'],
+            default: 'savings',
+          },
         }, { timestamps: true }),
       ],
       source: {

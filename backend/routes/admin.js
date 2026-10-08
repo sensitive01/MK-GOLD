@@ -61,8 +61,10 @@ adminRouter.get("/allowance/get", allowance.find);
 adminRouter.post("/allowance/create", allowance.create);
 
 adminRouter.get("/lead/get", lead.find);
-adminRouter.post("/lead/create", lead.create);
+adminRouter.post("/lead/create", multer.any(), lead.create);
 
+adminRouter.get("/melting/next-batch-number", melting.getNextBatchNumber);
+adminRouter.post("/melting/next-batch-number", melting.getNextBatchNumber);
 adminRouter.get("/melting/get", melting.find);
 adminRouter.post("/melting/get", melting.find);
 adminRouter.post("/melting/create", melting.create);

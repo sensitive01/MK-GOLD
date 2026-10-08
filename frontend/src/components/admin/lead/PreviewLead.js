@@ -19,7 +19,12 @@ import {
   Button,
   Modal,
   Stack,
+  IconButton,
+  Chip,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import CloseIcon from '@mui/icons-material/Close';
+import CustomerDocumentsGallery from '../../branch/lead/CustomerDocumentsGallery';
 import { LoadingButton } from '@mui/lab';
 import { useState, useEffect } from 'react';
 import { getLeadById, addDisposition } from '../../../apis/branch/lead';
@@ -62,10 +67,11 @@ function PreviewLead(props) {
     status: '',
     remark: '',
     branch: '',
-    uploadedFile: null,
     callbackDate: '',
     callbackTime: '',
   });
+
+  const [callLogFiles, setCallLogFiles] = useState([]);
 
   const fetchData = () => {
     if (props.id) {
@@ -93,6 +99,18 @@ function PreviewLead(props) {
     }
   }, [props.autoOpenLogModal]);
 
+  const handleCallLogFilesSelect = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const selected = Array.from(e.target.files);
+      setCallLogFiles((prev) => [...prev, ...selected]);
+    }
+    e.target.value = '';
+  };
+
+  const handleRemoveCallLogFile = (index) => {
+    setCallLogFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleAddLog = () => {
     if (!logForm.status) return;
     setAddingLog(true);
@@ -101,15 +119,27 @@ function PreviewLead(props) {
     formData.append('status', logForm.status);
     formData.append('remark', logForm.remark);
     if (logForm.branch) formData.append('branch', logForm.branch);
-    if (logForm.uploadedFile) formData.append('uploadedFile', logForm.uploadedFile);
-    if (logForm.status === 'Callback' || logForm.status === 'Planning to Visit' || logForm.status === 'Business Closed') {
+
+    if (callLogFiles.length > 0) {
+      callLogFiles.forEach((file) => {
+        formData.append('uploadedFiles', file);
+        formData.append('documentTypes', 'Proof');
+      });
+    }
+
+    if (
+      logForm.status === 'Callback' ||
+      logForm.status === 'Planning to Visit' ||
+      logForm.status === 'Business Closed'
+    ) {
       if (logForm.callbackDate) formData.append('callbackDate', logForm.callbackDate);
       if (logForm.callbackTime) formData.append('callbackTime', logForm.callbackTime);
     }
 
     addDisposition(props.id, formData).then((res) => {
       if (res.status) {
-        setLogForm({ status: '', remark: '', branch: '', uploadedFile: null, callbackDate: '', callbackTime: '' });
+        setLogForm({ status: '', remark: '', branch: '', callbackDate: '', callbackTime: '' });
+        setCallLogFiles([]);
         fetchData();
         setOpenModal(false);
       }
@@ -233,17 +263,7 @@ function PreviewLead(props) {
           <Typography variant="body1">{data.remarks || 'N/A'}</Typography>
         </Grid>
 
-        {currentImage && (
-          <Grid item xs={12}>
-            <Divider sx={{ mb: 2 }} />
-            <Typography variant="subtitle2" color="textSecondary" gutterBottom>Attachment</Typography>
-            <img
-              src={currentImage}
-              alt="attachment"
-              style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '8px' }}
-            />
-          </Grid>
-        )}
+        <CustomerDocumentsGallery data={data} />
 
         <Grid item xs={12}>
           <Divider sx={{ my: 4 }} />
@@ -277,11 +297,58 @@ function PreviewLead(props) {
                         )}
                       </TableCell>
                       <TableCell>
-                        {log.attachment ? (
-                          <a href={log.attachment.startsWith('http') ? log.attachment : `${global.baseURL}/${log.attachment}`} target="_blank" rel="noreferrer">
-                            View
-                          </a>
-                        ) : '-'}
+                        {(() => {
+                          if (log.documents && log.documents.length > 0) {
+                            return (
+                              <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                                {log.documents.map((d, idx) => {
+                                  const url = d.documentFile?.startsWith('http')
+                                    ? d.documentFile
+                                    : `${global.baseURL}/${d.documentFile}`;
+                                  return (
+                                    <Chip
+                                      key={idx}
+                                      size="small"
+                                      label={d.documentType || `Doc ${idx + 1}`}
+                                      component="a"
+                                      href={url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      clickable
+                                      color="primary"
+                                      variant="outlined"
+                                      sx={{ m: 0.25, fontSize: '0.72rem', cursor: 'pointer' }}
+                                    />
+                                  );
+                                })}
+                              </Stack>
+                            );
+                          }
+                          const files = log.attachments && log.attachments.length > 0
+                            ? log.attachments
+                            : log.attachment ? [log.attachment] : [];
+                          if (files.length === 0) return '-';
+                          if (files.length === 1) {
+                            const url = files[0].startsWith('http') ? files[0] : `${global.baseURL}/${files[0]}`;
+                            return (
+                              <a href={url} target="_blank" rel="noreferrer">
+                                View
+                              </a>
+                            );
+                          }
+                          return (
+                            <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                              {files.map((file, idx) => {
+                                const url = file.startsWith('http') ? file : `${global.baseURL}/${file}`;
+                                return (
+                                  <a key={idx} href={url} target="_blank" rel="noreferrer" style={{ marginRight: '6px' }}>
+                                    View {idx + 1}
+                                  </a>
+                                );
+                              })}
+                            </Stack>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         {log.createdBy?.employee
@@ -366,25 +433,98 @@ function PreviewLead(props) {
               />
             </Grid>
           <Grid item xs={12}>
-            {logForm.uploadedFile ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, px: 2 }}>
-                <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {logForm.uploadedFile.name}
-                </Typography>
-                <IconButton size="small" onClick={() => setLogForm({ ...logForm, uploadedFile: null })} color="error" sx={{ ml: 1 }}>
-                  <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
-                </IconButton>
-              </Box>
-            ) : (
-              <Button variant="outlined" component="label" fullWidth sx={{ textTransform: 'none' }}>
-                Upload Photo
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  onChange={(e) => setLogForm({ ...logForm, uploadedFile: e.target.files[0] })}
-                />
-              </Button>
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              sx={{ textTransform: 'none', py: 1 }}
+            >
+              {callLogFiles.length > 0 ? '+ Upload More Proofs' : 'Upload Proofs'}
+              <input
+                type="file"
+                hidden
+                multiple
+                accept="image/*,application/pdf,.pdf"
+                onChange={handleCallLogFilesSelect}
+              />
+            </Button>
+
+            {callLogFiles.length > 0 && (
+              <Stack spacing={1} sx={{ mt: 1.5, maxHeight: 180, overflowY: 'auto' }}>
+                {callLogFiles.map((file, idx) => (
+                  <Box
+                    key={`${file.name}-${idx}`}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      p: 0.8,
+                      px: 1.5,
+                      bgcolor: 'background.neutral',
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+                      {file.type?.includes('pdf') || file.name?.toLowerCase().endsWith('.pdf') ? (
+                        <Box
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 0.5,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: 'error.lighter',
+                            color: 'error.main',
+                            fontWeight: 700,
+                            fontSize: '0.65rem',
+                          }}
+                        >
+                          PDF
+                        </Box>
+                      ) : (
+                        <Box
+                          component="img"
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            objectFit: 'cover',
+                            borderRadius: 0.5,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            bgcolor: '#fff',
+                          }}
+                        />
+                      )}
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        >
+                          {file.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {(file.size / 1024).toFixed(1)} KB
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRemoveCallLogFile(idx)}
+                      color="error"
+                      sx={{ ml: 1 }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ))}
+              </Stack>
             )}
           </Grid>
             <Grid item xs={12}>

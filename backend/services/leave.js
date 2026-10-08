@@ -6,7 +6,7 @@ const { sendEmail } = require("./mailer");
 async function find(query = {}, user = null) {
   try {
     const type = user?.userType?.toLowerCase() || '';
-    const isBranchUser = ["branch", "assistant_branch_manager", "branch_executive", "telecalling", "telecaller", "marketing", "finance", "accounts", "operations"].some(role => type.includes(role));
+    const isBranchUser = ["branch", "assistant_branch_manager", "branch_executive", "telecalling", "telecaller", "marketing", "finance", "accounts", "operations", "store", "melting", "bullion_desk", "admin_desk"].some(role => type.includes(role));
     
     if (isBranchUser) {
       const bId = user.branch?._id || user.branch;

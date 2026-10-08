@@ -312,6 +312,10 @@ async function generateExactInvoiceHtml(data) {
             <p style="margin: 0; font-size: 12px;">
               <strong>Invoice No.:</strong> ${data?.billId || ''}
             </p>
+            ${data?.articleNumber ? `
+            <p style="margin: 4px 0 0 0; font-size: 12px;">
+              <strong>Article No.:</strong> ${data.articleNumber}
+            </p>` : ''}
             <p style="margin: 4px 0 0 0; font-size: 12px;">
               <strong>Date & Time:</strong> ${formattedDate}
             </p>
@@ -603,7 +607,12 @@ async function createPdfKitFallbackBuffer(sale) {
       doc.fillColor('#000000').fontSize(18).font('Helvetica-Bold').text('PURCHASE INVOICE', margin, 30);
       doc.fontSize(12).text(`MK Gold | ${branch.branchName || ''}`, margin, 58);
       doc.fontSize(9).font('Helvetica').text(`Invoice No.: ${sale.billId || ''}`, margin, 74);
-      doc.text(`Total Amount: ₹ ${Math.abs(Math.round(sale.payableAmount || 0)).toLocaleString('en-IN')}`, margin, 88);
+      if (sale.articleNumber) {
+        doc.text(`Article No.: ${sale.articleNumber}`, margin, 86);
+        doc.text(`Total Amount: ₹ ${Math.abs(Math.round(sale.payableAmount || 0)).toLocaleString('en-IN')}`, margin, 98);
+      } else {
+        doc.text(`Total Amount: ₹ ${Math.abs(Math.round(sale.payableAmount || 0)).toLocaleString('en-IN')}`, margin, 88);
+      }
 
       doc.end();
     } catch (e) {

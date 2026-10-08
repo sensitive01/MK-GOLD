@@ -6,11 +6,11 @@ import {
   Container, Typography, Card, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions,
   Stepper, Step, StepLabel, Checkbox, TextField, Box, Snackbar, MenuItem, Select, FormControl, InputLabel,
-  Stack, TablePagination, Grid, IconButton, Divider
+  Stack, TablePagination, Grid, IconButton, Divider, Chip
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
-import { findMelting, createMelting, updateMelting, deleteMelting } from '../../apis/admin/melting';
+import { findMelting, createMelting, updateMelting, deleteMelting, getNextBatchNumber } from '../../apis/admin/melting';
 import { findTransit } from '../../apis/admin/transit';
 import { findVendor } from '../../apis/admin/vendor';
 import Iconify from '../../components/iconify';
@@ -31,6 +31,7 @@ const AlertComponent = forwardRef((props, ref) => <MuiAlert elevation={6} ref={r
 
 const TABLE_HEAD = [
   { id: 'createdAt', label: 'Date', alignRight: false },
+  { id: 'batchNumber', label: 'Batch No', alignRight: false },
   { id: 'transitIds', label: 'Transit IDs', alignRight: false },
   { id: 'saleIds', label: 'Sales', alignRight: false },
   { id: 'totalOrnaments', label: 'Ornaments', alignRight: false },
@@ -103,6 +104,7 @@ export default function Melting() {
   const [selectedSales, setSelectedSales] = useState([]);
   const [selectedOrnaments, setSelectedOrnaments] = useState([]);
   const [notes, setNotes] = useState('');
+  const [batchNumber, setBatchNumber] = useState('');
   const [saleIdToView, setSaleIdToView] = useState(null);
 
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -210,6 +212,19 @@ export default function Melting() {
     fetchVendors();
   }, [fetchMeltings, fetchTransits, fetchVendors]);
 
+  const fetchNextBatch = async () => {
+    try {
+      const res = await getNextBatchNumber();
+      if (res?.data?.batchNumber) {
+        setBatchNumber(res.data.batchNumber);
+      } else {
+        setBatchNumber(`MB-${moment().format('YYMMDD')}-001`);
+      }
+    } catch (err) {
+      setBatchNumber(`MB-${moment().format('YYMMDD')}-001`);
+    }
+  };
+
   const handleOpenWizard = () => {
     setActiveStep(0);
     setSelectedTransits([]);
@@ -219,9 +234,15 @@ export default function Melting() {
     setMeltProof(null);
     setMeltProofName('');
     setOpenWizard(true);
+    fetchNextBatch();
   };
 
-  const handleNext = () => setActiveStep((prev) => prev + 1);
+  const handleNext = () => {
+    if (activeStep === 2 && !batchNumber) {
+      fetchNextBatch();
+    }
+    setActiveStep((prev) => prev + 1);
+  };
   const handleBack = () => setActiveStep((prev) => prev - 1);
 
   const handleToggleTransit = (transit) => {
@@ -257,6 +278,14 @@ export default function Melting() {
     });
   };
 
+  const formatArticleNumber = (art) => {
+    if (!art) return '-';
+    const str = String(art).trim();
+    const lastPart = str.includes('-') ? str.split('-').pop() : str;
+    const match = lastPart.match(/\d{3,}/) || str.match(/\d{3,}/) || str.match(/\d+/);
+    return match ? match[0] : (lastPart || str);
+  };
+
   const getSalesForSelectedTransits = () => {
     let sales = [];
     selectedTransits.forEach(t => {
@@ -281,13 +310,17 @@ export default function Melting() {
           if (orn.status !== 'melted') { // Don't show already melted ones
             orns.push({
               saleId: sale._id,
+              billId: sale.billId,
+              articleNumber: sale.articleNumber,
               ornamentId: orn._id,
               ornamentType: orn.ornamentType,
               grossWeight: orn.grossWeight,
               netWeight: orn.netWeight,
               purity: orn.purity,
               netAmount: orn.netAmount,
-              quantity: orn.quantity || 1
+              quantity: orn.quantity || 1,
+              goldRate: sale.purchaseType?.toLowerCase() === 'silver' ? (sale.silverRate || 0) : (sale.goldRate || 0),
+              date: sale.createdAt,
             });
           }
         });
@@ -319,6 +352,7 @@ export default function Melting() {
       .map(t => t._id);
 
     const payload = {
+      batchNumber: batchNumber?.trim() || undefined,
       transitIds: activeTransitIds,
       saleIds: selectedSales,
       ornaments: selectedOrnaments,
@@ -535,14 +569,14 @@ export default function Melting() {
       setUploadLoading(true);
       const formData = new FormData();
       formData.append('uploadedFile', file);
-      formData.append('uploadName', 'melt_proof');
+      formData.append('uploadName', 'batch_proof');
       formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
       const response = await createFile(formData);
       setUploadLoading(false);
       if (response.status) {
         setMeltProof(response.data?._id);
         setMeltProofName(file.name);
-        setNotify({ open: true, message: 'Proof uploaded successfully', severity: 'success' });
+        setNotify({ open: true, message: 'Batch proof uploaded successfully', severity: 'success' });
       } else {
         setNotify({ open: true, message: 'File upload failed', severity: 'error' });
       }
@@ -677,6 +711,7 @@ export default function Melting() {
                       {filteredMeltings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => (
                         <TableRow hover key={row._id} onClick={() => handleViewRow(row)} sx={{ cursor: 'pointer' }}>
                           <TableCell>{moment(row.createdAt).format('YYYY-MM-DD HH:mm')}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{row.batchNumber || '-'}</TableCell>
                           <TableCell>{row.transitIds?.length ? row.transitIds.map(t => t.transitId).join(', ') : (row.transitId?.transitId || 'N/A')}</TableCell>
                           <TableCell>{row.saleIds?.length || 0}</TableCell>
                           <TableCell>{row.totalOrnaments}</TableCell>
@@ -687,44 +722,66 @@ export default function Melting() {
                             <Stack direction="row" spacing={1}>
                               {row.status === 'sold' ? (
                                 <Label color="success">Sold</Label>
-                              ) : (
+                              ) : row.status === 'melt_updated' ? (
                                 <Button 
-                                  variant={row.status === 'melt_updated' ? "contained" : "outlined"} 
-                                  color={row.status === 'melt_updated' ? "success" : "primary"}
+                                  variant="contained" 
+                                  color="success"
                                   size="small" 
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (row.status !== 'melt_updated') {
-                                      handleOpenUpdateDialog(row);
-                                    } else {
-                                      handleOpenSellDialog(row);
-                                    }
+                                    handleOpenSellDialog(row);
                                   }}
                                 >
-                                  {row.status === 'melt_updated' ? 'Sell Bar' : 'Melt Update'}
+                                  Sell Bar
+                                </Button>
+                              ) : !row.isPreMeltCompleted ? (
+                                <Button 
+                                  variant="outlined" 
+                                  color="warning"
+                                  size="small" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenUpdateDialog(row);
+                                  }}
+                                  sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}
+                                >
+                                  Before Melting
+                                </Button>
+                              ) : (
+                                <Button 
+                                  variant="contained" 
+                                  color="primary"
+                                  size="small" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenUpdateDialog(row);
+                                  }}
+                                  sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}
+                                >
+                                  After Melting
                                 </Button>
                               )}
-                              <IconButton color="error" onClick={(e) => { e.stopPropagation(); handleDeleteMelting(row._id); }}>
-                                <Iconify icon={'eva:trash-2-outline'} />
-                              </IconButton>
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {isNotFound && (
-                        <TableRow>
-                          <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
-                            <Typography variant="body1">No records found for &quot;{filterName}&quot;</Typography>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {data.length === 0 && !filterName && (
-                        <TableRow>
-                          <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
-                            <Typography variant="body1">No melting records found</Typography>
-                          </TableCell>
-                        </TableRow>
-                      )}
+                               <IconButton color="error" onClick={(e) => { e.stopPropagation(); handleDeleteMelting(row._id); }}>
+                                 <Iconify icon={'eva:trash-2-outline'} />
+                               </IconButton>
+                             </Stack>
+                           </TableCell>
+                         </TableRow>
+                       ))}
+                       {isNotFound && (
+                         <TableRow>
+                           <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                             <Typography variant="body1">No records found for &quot;{filterName}&quot;</Typography>
+                           </TableCell>
+                         </TableRow>
+                       )}
+                       {data.length === 0 && !filterName && (
+                         <TableRow>
+                           <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                             <Typography variant="body1">No melting records found</Typography>
+                           </TableCell>
+                         </TableRow>
+                       )}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -820,6 +877,7 @@ export default function Melting() {
                           <TableCell padding="checkbox"></TableCell>
                           <TableCell>Transit ID</TableCell>
                           <TableCell>Bill ID</TableCell>
+                          <TableCell>Article No</TableCell>
                           <TableCell>Bill Date</TableCell>
                           <TableCell>Branch</TableCell>
                           <TableCell>Customer</TableCell>
@@ -837,6 +895,9 @@ export default function Melting() {
                             </TableCell>
                             <TableCell>{sale.transitId || 'N/A'}</TableCell>
                             <TableCell>{sale.billId}</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: 'primary.main' }}>
+                              {formatArticleNumber(sale.articleNumber)}
+                            </TableCell>
                             <TableCell>{moment(sale.createdAt).format('YYYY-MM-DD')}</TableCell>
                             <TableCell>{sale.branch?.branchName ? `${sale.branch.branchName} (${sale.branch.branchId})` : 'Unknown'}</TableCell>
                             <TableCell>{sale.customer?.name || 'Unknown'}</TableCell>
@@ -849,7 +910,7 @@ export default function Melting() {
                           </TableRow>
                         ))}
                         {getSalesForSelectedTransits().length === 0 && (
-                          <TableRow><TableCell colSpan={10} align="center">No sales in selected transits.</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={11} align="center">No sales in selected transits.</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
@@ -904,7 +965,10 @@ export default function Melting() {
                   <TableHead>
                     <TableRow>
                       <TableCell padding="checkbox"></TableCell>
+                      <TableCell>Article No</TableCell>
                       <TableCell>Type</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell align="right">Gold Rate (₹/g)</TableCell>
                       <TableCell>Quantity</TableCell>
                       <TableCell>Gross Wt.</TableCell>
                       <TableCell>Net Wt.</TableCell>
@@ -920,7 +984,14 @@ export default function Melting() {
                           <TableCell padding="checkbox">
                             <Checkbox checked={isSelected} onChange={() => handleToggleOrnament(orn)} />
                           </TableCell>
+                          <TableCell sx={{ fontWeight: 600, color: 'primary.main' }}>
+                            {formatArticleNumber(orn.articleNumber)}
+                          </TableCell>
                           <TableCell>{orn.ornamentType}</TableCell>
+                          <TableCell>{orn.date ? moment(orn.date).format('YYYY-MM-DD') : '-'}</TableCell>
+                          <TableCell align="right">
+                            {orn.goldRate ? `₹${Number(orn.goldRate).toLocaleString('en-IN')}` : '-'}
+                          </TableCell>
                           <TableCell>{orn.quantity}</TableCell>
                           <TableCell>{orn.grossWeight}</TableCell>
                           <TableCell>{orn.netWeight}</TableCell>
@@ -930,7 +1001,7 @@ export default function Melting() {
                       );
                     })}
                     {getOrnamentsForSelectedSales().length === 0 && (
-                      <TableRow><TableCell colSpan={7} align="center">No available ornaments found.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={10} align="center">No available ornaments found.</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
@@ -943,6 +1014,14 @@ export default function Melting() {
               <Typography variant="h6" gutterBottom>Summary</Typography>
               <Card sx={{ p: 3, mb: 3 }}>
                 <Stack spacing={2}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography variant="body1"><strong>Batch Number:</strong></Typography>
+                    <Chip
+                      label={batchNumber || 'Generating...'}
+                      color="primary"
+                      sx={{ fontWeight: 700, ml: 1.5, fontSize: '0.95rem' }}
+                    />
+                  </Box>
                   <Typography variant="body1"><strong>Total Ornaments:</strong> {selectedOrnaments.reduce((acc, curr) => acc + (Number(curr.quantity) || 1), 0)}</Typography>
                   <Typography variant="body1"><strong>Total Gross Weight:</strong> {summary.grossWeight.toFixed(2)}</Typography>
                   <Typography variant="body1"><strong>Total Net Weight:</strong> {summary.netWeight.toFixed(2)}</Typography>
@@ -964,7 +1043,7 @@ export default function Melting() {
                 disabled={uploadLoading}
                 sx={{ mt: 2 }}
               >
-                {uploadLoading ? 'Uploading...' : 'Upload Proof'}
+                {uploadLoading ? 'Uploading...' : 'Upload Batch Proof'}
                 <input
                   type="file"
                   hidden
@@ -973,14 +1052,14 @@ export default function Melting() {
               </Button>
               {meltProof && typeof meltProof === 'object' && meltProof.uploadedFile ? (
                 meltProof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
-                  <Box component="iframe" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} title="Proof" sx={{ width: '100%', height: 200, border: 'none', mt: 2 }} />
+                  <Box component="iframe" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} title="Batch Proof" sx={{ width: '100%', height: 200, border: 'none', mt: 2 }} />
                 ) : (
-                  <Box component="img" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} alt="Proof" sx={{ width: '100%', maxHeight: 200, objectFit: 'contain', mt: 2 }} />
+                  <Box component="img" src={meltProof.uploadedFile.startsWith('http') ? meltProof.uploadedFile : `${global.BASE_URL}/${meltProof.uploadedFile}`} alt="Batch Proof" sx={{ width: '100%', maxHeight: 200, objectFit: 'contain', mt: 2 }} />
                 )
               ) : meltProof ? (
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, mb: 2 }}>
                   <Typography variant="body2" sx={{ color: 'success.main' }}>
-                    {meltProofName || 'Before Melt Proof uploaded successfully!'}
+                    {meltProofName || 'Batch proof uploaded successfully!'}
                   </Typography>
                   <IconButton size="small" onClick={() => { setMeltProof(null); setMeltProofName(''); }} sx={{ color: 'error.main' }}>
                     <Iconify icon="eva:close-fill" />
@@ -1010,7 +1089,14 @@ export default function Melting() {
 
       {/* Melt Update Dialog */}
       <Dialog open={openUpdateDialog} onClose={handleCloseUpdateDialog} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700, color: '#1a237e', pb: 1 }}>Update Melt Results</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700, color: '#1a237e', pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{!isPreMeltCompleted ? 'Before Melting - Pre-Melt Details' : 'After Melting - Bar Results'}</span>
+          {selectedMelting?.batchNumber && (
+            <Typography variant="subtitle2" sx={{ bgcolor: '#ede7f6', color: '#7b1fa2', px: 1.5, py: 0.5, borderRadius: 1, fontWeight: 700 }}>
+              Batch: {selectedMelting.batchNumber}
+            </Typography>
+          )}
+        </DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
           <Box sx={{ mt: 1 }}>
             {/* Top Stats Row */}

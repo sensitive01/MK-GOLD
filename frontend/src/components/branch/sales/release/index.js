@@ -20,6 +20,7 @@ import {
   Checkbox,
   Paper,
   IconButton,
+  InputAdornment,
 } from '@mui/material';
 import { sentenceCase } from 'change-case';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -80,6 +81,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
   // Form validation
   const schema = Yup.object({
     weight: Yup.string().required('Weight is required'),
+    averagePurity: Yup.number().typeError('Average purity must be a number').nullable(),
     pledgeAmount: Yup.string().required('Pledge amount is required'),
     payableAmount: Yup.string().required('Total release amount is required'),
     paymentType: Yup.string().required('Payment type is required'),
@@ -96,6 +98,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
     initialValues: {
       customer: selectedUser?._id,
       weight: '',
+      averagePurity: '',
       pledgeAmount: '',
       payableAmount: '',
       paymentType: '',
@@ -125,6 +128,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
         customer: values.customer,
         branch: branch?._id,
         weight: values.weight,
+        averagePurity: values.averagePurity !== '' && values.averagePurity != null ? Number(values.averagePurity) : undefined,
         pledgeAmount: values.pledgeAmount,
         payableAmount: values.payableAmount,
         paymentType: values.paymentType,
@@ -303,6 +307,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
                 setValues({
                   customer: selectedUser?._id,
                   weight: '',
+                  averagePurity: '',
                   pledgeAmount: '',
                   payableAmount: '',
                   paymentType: '',
@@ -334,6 +339,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
                   <TableCell align="left">Pledge Id</TableCell>
                   <TableCell align="left">Pledged In</TableCell>
                   <TableCell align="left">Weight (Grams)</TableCell>
+                  <TableCell align="left">Average Purity (%)</TableCell>
                   <TableCell align="left">Pledge amount</TableCell>
                   <TableCell align="left">Pledged date</TableCell>
                   <TableCell align="left">Total release amount</TableCell>
@@ -354,6 +360,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
                     <TableCell align="left">{e.pledgeId}</TableCell>
                     <TableCell align="left">{sentenceCase(e.pledgedIn)}</TableCell>
                     <TableCell align="left">{e.weight}</TableCell>
+                    <TableCell align="left">{e.averagePurity != null && e.averagePurity !== '' ? `${e.averagePurity}%` : '-'}</TableCell>
                     <TableCell align="left">{e.pledgeAmount}</TableCell>
                     <TableCell align="left">{moment(e.pledgedDate).format('YYYY-MM-DD')}</TableCell>
                     <TableCell align="left">{e.payableAmount}</TableCell>
@@ -383,6 +390,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
                               setValues({
                                 customer: e.customer || selectedUser?._id,
                                 weight: e.weight || '',
+                                averagePurity: e.averagePurity != null ? e.averagePurity : '',
                                 pledgeAmount: e.pledgeAmount || '',
                                 payableAmount: e.payableAmount || '',
                                 paymentType: e.paymentType || '',
@@ -422,12 +430,12 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
                 ))}
                 {emptyRows > 0 && (
                   <TableRow style={{ height: 53 * emptyRows }}>
-                    <TableCell colSpan={9} />
+                    <TableCell colSpan={11} />
                   </TableRow>
                 )}
                 {data?.length === 0 && (
                   <TableRow>
-                    <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
+                    <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
                       <Paper
                         sx={{
                           textAlign: 'center',
@@ -490,7 +498,11 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
               </Typography>
               {values.weight && Number(values.weight) > 0 && (
                 <Typography variant="body2" sx={{ color: '#b78103', fontWeight: 700 }}>
-                  Estimated Gold Value: ₹{Math.round(Number(values.weight) * Number(goldRate)).toLocaleString('en-IN')}
+                  Estimated Gold Value: ₹{Math.round(
+                    Number(values.weight) *
+                    (values.averagePurity && Number(values.averagePurity) > 0 ? (Number(values.averagePurity) / 100) : 1) *
+                    Number(goldRate)
+                  ).toLocaleString('en-IN')}
                 </Typography>
               )}
             </Box>
@@ -504,6 +516,21 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
                   value={values.weight}
                   error={touched.weight && errors.weight && true}
                   label={touched.weight && errors.weight ? errors.weight : 'Weight (Grams)'}
+                  fullWidth
+                  onBlur={handleBlur}
+                  onChange={handleChange}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField
+                  name="averagePurity"
+                  type={'number'}
+                  value={values.averagePurity}
+                  error={touched.averagePurity && errors.averagePurity && true}
+                  label={touched.averagePurity && errors.averagePurity ? errors.averagePurity : 'Average Purity (%)'}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  }}
                   fullWidth
                   onBlur={handleBlur}
                   onChange={handleChange}
