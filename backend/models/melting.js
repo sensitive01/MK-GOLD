@@ -44,7 +44,7 @@ const meltingSchema = new mongoose.Schema({
     },
     totalNetAmount: {
         type: Number,
-        required: true
+        default: 0
     },
     notes: {
         type: String,
@@ -52,7 +52,7 @@ const meltingSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        default: 'melted'
+        default: 'created'
     },
     actualGrossWeight: {
         type: Number

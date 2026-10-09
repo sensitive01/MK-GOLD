@@ -1,4 +1,9 @@
 const Model = require('../models/melting');
+require('../models/transit');
+require('../models/sales');
+require('../models/fileupload');
+require('../models/vendor');
+require('../models/employee');
 
 async function find(query = {}) {
   return await Model.find(query)

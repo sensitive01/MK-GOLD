@@ -23,6 +23,29 @@ async function create(req, res) {
         payload.batchNumber = await service.generateUniqueBatchNumber();
       }
     }
+
+    // Defensive defaults
+    payload.status = payload.status || 'created';
+    payload.isPreMeltCompleted = payload.isPreMeltCompleted === true;
+    if (!payload.transitId && payload.transitIds && payload.transitIds.length > 0) {
+      payload.transitId = payload.transitIds[0];
+    }
+    if (payload.totalNetAmount === undefined || payload.totalNetAmount === null) {
+      payload.totalNetAmount = (payload.ornaments || []).reduce((sum, o) => sum + (Number(o.netAmount) || 0), 0);
+    }
+    if (!payload.totalGrossWeight && payload.ornaments) {
+      payload.totalGrossWeight = (payload.ornaments || []).reduce((sum, o) => sum + (Number(o.grossWeight) || 0), 0);
+    }
+    if (!payload.totalNetWeight && payload.ornaments) {
+      payload.totalNetWeight = (payload.ornaments || []).reduce((sum, o) => sum + (Number(o.netWeight) || 0), 0);
+    }
+    if (!payload.totalOrnaments && payload.ornaments) {
+      payload.totalOrnaments = (payload.ornaments || []).reduce((sum, o) => sum + (Number(o.quantity) || 1), 0);
+    }
+    if (!payload.meltProof && payload.proof) {
+      payload.meltProof = payload.proof;
+    }
+
     const data = await service.create(payload);
 
     // Update sales status for the selected ornaments
@@ -46,6 +69,41 @@ async function create(req, res) {
                 }
             }
         }
+    }
+
+    // Update transits status if transitIds provided
+    if (payload.transitIds && payload.transitIds.length > 0) {
+      const transitModel = require('../../models/transit');
+      const { assignArticleNumbersToSales } = require('../../services/sales');
+
+      const transitUpdatePayload = {
+        status: 'moved_to_melting',
+        isMovedToMelting: true,
+        movedToMeltingAt: new Date(),
+        movedToMeltingBy: req.user?._id,
+      };
+
+      const logEntry = {
+        actionBy: req.user?._id,
+        userType: req.user?.userType || 'store',
+        action: 'move_to_melting',
+        deviation: 'no',
+        status: 'moved_to_melting',
+        notes: payload.notes || `Moved from Store to Melting in Batch ${payload.batchNumber}`,
+        createdAt: new Date(),
+      };
+
+      await transitModel.updateMany(
+        { _id: { $in: payload.transitIds } },
+        {
+          $set: transitUpdatePayload,
+          $push: { deviationLogs: logEntry },
+        }
+      );
+
+      if (payload.saleIds && payload.saleIds.length > 0) {
+        await assignArticleNumbersToSales(payload.saleIds);
+      }
     }
 
     res.json({ status: true, data, message: 'Created successfully' });

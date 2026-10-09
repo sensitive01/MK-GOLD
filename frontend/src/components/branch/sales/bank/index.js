@@ -39,6 +39,7 @@ import Iconify from '../../../iconify';
 import Scrollbar from '../../../scrollbar';
 import { getBankById, createBank, updateBank, deleteBankById } from '../../../../apis/branch/customer-bank';
 import { createFile } from '../../../../apis/branch/fileupload';
+import { extractBankDetailsFromImage } from '../../../../utils/bankOcr';
 import global from '../../../../utils/global';
 
 const style = {
@@ -70,6 +71,8 @@ const CreateBankModal = ({
 }) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [bankProofPreview, setBankProofPreview] = useState(null);
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
 
   // Form validation
   const schema = Yup.object({
@@ -285,12 +288,59 @@ const CreateBankModal = ({
     }
   }, [values.ifscCode, values.accountNo, setFieldValue, setNotify]);
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setFieldValue('proofFile', file);
     setBankProofPreview(URL.createObjectURL(file));
+
+    // If the file is an image, perform OCR autofill
+    if (file.type && file.type.startsWith('image/')) {
+      setIsScanningOcr(true);
+      setOcrProgress(0);
+      try {
+        const extracted = await extractBankDetailsFromImage(file, (p) => setOcrProgress(p));
+        let filledCount = 0;
+
+        if (extracted.ifscCode) {
+          setFieldValue('ifscCode', extracted.ifscCode);
+          filledCount += 1;
+        }
+        if (extracted.accountNo) {
+          setFieldValue('accountNo', extracted.accountNo);
+          filledCount += 1;
+        }
+        if (extracted.bankName) {
+          setFieldValue('bankName', extracted.bankName);
+          filledCount += 1;
+        }
+        if (extracted.branch) {
+          setFieldValue('branch', extracted.branch);
+          filledCount += 1;
+        }
+        if (extracted.accountHolderName && (!values.accountHolderName || values.accountHolderName === '')) {
+          setFieldValue('accountHolderName', extracted.accountHolderName);
+          filledCount += 1;
+        }
+        if (extracted.detectedProofType && (!values.proofType || values.proofType === '')) {
+          setFieldValue('proofType', extracted.detectedProofType);
+          filledCount += 1;
+        }
+
+        if (filledCount > 0) {
+          setNotify({
+            open: true,
+            message: `Scanned & autofilled ${filledCount} detail${filledCount > 1 ? 's' : ''} from proof!`,
+            severity: 'success',
+          });
+        }
+      } catch (err) {
+        console.warn('OCR extraction skipped:', err);
+      } finally {
+        setIsScanningOcr(false);
+      }
+    }
   };
 
   if (!modalRoot) return null;
@@ -301,6 +351,7 @@ const CreateBankModal = ({
       onClose={() => {
         setBankModal(false);
         setBankProofPreview(null);
+        setIsScanningOcr(false);
         if (setBankToEdit) setBankToEdit(null);
       }}
       aria-labelledby="modal-modal-title"
@@ -316,6 +367,7 @@ const CreateBankModal = ({
             onClick={() => {
               setBankModal(false);
               setBankProofPreview(null);
+              setIsScanningOcr(false);
               if (setBankToEdit) setBankToEdit(null);
             }}
             sx={{
@@ -392,6 +444,7 @@ const CreateBankModal = ({
                         variant="contained"
                         size="small"
                         loading={isVerifying}
+                        disabled={isVerifying}
                         onClick={handleVerifyAccount}
                         startIcon={<Iconify icon="mdi:bank-check" width={16} />}
                         sx={{
@@ -555,6 +608,14 @@ const CreateBankModal = ({
                   </Tooltip>
                 )}
               </Box>
+              {isScanningOcr && (
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1, px: 0.5 }}>
+                  <CircularProgress size={14} color="primary" />
+                  <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                    Scanning proof for details ({ocrProgress}%)...
+                  </Typography>
+                </Stack>
+              )}
               {touched.proofFile && errors.proofFile && (
                 <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5, display: 'block' }}>
                   {errors.proofFile}
@@ -570,6 +631,7 @@ const CreateBankModal = ({
                   type="submit"
                   variant="contained"
                   loading={isSubmitting}
+                  disabled={Boolean(isSubmitting || isScanningOcr)}
                   startIcon={<SaveIcon />}
                   sx={{
                     px: 3.5,

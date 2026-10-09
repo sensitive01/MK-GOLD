@@ -772,10 +772,27 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
     });
 
     // Sort: Bank Verification rows always last
-    const finalPaymentsList = [
+    const combinedPaymentsList = [
       ...paymentsList.filter((p) => p.paymentType !== 'Bank Verification'),
       ...paymentsList.filter((p) => p.paymentType === 'Bank Verification'),
     ];
+
+    // Deduplicate identical payments (same stage, amount, verification status, and close timestamp or same proof)
+    const finalPaymentsList = [];
+    combinedPaymentsList.forEach((row) => {
+      const isDuplicate = finalPaymentsList.some((existing) => {
+        const sameAmount = Number(existing.amount) === Number(row.amount);
+        const sameStage = existing.stageKey === row.stageKey;
+        const sameVerification = Boolean(existing.isVerificationRow) === Boolean(row.isVerificationRow);
+        const sameProof = Boolean(existing.proof && row.proof && existing.proof === row.proof);
+        const timeDiff = Math.abs(new Date(existing.createdAt || 0) - new Date(row.createdAt || 0));
+        const withinRecent = timeDiff < 5 * 60 * 1000;
+        return sameAmount && sameStage && sameVerification && (sameProof || withinRecent);
+      });
+      if (!isDuplicate) {
+        finalPaymentsList.push(row);
+      }
+    });
 
     const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - finalPaymentsList.length) : 0;
     const handleChangePage = (event, newPage) => {
@@ -2701,7 +2718,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     isCompleted: Yup.boolean(),
   });
 
-  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue, resetForm } = useFormik({
+  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue, resetForm, isSubmitting } = useFormik({
     initialValues: {
       amount: '',
       cashAmount: '',
@@ -3303,7 +3320,13 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         </DialogContent>
         <DialogActions>
           <Button onClick={handleModalClose}>Cancel</Button>
-          <LoadingButton type="submit" variant="contained" loading={loading} sx={{ color: '#fff' }}>
+          <LoadingButton
+            type="submit"
+            variant="contained"
+            loading={Boolean(loading || isSubmitting || isUploading)}
+            disabled={Boolean(loading || isSubmitting || isUploading)}
+            sx={{ color: '#fff' }}
+          >
             Save & Update Status
           </LoadingButton>
         </DialogActions>

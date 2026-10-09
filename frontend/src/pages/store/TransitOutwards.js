@@ -20,6 +20,7 @@ import {
   TableContainer,
   TablePagination,
   TableRow,
+  TableHead,
   Typography,
   Dialog,
   DialogTitle,
@@ -33,6 +34,11 @@ import {
   Snackbar,
   Alert,
   Portal,
+  Stepper,
+  Step,
+  StepLabel,
+  Checkbox,
+  Chip,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 
@@ -42,6 +48,9 @@ import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 import { TransitListHead, TransitListToolbar } from '../../sections/@dashboard/transit';
 import { findTransit, updateTransitStatus } from '../../apis/admin/transit';
+import { createMelting, getNextBatchNumber } from '../../apis/admin/melting';
+import { createFile } from '../../apis/branch/fileupload';
+import global from '../../utils/global';
 
 // ----------------------------------------------------------------------
 
@@ -57,6 +66,8 @@ const TABLE_HEAD = [
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: 'actions', label: 'Action', alignRight: true },
 ];
+
+const WIZARD_STEPS = ['Select Transits', 'Select Sales & Articles', 'Select Ornaments', 'Batch Summary'];
 
 function descendingComparator(a, b, orderBy) {
   if (b[orderBy] < a[orderBy]) return -1;
@@ -137,11 +148,17 @@ export default function StoreTransitOutwards() {
     branch: 'all',
   });
 
-  // Move to Melting confirmation modal state
-  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
-  const [transitToMove, setTransitToMove] = useState(null);
-  const [moveNotes, setMoveNotes] = useState('');
-  const [movingLoading, setMovingLoading] = useState(false);
+  // Melting Wizard state
+  const [openWizard, setOpenWizard] = useState(false);
+  const [activeStep, setActiveStep] = useState(0);
+  const [selectedTransits, setSelectedTransits] = useState([]);
+  const [selectedSales, setSelectedSales] = useState([]);
+  const [selectedOrnaments, setSelectedOrnaments] = useState([]);
+  const [batchNumber, setBatchNumber] = useState('');
+  const [notes, setNotes] = useState('');
+  const [batchProof, setBatchProof] = useState(null);
+  const [batchProofLoading, setBatchProofLoading] = useState(false);
+  const [submittingBatch, setSubmittingBatch] = useState(false);
 
   const [notify, setNotify] = useState({ open: false, message: '', severity: 'success' });
 
@@ -211,61 +228,291 @@ export default function StoreTransitOutwards() {
   const totalGrossWeight = data.reduce((acc, curr) => acc + (Number(curr.totalGrossWeight) || 0), 0).toFixed(2);
   const totalNetWeight = data.reduce((acc, curr) => acc + (Number(curr.totalNetWeight) || 0), 0).toFixed(2);
 
-  // Handle open Move dialog
-  const handleOpenMoveDialog = (transit) => {
-    setTransitToMove(transit);
-    setMoveNotes('');
-    setMoveDialogOpen(true);
+  // Available in-store transits (not yet moved to melting)
+  const availableTransits = data.filter((t) => !t.isMovedToMelting && t.status !== 'moved_to_melting');
+
+  const formatArticleNumber = (art) => {
+    if (!art) return '-';
+    const str = String(art).trim();
+    const lastPart = str.includes('-') ? str.split('-').pop() : str;
+    const match = lastPart.match(/\d{3,}/) || str.match(/\d{3,}/) || str.match(/\d+/);
+    return match ? match[0] : (lastPart || str);
   };
 
-  // Confirm Move to Melting
-  const handleConfirmMoveToMelting = async () => {
-    if (!transitToMove?._id) return;
-    setMovingLoading(true);
-    try {
-      const res = await updateTransitStatus(transitToMove._id, {
-        action: 'move_to_melting',
-        notes: moveNotes,
-      });
+  // Open Move to Melting Wizard
+  const handleOpenMoveWizard = async (preselectedTransit = null) => {
+    setActiveStep(0);
+    setNotes('');
+    setBatchProof(null);
 
-      if (res?.status) {
+    try {
+      const res = await getNextBatchNumber();
+      if (res?.data?.batchNumber) {
+        setBatchNumber(res.data.batchNumber);
+      } else {
+        setBatchNumber(`MB-${moment().format('YYMMDD')}-001`);
+      }
+    } catch (e) {
+      setBatchNumber(`MB-${moment().format('YYMMDD')}-001`);
+    }
+
+    if (preselectedTransit && !preselectedTransit.isMovedToMelting && preselectedTransit.status !== 'moved_to_melting') {
+      setSelectedTransits([preselectedTransit]);
+      const initialSales = [];
+      (preselectedTransit.saleIds || []).forEach((s) => {
+        if (s.ornaments && s.ornaments.some((o) => o.status !== 'melted')) {
+          initialSales.push(s._id);
+        }
+      });
+      setSelectedSales(initialSales);
+    } else {
+      setSelectedTransits([]);
+      setSelectedSales([]);
+    }
+    setSelectedOrnaments([]);
+    setOpenWizard(true);
+  };
+
+  const handleToggleTransit = (transit) => {
+    const exists = selectedTransits.find((t) => t._id === transit._id);
+    let updated;
+    if (exists) {
+      updated = selectedTransits.filter((t) => t._id !== transit._id);
+    } else {
+      updated = [...selectedTransits, transit];
+    }
+    setSelectedTransits(updated);
+
+    // Auto-sync sales
+    let newSales = [];
+    updated.forEach((t) => {
+      if (t.saleIds) {
+        t.saleIds.forEach((s) => {
+          if (s.ornaments && s.ornaments.some((o) => o.status !== 'melted')) {
+            newSales.push(s._id);
+          }
+        });
+      }
+    });
+    setSelectedSales(newSales);
+  };
+
+  const handleSelectAllTransits = () => {
+    if (selectedTransits.length === availableTransits.length) {
+      setSelectedTransits([]);
+      setSelectedSales([]);
+    } else {
+      setSelectedTransits([...availableTransits]);
+      let newSales = [];
+      availableTransits.forEach((t) => {
+        if (t.saleIds) {
+          t.saleIds.forEach((s) => {
+            if (s.ornaments && s.ornaments.some((o) => o.status !== 'melted')) {
+              newSales.push(s._id);
+            }
+          });
+        }
+      });
+      setSelectedSales(newSales);
+    }
+  };
+
+  const getSalesForSelectedTransits = () => {
+    let sales = [];
+    selectedTransits.forEach((t) => {
+      if (t.saleIds) {
+        t.saleIds.forEach((sale) => {
+          const hasUnmelted = sale.ornaments && sale.ornaments.some((orn) => orn.status !== 'melted');
+          if (hasUnmelted && !sales.find((s) => s._id === sale._id)) {
+            sales.push({ ...sale, transitId: t.transitId });
+          }
+        });
+      }
+    });
+    return sales;
+  };
+
+  const handleToggleSale = (saleId) => {
+    if (selectedSales.includes(saleId)) {
+      setSelectedSales(selectedSales.filter((id) => id !== saleId));
+    } else {
+      setSelectedSales([...selectedSales, saleId]);
+    }
+  };
+
+  const handleSelectAllSales = () => {
+    const sales = getSalesForSelectedTransits();
+    if (selectedSales.length === sales.length) {
+      setSelectedSales([]);
+    } else {
+      setSelectedSales(sales.map((s) => s._id));
+    }
+  };
+
+  const getOrnamentsForSelectedSales = () => {
+    const sales = getSalesForSelectedTransits();
+    let orns = [];
+    sales.forEach((sale) => {
+      if (selectedSales.includes(sale._id) && sale.ornaments) {
+        sale.ornaments.forEach((orn) => {
+          if (orn.status !== 'melted') {
+            orns.push({
+              saleId: sale._id,
+              billId: sale.billId,
+              articleNumber: sale.articleNumber,
+              ornamentId: orn._id,
+              ornamentType: orn.ornamentType,
+              grossWeight: orn.grossWeight,
+              netWeight: orn.netWeight,
+              purity: orn.purity,
+              netAmount: orn.netAmount,
+              quantity: orn.quantity || 1,
+              goldRate: sale.purchaseType?.toLowerCase() === 'silver' ? (sale.silverRate || 0) : (sale.goldRate || 0),
+              date: sale.createdAt,
+            });
+          }
+        });
+      }
+    });
+    return orns;
+  };
+
+  const handleToggleOrnament = (orn) => {
+    const exists = selectedOrnaments.findIndex((o) => o.ornamentId === orn.ornamentId) !== -1;
+    if (exists) {
+      setSelectedOrnaments(selectedOrnaments.filter((o) => o.ornamentId !== orn.ornamentId));
+    } else {
+      setSelectedOrnaments([...selectedOrnaments, orn]);
+    }
+  };
+
+  const handleSelectAllOrnaments = () => {
+    const orns = getOrnamentsForSelectedSales();
+    if (selectedOrnaments.length === orns.length) {
+      setSelectedOrnaments([]);
+    } else {
+      setSelectedOrnaments([...orns]);
+    }
+  };
+
+  const handleNextStep = () => {
+    if (activeStep === 0) {
+      // Auto-populate sales if not set
+      const sales = getSalesForSelectedTransits();
+      if (selectedSales.length === 0) {
+        setSelectedSales(sales.map((s) => s._id));
+      }
+    } else if (activeStep === 1) {
+      // Auto-populate ornaments if not set
+      const orns = getOrnamentsForSelectedSales();
+      if (selectedOrnaments.length === 0) {
+        setSelectedOrnaments([...orns]);
+      }
+    }
+    setActiveStep((prev) => prev + 1);
+  };
+
+  const handleBackStep = () => {
+    setActiveStep((prev) => prev - 1);
+  };
+
+  const handleBatchProofUpload = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setBatchProofLoading(true);
+      const formData = new FormData();
+      formData.append('uploadedFile', file);
+      formData.append('uploadName', 'store_melting_batch_proof');
+      formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
+      const response = await createFile(formData);
+      setBatchProofLoading(false);
+      if (response?.status) {
+        setBatchProof(response.data);
+        setNotify({ open: true, message: 'Batch dispatch proof uploaded successfully', severity: 'success' });
+      } else {
+        setNotify({ open: true, message: 'File upload failed', severity: 'error' });
+      }
+    }
+  };
+
+  // Submit and create melting batch
+  const handleProceedToMelt = async () => {
+    if (selectedOrnaments.length === 0) {
+      setNotify({ open: true, message: 'Please select at least one ornament for melting', severity: 'warning' });
+      return;
+    }
+    setSubmittingBatch(true);
+    try {
+      const activeTransitIds = selectedTransits.map((t) => t._id);
+      const totalAmount = selectedOrnaments.reduce((acc, curr) => acc + (Number(curr.netAmount) || 0), 0);
+      const totalGross = selectedOrnaments.reduce((acc, curr) => acc + (Number(curr.grossWeight) || 0), 0);
+      const totalNet = selectedOrnaments.reduce((acc, curr) => acc + (Number(curr.netWeight) || 0), 0);
+
+      const payload = {
+        batchNumber,
+        transitIds: activeTransitIds,
+        transitId: activeTransitIds[0] || null,
+        saleIds: selectedSales,
+        ornaments: selectedOrnaments.map((o) => ({
+          saleId: o.saleId,
+          ornamentId: o.ornamentId,
+          articleNumber: o.articleNumber,
+          ornamentType: o.ornamentType,
+          grossWeight: Number(o.grossWeight) || 0,
+          netWeight: Number(o.netWeight) || 0,
+          purity: Number(o.purity) || 0,
+          netAmount: Number(o.netAmount) || 0,
+        })),
+        totalOrnaments: selectedOrnaments.reduce((acc, curr) => acc + (Number(curr.quantity) || 1), 0),
+        totalGrossWeight: Number(totalGross.toFixed(2)),
+        totalNetWeight: Number(totalNet.toFixed(2)),
+        totalNetAmount: Number(totalAmount.toFixed(2)),
+        notes,
+        meltProof: batchProof?._id || null,
+        status: 'created',
+        isPreMeltCompleted: false,
+      };
+
+      const res = await createMelting(payload);
+      if (res && res.status === true) {
         setNotify({
           open: true,
-          message: res.message || `Transit ${transitToMove.transitId} moved to Melting successfully!`,
+          message: `Melting Batch ${batchNumber} created! ${selectedTransits.length} transit(s) moved to Melting successfully!`,
           severity: 'success',
         });
-        setMoveDialogOpen(false);
-        setTransitToMove(null);
-        setMoveNotes('');
+        setOpenWizard(false);
         fetchData();
       } else {
         setNotify({
           open: true,
-          message: res?.message || 'Failed to move transit to Melting',
+          message: res?.message || 'Failed to create melting batch',
           severity: 'error',
         });
       }
     } catch (err) {
-      console.error('Error moving transit to melting:', err);
+      console.error('Error creating melting batch:', err);
       setNotify({
         open: true,
-        message: err.message || 'Error moving transit to melting',
+        message: err?.response?.data?.message || err?.message || 'Something went wrong while creating melting batch',
         severity: 'error',
       });
     } finally {
-      setMovingLoading(false);
+      setSubmittingBatch(false);
     }
   };
+
+  // Summary statistics for Step 3
+  const summaryGrossWeight = selectedOrnaments.reduce((acc, curr) => acc + (Number(curr.grossWeight) || 0), 0);
+  const summaryNetWeight = selectedOrnaments.reduce((acc, curr) => acc + (Number(curr.netWeight) || 0), 0);
+  const summaryAvgPurity = summaryNetWeight > 0
+    ? (selectedOrnaments.reduce((sum, o) => sum + (Number(o.purity) || 0) * (Number(o.netWeight) || 0), 0) / summaryNetWeight).toFixed(2)
+    : '0.00';
 
   return (
     <>
       <Helmet>
         <title> Transit Outwards | Store | MK Gold </title>
       </Helmet>
-
-      <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={loading}>
-        <CircularProgress color="inherit" />
-      </Backdrop>
 
       <Container maxWidth="xl">
         {/* Header section */}
@@ -281,11 +528,11 @@ export default function StoreTransitOutwards() {
               Transit Outwards
             </Typography>
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)', mt: 0.5 }}>
-              Manage received transits and dispatch them to the Melting Department
+              Manage received transits and dispatch batches to the Melting Department
             </Typography>
           </div>
 
-          <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+          <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap alignItems="center">
             {isFilterApplied && (
               <Button
                 variant="contained"
@@ -297,29 +544,30 @@ export default function StoreTransitOutwards() {
               </Button>
             )}
 
-            {/* Top Move to Melting button commented out as requested; move action is on each row */}
-            {/* 
+            {/* Top Common Button: Move to Melting */}
             <Button
               variant="contained"
-              startIcon={<Iconify icon="eva:layers-fill" />}
-              onClick={() => setOpenBatchWizard(true)}
+              startIcon={<Iconify icon="mdi:fire" width={22} />}
+              onClick={() => handleOpenMoveWizard()}
               sx={{
-                bgcolor: '#fff',
-                color: '#7b1fa2',
+                bgcolor: '#FFD700',
+                color: '#000',
                 fontWeight: 700,
-                boxShadow: 2,
-                '&:hover': { bgcolor: '#f3e5f5' },
+                fontSize: '0.875rem',
+                boxShadow: 3,
+                px: 2.5,
+                py: 1,
+                '&:hover': { bgcolor: '#e6c200' },
               }}
             >
               Move to Melting
-            </Button> 
-            */}
+            </Button>
 
             <Button
               variant="contained"
               startIcon={<Iconify icon="eva:funnel-fill" />}
               onClick={() => setFilterOpen(true)}
-              sx={{ bgcolor: '#FFD700', color: '#000', fontWeight: 700, '&:hover': { bgcolor: '#e6c200' } }}
+              sx={{ bgcolor: '#fff', color: '#7b1fa2', fontWeight: 700, '&:hover': { bgcolor: '#f3e5f5' } }}
             >
               Filter
             </Button>
@@ -364,7 +612,6 @@ export default function StoreTransitOutwards() {
                   height: 48,
                   borderRadius: 1.5,
                   bgcolor: 'rgba(0,0,0,0.08)',
-                  color: '#000',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -377,7 +624,7 @@ export default function StoreTransitOutwards() {
                 <Typography variant="h5" sx={{ fontWeight: 700 }}>
                   {movedToMeltingCount}
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'rgba(0,0,0,0.7)', fontWeight: 500 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
                   Moved to Melting
                 </Typography>
               </div>
@@ -391,15 +638,15 @@ export default function StoreTransitOutwards() {
                   width: 48,
                   height: 48,
                   borderRadius: 1.5,
-                  bgcolor: '#e3f2fd',
-                  color: '#1976d2',
+                  bgcolor: '#e0f2fe',
+                  color: '#0284c7',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
                 }}
               >
-                <Iconify icon="mdi:gold" width={28} />
+                <Iconify icon="fluent:gold-24-filled" width={28} />
               </Box>
               <div>
                 <Typography variant="h5" sx={{ fontWeight: 700 }}>
@@ -419,15 +666,15 @@ export default function StoreTransitOutwards() {
                   width: 48,
                   height: 48,
                   borderRadius: 1.5,
-                  bgcolor: '#fff3e0',
-                  color: '#e65100',
+                  bgcolor: '#fff7ed',
+                  color: '#ea580c',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
                 }}
               >
-                <Iconify icon="mdi:ring" width={28} />
+                <Iconify icon="icon-park-outline:diamond-ring" width={28} />
               </Box>
               <div>
                 <Typography variant="h5" sx={{ fontWeight: 700 }}>
@@ -441,59 +688,56 @@ export default function StoreTransitOutwards() {
           </Grid>
         </Grid>
 
-        {/* Filter Info Banner */}
-        {isFilterApplied && (
-          <Typography variant="body2" sx={{ color: '#fff', mb: 2 }}>
-            {[
-              filters.fromDate ? `From Date: ${filters.fromDate}` : null,
-              filters.toDate ? `To Date: ${filters.toDate}` : null,
-              filters.status !== 'all' ? `Status: ${filters.status === 'moved_to_melting' ? 'Moved to Melting' : 'In Store'}` : null,
-              filters.branch !== 'all' ? `Branch: ${filters.branch}` : null,
-            ]
-              .filter(Boolean)
-              .join(' | ')}
-          </Typography>
-        )}
-
-        {/* Main Card & Table */}
-        <Card sx={{ borderRadius: 2, boxShadow: 3 }}>
+        {/* Transits Table Card */}
+        <Card sx={{ boxShadow: 3 }}>
           <TransitListToolbar
             numSelected={0}
             filterName={filterName}
             onFilterName={handleFilterByName}
+            placeholder="Search transit by ID, branch, or delivery person..."
           />
 
           <Scrollbar>
-            <TableContainer>
-              <Table sx={{ minWidth: 900 }}>
+            <TableContainer sx={{ minWidth: 900 }}>
+              <Table>
                 <TransitListHead
                   order={order}
                   orderBy={orderBy}
                   headLabel={TABLE_HEAD}
-                  rowCount={data.length}
+                  rowCount={filteredData?.length || 0}
                   numSelected={0}
                   onRequestSort={handleRequestSort}
                   hideCheckbox={true}
                 />
                 <TableBody>
-                  {filteredData
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((row) => {
+                  {loading && (
+                    <TableRow>
+                      <TableCell align="center" colSpan={10} sx={{ py: 6 }}>
+                        <CircularProgress />
+                        <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+                          Loading store transits...
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+
+                  {!loading &&
+                    filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
                       const {
                         _id,
-                        branch,
                         transitId,
+                        branch,
                         numberOfPackets,
                         numberOfOrnaments,
                         totalGrossWeight,
                         totalNetWeight,
                         deliveryBy,
-                        createdAt,
                         status,
                         isMovedToMelting,
+                        createdAt,
                       } = row;
 
-                      const isAlreadyMoved = isMovedToMelting === true || status === 'moved_to_melting';
+                      const isAlreadyMoved = isMovedToMelting || status === 'moved_to_melting';
 
                       return (
                         <TableRow
@@ -539,9 +783,9 @@ export default function StoreTransitOutwards() {
                                 <Label color="secondary" sx={{ fontWeight: 600 }}>
                                   Moved to Melting
                                 </Label>
-                                {row.meltingBatch?.batchNumber && (
+                                {row.meltRecord?.batchNumber && (
                                   <Typography variant="caption" sx={{ color: '#7b1fa2', fontWeight: 700 }}>
-                                    Batch: {row.meltingBatch.batchNumber}
+                                    Batch: {row.meltRecord.batchNumber}
                                   </Typography>
                                 )}
                               </Stack>
@@ -560,45 +804,20 @@ export default function StoreTransitOutwards() {
                           </TableCell>
 
                           <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                            <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-                              {isAlreadyMoved ? (
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  color="inherit"
-                                  disabled
-                                  startIcon={<Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: 'secondary.main' }} />}
-                                  sx={{
-                                    fontWeight: 700,
-                                    fontSize: '0.75rem',
-                                    textTransform: 'none',
-                                    whiteSpace: 'nowrap',
-                                    bgcolor: '#f5f5f5',
-                                    color: '#616161 !important',
-                                  }}
-                                >
-                                  Moved to Melting
-                                </Button>
-                              ) : (
-                                <Button
-                                  size="small"
-                                  variant="contained"
-                                  startIcon={<Iconify icon="mdi:fire" sx={{ color: '#ffffff !important' }} />}
-                                  onClick={() => handleOpenMoveDialog(row)}
-                                  sx={{
-                                    bgcolor: '#7b1fa2',
-                                    color: '#fff',
-                                    fontWeight: 700,
-                                    fontSize: '0.75rem',
-                                    textTransform: 'none',
-                                    whiteSpace: 'nowrap',
-                                    '&:hover': { bgcolor: '#6a1b9a' },
-                                  }}
-                                >
-                                  Move to Melting
-                                </Button>
-                              )}
-                            </Stack>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="primary"
+                              startIcon={<Iconify icon="eva:eye-fill" />}
+                              onClick={() => navigate(`/store/transit-sales/${_id}`)}
+                              sx={{
+                                fontWeight: 600,
+                                fontSize: '0.75rem',
+                                textTransform: 'none',
+                              }}
+                            >
+                              View
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );
@@ -715,105 +934,388 @@ export default function StoreTransitOutwards() {
         </DialogActions>
       </Dialog>
 
-      {/* Confirm Move to Melting Dialog */}
+      {/* Move to Melting Multi-Step Wizard Dialog */}
       <Dialog
-        open={moveDialogOpen}
+        open={openWizard}
         onClose={() => {
-          if (!movingLoading) {
-            setMoveDialogOpen(false);
-            setTransitToMove(null);
-            setMoveNotes('');
+          if (!submittingBatch) {
+            setOpenWizard(false);
           }
         }}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
+        disableEscapeKeyDown={submittingBatch}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Iconify icon="mdi:fire" width={28} sx={{ color: '#7b1fa2' }} />
-          Move Transit to Melting
+        <DialogTitle sx={{ fontWeight: 700, color: '#1a237e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Move to Melting - {WIZARD_STEPS[activeStep]}</span>
+          <Chip
+            label={batchNumber || 'Generating...'}
+            color="primary"
+            sx={{ fontWeight: 700, fontSize: '0.875rem' }}
+          />
         </DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          {transitToMove && (
-            <Stack spacing={2.5} sx={{ mt: 1 }}>
-              <Alert severity="info">
-                Moving this transit will transfer custody from <strong>Store</strong> to the <strong>Melting Department</strong>. It will immediately show in the Melting login for melting batch processing.
-              </Alert>
 
-              <Paper variant="outlined" sx={{ p: 2, bgcolor: '#fafafa', borderRadius: 1.5 }}>
+        <DialogContent sx={{ minHeight: 420 }}>
+          <Stepper activeStep={activeStep} alternativeLabel sx={{ pt: 2, pb: 4 }}>
+            {WIZARD_STEPS.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+
+          {/* Step 0: Select In-Store Transits */}
+          {activeStep === 0 && (
+            <Box>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Select Transits Available in Store ({selectedTransits.length}/{availableTransits.length} selected)
+                </Typography>
+                {availableTransits.length > 0 && (
+                  <Button size="small" onClick={handleSelectAllTransits}>
+                    {selectedTransits.length === availableTransits.length ? 'Deselect All' : 'Select All'}
+                  </Button>
+                )}
+              </Stack>
+
+              <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 340 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          indeterminate={selectedTransits.length > 0 && selectedTransits.length < availableTransits.length}
+                          checked={availableTransits.length > 0 && selectedTransits.length === availableTransits.length}
+                          onChange={handleSelectAllTransits}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Transit ID</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Branch</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700 }}>Packets</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700 }}>Ornaments</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>Gross Wt (g)</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>Net Wt (g)</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {availableTransits.map((t) => {
+                      const isSelected = selectedTransits.findIndex((x) => x._id === t._id) !== -1;
+                      return (
+                        <TableRow
+                          hover
+                          key={t._id}
+                          selected={isSelected}
+                          onClick={() => handleToggleTransit(t)}
+                          sx={{ cursor: 'pointer' }}
+                        >
+                          <TableCell padding="checkbox">
+                            <Checkbox checked={isSelected} />
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>{t.transitId}</TableCell>
+                          <TableCell>{t.branch?.branchName || 'N/A'}</TableCell>
+                          <TableCell align="center">{t.numberOfPackets}</TableCell>
+                          <TableCell align="center">{t.numberOfOrnaments}</TableCell>
+                          <TableCell align="right">{t.totalGrossWeight} g</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>{t.totalNetWeight} g</TableCell>
+                          <TableCell>{moment(t.createdAt).format('YYYY-MM-DD')}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {availableTransits.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No in-store transits ready for melting.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+
+          {/* Step 1: Select Sales & Articles */}
+          {activeStep === 1 && (
+            <Box>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Select Sales & Verify Article Numbers ({selectedSales.length}/{getSalesForSelectedTransits().length} selected)
+                </Typography>
+                {getSalesForSelectedTransits().length > 0 && (
+                  <Button size="small" onClick={handleSelectAllSales}>
+                    {selectedSales.length === getSalesForSelectedTransits().length ? 'Deselect All' : 'Select All'}
+                  </Button>
+                )}
+              </Stack>
+
+              <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 340 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          indeterminate={selectedSales.length > 0 && selectedSales.length < getSalesForSelectedTransits().length}
+                          checked={getSalesForSelectedTransits().length > 0 && selectedSales.length === getSalesForSelectedTransits().length}
+                          onChange={handleSelectAllSales}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Transit ID</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Bill ID</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Article No</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Branch</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700 }}>Ornaments</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>Net Wt (g)</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {getSalesForSelectedTransits().map((sale) => {
+                      const isSelected = selectedSales.includes(sale._id);
+                      return (
+                        <TableRow
+                          hover
+                          key={sale._id}
+                          selected={isSelected}
+                          onClick={() => handleToggleSale(sale._id)}
+                          sx={{ cursor: 'pointer' }}
+                        >
+                          <TableCell padding="checkbox">
+                            <Checkbox checked={isSelected} />
+                          </TableCell>
+                          <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>{sale.transitId}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{sale.billId}</TableCell>
+                          <TableCell sx={{ fontWeight: 700, color: '#7b1fa2' }}>
+                            {formatArticleNumber(sale.articleNumber)}
+                          </TableCell>
+                          <TableCell>{sale.branch?.branchName || 'N/A'}</TableCell>
+                          <TableCell>{sale.customer?.name || 'N/A'}</TableCell>
+                          <TableCell align="center">{sale.ornaments?.length || 0}</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>{sale.netWeight} g</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {getSalesForSelectedTransits().length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No sales available in selected transits.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+
+          {/* Step 2: Select Ornaments */}
+          {activeStep === 2 && (
+            <Box>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Select Ornaments for Smelting ({selectedOrnaments.length}/{getOrnamentsForSelectedSales().length} selected)
+                </Typography>
+                {getOrnamentsForSelectedSales().length > 0 && (
+                  <Button size="small" onClick={handleSelectAllOrnaments}>
+                    {selectedOrnaments.length === getOrnamentsForSelectedSales().length ? 'Deselect All' : 'Select All'}
+                  </Button>
+                )}
+              </Stack>
+
+              <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 340 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          indeterminate={selectedOrnaments.length > 0 && selectedOrnaments.length < getOrnamentsForSelectedSales().length}
+                          checked={getOrnamentsForSelectedSales().length > 0 && selectedOrnaments.length === getOrnamentsForSelectedSales().length}
+                          onChange={handleSelectAllOrnaments}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Article No</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Ornament Type</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700 }}>Qty</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>Gross Wt (g)</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>Net Wt (g)</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700 }}>Purity (%)</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {getOrnamentsForSelectedSales().map((orn, idx) => {
+                      const isSelected = selectedOrnaments.findIndex((o) => o.ornamentId === orn.ornamentId) !== -1;
+                      return (
+                        <TableRow
+                          hover
+                          key={idx}
+                          selected={isSelected}
+                          onClick={() => handleToggleOrnament(orn)}
+                          sx={{ cursor: 'pointer' }}
+                        >
+                          <TableCell padding="checkbox">
+                            <Checkbox checked={isSelected} />
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 700, color: '#7b1fa2' }}>
+                            {formatArticleNumber(orn.articleNumber)}
+                          </TableCell>
+                          <TableCell>{orn.ornamentType}</TableCell>
+                          <TableCell align="center">{orn.quantity}</TableCell>
+                          <TableCell align="right">{orn.grossWeight} g</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>{orn.netWeight} g</TableCell>
+                          <TableCell align="center">{orn.purity}%</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {getOrnamentsForSelectedSales().length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No ornaments found for selected sales.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+
+          {/* Step 3: Batch Summary & Confirmation */}
+          {activeStep === 3 && (
+            <Box>
+              <Card sx={{ p: 2.5, mb: 3, bgcolor: '#faf5ff', border: '1px solid #e9d5ff' }}>
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Transit ID
-                    </Typography>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1a237e' }}>
-                      {transitToMove.transitId}
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="caption" color="text.secondary">Melting Batch No</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#7b1fa2' }}>
+                      {batchNumber}
                     </Typography>
                   </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Origin Branch
-                    </Typography>
-                    <Typography variant="subtitle2">
-                      {transitToMove.branch?.branchName || 'N/A'}
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="caption" color="text.secondary">Selected Transits</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      {selectedTransits.length}
                     </Typography>
                   </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Packets / Ornaments
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {transitToMove.numberOfPackets} pkts / {transitToMove.numberOfOrnaments} orns
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="caption" color="text.secondary">Total Ornaments</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      {selectedOrnaments.reduce((acc, curr) => acc + (Number(curr.quantity) || 1), 0)}
                     </Typography>
                   </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">
-                      Gross / Net Weight
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="caption" color="text.secondary">Total Gross Weight</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#d84315' }}>
+                      {summaryGrossWeight.toFixed(2)} g
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#d84315' }}>
-                      {transitToMove.totalGrossWeight}g Gross / {transitToMove.totalNetWeight}g Net
+                  </Grid>
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="caption" color="text.secondary">Total Net Weight</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#2e7d32' }}>
+                      {summaryNetWeight.toFixed(2)} g
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="caption" color="text.secondary">Average Purity</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0284c7' }}>
+                      {summaryAvgPurity}%
                     </Typography>
                   </Grid>
                 </Grid>
-              </Paper>
+              </Card>
 
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Outward Notes / Dispatch Remarks (Optional)"
-                placeholder="Enter any instructions or notes for the melting team..."
-                value={moveNotes}
-                onChange={(e) => setMoveNotes(e.target.value)}
-              />
-            </Stack>
+              <Stack spacing={2}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2.5}
+                  label="Dispatch / Outward Remarks (Optional)"
+                  placeholder="Add any instructions or notes for the melting team..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+
+                <Box>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    disabled={batchProofLoading}
+                    startIcon={<Iconify icon="eva:cloud-upload-fill" />}
+                    sx={{ textTransform: 'none', fontWeight: 600 }}
+                  >
+                    {batchProofLoading ? 'Uploading...' : 'Attach Batch Proof Photo (Optional)'}
+                    <input type="file" hidden accept="image/*,application/pdf" onChange={handleBatchProofUpload} />
+                  </Button>
+                  {batchProof?.uploadedFile && (
+                    <Typography variant="caption" sx={{ color: 'success.main', display: 'block', mt: 0.5, fontWeight: 600 }}>
+                      ✓ Proof attached successfully
+                    </Typography>
+                  )}
+                </Box>
+              </Stack>
+            </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+
+        <DialogActions sx={{ px: 3, pb: 2.5, justifyContent: 'space-between' }}>
           <Button
-            onClick={() => {
-              setMoveDialogOpen(false);
-              setTransitToMove(null);
-              setMoveNotes('');
-            }}
+            onClick={() => setOpenWizard(false)}
             color="inherit"
-            disabled={movingLoading}
+            disabled={submittingBatch}
           >
             Cancel
           </Button>
-          <LoadingButton
-            variant="contained"
-            loading={movingLoading}
-            onClick={handleConfirmMoveToMelting}
-            startIcon={<Iconify icon="mdi:fire" />}
-            sx={{
-              bgcolor: '#7b1fa2',
-              color: '#fff',
-              fontWeight: 700,
-              '&:hover': { bgcolor: '#6a1b9a' },
-            }}
-          >
-            Confirm Move to Melting
-          </LoadingButton>
+
+          <Stack direction="row" spacing={1.5}>
+            {activeStep > 0 && (
+              <Button
+                variant="outlined"
+                onClick={handleBackStep}
+                disabled={submittingBatch}
+                startIcon={<Iconify icon="mdi:arrow-left" />}
+              >
+                Back
+              </Button>
+            )}
+
+            {activeStep < 3 && (
+              <Button
+                variant="contained"
+                onClick={handleNextStep}
+                disabled={
+                  (activeStep === 0 && selectedTransits.length === 0) ||
+                  (activeStep === 1 && selectedSales.length === 0) ||
+                  (activeStep === 2 && selectedOrnaments.length === 0)
+                }
+              >
+                Next
+              </Button>
+            )}
+
+            {activeStep === 3 && (
+              <LoadingButton
+                variant="contained"
+                color="primary"
+                loading={submittingBatch}
+                disabled={submittingBatch || selectedOrnaments.length === 0}
+                onClick={handleProceedToMelt}
+                startIcon={<Iconify icon="mdi:fire" />}
+                sx={{
+                  bgcolor: '#7b1fa2',
+                  color: '#fff',
+                  fontWeight: 700,
+                  '&:hover': { bgcolor: '#6a1b9a' },
+                }}
+              >
+                Confirm & Move to Melting
+              </LoadingButton>
+            )}
+          </Stack>
         </DialogActions>
       </Dialog>
 

@@ -1500,7 +1500,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     isCompleted: Yup.boolean(),
   });
 
-  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue } = useFormik({
+  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue, isSubmitting } = useFormik({
     initialValues: {
       amount: '',
       cashAmount: '',
@@ -2283,13 +2283,16 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           <LoadingButton
             type="submit"
             variant="contained"
-            loading={loading}
+            loading={Boolean(loading || isSubmitting)}
             disabled={
-              type === 'finance' && saleDetails?.status !== 'completed' && (
-                ((saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged' && !(saleDetails?.assigneeCompleted ?? assigneeCompleted)
-                  ? (saleDetails?.release || []).some((r) => r.paymentType === 'bank' || r.bank)
-                  : (saleDetails?.paymentType === 'bank' || (saleDetails?.paymentType === 'partial' && Number(saleDetails?.bankAmount) > 0))
-                ) && !isEffectiveBankVerified
+              Boolean(loading || isSubmitting) ||
+              Boolean(
+                type === 'finance' && saleDetails?.status !== 'completed' && (
+                  ((saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged' && !(saleDetails?.assigneeCompleted ?? assigneeCompleted)
+                    ? (saleDetails?.release || []).some((r) => r.paymentType === 'bank' || r.bank)
+                    : (saleDetails?.paymentType === 'bank' || (saleDetails?.paymentType === 'partial' && Number(saleDetails?.bankAmount) > 0))
+                  ) && !isEffectiveBankVerified
+                )
               )
             }
             sx={{ color: '#fff' }}

@@ -61,7 +61,7 @@ hrRouter.post("/leave/get", leave.find);
 hrRouter.get("/leave/get/:id", leave.findById);
 hrRouter.post("/leave/create", leave.create);
 hrRouter.post("/leave/update/:id", leave.update);
-// hrRouter.post("/leave/delete/:id", leave.remove);
+hrRouter.post("/leave/delete/:id", leave.remove);
 
 hrRouter.get("/payprocess/get", payprocess.find);
 hrRouter.post("/payprocess/get", payprocess.find);

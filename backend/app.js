@@ -87,12 +87,16 @@ app.get("/", (req, res) => {
 
 // 404 handler
 app.use((req, res, next) => {
-  next(createError(404));
+  next(createError(404, `Cannot ${req.method} ${req.originalUrl}`));
 });
 
 // error handler
 app.use((err, req, res, next) => {
-  console.error(err);
+  if (err.status === 404) {
+    console.warn(`[404 Not Found] ${req.method} ${req.originalUrl}`);
+  } else {
+    console.error(`[Server Error] ${req.method} ${req.originalUrl}:`, err);
+  }
 
   res.status(err.status || 500).json({
     message: err.message || "Internal Server Error",

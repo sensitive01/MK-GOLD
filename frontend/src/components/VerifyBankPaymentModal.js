@@ -351,6 +351,7 @@ export default function VerifyBankPaymentModal({
             type="submit"
             variant="contained"
             loading={loading}
+            disabled={loading}
             startIcon={<Iconify icon="eva:checkmark-circle-fill" />}
             sx={{ px: 3 }}
           >

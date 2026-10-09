@@ -1698,13 +1698,39 @@ async function update(id, payload) {
       }));
       delete payload.newFinancePayments;
       delete payload.newFinancePayment;
-      pushOps.financePayments = { $each: paymentsToAdd };
     } else if (payload.newFinancePayment) {
       const newFp = payload.newFinancePayment;
       delete payload.newFinancePayment;
       newFp.stage = newFp.stage || defaultStage;
-      pushOps.financePayments = newFp;
       paymentsToAdd = [newFp];
+    }
+
+    if (payload.isFinanceReupdate) {
+      if (paymentsToAdd.length > 0) {
+        const existingReleasePayments = (sale.financePayments || []).filter(fp => fp.stage === 'release');
+        payload.financePayments = [...existingReleasePayments, ...paymentsToAdd];
+        delete pushOps.financePayments;
+      }
+      payload.invoiceSent = false;
+      payload.invoicePdfUrl = "";
+    } else if (paymentsToAdd.length > 0) {
+      // Filter out duplicate payments (same amount, stage, and identical proof or within 5 minutes)
+      if (Array.isArray(sale.financePayments) && sale.financePayments.length > 0) {
+        paymentsToAdd = paymentsToAdd.filter((newP) => {
+          const isDup = sale.financePayments.some((existingP) => {
+            const sameAmount = Number(existingP.amount) === Number(newP.amount);
+            const sameStage = (existingP.stage || defaultStage) === (newP.stage || defaultStage);
+            const sameProof = Boolean(existingP.proof && newP.proof && existingP.proof === newP.proof);
+            const timeDiff = Math.abs(new Date(existingP.createdAt || 0) - new Date(newP.createdAt || Date.now()));
+            const withinRecent = timeDiff < 5 * 60 * 1000;
+            return sameAmount && sameStage && (sameProof || withinRecent);
+          });
+          return !isDup;
+        });
+      }
+      if (paymentsToAdd.length > 0) {
+        pushOps.financePayments = { $each: paymentsToAdd };
+      }
     }
 
     const updateQuery = { $set: payload };
@@ -1954,6 +1980,25 @@ async function updateWithLog(id, setData, logEntry) {
       }
       setData.invoiceSent = false;
       setData.invoicePdfUrl = "";
+    } else if (paymentsToAdd.length > 0) {
+      if (Array.isArray(sale.financePayments) && sale.financePayments.length > 0) {
+        paymentsToAdd = paymentsToAdd.filter((newP) => {
+          const isDup = sale.financePayments.some((existingP) => {
+            const sameAmount = Number(existingP.amount) === Number(newP.amount);
+            const sameStage = (existingP.stage || defaultStage) === (newP.stage || defaultStage);
+            const sameProof = Boolean(existingP.proof && newP.proof && existingP.proof === newP.proof);
+            const timeDiff = Math.abs(new Date(existingP.createdAt || 0) - new Date(newP.createdAt || Date.now()));
+            const withinRecent = timeDiff < 5 * 60 * 1000;
+            return sameAmount && sameStage && (sameProof || withinRecent);
+          });
+          return !isDup;
+        });
+      }
+      if (paymentsToAdd.length > 0) {
+        pushOps.financePayments = { $each: paymentsToAdd };
+      } else {
+        delete pushOps.financePayments;
+      }
     }
 
     const updatedSale = await Sales.findByIdAndUpdate(

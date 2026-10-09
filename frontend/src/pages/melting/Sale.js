@@ -1196,7 +1196,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     isCompleted: Yup.boolean(),
   });
 
-  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue } = useFormik({
+  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setValues, setFieldValue, isSubmitting } = useFormik({
     initialValues: {
       amount: '',
       cashAmount: '',
@@ -1727,7 +1727,13 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <LoadingButton type="submit" variant="contained" loading={loading || isUploading} disabled={isUploading} sx={{ color: '#fff' }}>
+          <LoadingButton
+            type="submit"
+            variant="contained"
+            loading={Boolean(loading || isSubmitting || isUploading)}
+            disabled={Boolean(loading || isSubmitting || isUploading)}
+            sx={{ color: '#fff' }}
+          >
             Save & Update Status
           </LoadingButton>
         </DialogActions>

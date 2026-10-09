@@ -14,6 +14,11 @@ import {
   Card,
   Divider,
   IconButton,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
 } from '@mui/material';
 import Iconify from '../iconify';
 import Label from '../label';
@@ -366,6 +371,54 @@ export default function MeltingDetailDialog({ open, onClose, melting }) {
                 </Typography>
               </Grid>
             </>
+          )}
+
+          {/* Included Ornaments List */}
+          {melting.ornaments && melting.ornaments.length > 0 && (
+            <Grid item xs={12}>
+              <Divider sx={{ my: 1 }} />
+              <Typography variant="subtitle1" sx={{ color: '#7b1fa2', fontWeight: 700, mb: 1 }}>
+                Included Ornaments ({melting.ornaments.length})
+              </Typography>
+              <Box sx={{ overflowX: 'auto', border: '1px solid #eee', borderRadius: 1 }}>
+                <Table size="small">
+                  <TableHead sx={{ bgcolor: '#faf5ff' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>#</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Article No</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Ornament Type</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Gross Wt (g)</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Net Wt (g)</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Purity (%)</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Amount (₹)</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {melting.ornaments.map((orn, idx) => {
+                      const art = orn.articleNumber;
+                      const artStr = art ? String(art).trim() : '-';
+                      const lastPart = artStr.includes('-') ? artStr.split('-').pop() : artStr;
+                      const match = lastPart.match(/\d{3,}/) || artStr.match(/\d{3,}/) || artStr.match(/\d+/);
+                      const displayArt = match ? match[0] : (lastPart || artStr);
+
+                      return (
+                        <TableRow key={idx} hover>
+                          <TableCell>{idx + 1}</TableCell>
+                          <TableCell sx={{ fontWeight: 600, color: '#7b1fa2' }}>
+                            {displayArt}
+                          </TableCell>
+                          <TableCell>{orn.ornamentType || '-'}</TableCell>
+                          <TableCell>{Number(orn.grossWeight || 0).toFixed(2)}</TableCell>
+                          <TableCell>{Number(orn.netWeight || 0).toFixed(2)}</TableCell>
+                          <TableCell>{Number(orn.purity || 0).toFixed(2)}%</TableCell>
+                          <TableCell>₹{Number(orn.netAmount || 0).toLocaleString('en-IN')}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </Box>
+            </Grid>
           )}
         </Grid>
       </DialogContent>

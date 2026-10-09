@@ -17,6 +17,7 @@ import Scrollbar from '../../components/scrollbar';
 import Label from '../../components/label';
 import { SaleDetail } from '../../components/branch/sales';
 import { createFile } from '../../apis/branch/fileupload';
+import MeltingDetailDialog from '../../components/store/MeltingDetailDialog';
 import global from '../../utils/global';
 
 const AlertComponent = forwardRef((props, ref) => <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />);
@@ -84,6 +85,20 @@ export default function Melting({ onlyCompleted = false }) {
   const [sellGoldRate, setSellGoldRate] = useState('');
   const [sellAmount, setSellAmount] = useState('');
   const [sellPaymentMode, setSellPaymentMode] = useState('');
+
+  // Melting Detail & Proofs state
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [meltingToView, setMeltingToView] = useState(null);
+
+  const handleOpenDetailDialog = (row) => {
+    setMeltingToView(row);
+    setDetailDialogOpen(true);
+  };
+
+  const handleCloseDetailDialog = () => {
+    setDetailDialogOpen(false);
+    setMeltingToView(null);
+  };
 
   const fetchMeltings = useCallback(async () => {
     const query = onlyCompleted ? { status: 'melt_updated' } : { status: { $ne: 'sold' } };
@@ -557,11 +572,6 @@ export default function Melting({ onlyCompleted = false }) {
               <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
                 {onlyCompleted ? 'Completed Melting' : 'Melting Management'}
               </Typography>
-              {!onlyCompleted && (
-                <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={handleOpenWizard}>
-                  Add Melting
-                </Button>
-              )}
             </Stack>
 
             <Card>
@@ -620,7 +630,6 @@ export default function Melting({ onlyCompleted = false }) {
                         <TableCell>Gross Wt.</TableCell>
                         <TableCell>Net Wt.</TableCell>
                         <TableCell>Status</TableCell>
-                        <TableCell>Created By</TableCell>
                         <TableCell>Action</TableCell>
                       </TableRow>
                     </TableHead>
@@ -628,7 +637,17 @@ export default function Melting({ onlyCompleted = false }) {
                       {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => (
                         <TableRow hover key={row._id}>
                           <TableCell>{moment(row.createdAt).format('YYYY-MM-DD HH:mm')}</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>{row.batchNumber || '-'}</TableCell>
+                          <TableCell
+                            sx={{
+                              fontWeight: 700,
+                              color: '#7b1fa2',
+                              cursor: 'pointer',
+                              '&:hover': { textDecoration: 'underline' }
+                            }}
+                            onClick={() => handleOpenDetailDialog(row)}
+                          >
+                            {row.batchNumber || '-'}
+                          </TableCell>
                           <TableCell>{row.transitIds?.length ? row.transitIds.map(t => t.transitId).join(', ') : (row.transitId?.transitId || 'N/A')}</TableCell>
                           <TableCell>{row.saleIds?.length || 0}</TableCell>
                           <TableCell>{row.totalOrnaments}</TableCell>
@@ -654,9 +673,19 @@ export default function Melting({ onlyCompleted = false }) {
                               <Label color="warning" variant="soft">Before Melting</Label>
                             )}
                           </TableCell>
-                          <TableCell>{row.createdBy?.name}</TableCell>
                           <TableCell>
-                            <Stack direction="row" spacing={1}>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Button 
+                                variant="outlined" 
+                                color="info" 
+                                size="small" 
+                                startIcon={<Iconify icon="eva:eye-fill" />}
+                                onClick={() => handleOpenDetailDialog(row)}
+                                sx={{ fontWeight: 600, whiteSpace: 'nowrap', textTransform: 'none' }}
+                              >
+                                View
+                              </Button>
+
                               {row.status === 'sold' ? (
                                 <Label color="success">Sold</Label>
                               ) : row.status === 'melt_updated' ? (
@@ -685,7 +714,7 @@ export default function Melting({ onlyCompleted = false }) {
                               ) : (
                                 <Button 
                                   variant="contained" 
-                                  color="primary"
+                                  color="primary" 
                                   size="small" 
                                   onClick={() => handleOpenUpdateDialog(row)}
                                   sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}
@@ -693,16 +722,13 @@ export default function Melting({ onlyCompleted = false }) {
                                   After Melting
                                 </Button>
                               )}
-                              {/* <IconButton color="error" onClick={() => handleDeleteMelting(row._id)}>
-                                <Iconify icon={'eva:trash-2-outline'} />
-                              </IconButton> */}
                             </Stack>
                           </TableCell>
                         </TableRow>
                       ))}
                       {filteredData.length === 0 && (
                         <TableRow>
-                          <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
+                          <TableCell align="center" colSpan={9} sx={{ py: 3 }}>
                             <Typography variant="body1">No melting records found</Typography>
                           </TableCell>
                         </TableRow>
@@ -1370,6 +1396,13 @@ export default function Melting({ onlyCompleted = false }) {
           <Button onClick={() => setSaleIdToView(null)}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Melting Details & Proofs Dialog */}
+      <MeltingDetailDialog
+        open={detailDialogOpen}
+        onClose={handleCloseDetailDialog}
+        melting={meltingToView}
+      />
     </>
   );
 }

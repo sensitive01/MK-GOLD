@@ -956,7 +956,24 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
 
     const normalRows = paymentsList.filter((p) => !p.isVerificationRow);
     const verificationRows = paymentsList.filter((p) => p.isVerificationRow);
-    const finalPaymentsList = [...normalRows, ...verificationRows];
+    const combinedPaymentsList = [...normalRows, ...verificationRows];
+
+    // Deduplicate identical payments (same stage, amount, verification status, and close timestamp or same proof)
+    const finalPaymentsList = [];
+    combinedPaymentsList.forEach((row) => {
+      const isDuplicate = finalPaymentsList.some((existing) => {
+        const sameAmount = Number(existing.amount) === Number(row.amount);
+        const sameStage = existing.stageKey === row.stageKey;
+        const sameVerification = Boolean(existing.isVerificationRow) === Boolean(row.isVerificationRow);
+        const sameProof = Boolean(existing.proof && row.proof && existing.proof === row.proof);
+        const timeDiff = Math.abs(new Date(existing.createdAt || 0) - new Date(row.createdAt || 0));
+        const withinRecent = timeDiff < 5 * 60 * 1000;
+        return sameAmount && sameStage && sameVerification && (sameProof || withinRecent);
+      });
+      if (!isDuplicate) {
+        finalPaymentsList.push(row);
+      }
+    });
 
     const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - finalPaymentsList.length) : 0;
     const handleChangePage = (event, newPage) => {
