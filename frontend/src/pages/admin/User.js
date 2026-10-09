@@ -95,12 +95,33 @@ function applySortFilter(array, comparator, query) {
     if (order !== 0) return order;
     return a[1] - b[1];
   });
+  let results = stabilizedThis?.map((el) => el[0]);
   if (query) {
-    return filter(array, (row) =>
-      row.username ? row.username.toLowerCase().indexOf(query.toLowerCase()) !== -1 : false
-    );
+    const cleanQuery = query.toLowerCase().trim();
+    results = filter(results, (row) => {
+      const username = (row?.username || row?.usernames || '').toString().toLowerCase();
+      const phone = (
+        row?.employee?.phoneNumber ||
+        row?.employee?.phone ||
+        row?.employee?.alternatePhoneNumber ||
+        ''
+      ).toString().toLowerCase();
+      const userType = (row?.userType || row?.usertype || '').toString().toLowerCase();
+      const userTypeFormatted = sentenceCase(row?.userType || row?.usertype || '').toLowerCase();
+      const empId = (row?.employee?.employeeId || '').toString().toLowerCase();
+      const empName = (row?.employee?.name || '').toString().toLowerCase();
+
+      return (
+        username.includes(cleanQuery) ||
+        phone.includes(cleanQuery) ||
+        userType.includes(cleanQuery) ||
+        userTypeFormatted.includes(cleanQuery) ||
+        empId.includes(cleanQuery) ||
+        empName.includes(cleanQuery)
+      );
+    });
   }
-  return stabilizedThis?.map((el) => el[0]);
+  return results;
 }
 
 export default function User() {
@@ -398,6 +419,9 @@ export default function User() {
                   data?.map((e) => ({
                     Username: e.username,
                     UserType: e.userType,
+                    'Employee ID': e.employee?.employeeId || '',
+                    'Employee Name': e.employee?.name || '',
+                    Branch: e.branch?.branchName || 'N/A',
                     Status: e.status,
                     Date: e.createdAt,
                   })),
@@ -467,6 +491,8 @@ export default function User() {
                     const username = row.username || row.usernames;
                     const userType = row.userType || row.usertype;
                     const employee = row.employee;
+                    const employeeId = employee?.employeeId || (typeof employee === 'string' ? employee : '');
+                    const employeeName = employee?.name || '';
                     const status = row.status;
                     const createdAt = row.createdAt || row.createdat;
                     const loginMethod = row.loginMethod || row.loginmethod || 'password';
@@ -479,7 +505,24 @@ export default function User() {
                         </TableCell>
                         <TableCell align="left">{username}</TableCell>
                         <TableCell align="left">{sentenceCase(userType)}</TableCell>
-                        <TableCell align="left">{employee?.employeeId}</TableCell>
+                        <TableCell align="left">
+                          {employeeId || employeeName ? (
+                            <>
+                              {employeeId && (
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  {employeeId}
+                                </Typography>
+                              )}
+                              {employeeName && (
+                                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                                  {employeeName}
+                                </Typography>
+                              )}
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
                         <TableCell align="left">{row.branch?.branchName || 'N/A'}</TableCell>
                         <TableCell align="left">
                           <Status status={status} _id={_id} />
@@ -506,7 +549,7 @@ export default function User() {
                       <TableCell colSpan={12} />
                     </TableRow>
                   )}
-                  {filteredData?.length === 0 && (
+                  {filteredData?.length === 0 && !filterName && (
                     <TableRow>
                       <TableCell align="center" colSpan={12} sx={{ py: 3 }}>
                         <Paper
@@ -519,10 +562,7 @@ export default function User() {
                       </TableCell>
                     </TableRow>
                   )}
-                </TableBody>
-
-                {filteredData?.length > 0 && isNotFound && (
-                  <TableBody>
+                  {isNotFound && (
                     <TableRow>
                       <TableCell align="center" colSpan={12} sx={{ py: 3 }}>
                         <Paper
@@ -542,8 +582,8 @@ export default function User() {
                         </Paper>
                       </TableCell>
                     </TableRow>
-                  </TableBody>
-                )}
+                  )}
+                </TableBody>
               </Table>
             </TableContainer>
           </Scrollbar>
@@ -551,7 +591,7 @@ export default function User() {
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
-            count={data?.length || 0}
+            count={filteredData?.length || 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}

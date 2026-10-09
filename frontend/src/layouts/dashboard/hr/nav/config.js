@@ -43,11 +43,6 @@ const navConfig = [
     ]
   },
   {
-    title: 'Leads',
-    path: '/hr/leads',
-    icon: icon('ic_analytics'),
-  },
-  {
     title: 'user',
     path: '/hr/user',
     icon: icon('ic_user'),

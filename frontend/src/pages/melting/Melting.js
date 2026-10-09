@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, forwardRef } from 'react';
+import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 import {
   Container, Typography, Card, Table, TableBody, TableCell, TableContainer,
@@ -21,6 +22,8 @@ import global from '../../utils/global';
 const AlertComponent = forwardRef((props, ref) => <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />);
 
 export default function Melting({ onlyCompleted = false }) {
+  const auth = useSelector((state) => state.auth);
+  const userType = auth?.user?.userType;
   const [data, setData] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -657,14 +660,18 @@ export default function Melting({ onlyCompleted = false }) {
                               {row.status === 'sold' ? (
                                 <Label color="success">Sold</Label>
                               ) : row.status === 'melt_updated' ? (
-                                <Button 
-                                  variant="contained" 
-                                  color="success"
-                                  size="small" 
-                                  onClick={() => handleOpenSellDialog(row)}
-                                >
-                                  Sell Bar
-                                </Button>
+                                userType === 'admin' ? (
+                                  <Button 
+                                    variant="contained" 
+                                    color="success" 
+                                    size="small" 
+                                    onClick={() => handleOpenSellDialog(row)}
+                                  >
+                                    Sell Bar
+                                  </Button>
+                                ) : (
+                                  <Label color="success">Completed</Label>
+                                )
                               ) : !row.isPreMeltCompleted ? (
                                 <Button 
                                   variant="outlined" 
