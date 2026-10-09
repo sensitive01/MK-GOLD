@@ -2,6 +2,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DescriptionIcon from '@mui/icons-material/Description';
 import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
 import GroupsIcon from '@mui/icons-material/Groups';
+import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -14,6 +15,16 @@ const navConfig = [
     title: 'Dashboard',
     path: '/telecaller-tl/dashboard',
     icon: icon('ic_analytics'),
+  },
+  {
+    title: 'Telecallers',
+    path: '/telecaller-tl/telecallers',
+    icon: <SupportAgentIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Leads',
+    path: '/telecaller-tl/leads',
+    icon: <GroupsIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Attendance',
@@ -29,11 +40,6 @@ const navConfig = [
     title: 'Expenses',
     path: '/telecaller-tl/expense',
     icon: <RequestQuoteIcon sx={{ width: 1, height: 1 }} />,
-  },
-  {
-    title: 'Leads',
-    path: '/telecaller-tl/leads',
-    icon: <GroupsIcon sx={{ width: 1, height: 1 }} />,
   },
 ];
 

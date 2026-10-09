@@ -1,11 +1,14 @@
-import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 // @mui
 import { styled } from '@mui/material/styles';
 //
 import Header from './header';
 import Nav from './nav';
 import { NotificationDisplay } from '../../../components/announcement';
+import { getProfileApi } from '../../../apis/auth';
+import { logout } from '../../../features/authSlice';
 
 // ----------------------------------------------------------------------
 
@@ -35,6 +38,44 @@ const Main = styled('div')(({ theme }) => ({
 
 export default function DashboardLayout() {
   const [open, setOpen] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkActiveSession = async () => {
+      try {
+        const res = await getProfileApi();
+        if (!isMounted) return;
+
+        // If response indicates account is not active, force immediate logout
+        if (res && res.status === true && res.data && res.data.status !== 'active') {
+          dispatch(logout());
+          localStorage.removeItem('token');
+          localStorage.removeItem('persist:root');
+          navigate('/login', { replace: true });
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        if (err?.response?.status === 401) {
+          dispatch(logout());
+          localStorage.removeItem('token');
+          localStorage.removeItem('persist:root');
+          navigate('/login', { replace: true });
+        }
+      }
+    };
+
+    // Run check immediately and then periodically every 8 seconds
+    checkActiveSession();
+    const interval = setInterval(checkActiveSession, 8000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [dispatch, navigate]);
 
   return (
     <>

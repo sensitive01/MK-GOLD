@@ -116,10 +116,12 @@ import CampaignCreate from './pages/marketing/campaign/CampaignCreate';
 import CampaignView from './pages/marketing/campaign/CampaignView';
 import MarketingCalendar from './pages/marketing/Calendar.js';
 import MarketingLeads from './pages/marketing/Leads';
+import MarketingTelecallers from './pages/marketing/Telecallers';
 
 import TelecallerTLDashboardLayout from './layouts/dashboard/telecaller_tl';
 import TelecallerTLDashboard from './pages/telecaller_tl/Dashboard';
 import TelecallerTLLeads from './pages/telecaller_tl/Leads';
+import TelecallerTLTelecallers from './pages/telecaller_tl/Telecallers';
 
 import AdminDeskDashboardLayout from './layouts/dashboard/admin_desk/AdminDeskDashboardLayout';
 import AdminDeskDashboard from './pages/admin_desk/Dashboard';
@@ -456,6 +458,7 @@ export default function Router() {
         { path: 'campaigns/view/:id', element: <CampaignView /> },
         { path: 'calendar', element: <MarketingCalendar /> },
         { path: 'leads', element: <MarketingLeads /> },
+        { path: 'telecallers', element: <MarketingTelecallers /> },
       ],
     },
     {
@@ -469,10 +472,11 @@ export default function Router() {
         { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/telecaller-tl/dashboard" />, index: true },
         { path: 'dashboard', element: <TelecallerTLDashboard /> },
+        { path: 'telecallers', element: <TelecallerTLTelecallers /> },
+        { path: 'leads', element: <TelecallerTLLeads /> },
         { path: 'attendance', element: <MarketingAttendance /> },
         { path: 'leave', element: <MarketingLeave /> },
         { path: 'expense', element: <MarketingExpense /> },
-        { path: 'leads', element: <TelecallerTLLeads /> },
       ],
     },
     {

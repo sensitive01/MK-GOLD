@@ -15,6 +15,9 @@ passport.use(
       User.findById(payload.sub).exec()
         .then(user => {
           if (user) {
+            if (user.status !== "active") {
+              return done(null, false, { message: "Your account is not active." });
+            }
             return done(null, user);
           } else {
             return done(null, false);

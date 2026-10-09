@@ -156,19 +156,35 @@ function verifyLoginOtp(req, res, next) {
       });
     }
 
-    const token = jwt.sign(
-      {
-        sub: data.user._id,
-        iat: new Date().getTime(),
-      },
-      process.env.SECRET,
-      { expiresIn: "1d" }
-    );
+    User.findById(data.user._id).exec().then((freshUser) => {
+      if (!freshUser || freshUser.status !== "active") {
+        return res.json({
+          status: false,
+          message: "Your account is not active.",
+          data: {},
+        });
+      }
 
-    return res.json({
-      status: true,
-      message: "Logged in Successfully.",
-      data: { user: data.user, token },
+      const token = jwt.sign(
+        {
+          sub: freshUser._id,
+          iat: new Date().getTime(),
+        },
+        process.env.SECRET,
+        { expiresIn: "1d" }
+      );
+
+      return res.json({
+        status: true,
+        message: "Logged in Successfully.",
+        data: { user: freshUser, token },
+      });
+    }).catch((err) => {
+      return res.json({
+        status: false,
+        message: err.message || "Failed to complete login",
+        data: {},
+      });
     });
   });
 }

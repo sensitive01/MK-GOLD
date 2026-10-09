@@ -55,6 +55,11 @@ const navConfig = [
     path: '/marketing/leads',
     icon: <GroupsIcon sx={{ width: 1, height: 1 }} />,
   },
+  {
+    title: 'Telecallers',
+    path: '/marketing/telecallers',
+    icon: <SupportAgentIcon sx={{ width: 1, height: 1 }} />,
+  },
 ];
 
 export default navConfig;

@@ -689,12 +689,13 @@ export default function Melting({ onlyCompleted = false }) {
                               {row.status === 'sold' ? (
                                 <Label color="success">Sold</Label>
                               ) : row.status === 'melt_updated' ? (
-                                userType === 'admin' ? (
+                                (userType === 'accounts' || (userType === 'admin' && onlyCompleted)) ? (
                                   <Button 
                                     variant="contained" 
                                     color="success" 
                                     size="small" 
                                     onClick={() => handleOpenSellDialog(row)}
+                                    sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}
                                   >
                                     Sell Bar
                                   </Button>

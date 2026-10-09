@@ -173,6 +173,7 @@ branchRouter.get("/qr-enquiry/get-by-enqid/:enqId", qrEnquiry.findByEnqIdStrict)
 branchRouter.post("/qr-enquiry/get", qrEnquiry.getEnquiries);
 
 branchRouter.post("/user/get", user.find);
+branchRouter.post("/user/update/:id", user.update);
 
 branchRouter.get("/profile", profile.get);
 branchRouter.post("/profile/change-password", profile.changePassword);
@@ -190,10 +191,10 @@ router.use(
   function (req, res, next) {
     passport.authenticate("jwt", { session: false }, (err, user, info) => {
       console.log("JWT Auth Attempt:", { err, userId: user?._id, username: user?.username, userType: user?.userType, info });
-      if (err) {
-        return res.status(400).json({
+      if (err || !user) {
+        return res.status(401).json({
           status: false,
-          message: err ?? "Unauthorized",
+          message: info ? info.message : (err ?? "Unauthorized"),
           data: {},
         });
       }
