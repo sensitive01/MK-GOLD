@@ -437,7 +437,8 @@ function PreviewLead(props) {
   const isRejected = data.status === 'rejected' || data.bullionStatus === 'rejected' || data.tlStatus === 'rejected';
   const isBullionDesk = ['bullion_desk', 'bullion-desk'].includes(userType);
   const isTelecallerRole = ['telecalling', 'telecaller_tl', 'telecaller-tl'].includes(userType);
-  const canAssignExecutive = !isTelecallerRole && !isRejected && (!isBullionDesk || data.bullionStatus === 'approved');
+  // Only Admin or Bullion Desk can assign an executive (hidden for Branch Manager, Assistant Branch Manager, and Transaction Executives)
+  const canAssignExecutive = !isRejected && (userType === 'admin' || (isBullionDesk && data.bullionStatus === 'approved'));
 
   return (
     <Card sx={{ p: 4, my: 4 }}>
