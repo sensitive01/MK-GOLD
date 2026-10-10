@@ -42,7 +42,6 @@ const DISPOSITIONS = [
   'Price issues',
   'Not Connected',
   'Not Feasible',
-  'Business Closed',
 ];
 
 const modalStyle = {
@@ -129,8 +128,7 @@ function PreviewLead(props) {
 
     if (
       logForm.status === 'Callback' ||
-      logForm.status === 'Planning to Visit' ||
-      logForm.status === 'Business Closed'
+      logForm.status === 'Planning to Visit'
     ) {
       if (logForm.callbackDate) formData.append('callbackDate', logForm.callbackDate);
       if (logForm.callbackTime) formData.append('callbackTime', logForm.callbackTime);
@@ -384,7 +382,7 @@ function PreviewLead(props) {
                   </Select>
                </FormControl>
             </Grid>
-            {(logForm.status === 'Visited Branch' || logForm.status === 'Planning to Visit' || logForm.status === 'Business Closed') && (
+            {(logForm.status === 'Visited Branch' || logForm.status === 'Planning to Visit') && (
               <Grid item xs={12}>
                 <FormControl fullWidth>
                   <InputLabel>Select Branch</InputLabel>
@@ -398,7 +396,7 @@ function PreviewLead(props) {
                 </FormControl>
               </Grid>
             )}
-            {(logForm.status === 'Callback' || logForm.status === 'Planning to Visit' || logForm.status === 'Business Closed') && (
+            {(logForm.status === 'Callback' || logForm.status === 'Planning to Visit') && (
               <>
                 <Grid item xs={12} sm={6}>
                   <TextField

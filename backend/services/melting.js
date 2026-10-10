@@ -7,12 +7,20 @@ require('../models/employee');
 
 async function find(query = {}) {
   return await Model.find(query)
-    .populate('transitIds')
-    .populate('transitId')
+    .populate({
+      path: 'transitIds',
+      populate: { path: 'saleIds', select: 'articleNumber ornaments' }
+    })
+    .populate({
+      path: 'transitId',
+      populate: { path: 'saleIds', select: 'articleNumber ornaments' }
+    })
     .populate('saleIds')
     .populate('meltProof')
     .populate('preMeltProof')
     .populate('afterMeltProof')
+    .populate('purityPhoto')
+    .populate('purityCertificate')
     .populate('createdBy', 'name')
     .populate('vendor')
     .sort({ createdAt: -1 })
@@ -20,11 +28,22 @@ async function find(query = {}) {
 }
 
 async function create(payload) {
+  if (!payload.meltProof) {
+    throw new Error('Batch proof is mandatory to create melting batch');
+  }
   const item = new Model(payload);
   return await item.save();
 }
 
 async function update(id, payload) {
+  if (payload.status === 'sold') {
+    if (!payload.purityPhoto) {
+      throw new Error('Purity photo is mandatory for vendor settlement');
+    }
+    if (!payload.purityCertificate) {
+      throw new Error('Purity certificate is mandatory for vendor settlement');
+    }
+  }
   return await Model.findByIdAndUpdate(id, payload, { new: true }).exec();
 }
 

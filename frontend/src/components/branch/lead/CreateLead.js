@@ -13,6 +13,7 @@ import { LoadingButton } from '@mui/lab';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import moment from 'moment';
 import { createLead } from '../../../apis/branch/lead';
 import { createFile } from '../../../apis/branch/fileupload';
@@ -21,6 +22,10 @@ import global from '../../../utils/global';
 import CustomerDocumentsInput from './CustomerDocumentsInput';
 
 function CreateLead(props) {
+  const auth = useSelector((state) => state.auth);
+  const currentUserType = (auth?.user?.userType || '').toLowerCase();
+  const isTelecaller = ['telecalling', 'telecaller', 'telecaller_tl', 'telecaller-tl'].includes(currentUserType);
+
   const [docEntries, setDocEntries] = useState([
     { id: 1, type: 'Aadhar card', file: null, preview: '' },
   ]);
@@ -179,7 +184,9 @@ function CreateLead(props) {
               <InputLabel>Status</InputLabel>
               <Select label="Status" name="status" value={values.status} onChange={handleChange}>
                 <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="converted">Converted</MenuItem>
+                <MenuItem value="converted" disabled={isTelecaller}>
+                  Converted {isTelecaller ? '(Requires Bullion Approval)' : ''}
+                </MenuItem>
                 <MenuItem value="rejected">Rejected</MenuItem>
               </Select>
             </FormControl>

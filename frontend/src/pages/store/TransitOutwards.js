@@ -39,6 +39,7 @@ import {
   StepLabel,
   Checkbox,
   Chip,
+  FormHelperText,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 
@@ -92,12 +93,14 @@ function applySortFilter(array, comparator, query, filters) {
   let filteredData = stabilizedThis?.map((el) => el[0]);
 
   if (query) {
+    const qLower = query.toLowerCase();
     filteredData = filter(
       filteredData,
       (row) =>
-        row?.transitId?.toLowerCase().indexOf(query.toLowerCase()) !== -1 ||
-        row?.branch?.branchName?.toLowerCase().indexOf(query.toLowerCase()) !== -1 ||
-        row?.deliveryBy?.toLowerCase().indexOf(query.toLowerCase()) !== -1
+        row?.transitId?.toLowerCase().indexOf(qLower) !== -1 ||
+        row?.branch?.branchName?.toLowerCase().indexOf(qLower) !== -1 ||
+        row?.deliveryBy?.toLowerCase().indexOf(qLower) !== -1 ||
+        (row?.saleIds && row.saleIds.some((s) => String(s?.articleNumber || '').toLowerCase().indexOf(qLower) !== -1))
     );
   }
 
@@ -158,6 +161,7 @@ export default function StoreTransitOutwards() {
   const [notes, setNotes] = useState('');
   const [batchProof, setBatchProof] = useState(null);
   const [batchProofLoading, setBatchProofLoading] = useState(false);
+  const [batchProofError, setBatchProofError] = useState(false);
   const [submittingBatch, setSubmittingBatch] = useState(false);
 
   const [notify, setNotify] = useState({ open: false, message: '', severity: 'success' });
@@ -239,11 +243,36 @@ export default function StoreTransitOutwards() {
     return match ? match[0] : (lastPart || str);
   };
 
+  const getTransitArticleNumbers = (transit) => {
+    if (!transit) return [];
+    const sales = Array.isArray(transit.saleIds)
+      ? transit.saleIds
+      : Array.isArray(transit.sales)
+      ? transit.sales
+      : [];
+    const articles = [];
+    sales.forEach((sale) => {
+      const rawArt =
+        sale?.articleNumber ||
+        (sale?.ornaments && sale.ornaments.find((o) => o?.articleNumber)?.articleNumber);
+      if (rawArt) {
+        const formatted = formatArticleNumber(rawArt);
+        if (formatted && formatted !== '-') {
+          articles.push(formatted);
+        } else {
+          articles.push(String(rawArt).trim());
+        }
+      }
+    });
+    return articles;
+  };
+
   // Open Move to Melting Wizard
   const handleOpenMoveWizard = async (preselectedTransit = null) => {
     setActiveStep(0);
     setNotes('');
     setBatchProof(null);
+    setBatchProofError(false);
 
     try {
       const res = await getNextBatchNumber();
@@ -420,6 +449,7 @@ export default function StoreTransitOutwards() {
     const file = e.target.files[0];
     if (file) {
       setBatchProofLoading(true);
+      setBatchProofError(false);
       const formData = new FormData();
       formData.append('uploadedFile', file);
       formData.append('uploadName', 'store_melting_batch_proof');
@@ -428,6 +458,7 @@ export default function StoreTransitOutwards() {
       setBatchProofLoading(false);
       if (response?.status) {
         setBatchProof(response.data);
+        setBatchProofError(false);
         setNotify({ open: true, message: 'Batch dispatch proof uploaded successfully', severity: 'success' });
       } else {
         setNotify({ open: true, message: 'File upload failed', severity: 'error' });
@@ -439,6 +470,11 @@ export default function StoreTransitOutwards() {
   const handleProceedToMelt = async () => {
     if (selectedOrnaments.length === 0) {
       setNotify({ open: true, message: 'Please select at least one ornament for melting', severity: 'warning' });
+      return;
+    }
+    if (!batchProof || !(batchProof._id || batchProof.uploadedFile)) {
+      setBatchProofError(true);
+      setNotify({ open: true, message: 'Batch proof photo is mandatory to move to melting', severity: 'error' });
       return;
     }
     setSubmittingBatch(true);
@@ -750,9 +786,26 @@ export default function StoreTransitOutwards() {
                           }}
                         >
                           <TableCell align="left">
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1a237e' }}>
-                              {transitId}
-                            </Typography>
+                            <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
+                              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1a237e' }}>
+                                {transitId}
+                              </Typography>
+                              {(() => {
+                                const arts = getTransitArticleNumbers(row);
+                                return arts.length > 0 ? (
+                                  <Typography
+                                    component="span"
+                                    sx={{
+                                      fontWeight: 600,
+                                      color: '#7b1fa2',
+                                      fontSize: '0.8125rem',
+                                    }}
+                                  >
+                                    ({arts.join(', ')})
+                                  </Typography>
+                                ) : null;
+                              })()}
+                            </Stack>
                           </TableCell>
 
                           <TableCell align="left">
@@ -1012,7 +1065,26 @@ export default function StoreTransitOutwards() {
                           <TableCell padding="checkbox">
                             <Checkbox checked={isSelected} />
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>{t.transitId}</TableCell>
+                          <TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>
+                            <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
+                              <span>{t.transitId}</span>
+                              {(() => {
+                                const arts = getTransitArticleNumbers(t);
+                                return arts.length > 0 ? (
+                                  <Typography
+                                    component="span"
+                                    sx={{
+                                      fontWeight: 600,
+                                      color: '#7b1fa2',
+                                      fontSize: '0.8125rem',
+                                    }}
+                                  >
+                                    ({arts.join(', ')})
+                                  </Typography>
+                                ) : null;
+                              })()}
+                            </Stack>
+                          </TableCell>
                           <TableCell>{t.branch?.branchName || 'N/A'}</TableCell>
                           <TableCell align="center">{t.numberOfPackets}</TableCell>
                           <TableCell align="center">{t.numberOfOrnaments}</TableCell>
@@ -1240,22 +1312,67 @@ export default function StoreTransitOutwards() {
                   onChange={(e) => setNotes(e.target.value)}
                 />
 
-                <Box>
+                <Box sx={{ width: '100%' }}>
                   <Button
-                    variant="outlined"
+                    variant={batchProof?.uploadedFile ? 'contained' : 'outlined'}
                     component="label"
+                    color={batchProofError ? 'error' : (batchProof?.uploadedFile ? 'success' : 'primary')}
                     disabled={batchProofLoading}
-                    startIcon={<Iconify icon="eva:cloud-upload-fill" />}
-                    sx={{ textTransform: 'none', fontWeight: 600 }}
+                    startIcon={
+                      batchProofLoading ? (
+                        <CircularProgress size={16} color="inherit" />
+                      ) : (
+                        <Iconify icon={batchProof?.uploadedFile ? 'eva:checkmark-circle-2-fill' : 'eva:cloud-upload-fill'} />
+                      )
+                    }
+                    sx={{
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      py: 1.25,
+                      px: 2.5,
+                      ...(batchProofError && {
+                        borderColor: 'error.main',
+                        borderWidth: 2,
+                        color: 'error.main',
+                        bgcolor: 'rgba(255, 72, 66, 0.04)',
+                        '&:hover': { borderWidth: 2, borderColor: 'error.dark' },
+                      }),
+                      ...(batchProof?.uploadedFile && {
+                        bgcolor: 'success.main',
+                        color: '#fff',
+                        '&:hover': { bgcolor: 'success.dark' },
+                      }),
+                    }}
                   >
-                    {batchProofLoading ? 'Uploading...' : 'Attach Batch Proof Photo (Optional)'}
-                    <input type="file" hidden accept="image/*,application/pdf" onChange={handleBatchProofUpload} />
+                    {batchProofLoading
+                      ? 'Uploading Proof...'
+                      : batchProof?.uploadedFile
+                      ? '✓ Batch Proof Uploaded (Click to Change)'
+                      : 'Attach Batch Proof Photo *'}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*,application/pdf"
+                      onChange={(e) => {
+                        setBatchProofError(false);
+                        handleBatchProofUpload(e);
+                      }}
+                    />
                   </Button>
-                  {batchProof?.uploadedFile && (
-                    <Typography variant="caption" sx={{ color: 'success.main', display: 'block', mt: 0.5, fontWeight: 600 }}>
-                      ✓ Proof attached successfully
-                    </Typography>
-                  )}
+                  <FormHelperText
+                    error={batchProofError}
+                    sx={{
+                      mt: 0.75,
+                      fontWeight: batchProofError ? 600 : 500,
+                      color: batchProofError
+                        ? 'error.main'
+                        : (batchProof?.uploadedFile ? 'success.main' : 'error.main'),
+                    }}
+                  >
+                    {batchProofError
+                      ? '* Batch proof photo/document is mandatory to move to melting.'
+                      : (batchProof?.uploadedFile ? '✓ Proof attached successfully' : '* Batch proof is mandatory')}
+                  </FormHelperText>
                 </Box>
               </Stack>
             </Box>
@@ -1300,15 +1417,28 @@ export default function StoreTransitOutwards() {
             {activeStep === 3 && (
               <LoadingButton
                 variant="contained"
-                color="primary"
                 loading={submittingBatch}
                 disabled={submittingBatch || selectedOrnaments.length === 0}
                 onClick={handleProceedToMelt}
-                startIcon={<Iconify icon="mdi:fire" />}
+                startIcon={
+                  <Iconify
+                    icon="mdi:fire"
+                    width={22}
+                    sx={{ color: '#FFD700 !important' }}
+                  />
+                }
                 sx={{
                   bgcolor: '#7b1fa2',
-                  color: '#fff',
+                  color: '#ffffff !important',
                   fontWeight: 700,
+                  '& .MuiButton-startIcon': {
+                    color: '#FFD700 !important',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                  },
+                  '& .MuiButton-startIcon > *:first-of-type': {
+                    color: '#FFD700 !important',
+                  },
                   '&:hover': { bgcolor: '#6a1b9a' },
                 }}
               >

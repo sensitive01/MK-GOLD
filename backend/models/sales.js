@@ -117,6 +117,30 @@ const Sales = mongoose.model(
               type: String,
               default: "",
             },
+            weightProof: {
+              type: String,
+              default: "",
+            },
+            purityProof: {
+              type: String,
+              default: "",
+            },
+            actualNetWeight: {
+              type: Number,
+            },
+            actualPurity: {
+              type: Number,
+            },
+            originalNetWeight: {
+              type: Number,
+            },
+            originalPurity: {
+              type: Number,
+            },
+            isEdited: {
+              type: Boolean,
+              default: false,
+            },
           },
           { timestamps: true }
         ),

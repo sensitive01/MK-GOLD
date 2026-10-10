@@ -66,7 +66,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { SaleListHead, SaleListToolbar } from '../../sections/@dashboard/sales';
 // mock
 import { getBranch } from '../../apis/admin/branch';
-import { deleteSalesById, findSales, updateSales, getSalesById } from '../../apis/admin/sales';
+import { deleteSalesById, findSales, updateSales, getSalesById, checkArticleNumberApi } from '../../apis/admin/sales';
 import { createFile } from '../../apis/branch/fileupload';
 
 // ----------------------------------------------------------------------
@@ -141,7 +141,7 @@ export default function Sale() {
   const [data, setData] = useState([]);
   const [detailedSale, setDetailedSale] = useState(null);
   const selectedSale = useMemo(() => data?.find((s) => s._id === saleIdToEdit), [data, saleIdToEdit]);
-  const isSaleCompleted = ['completed', 'intransit', 'moved', 'melted'].includes((detailedSale?.status || selectedSale?.status)?.toLowerCase());
+  const isSaleCompleted = ['completed', 'intransit', 'moved', 'moved_to_melting', 'melted'].includes((detailedSale?.status || selectedSale?.status)?.toLowerCase());
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
@@ -1123,20 +1123,24 @@ function Status(props) {
     });
   };
 
+  const normStatus = (status || '').toLowerCase().replace(/_/g, ' ');
+
   let content = (
     <Label
       color={
-        (status === 'completed' && 'success') ||
-        (status === 'finance pending' && 'warning') ||
-        (status === 'release pending' && 'warning') ||
-        (status === 'bullion pending' && 'warning') ||
-        (status === 'admin approval pending' && 'info') ||
-        (status === 'fund transfer pending' && 'warning') ||
-        (status === 'intransit' && 'info') ||
+        (normStatus === 'completed' && 'success') ||
+        (normStatus === 'melted' && 'success') ||
+        (normStatus === 'moved to melting' && 'secondary') ||
+        (normStatus === 'finance pending' && 'warning') ||
+        (normStatus === 'release pending' && 'warning') ||
+        (normStatus === 'bullion pending' && 'warning') ||
+        (normStatus === 'admin approval pending' && 'info') ||
+        (normStatus === 'fund transfer pending' && 'warning') ||
+        (normStatus === 'intransit' && 'info') ||
         'error'
       }
     >
-      {sentenceCase(status || '')}
+      {normStatus === 'moved to melting' ? 'Moved to Melting' : sentenceCase(status || '')}
     </Label>
   );
 
@@ -1153,17 +1157,19 @@ function Status(props) {
       <Stack direction="row" spacing={1} alignItems="center">
         <Label
           color={
-            (status === 'completed' && 'success') ||
-            (status === 'finance pending' && 'warning') ||
-            (status === 'release pending' && 'warning') ||
-            (status === 'bullion pending' && 'warning') ||
-            (status === 'admin approval pending' && 'info') ||
-            (status === 'fund transfer pending' && 'warning') ||
-            (status === 'intransit' && 'info') ||
+            (normStatus === 'completed' && 'success') ||
+            (normStatus === 'melted' && 'success') ||
+            (normStatus === 'moved to melting' && 'secondary') ||
+            (normStatus === 'finance pending' && 'warning') ||
+            (normStatus === 'release pending' && 'warning') ||
+            (normStatus === 'bullion pending' && 'warning') ||
+            (normStatus === 'admin approval pending' && 'info') ||
+            (normStatus === 'fund transfer pending' && 'warning') ||
+            (normStatus === 'intransit' && 'info') ||
             'error'
           }
         >
-          {sentenceCase(status || '')}
+          {normStatus === 'moved to melting' ? 'Moved to Melting' : sentenceCase(status || '')}
         </Label>
         {status === 'release pending' && employeeId === assignee && (
           <Button variant="contained" size="small" onClick={() => handleVerify('assignee')}>
@@ -1319,10 +1325,11 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
   const [ornaments, setOrnaments] = useState([]);
   const [showOrnamentForm, setShowOrnamentForm] = useState(false);
 
-  // Admin read-only review states
   const [saleDetails, setSaleDetails] = useState(null);
   const [selectedBank, setSelectedBank] = useState(null);
   const [adminComments, setAdminComments] = useState('');
+  const [articleNumberError, setArticleNumberError] = useState('');
+  const [isCheckingArticleNumber, setIsCheckingArticleNumber] = useState(false);
 
   const [ornamentValues, setOrnamentValues] = useState({
     ornamentType: '',
@@ -1342,6 +1349,11 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         setLoading(false);
         if (res.status) {
           setSaleDetails(res.data);
+          if (res.data.articleNumber) {
+            setFieldValue('articleNumber', res.data.articleNumber);
+          } else {
+            setFieldValue('articleNumber', '');
+          }
           if (res.data.ornaments) {
             setOrnaments(res.data.ornaments);
           }
@@ -1509,11 +1521,38 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
       paymentType: '',
       comments: '',
       proof: '',
+      articleNumber: '',
       isCompleted: false,
     },
     validationSchema: schema,
     onSubmit: async (values) => {
       try {
+        const isPledgedCheck = (saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged' && !(saleDetails?.assigneeCompleted ?? assigneeCompleted);
+        const isCompleting = Boolean(isAdmin || values.isCompleted || saleDetails?.status === 'completed' || saleDetails?.financeCompleted);
+        const mustHaveArticle = type === 'finance' && !isPledgedCheck && isCompleting;
+
+        if (mustHaveArticle && (!values.articleNumber || !values.articleNumber.trim())) {
+          setArticleNumberError('Article number is required when marking as completed.');
+          alert('Article number is required when marking as completed.');
+          return;
+        }
+        if (articleNumberError) {
+          alert(articleNumberError);
+          return;
+        }
+        if (mustHaveArticle && values.articleNumber && values.articleNumber.trim() && values.articleNumber.trim() !== (saleDetails?.articleNumber || '').trim()) {
+          try {
+            const checkRes = await checkArticleNumberApi({ articleNumber: values.articleNumber.trim(), saleId: id });
+            if (checkRes?.status && checkRes?.data?.exists) {
+              const errMsg = checkRes.data.message || 'This article number is already assigned.';
+              setArticleNumberError(errMsg);
+              alert(errMsg);
+              return;
+            }
+          } catch (e) {
+            console.error('Error validating article number on submit:', e);
+          }
+        }
         if (type === 'assignee' && !saleDetails?.financeCompleted) {
           alert('Cannot verify Assignee stage: Finance verification must be completed first!');
           return;
@@ -1697,6 +1736,12 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
             const isAssigneeDone = Boolean(saleDetails?.assigneeCompleted ?? assigneeCompleted);
             payload.status = (isPhys || isAssigneeDone) ? 'completed' : 'release pending';
           }
+        }
+
+        const isPledged = (saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged';
+        const isPledgedStageCheck = isPledged && !saleDetails?.assigneeCompleted;
+        if (!isPledgedStageCheck && values.articleNumber && values.articleNumber.trim()) {
+          payload.articleNumber = values.articleNumber.trim();
         }
       } else if (type === 'fund transfer') {
         payload.fundTransferAmount = values.amount;
@@ -1882,6 +1927,39 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     ? (saleDetails?.release || []).filter((r) => String(r?.paymentType || '').toLowerCase() === 'bank')
     : [];
   const hasBankRelease = bankReleases.length > 0;
+  const isCompletionActive = Boolean(isAdmin || values.isCompleted || saleDetails?.status === 'completed' || saleDetails?.financeCompleted);
+  const showArticleNumberField = type === 'finance' && !isPledgedReleaseStage && isCompletionActive;
+  const isArticleMissing = showArticleNumberField && (!values.articleNumber || !values.articleNumber.trim());
+
+  useEffect(() => {
+    if (!showArticleNumberField) {
+      setArticleNumberError('');
+      return;
+    }
+    const trimmed = (values.articleNumber || '').trim();
+    if (!trimmed || trimmed === (saleDetails?.articleNumber || '').trim()) {
+      setArticleNumberError('');
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsCheckingArticleNumber(true);
+      try {
+        const res = await checkArticleNumberApi({ articleNumber: trimmed, saleId: id });
+        if (res?.status && res?.data?.exists) {
+          setArticleNumberError(res.data.message || 'This article number is already assigned.');
+        } else {
+          setArticleNumberError('');
+        }
+      } catch (err) {
+        console.error('Error checking article number:', err);
+      } finally {
+        setIsCheckingArticleNumber(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [values.articleNumber, id, saleDetails?.articleNumber, showArticleNumberField]);
 
   const customerBanks = saleDetails?.customer?.bank || [];
   let isEffectiveBankVerified = false;
@@ -2125,6 +2203,9 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                 </Grid>
               </>
             )}
+
+
+
             <Grid item xs={12}>
               <TextField
                 name="comments"
@@ -2263,10 +2344,51 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                   <Checkbox
                     name="isCompleted"
                     checked={values.isCompleted}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      handleChange(e);
+                      if (!e.target.checked && !(saleDetails?.status === 'completed' || saleDetails?.financeCompleted)) {
+                        setArticleNumberError('');
+                      }
+                    }}
                   />
                   <Typography variant="body2">Mark as completed (Moves to next stage)</Typography>
                 </Stack>
+              </Grid>
+            )}
+
+            {showArticleNumberField && (
+              <Grid item xs={12}>
+                <TextField
+                  name="articleNumber"
+                  label="Article Number *"
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  placeholder="Enter manual article number (e.g. 101, 102)"
+                  value={values.articleNumber || ''}
+                  fullWidth
+                  onBlur={handleBlur}
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (articleNumberError) setArticleNumberError('');
+                  }}
+                  error={Boolean(articleNumberError || (touched.articleNumber && !values.articleNumber?.trim()))}
+                  helperText={
+                    articleNumberError ? (
+                      <span style={{ color: '#d32f2f', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                        ⚠️ {articleNumberError}
+                      </span>
+                    ) : (
+                      isCheckingArticleNumber
+                        ? 'Checking availability...'
+                        : (!values.articleNumber?.trim() ? 'Article number is mandatory to mark as completed.' : '')
+                    )
+                  }
+                  FormHelperTextProps={{
+                    sx: {
+                      color: articleNumberError || !values.articleNumber?.trim() ? '#d32f2f !important' : undefined,
+                    },
+                  }}
+                />
               </Grid>
             )}
             {Object.keys(errors).length > 0 && (
@@ -2285,7 +2407,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
             variant="contained"
             loading={Boolean(loading || isSubmitting)}
             disabled={
-              Boolean(loading || isSubmitting) ||
+              Boolean(loading || isSubmitting || articleNumberError || isCheckingArticleNumber || isArticleMissing) ||
               Boolean(
                 type === 'finance' && saleDetails?.status !== 'completed' && (
                   ((saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged' && !(saleDetails?.assigneeCompleted ?? assigneeCompleted)

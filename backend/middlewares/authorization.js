@@ -29,7 +29,8 @@ function isAdmin(req, res, next) {
     (req.path.includes("transit") ||
       req.path.includes("branch/get") ||
       req.path.includes("sales/get") ||
-      req.path.includes("sales/update"))
+      req.path.includes("sales/update") ||
+      req.path.includes("sales/check-article-number"))
   ) {
     return next();
   }

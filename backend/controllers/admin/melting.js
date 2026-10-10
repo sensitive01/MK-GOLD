@@ -49,24 +49,31 @@ async function create(req, res) {
     const data = await service.create(payload);
 
     // Update sales status for the selected ornaments
+    let affectedSaleIds = [];
     if (payload.ornaments && payload.ornaments.length > 0) {
-        let affectedSaleIds = [];
         for (let orn of payload.ornaments) {
             await salesModel.updateOne(
                 { _id: orn.saleId, "ornaments._id": orn.ornamentId },
-                { $set: { "ornaments.$.status": "melted" } }
+                { $set: { "ornaments.$.status": "moved_to_melting" } }
             );
-            if (!affectedSaleIds.includes(orn.saleId)) affectedSaleIds.push(orn.saleId);
+            const sId = String(orn.saleId);
+            if (!affectedSaleIds.includes(sId)) affectedSaleIds.push(sId);
         }
-        
-        // Check and update sale status if all ornaments are melted
-        for (let saleId of affectedSaleIds) {
-            const sale = await salesModel.findById(saleId);
-            if (sale && sale.ornaments) {
-                const allMelted = sale.ornaments.every(o => o.status === 'melted');
-                if (allMelted) {
-                    await salesModel.updateOne({ _id: saleId }, { $set: { status: 'melted' } });
-                }
+    }
+    if (payload.saleIds && payload.saleIds.length > 0) {
+        for (let sId of payload.saleIds) {
+            const strId = String(sId._id || sId);
+            if (!affectedSaleIds.includes(strId)) affectedSaleIds.push(strId);
+        }
+    }
+    
+    // Check and update sale status if all ornaments are moved to melting or melted
+    for (let saleId of affectedSaleIds) {
+        const sale = await salesModel.findById(saleId);
+        if (sale && sale.ornaments) {
+            const allMoved = sale.ornaments.every(o => o.status === 'moved_to_melting' || o.status === 'melted');
+            if (allMoved) {
+                await salesModel.updateOne({ _id: saleId }, { $set: { status: 'moved_to_melting' } });
             }
         }
     }
@@ -115,6 +122,39 @@ async function create(req, res) {
 async function update(req, res) {
   try {
     const data = await service.update(req.params.id, req.body);
+    
+    // When melting is completed (status === 'melt_updated'), mark ornaments and sales as melted
+    if (req.body.status === 'melt_updated') {
+      const melt = await require('../../models/melting').findById(req.params.id);
+      if (melt) {
+        let affectedSaleIds = [];
+        if (melt.ornaments && melt.ornaments.length > 0) {
+          for (let orn of melt.ornaments) {
+            await salesModel.updateOne(
+              { _id: orn.saleId, "ornaments._id": orn.ornamentId },
+              { $set: { "ornaments.$.status": "melted" } }
+            );
+            const sId = String(orn.saleId);
+            if (!affectedSaleIds.includes(sId)) affectedSaleIds.push(sId);
+          }
+        }
+        if (melt.saleIds && melt.saleIds.length > 0) {
+          for (let sId of melt.saleIds) {
+            const strId = String(sId._id || sId);
+            if (!affectedSaleIds.includes(strId)) affectedSaleIds.push(strId);
+          }
+        }
+        for (let saleId of affectedSaleIds) {
+          const sale = await salesModel.findById(saleId);
+          if (sale && sale.ornaments) {
+            const allMelted = sale.ornaments.every(o => o.status === 'melted');
+            if (allMelted) {
+              await salesModel.updateOne({ _id: saleId }, { $set: { status: 'melted' } });
+            }
+          }
+        }
+      }
+    }
     res.json({ status: true, data, message: 'Updated successfully' });
   } catch (err) {
     res.status(500).json({ status: false, message: err.message });
@@ -124,17 +164,26 @@ async function update(req, res) {
 async function remove(req, res) {
   try {
     const melt = await require('../../models/melting').findById(req.params.id);
-    if (melt && melt.ornaments && melt.ornaments.length > 0) {
+    if (melt) {
         let affectedSaleIds = [];
-        for (let orn of melt.ornaments) {
-            await salesModel.updateOne(
-                { _id: orn.saleId, "ornaments._id": orn.ornamentId },
-                { $unset: { "ornaments.$.status": "" } }
-            );
-            if (!affectedSaleIds.includes(orn.saleId)) affectedSaleIds.push(orn.saleId);
+        if (melt.ornaments && melt.ornaments.length > 0) {
+            for (let orn of melt.ornaments) {
+                await salesModel.updateOne(
+                    { _id: orn.saleId, "ornaments._id": orn.ornamentId },
+                    { $unset: { "ornaments.$.status": "" } }
+                );
+                const sId = String(orn.saleId);
+                if (!affectedSaleIds.includes(sId)) affectedSaleIds.push(sId);
+            }
+        }
+        if (melt.saleIds && melt.saleIds.length > 0) {
+            for (let sId of melt.saleIds) {
+                const strId = String(sId._id || sId);
+                if (!affectedSaleIds.includes(strId)) affectedSaleIds.push(strId);
+            }
         }
         
-        // Revert sale status if it was melted
+        // Revert sale status if it was moved_to_melting or melted
         for (let saleId of affectedSaleIds) {
             await salesModel.updateOne({ _id: saleId }, { $set: { status: 'intransit' } });
         }

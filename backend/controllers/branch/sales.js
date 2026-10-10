@@ -203,4 +203,21 @@ async function verifyFinancePayment(req, res) {
   }
 }
 
-module.exports = { find, findById, create, update, remove, verifyFinancePayment };
+async function checkArticleNumber(req, res) {
+  try {
+    const { articleNumber, saleId } = req.body;
+    const result = await salesService.checkArticleNumber(articleNumber, saleId);
+    res.json({
+      status: true,
+      data: result,
+    });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: err.errors ?? err.message,
+      data: {},
+    });
+  }
+}
+
+module.exports = { find, findById, create, update, remove, verifyFinancePayment, checkArticleNumber };

@@ -1078,7 +1078,7 @@ export default function TransitSales() {
           </Stack>
         </Stack>
 
-        <SaleDetail id={saleIdToEdit} setNotify={setNotify} />
+        <SaleDetail id={saleIdToEdit} setNotify={setNotify} isTransitSale={true} />
       </Container>
 
       <Container
@@ -1425,19 +1425,23 @@ function Status(props) {
     });
   };
 
+  const normStatus = (status || '').toLowerCase().replace(/_/g, ' ');
+
   let content = (
     <Label
       color={
-        (status === 'completed' && 'success') ||
-        (status === 'finance pending' && 'warning') ||
-        (status === 'release pending' && 'warning') ||
-        (status === 'admin approval pending' && 'info') ||
-        (status === 'fund transfer pending' && 'warning') ||
-        (status === 'intransit' && 'info') ||
+        (normStatus === 'completed' && 'success') ||
+        (normStatus === 'melted' && 'success') ||
+        (normStatus === 'moved to melting' && 'secondary') ||
+        (normStatus === 'finance pending' && 'warning') ||
+        (normStatus === 'release pending' && 'warning') ||
+        (normStatus === 'admin approval pending' && 'info') ||
+        (normStatus === 'fund transfer pending' && 'warning') ||
+        (normStatus === 'intransit' && 'info') ||
         'error'
       }
     >
-      {sentenceCase(status || '')}
+      {normStatus === 'moved to melting' ? 'Moved to Melting' : sentenceCase(status || '')}
     </Label>
   );
 

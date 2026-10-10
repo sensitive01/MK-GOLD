@@ -13,6 +13,7 @@ import { LoadingButton } from '@mui/lab';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { getLeadById, updateLead } from '../../../apis/branch/lead';
 import { getBranch } from '../../../apis/branch/branch';
 import { createFile } from '../../../apis/branch/fileupload';
@@ -21,6 +22,11 @@ import moment from 'moment';
 import CustomerDocumentsInput from './CustomerDocumentsInput';
 
 function UpdateLead(props) {
+  const auth = useSelector((state) => state.auth);
+  const currentUserType = (auth?.user?.userType || '').toLowerCase();
+  const isTelecaller = ['telecalling', 'telecaller', 'telecaller_tl', 'telecaller-tl'].includes(currentUserType);
+
+  const [leadData, setLeadData] = useState(null);
   const [docEntries, setDocEntries] = useState([
     { id: 1, type: 'Aadhar card', file: null, preview: '' },
   ]);
@@ -28,6 +34,11 @@ function UpdateLead(props) {
   const [loading, setLoading] = useState(true);
   const [currentImage, setCurrentImage] = useState('');
   const [branches, setBranches] = useState([]);
+
+  const isBullionApproved = leadData?.bullionStatus === 'approved';
+  const hasExecutive = Boolean(leadData?.assignedExecutive || leadData?.assignedExecutiveName);
+  const isAlreadyConverted = leadData?.status === 'converted';
+  const canConvert = !isTelecaller || (isBullionApproved && hasExecutive) || isAlreadyConverted;
 
   const handleRemoveExistingDoc = (idx) => {
     setExistingDocuments((prev) => prev.filter((_, i) => i !== idx));
@@ -77,6 +88,14 @@ function UpdateLead(props) {
     },
     validationSchema: schema,
     onSubmit: (values) => {
+      if (values.status === 'converted' && isTelecaller && !canConvert) {
+        props.setNotify({
+          open: true,
+          message: 'Lead cannot be converted until Bullion Desk approves and an Executive is assigned.',
+          severity: 'error',
+        });
+        return;
+      }
       const payload = { ...values };
       if (!payload.branch || payload.branch === '') {
         delete payload.branch;
@@ -155,6 +174,7 @@ function UpdateLead(props) {
     if (props.id) {
       getLeadById(props.id).then((data) => {
         if (data.status) {
+          setLeadData(data.data);
           formik.setValues({
             name: data.data.name || '',
             mobile: data.data.mobile || '',
@@ -262,9 +282,16 @@ function UpdateLead(props) {
               <InputLabel>Status</InputLabel>
               <Select label="Status" name="status" value={formik.values.status} onChange={formik.handleChange} sx={{ textTransform: 'capitalize' }}>
                 <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="converted">Converted</MenuItem>
+                <MenuItem value="converted" disabled={!canConvert}>
+                  Converted {!canConvert ? '(Requires Bullion Approval & Executive)' : ''}
+                </MenuItem>
                 <MenuItem value="rejected">Rejected</MenuItem>
               </Select>
+              {isTelecaller && !canConvert && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  Requires Bullion Desk approval & assigned Executive to convert.
+                </Typography>
+              )}
             </FormControl>
           </Grid>
           {formik.values.status === 'converted' && (

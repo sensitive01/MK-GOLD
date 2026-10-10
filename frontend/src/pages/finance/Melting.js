@@ -395,12 +395,9 @@ export default function Melting({ onlyCompleted = false }) {
       fineGoldDifference: 0
     };
 
-    if (!meltProof) {
-      setNotify({ open: true, message: 'Batch proof is mandatory to create melting batch', severity: 'warning' });
-      return;
+    if (meltProof) {
+      payload.meltProof = typeof meltProof === 'object' ? meltProof._id : meltProof;
     }
-
-    payload.meltProof = typeof meltProof === 'object' ? meltProof._id : meltProof;
 
     const res = await createMelting(payload);
     if (res.status) {
@@ -1170,7 +1167,7 @@ export default function Melting({ onlyCompleted = false }) {
                 disabled={uploadLoading}
                 sx={{ mt: 2 }}
               >
-                {uploadLoading ? 'Uploading...' : 'Upload Batch Proof *'}
+                {uploadLoading ? 'Uploading...' : 'Upload Batch Proof'}
                 <input
                   type="file"
                   hidden

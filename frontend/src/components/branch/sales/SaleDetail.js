@@ -2214,7 +2214,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
   const isMovedToTransit = Boolean(
     hasTransitProofs ||
     (data?.transits && data.transits.length > 0) ||
-    ['intransit', 'moved', 'melted'].includes(data?.status?.toLowerCase())
+    ['intransit', 'moved', 'moved_to_melting', 'melted'].includes(data?.status?.toLowerCase())
   );
 
   const hasMeltingProofs = (data?.proof || []).some(isMeltingDoc);
@@ -2224,8 +2224,8 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
     data?.isMelted ||
     data?.meltingStatus === 'melted' ||
     data?.meltingStatus === 'partial' ||
-    data?.status?.toLowerCase() === 'melted' ||
-    data?.ornaments?.some(o => o.status === 'melted')
+    ['moved_to_melting', 'melted'].includes(data?.status?.toLowerCase()) ||
+    data?.ornaments?.some(o => ['moved_to_melting', 'melted'].includes(o.status))
   );
 
   return (

@@ -26,6 +26,7 @@ import {
   IconButton,
   Chip,
   Alert,
+  FormHelperText,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import moment from 'moment';
@@ -45,6 +46,30 @@ const formatArticleNumber = (art) => {
   const lastPart = str.includes('-') ? str.split('-').pop() : str;
   const match = lastPart.match(/\d{3,}/) || str.match(/\d{3,}/) || str.match(/\d+/);
   return match ? match[0] : (lastPart || str);
+};
+
+const getTransitArticleNumbers = (transit) => {
+  if (!transit) return [];
+  const sales = Array.isArray(transit.saleIds)
+    ? transit.saleIds
+    : Array.isArray(transit.sales)
+    ? transit.sales
+    : [];
+  const articles = [];
+  sales.forEach((sale) => {
+    const rawArt =
+      sale?.articleNumber ||
+      (sale?.ornaments && sale.ornaments.find((o) => o?.articleNumber)?.articleNumber);
+    if (rawArt) {
+      const formatted = formatArticleNumber(rawArt);
+      if (formatted && formatted !== '-') {
+        articles.push(formatted);
+      } else {
+        articles.push(String(rawArt).trim());
+      }
+    }
+  });
+  return articles;
 };
 
 export default function AddMeltingBatchWizard({ open, onClose, onSuccess }) {
@@ -69,6 +94,7 @@ export default function AddMeltingBatchWizard({ open, onClose, onSuccess }) {
   const [batchNumber, setBatchNumber] = useState('');
   const [meltProof, setMeltProof] = useState(null);
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [proofError, setProofError] = useState(false);
 
   // Fetch available transits when modal opens
   const fetchAvailableTransits = useCallback(async () => {
@@ -119,6 +145,7 @@ export default function AddMeltingBatchWizard({ open, onClose, onSuccess }) {
         setBatchNumber(`MB-${moment().format('YYMMDD')}-${Math.floor(100 + Math.random() * 900)}`);
       });
       setMeltProof(null);
+      setProofError(false);
       setErrorMsg('');
       fetchAvailableTransits();
     }
@@ -267,6 +294,7 @@ export default function AddMeltingBatchWizard({ open, onClose, onSuccess }) {
       const res = await createFile(formData);
       if (res?.data) {
         setMeltProof(res.data);
+        setProofError(false);
       }
     } catch (err) {
       console.error('Error uploading proof:', err);
@@ -294,6 +322,11 @@ export default function AddMeltingBatchWizard({ open, onClose, onSuccess }) {
 
   // Submit Batch Creation
   const handleProceedToMelt = async () => {
+    if (!meltProof) {
+      setProofError(true);
+      setErrorMsg('Batch proof photo/document is mandatory to create melting batch');
+      return;
+    }
     setSubmitting(true);
     setErrorMsg('');
     try {
@@ -477,7 +510,24 @@ export default function AddMeltingBatchWizard({ open, onClose, onSuccess }) {
                                   <Checkbox checked={isSelected} />
                                 </TableCell>
                                 <TableCell sx={{ fontWeight: 600, color: 'primary.main' }}>
-                                  {t.transitId}
+                                  <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
+                                    <span>{t.transitId}</span>
+                                    {(() => {
+                                      const arts = getTransitArticleNumbers(t);
+                                      return arts.length > 0 ? (
+                                        <Typography
+                                          component="span"
+                                          sx={{
+                                            fontWeight: 600,
+                                            color: '#7b1fa2',
+                                            fontSize: '0.8125rem',
+                                          }}
+                                        >
+                                          ({arts.join(', ')})
+                                        </Typography>
+                                      ) : null;
+                                    })()}
+                                  </Stack>
                                 </TableCell>
                                 <TableCell>{t.branch?.branchName || '-'}</TableCell>
                                 <TableCell align="center">{t.numberOfPackets}</TableCell>
@@ -859,29 +909,60 @@ export default function AddMeltingBatchWizard({ open, onClose, onSuccess }) {
                         }}
                       >
                         <Button
-                          variant="outlined"
+                          variant={meltProof ? 'contained' : 'outlined'}
                           component="label"
+                          color={proofError ? 'error' : (meltProof ? 'success' : 'primary')}
                           disabled={uploadLoading}
                           startIcon={
                             uploadLoading ? (
-                              <CircularProgress size={16} />
+                              <CircularProgress size={16} color="inherit" />
                             ) : (
-                              <Iconify icon="eva:upload-fill" />
+                              <Iconify icon={meltProof ? "eva:checkmark-circle-2-fill" : "eva:upload-fill"} />
                             )
                           }
-                          sx={{ textTransform: 'none' }}
+                          sx={{
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            ...(proofError && {
+                              borderColor: 'error.main',
+                              borderWidth: 2,
+                              color: 'error.main',
+                              bgcolor: 'rgba(255, 72, 66, 0.04)',
+                            }),
+                            ...(meltProof && {
+                              bgcolor: 'success.main',
+                              color: '#fff',
+                              '&:hover': { bgcolor: 'success.dark' },
+                            }),
+                          }}
                         >
-                          {uploadLoading ? 'Uploading...' : 'Upload Batch Proof / Photo'}
-                          <input type="file" hidden accept="image/*" onChange={handleFileUpload} />
+                          {uploadLoading
+                            ? 'Uploading Proof...'
+                            : meltProof
+                            ? '✓ Batch Proof Uploaded (Click to Change)'
+                            : 'Upload Batch Proof / Photo *'}
+                          <input
+                            type="file"
+                            hidden
+                            accept="image/*,application/pdf"
+                            onChange={(e) => {
+                              setProofError(false);
+                              handleFileUpload(e);
+                            }}
+                          />
                         </Button>
-                        {meltProof && (
-                          <Typography
-                            variant="caption"
-                            sx={{ color: 'success.main', mt: 1, fontWeight: 600 }}
-                          >
-                            ✓ Batch proof uploaded successfully
-                          </Typography>
-                        )}
+                        <FormHelperText
+                          error={proofError}
+                          sx={{
+                            mt: 0.75,
+                            fontWeight: proofError ? 600 : 500,
+                            color: proofError ? 'error.main' : (meltProof ? 'success.main' : 'error.main'),
+                          }}
+                        >
+                          {proofError
+                            ? '* Batch proof photo/document is mandatory to create melting batch.'
+                            : (meltProof ? '✓ Batch proof uploaded successfully' : '* Batch proof is mandatory')}
+                        </FormHelperText>
                       </Card>
                     </Grid>
                     <Grid item xs={12}>

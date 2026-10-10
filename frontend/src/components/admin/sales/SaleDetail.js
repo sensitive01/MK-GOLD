@@ -19,6 +19,13 @@ import {
   Chip,
   Button,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  InputAdornment,
+  Alert,
+  Tooltip,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import Iconify from '../../iconify';
@@ -32,21 +39,38 @@ import * as Yup from 'yup';
 import { sentenceCase } from 'change-case';
 import moment from 'moment';
 import { getSalesById, updateSales, verifyFinancePayment } from '../../../apis/admin/sales';
+import { createFile } from '../../../apis/branch/fileupload';
 import global from '../../../utils/global';
 import TimelineView from '../../TimelineView';
 import Scrollbar from '../../scrollbar';
 import BankDetailCard from '../../BankDetailCard';
 import VerifyBankPaymentModal from '../../VerifyBankPaymentModal';
 
-export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoaded }) {
+export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoaded, isTransitSale }) {
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType?.toLowerCase();
   const isAdmin = userType === 'admin';
+  const isStoreTransitView = userType === 'store' && (isTransitSale === true || window.location.pathname.includes('transit-sales'));
   const [visiblePhoneField, setVisiblePhoneField] = useState(null);
   const [data, setData] = useState({});
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openVerifyBankModal, setOpenVerifyBankModal] = useState(false);
   const [selectedVerifyTarget, setSelectedVerifyTarget] = useState(null);
+
+  // Store Transit Ornament Edit State
+  const [editOrnamentModal, setEditOrnamentModal] = useState(false);
+  const [selectedOrnament, setSelectedOrnament] = useState(null);
+  const [selectedOrnamentIdx, setSelectedOrnamentIdx] = useState(null);
+  const [editNetWeight, setEditNetWeight] = useState('');
+  const [editPurity, setEditPurity] = useState('');
+  const [existingWeightProof, setExistingWeightProof] = useState('');
+  const [weightProofFile, setWeightProofFile] = useState(null);
+  const [weightProofFileName, setWeightProofFileName] = useState('');
+  const [existingPurityProof, setExistingPurityProof] = useState('');
+  const [purityProofFile, setPurityProofFile] = useState(null);
+  const [purityProofFileName, setPurityProofFileName] = useState('');
+  const [savingOrnament, setSavingOrnament] = useState(false);
+  const [ornamentError, setOrnamentError] = useState('');
 
   // Form validation
   const schema = Yup.object({
@@ -99,6 +123,177 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
     }
   }, [id]);
 
+  const getProofUrl = (proof) => {
+    if (!proof) return null;
+    const file = proof?.uploadedFile || (typeof proof === 'string' ? proof : null);
+    if (!file) return null;
+    const base = global.BASE_URL || global.baseURL;
+    return file.startsWith('http') ? file : `${base}/${file}`;
+  };
+
+  const handleOpenEditOrnament = (ornament, index) => {
+    if (!isStoreTransitView) return;
+    setSelectedOrnament(ornament);
+    setSelectedOrnamentIdx(index);
+    setEditNetWeight(ornament.netWeight != null ? String(ornament.netWeight) : '');
+    setEditPurity(ornament.purity != null ? String(ornament.purity) : '');
+    setExistingWeightProof(ornament.weightProof || '');
+    setWeightProofFile(null);
+    setWeightProofFileName('');
+    setExistingPurityProof(ornament.purityProof || '');
+    setPurityProofFile(null);
+    setPurityProofFileName('');
+    setOrnamentError('');
+    setEditOrnamentModal(true);
+  };
+
+  const handleSaveOrnament = async () => {
+    if (!editNetWeight || isNaN(editNetWeight) || Number(editNetWeight) <= 0) {
+      setOrnamentError('Please enter a valid Net Weight greater than 0');
+      return;
+    }
+    if (!editPurity || isNaN(editPurity) || Number(editPurity) <= 0) {
+      setOrnamentError('Please enter a valid Purity percentage');
+      return;
+    }
+
+    setSavingOrnament(true);
+    setOrnamentError('');
+
+    try {
+      let finalWeightProof = existingWeightProof;
+      if (weightProofFile) {
+        const formData = new FormData();
+        formData.append('uploadedFile', weightProofFile);
+        formData.append('uploadName', 'ornament_weight_proof');
+        formData.append('uploadId', id || data?._id);
+        formData.append('documentType', 'Ornament Weight Proof');
+        formData.append('documentNo', `${selectedOrnament?.ornamentType || 'Ornament'} Weight Proof`);
+        const res = await createFile(formData);
+        if (res?.data?.uploadedFile) {
+          finalWeightProof = res.data.uploadedFile;
+        } else if (res?.data) {
+          finalWeightProof = typeof res.data === 'string' ? res.data : (res.data._id || '');
+        }
+      }
+
+      let finalPurityProof = existingPurityProof;
+      if (purityProofFile) {
+        const formData = new FormData();
+        formData.append('uploadedFile', purityProofFile);
+        formData.append('uploadName', 'ornament_purity_proof');
+        formData.append('uploadId', id || data?._id);
+        formData.append('documentType', 'Ornament Purity Proof');
+        formData.append('documentNo', `${selectedOrnament?.ornamentType || 'Ornament'} Purity Proof`);
+        const res = await createFile(formData);
+        if (res?.data?.uploadedFile) {
+          finalPurityProof = res.data.uploadedFile;
+        } else if (res?.data) {
+          finalPurityProof = typeof res.data === 'string' ? res.data : (res.data._id || '');
+        }
+      }
+
+      const updatedOrnaments = (data?.ornaments || []).map((orn, idx) => {
+        if (idx === selectedOrnamentIdx) {
+          const newNetWeight = Number(editNetWeight);
+          const newPurity = Number(editPurity);
+          const rateVal = data?.purchaseType === 'silver' ? data?.silverRate : data?.goldRate;
+
+          const actualWeight = orn.actualNetWeight != null
+            ? Number(orn.actualNetWeight)
+            : (orn.originalNetWeight != null
+                ? Number(orn.originalNetWeight)
+                : ((orn.grossWeight != null && orn.stoneWeight != null && (Number(orn.grossWeight) - Number(orn.stoneWeight)) > 0)
+                    ? Number(orn.grossWeight) - Number(orn.stoneWeight)
+                    : Number(orn.netWeight)));
+
+          const actualPurity = orn.actualPurity != null
+            ? Number(orn.actualPurity)
+            : (orn.originalPurity != null
+                ? Number(orn.originalPurity)
+                : Number(orn.purity));
+
+          // Retain original bill amounts - changing verified purity or net weight in Store Transit MUST NOT alter the customer/sale amount
+          let lockedCalculated = orn.originalCalculatedAmount;
+          let lockedNet = orn.originalNetAmount;
+
+          if (lockedCalculated == null) {
+            if (!orn.isEdited) {
+              lockedCalculated = (orn.calculatedAmount !== undefined && orn.calculatedAmount !== null && Number(orn.calculatedAmount) > 0)
+                ? Number(orn.calculatedAmount)
+                : (Number(orn.netAmount || 0) - (Number(orn.adjustment) || 0));
+            } else if (rateVal > 0 && actualWeight && actualPurity) {
+              lockedCalculated = Math.round(((actualWeight * actualPurity) / 100) * Number(rateVal));
+            } else {
+              lockedCalculated = (orn.calculatedAmount !== undefined && orn.calculatedAmount !== null && Number(orn.calculatedAmount) > 0)
+                ? Number(orn.calculatedAmount)
+                : (Number(orn.netAmount || 0) - (Number(orn.adjustment) || 0));
+            }
+          }
+
+          if (lockedNet == null) {
+            if (!orn.isEdited && orn.netAmount != null) {
+              lockedNet = Number(orn.netAmount);
+            } else {
+              lockedNet = Number(lockedCalculated || 0) + (Number(orn.adjustment) || 0);
+            }
+          }
+
+          return {
+            ...orn,
+            actualNetWeight: actualWeight,
+            originalNetWeight: actualWeight,
+            actualPurity,
+            originalPurity: actualPurity,
+            originalCalculatedAmount: lockedCalculated,
+            originalNetAmount: lockedNet,
+            isEdited: true,
+            netWeight: newNetWeight,
+            purity: newPurity,
+            weightProof: finalWeightProof,
+            purityProof: finalPurityProof,
+            calculatedAmount: lockedCalculated,
+            netAmount: lockedNet,
+          };
+        }
+        return orn;
+      });
+
+      const newTotalNetWeight = parseFloat(
+        updatedOrnaments.reduce((sum, o) => sum + (Number(o.netWeight) || 0), 0).toFixed(2)
+      );
+
+      const updatePayload = {
+        ornaments: updatedOrnaments,
+        netWeight: newTotalNetWeight,
+      };
+
+      const res = await updateSales(id || data?._id, updatePayload);
+      if (res?.status === false) {
+        setOrnamentError(res?.message || 'Failed to update ornament');
+      } else {
+        if (setNotify) {
+          setNotify({
+            open: true,
+            message: 'Ornament details updated successfully',
+            severity: 'success',
+          });
+        }
+        setEditOrnamentModal(false);
+        const refreshData = await getSalesById(id || data?._id);
+        if (refreshData?.status && refreshData?.data) {
+          setData(refreshData.data);
+          if (onSaleLoaded) onSaleLoaded(refreshData.data);
+        }
+      }
+    } catch (err) {
+      console.error('Error updating ornament:', err);
+      setOrnamentError(err.message || 'Error updating ornament');
+    } finally {
+      setSavingOrnament(false);
+    }
+  };
+
   function Ornament() {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -133,9 +328,81 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
               </TableRow>
             </TableHead>
             <TableBody>
-              {data?.ornaments?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
-                <TableRow hover key={index} tabIndex={-1}>
-                  <TableCell align="left">{sentenceCase(e.ornamentType || '')}</TableCell>
+              {data?.ornaments?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => {
+                const globalIdx = page * rowsPerPage + index;
+
+                // Determine actual net weight & purity (only active in Store Transit view)
+                const ornActualWeight = isStoreTransitView && (e.actualNetWeight != null 
+                  ? Number(e.actualNetWeight) 
+                  : (e.originalNetWeight != null 
+                      ? Number(e.originalNetWeight) 
+                      : ((e.isEdited && e.grossWeight != null && e.stoneWeight != null) 
+                          ? Number(e.grossWeight) - Number(e.stoneWeight) 
+                          : null)));
+
+                const hasWeightChange = Boolean(isStoreTransitView && ornActualWeight != null && Math.abs(Number(e.netWeight) - ornActualWeight) > 0.0001);
+                const isWeightHigher = hasWeightChange && Number(e.netWeight) > ornActualWeight;
+                const isWeightLower = hasWeightChange && Number(e.netWeight) < ornActualWeight;
+                const weightDiff = hasWeightChange ? Number(e.netWeight) - ornActualWeight : 0;
+
+                const ornActualPurity = isStoreTransitView && (e.actualPurity != null 
+                  ? Number(e.actualPurity) 
+                  : (e.originalPurity != null ? Number(e.originalPurity) : null));
+
+                const hasPurityChange = Boolean(isStoreTransitView && ornActualPurity != null && Math.abs(Number(e.purity) - ornActualPurity) > 0.0001);
+                const isPurityHigher = hasPurityChange && Number(e.purity) > ornActualPurity;
+                const isPurityLower = hasPurityChange && Number(e.purity) < ornActualPurity;
+                const purityDiff = hasPurityChange ? Number(e.purity) - ornActualPurity : 0;
+
+                const isModified = Boolean(isStoreTransitView && (hasWeightChange || hasPurityChange));
+
+                return (
+                <TableRow
+                  hover
+                  key={index}
+                  tabIndex={-1}
+                  onClick={() => {
+                    if (isStoreTransitView) {
+                      handleOpenEditOrnament(e, globalIdx);
+                    }
+                  }}
+                  sx={{
+                    ...(isStoreTransitView ? {
+                      cursor: 'pointer',
+                      '&:hover': {
+                        bgcolor: 'rgba(123, 31, 162, 0.08) !important',
+                      },
+                    } : {}),
+                    ...(isModified ? {
+                      bgcolor: 'rgba(211, 47, 47, 0.04)',
+                    } : {}),
+                  }}
+                >
+                  <TableCell align="left">
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Typography variant="body2" sx={{ fontWeight: isStoreTransitView ? 700 : 500, color: isStoreTransitView ? 'primary.main' : 'inherit' }}>
+                        {sentenceCase(e.ornamentType || '')}
+                      </Typography>
+                      {isStoreTransitView && (
+                        <Chip
+                          size="small"
+                          label="Edit"
+                          color="secondary"
+                          variant="outlined"
+                          icon={<Iconify icon="eva:edit-fill" width={14} />}
+                          sx={{ height: 22, fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}
+                        />
+                      )}
+                      {isModified && (
+                        <Chip
+                          size="small"
+                          label="Modified"
+                          color="error"
+                          sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, px: 0.5 }}
+                        />
+                      )}
+                    </Stack>
+                  </TableCell>
                   <TableCell align="left">{e.source || '-'}</TableCell>
                   <TableCell align="left">{e.quantity}</TableCell>
                   <TableCell align="center">
@@ -145,6 +412,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                         target="_blank"
                         rel="noreferrer"
                         style={{ display: 'inline-block' }}
+                        onClick={(ev) => ev.stopPropagation()}
                       >
                         <Avatar
                           src={e.ornamentPhoto.startsWith('http') ? e.ornamentPhoto : `${global.baseURL}/${e.ornamentPhoto}`}
@@ -167,19 +435,101 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                   </TableCell>
                   <TableCell align="left">{e.grossWeight?.toFixed(2)}</TableCell>
                   <TableCell align="left">{e.stoneWeight?.toFixed(2)}</TableCell>
-                  <TableCell align="left">{e.netWeight?.toFixed(2)}</TableCell>
-                  <TableCell align="left">{e.purity}</TableCell>
+                  <TableCell align="left">
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Tooltip
+                        title={
+                          hasWeightChange
+                            ? `Actual: ${ornActualWeight?.toFixed(2)}g (${isWeightHigher ? '+' : ''}${weightDiff.toFixed(2)}g)`
+                            : ''
+                        }
+                        arrow
+                        disableHoverListener={!hasWeightChange}
+                      >
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          sx={{
+                            fontWeight: hasWeightChange ? 700 : 500,
+                            color: isWeightHigher ? '#2e7d32' : isWeightLower ? '#d32f2f' : 'inherit',
+                            cursor: hasWeightChange ? 'help' : 'inherit',
+                          }}
+                        >
+                          {e.netWeight?.toFixed(2)}
+                        </Typography>
+                      </Tooltip>
+                      {e.weightProof && (
+                        <IconButton
+                          size="small"
+                          color="info"
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            const url = getProofUrl(e.weightProof);
+                            if (url) window.open(url, '_blank');
+                          }}
+                          title="View Weight Proof"
+                          sx={{ p: 0.25 }}
+                        >
+                          <Iconify icon="eva:file-text-fill" width={16} />
+                        </IconButton>
+                      )}
+                    </Stack>
+                  </TableCell>
+                  <TableCell align="left">
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Tooltip
+                        title={
+                          hasPurityChange
+                            ? `Actual: ${ornActualPurity}% (${isPurityHigher ? '+' : ''}${purityDiff > 0 && purityDiff % 1 === 0 ? purityDiff : purityDiff.toFixed(2)}%)`
+                            : ''
+                        }
+                        arrow
+                        disableHoverListener={!hasPurityChange}
+                      >
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          sx={{
+                            fontWeight: hasPurityChange ? 700 : 500,
+                            color: isPurityHigher ? '#2e7d32' : isPurityLower ? '#d32f2f' : 'inherit',
+                            cursor: hasPurityChange ? 'help' : 'inherit',
+                          }}
+                        >
+                          {e.purity}
+                        </Typography>
+                      </Tooltip>
+                      {e.purityProof && (
+                        <IconButton
+                          size="small"
+                          color="info"
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            const url = getProofUrl(e.purityProof);
+                            if (url) window.open(url, '_blank');
+                          }}
+                          title="View Purity Proof"
+                          sx={{ p: 0.25 }}
+                        >
+                          <Iconify icon="eva:shield-fill" width={16} />
+                        </IconButton>
+                      )}
+                    </Stack>
+                  </TableCell>
                   <TableCell align="left">
                     ₹{Math.round(
-                      (e.calculatedAmount !== undefined && e.calculatedAmount !== null && Number(e.calculatedAmount) > 0)
+                      (e.originalCalculatedAmount !== undefined && e.originalCalculatedAmount !== null && Number(e.originalCalculatedAmount) > 0)
+                        ? Number(e.originalCalculatedAmount)
+                        : (e.calculatedAmount !== undefined && e.calculatedAmount !== null && Number(e.calculatedAmount) > 0)
                         ? Number(e.calculatedAmount)
-                        : ((data?.purchaseType === 'silver' ? data?.silverRate : data?.goldRate) > 0 && e.netWeight && e.purity)
-                        ? Math.round(((Number(e.netWeight) * Number(e.purity)) / 100) * Number(data?.purchaseType === 'silver' ? data?.silverRate : data?.goldRate))
                         : (Number(e.netAmount || 0) - (Number(e.adjustment) || 0))
                     ).toLocaleString('en-IN')}
                   </TableCell>
                   <TableCell align="left">
-                    ₹{Math.round(e.netAmount || 0).toLocaleString('en-IN')}
+                    ₹{Math.round(
+                      (e.originalNetAmount !== undefined && e.originalNetAmount !== null && Number(e.originalNetAmount) > 0)
+                        ? Number(e.originalNetAmount)
+                        : Number(e.netAmount || 0)
+                    ).toLocaleString('en-IN')}
                     {Boolean(e.adjustment) && (
                       <Typography
                         variant="caption"
@@ -201,6 +551,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                           target="_blank"
                           rel="noreferrer"
                           style={{ textDecoration: 'none' }}
+                          onClick={(ev) => ev.stopPropagation()}
                         >
                           <Chip
                             size="small"
@@ -219,7 +570,8 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                     )}
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
                   <TableCell colSpan={11} />
@@ -239,7 +591,22 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 </TableRow>
               )}
             </TableBody>
-            {data?.ornaments?.length > 0 && (
+            {data?.ornaments?.length > 0 && (() => {
+              const totalNetWeight = (data?.ornaments || []).reduce((prev, cur) => prev + (+cur.netWeight || 0), 0);
+              const totalActualNetWeight = (data?.ornaments || []).reduce((prev, cur) => {
+                const act = cur.actualNetWeight != null 
+                  ? Number(cur.actualNetWeight) 
+                  : (cur.originalNetWeight != null 
+                      ? Number(cur.originalNetWeight) 
+                      : ((cur.isEdited && cur.grossWeight != null && cur.stoneWeight != null) 
+                          ? Number(cur.grossWeight) - Number(cur.stoneWeight) 
+                          : Number(cur.netWeight)));
+                return prev + (+act || 0);
+              }, 0);
+              const hasTotalWeightDiff = Boolean(isStoreTransitView && Math.abs(totalNetWeight - totalActualNetWeight) > 0.0001);
+              const totalWeightDiff = totalNetWeight - totalActualNetWeight;
+
+              return (
               <TableFooter>
                 <TableRow
                   sx={{
@@ -269,29 +636,56 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                     {data.ornaments.reduce((prev, cur) => prev + (+cur.stoneWeight || 0), 0).toFixed(2)}
                   </TableCell>
                   <TableCell align="left">
-                    {data.ornaments.reduce((prev, cur) => prev + (+cur.netWeight || 0), 0).toFixed(2)}
+                    <Tooltip
+                      title={
+                        hasTotalWeightDiff
+                          ? `Actual Total: ${totalActualNetWeight.toFixed(2)}g (${totalWeightDiff > 0 ? '+' : ''}${totalWeightDiff.toFixed(2)}g)`
+                          : ''
+                      }
+                      arrow
+                      disableHoverListener={!hasTotalWeightDiff}
+                    >
+                      <Typography
+                        component="span"
+                        variant="body2"
+                        sx={{
+                          fontWeight: 700,
+                          color: totalWeightDiff > 0 ? '#2e7d32' : totalWeightDiff < 0 ? '#d32f2f' : 'inherit',
+                          cursor: hasTotalWeightDiff ? 'help' : 'inherit',
+                        }}
+                      >
+                        {totalNetWeight.toFixed(2)}
+                      </Typography>
+                    </Tooltip>
                   </TableCell>
                   <TableCell align="left">-</TableCell>
                   <TableCell align="left">
                     ₹{Math.round(
                       data.ornaments.reduce((prev, cur) => {
-                        const rateVal = data?.purchaseType === 'silver' ? data?.silverRate : data?.goldRate;
-                        const sysAmt = (cur.calculatedAmount !== undefined && cur.calculatedAmount !== null && Number(cur.calculatedAmount) > 0)
+                        const sysAmt = (cur.originalCalculatedAmount !== undefined && cur.originalCalculatedAmount !== null && Number(cur.originalCalculatedAmount) > 0)
+                          ? Number(cur.originalCalculatedAmount)
+                          : (cur.calculatedAmount !== undefined && cur.calculatedAmount !== null && Number(cur.calculatedAmount) > 0)
                           ? Number(cur.calculatedAmount)
-                          : (rateVal > 0 && cur.netWeight && cur.purity)
-                          ? Math.round(((Number(cur.netWeight) * Number(cur.purity)) / 100) * Number(rateVal))
                           : (Number(cur.netAmount || 0) - (Number(cur.adjustment) || 0));
                         return prev + (Number(sysAmt) || 0);
                       }, 0)
                     ).toLocaleString('en-IN')}
                   </TableCell>
                   <TableCell align="left">
-                    ₹{Math.round(data.ornaments.reduce((prev, cur) => prev + (+cur.netAmount || 0), 0)).toLocaleString('en-IN')}
+                    ₹{Math.round(
+                      data.ornaments.reduce((prev, cur) => {
+                        const netAmt = (cur.originalNetAmount !== undefined && cur.originalNetAmount !== null && Number(cur.originalNetAmount) > 0)
+                          ? Number(cur.originalNetAmount)
+                          : Number(cur.netAmount || 0);
+                        return prev + netAmt;
+                      }, 0)
+                    ).toLocaleString('en-IN')}
                   </TableCell>
                   <TableCell align="center">-</TableCell>
                 </TableRow>
               </TableFooter>
-            )}
+              );
+            })()}
           </Table>
         </TableContainer>
 
@@ -1989,7 +2383,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
   const isMovedToTransit = Boolean(
     hasTransitProofs ||
     (data?.transits && data.transits.length > 0) ||
-    ['intransit', 'moved', 'melted'].includes(data?.status?.toLowerCase())
+    ['intransit', 'moved', 'moved_to_melting', 'melted'].includes(data?.status?.toLowerCase())
   );
 
   const hasMeltingProofs = (data?.proof || []).some(isMeltingDoc);
@@ -1999,8 +2393,8 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
     data?.isMelted ||
     data?.meltingStatus === 'melted' ||
     data?.meltingStatus === 'partial' ||
-    data?.status?.toLowerCase() === 'melted' ||
-    data?.ornaments?.some(o => o.status === 'melted')
+    ['moved_to_melting', 'melted'].includes(data?.status?.toLowerCase()) ||
+    data?.ornaments?.some(o => ['moved_to_melting', 'melted'].includes(o.status))
   );
 
   return (
@@ -2532,6 +2926,331 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           });
         }}
       />
+
+      {/* Store Transit: Edit Ornament Dialog */}
+      <Dialog
+        open={Boolean(isStoreTransitView && editOrnamentModal)}
+        onClose={() => {
+          if (!savingOrnament) setEditOrnamentModal(false);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Iconify icon="mdi:gold" width={28} sx={{ color: '#7b1fa2' }} />
+            <div>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                Edit Ornament: {sentenceCase(selectedOrnament?.ornamentType || '')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Store Transit Verification
+              </Typography>
+            </div>
+          </Stack>
+          <IconButton onClick={() => setEditOrnamentModal(false)} size="small" disabled={savingOrnament}>
+            <Iconify icon="eva:close-fill" />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ pt: 2.5 }}>
+          {(() => {
+            const modalActualWeight = selectedOrnament?.actualNetWeight != null
+              ? Number(selectedOrnament.actualNetWeight)
+              : (selectedOrnament?.originalNetWeight != null
+                  ? Number(selectedOrnament.originalNetWeight)
+                  : ((selectedOrnament?.grossWeight != null && selectedOrnament?.stoneWeight != null && (Number(selectedOrnament.grossWeight) - Number(selectedOrnament.stoneWeight)) > 0)
+                      ? Number(selectedOrnament.grossWeight) - Number(selectedOrnament.stoneWeight)
+                      : Number(selectedOrnament?.netWeight)));
+
+            const modalActualPurity = selectedOrnament?.actualPurity != null
+              ? Number(selectedOrnament.actualPurity)
+              : (selectedOrnament?.originalPurity != null
+                  ? Number(selectedOrnament.originalPurity)
+                  : Number(selectedOrnament?.purity));
+
+            const parsedWeight = parseFloat(editNetWeight);
+            const hasWeightDiff = !isNaN(parsedWeight) && modalActualWeight != null && Math.abs(parsedWeight - modalActualWeight) > 0.0001;
+            const weightDiff = hasWeightDiff ? parsedWeight - modalActualWeight : 0;
+
+            const parsedPurity = parseFloat(editPurity);
+            const hasPurityDiff = !isNaN(parsedPurity) && modalActualPurity != null && Math.abs(parsedPurity - modalActualPurity) > 0.0001;
+            const purityDiff = hasPurityDiff ? parsedPurity - modalActualPurity : 0;
+
+            return (
+              <Stack spacing={2.5}>
+                {/* Reference info */}
+                <Card variant="outlined" sx={{ p: 2, bgcolor: '#faf5ff', borderColor: '#e9d5ff' }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={3}>
+                      <Typography variant="caption" color="text.secondary">Ornament Type</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#7b1fa2' }}>
+                        {sentenceCase(selectedOrnament?.ornamentType || '')}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={3}>
+                      <Typography variant="caption" color="text.secondary">Gross Weight</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        {selectedOrnament?.grossWeight?.toFixed(2)} g
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={3}>
+                      <Typography variant="caption" color="text.secondary">Actual Net Wt</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                        {modalActualWeight != null ? `${modalActualWeight.toFixed(2)} g` : '-'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={3}>
+                      <Typography variant="caption" color="text.secondary">Actual Purity</Typography>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                        {modalActualPurity != null ? `${modalActualPurity}%` : '-'}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Card>
+
+                {/* Net Weight Field */}
+                <TextField
+                  fullWidth
+                  label="Net Weight (g)"
+                  type="number"
+                  inputProps={{ step: '0.01', min: '0' }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">g</InputAdornment>,
+                  }}
+                  value={editNetWeight}
+                  onChange={(e) => setEditNetWeight(e.target.value)}
+                  error={hasWeightDiff && weightDiff < 0}
+                  helperText={
+                    hasWeightDiff ? (
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        sx={{
+                          color: weightDiff > 0 ? '#2e7d32' : '#d32f2f',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                        }}
+                      >
+                        {weightDiff > 0
+                          ? `▲ +${weightDiff.toFixed(2)}g higher than actual (${modalActualWeight?.toFixed(2)}g)`
+                          : `▼ ${weightDiff.toFixed(2)}g lower than actual (${modalActualWeight?.toFixed(2)}g)`}
+                      </Typography>
+                    ) : (
+                      'Verified net weight of the ornament'
+                    )
+                  }
+                  FormHelperTextProps={{
+                    sx: hasWeightDiff ? { color: `${weightDiff > 0 ? '#2e7d32' : '#d32f2f'} !important` } : {},
+                  }}
+                />
+
+                {/* Purity Field */}
+                <TextField
+                  fullWidth
+                  label="Purity (%)"
+                  type="number"
+                  inputProps={{ step: '0.01', min: '0', max: '100' }}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  }}
+                  value={editPurity}
+                  onChange={(e) => setEditPurity(e.target.value)}
+                  error={hasPurityDiff && purityDiff < 0}
+                  helperText={
+                    hasPurityDiff ? (
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        sx={{
+                          color: purityDiff > 0 ? '#2e7d32' : '#d32f2f',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                        }}
+                      >
+                        {purityDiff > 0
+                          ? `▲ +${purityDiff > 0 && purityDiff % 1 === 0 ? purityDiff : purityDiff.toFixed(2)}% higher than actual (${modalActualPurity}%)`
+                          : `▼ ${purityDiff % 1 === 0 ? purityDiff : purityDiff.toFixed(2)}% lower than actual (${modalActualPurity}%)`}
+                      </Typography>
+                    ) : (
+                      'Tested purity percentage (e.g. 22 or 91.6)'
+                    )
+                  }
+                  FormHelperTextProps={{
+                    sx: hasPurityDiff ? { color: `${purityDiff > 0 ? '#2e7d32' : '#d32f2f'} !important` } : {},
+                  }}
+                />
+
+            {/* Weight Proof Upload */}
+            <Box sx={{ border: '1px dashed #d1d5db', borderRadius: 1.5, p: 2, bgcolor: '#f9fafb' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Iconify icon="carbon:scale" width={20} sx={{ color: '#7b1fa2' }} />
+                Weight Proof Photo / Document
+              </Typography>
+              
+              <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                <Button
+                  variant="outlined"
+                  component="label"
+                  size="small"
+                  startIcon={<Iconify icon="eva:cloud-upload-fill" />}
+                  sx={{ textTransform: 'none', fontWeight: 600 }}
+                >
+                  {existingWeightProof || weightProofFileName ? 'Change Weight Proof' : 'Upload Weight Proof'}
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*,application/pdf"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setWeightProofFile(file);
+                        setWeightProofFileName(file.name);
+                      }
+                    }}
+                  />
+                </Button>
+
+                {weightProofFileName ? (
+                  <Chip
+                    size="small"
+                    color="success"
+                    label={`New: ${weightProofFileName}`}
+                    icon={<Iconify icon="eva:checkmark-circle-2-fill" />}
+                  />
+                ) : existingWeightProof ? (
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip
+                      size="small"
+                      color="info"
+                      variant="outlined"
+                      label="Proof Uploaded"
+                      icon={<Iconify icon="eva:file-text-fill" />}
+                    />
+                    <Button
+                      size="small"
+                      color="primary"
+                      onClick={() => {
+                        const url = getProofUrl(existingWeightProof);
+                        if (url) window.open(url, '_blank');
+                      }}
+                      startIcon={<Iconify icon="eva:external-link-outline" />}
+                      sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+                    >
+                      View Current
+                    </Button>
+                  </Stack>
+                ) : (
+                  <Typography variant="caption" color="text.secondary">
+                    No weight proof uploaded
+                  </Typography>
+                )}
+              </Stack>
+            </Box>
+
+            {/* Purity Proof Upload */}
+            <Box sx={{ border: '1px dashed #d1d5db', borderRadius: 1.5, p: 2, bgcolor: '#f9fafb' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Iconify icon="eva:shield-fill" width={20} sx={{ color: '#7b1fa2' }} />
+                Purity Proof / Touchstone / Assay Report
+              </Typography>
+              
+              <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                <Button
+                  variant="outlined"
+                  component="label"
+                  size="small"
+                  startIcon={<Iconify icon="eva:cloud-upload-fill" />}
+                  sx={{ textTransform: 'none', fontWeight: 600 }}
+                >
+                  {existingPurityProof || purityProofFileName ? 'Change Purity Proof' : 'Upload Purity Proof'}
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*,application/pdf"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setPurityProofFile(file);
+                        setPurityProofFileName(file.name);
+                      }
+                    }}
+                  />
+                </Button>
+
+                {purityProofFileName ? (
+                  <Chip
+                    size="small"
+                    color="success"
+                    label={`New: ${purityProofFileName}`}
+                    icon={<Iconify icon="eva:checkmark-circle-2-fill" />}
+                  />
+                ) : existingPurityProof ? (
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip
+                      size="small"
+                      color="info"
+                      variant="outlined"
+                      label="Proof Uploaded"
+                      icon={<Iconify icon="eva:file-text-fill" />}
+                    />
+                    <Button
+                      size="small"
+                      color="primary"
+                      onClick={() => {
+                        const url = getProofUrl(existingPurityProof);
+                        if (url) window.open(url, '_blank');
+                      }}
+                      startIcon={<Iconify icon="eva:external-link-outline" />}
+                      sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+                    >
+                      View Current
+                    </Button>
+                  </Stack>
+                ) : (
+                  <Typography variant="caption" color="text.secondary">
+                    No purity proof uploaded
+                  </Typography>
+                )}
+              </Stack>
+            </Box>
+
+            {ornamentError && (
+              <Alert severity="error" sx={{ width: '100%' }}>
+                {ornamentError}
+              </Alert>
+            )}
+          </Stack>
+            );
+          })()}
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setEditOrnamentModal(false)} color="inherit" disabled={savingOrnament}>
+            Cancel
+          </Button>
+          <LoadingButton
+            variant="contained"
+            color="primary"
+            loading={savingOrnament}
+            onClick={handleSaveOrnament}
+            sx={{
+              bgcolor: '#7b1fa2',
+              color: '#ffffff !important',
+              fontWeight: 600,
+              px: 3,
+              '&:hover': { bgcolor: '#6a1b9a' },
+              '&.Mui-disabled': { bgcolor: '#ba68c8', color: 'rgba(255, 255, 255, 0.7) !important' },
+            }}
+          >
+            Save Changes
+          </LoadingButton>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

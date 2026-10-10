@@ -325,8 +325,16 @@ async function getNextTelecaller() {
   }
 }
 
-async function create(data) {
+async function create(data, user = null) {
   try {
+    if (data.status === "converted" && user) {
+      const uType = (user.userType || "").toLowerCase();
+      const isTelecaller = ["telecalling", "telecaller", "telecaller_tl", "telecaller-tl"].includes(uType);
+      if (isTelecaller) {
+        throw new Error("Lead cannot be created with 'converted' status. Requires Bullion Desk approval and Executive assignment.");
+      }
+    }
+
     if (data.mobile && data.date) {
       const existing = await Lead.findOne({
         mobile: data.mobile,
@@ -356,6 +364,21 @@ async function update(id, data, user = null) {
     if (!lead) {
       throw new Error("Lead not found");
     }
+
+    // Telecaller validation for converting lead:
+    // Can only convert if Bullion Desk approved AND an executive is assigned
+    if (data.status === "converted" && lead.status !== "converted") {
+      const uType = (user?.userType || "").toLowerCase();
+      const isTelecaller = ["telecalling", "telecaller", "telecaller_tl", "telecaller-tl"].includes(uType);
+      if (isTelecaller) {
+        const isBullionApproved = lead.bullionStatus === "approved";
+        const hasExecutive = Boolean(lead.assignedExecutive || lead.assignedExecutiveName);
+        if (!isBullionApproved || !hasExecutive) {
+          throw new Error("Lead cannot be converted until Bullion Desk approves and an Executive is assigned.");
+        }
+      }
+    }
+
     if (user) {
       if (user.userType?.toLowerCase() === 'telecalling' && !lead.assignedTo) {
         data.assignedTo = user._id;
@@ -415,13 +438,8 @@ async function addDisposition(id, payload, user = null) {
       }));
       update.$push.documents = { $each: docsWithMeta };
     }
-    if ((payload.status === "Visited Branch" || payload.status === "Planning to Visit" || payload.status === "Business Closed") && payload.branch) {
+    if ((payload.status === "Visited Branch" || payload.status === "Planning to Visit") && payload.branch) {
       update.$set = { branch: payload.branch };
-    }
-
-    if (payload.status === "Business Closed" || payload.status === "Business Converted") {
-      update.$set = update.$set || {};
-      update.$set.status = "converted";
     }
 
     const rejectedStatuses = ["Wrong Enquiry", "Not Connected", "Not Feasible", "Sold outside"];

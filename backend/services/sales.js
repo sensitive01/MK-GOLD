@@ -1396,6 +1396,30 @@ async function assignArticleNumbersToSales(saleIds) {
   }
 }
 
+async function checkArticleNumber(articleNumber, saleId = null) {
+  try {
+    if (!articleNumber || !String(articleNumber).trim()) {
+      return { exists: false };
+    }
+    const trimmed = String(articleNumber).trim();
+    const query = { articleNumber: trimmed };
+    if (saleId && mongoose.Types.ObjectId.isValid(saleId)) {
+      query._id = { $ne: new mongoose.Types.ObjectId(saleId) };
+    }
+    const existing = await Sales.findOne(query).select("billId articleNumber").lean();
+    if (existing) {
+      return {
+        exists: true,
+        message: `Article number "${trimmed}" is already assigned to Bill #${existing.billId || 'another sale'}`,
+        billId: existing.billId,
+      };
+    }
+    return { exists: false };
+  } catch (err) {
+    throw err;
+  }
+}
+
 async function create(payload) {
   try {
     const Customer = require("../models/customer");
@@ -1565,6 +1589,26 @@ async function update(id, payload) {
   try {
     const sale = await Sales.findById(id).exec();
     if (!sale) throw new Error("Sale not found");
+
+    if (payload.articleNumber !== undefined) {
+      if (typeof payload.articleNumber === 'string') {
+        const trimmedArt = payload.articleNumber.trim();
+        if (trimmedArt) {
+          const existing = await Sales.findOne({
+            articleNumber: trimmedArt,
+            _id: { $ne: new mongoose.Types.ObjectId(id) },
+          }).exec();
+          if (existing) {
+            throw new Error(`Article number "${trimmedArt}" is already assigned to bill ${existing.billId || 'another sale'}. Please enter a unique article number.`);
+          }
+          payload.articleNumber = trimmedArt;
+        } else {
+          delete payload.articleNumber;
+        }
+      } else if (!payload.articleNumber) {
+        delete payload.articleNumber;
+      }
+    }
 
     // Sequence validation:
     if (payload.status === "finance pending" && !sale.bullionCompleted && !payload.bullionCompleted) {
@@ -1811,6 +1855,26 @@ async function updateWithLog(id, setData, logEntry) {
     const sale = await Sales.findById(id).exec();
     if (!sale) throw new Error("Sale not found");
 
+    if (setData.articleNumber !== undefined) {
+      if (typeof setData.articleNumber === 'string') {
+        const trimmedArt = setData.articleNumber.trim();
+        if (trimmedArt) {
+          const existing = await Sales.findOne({
+            articleNumber: trimmedArt,
+            _id: { $ne: new mongoose.Types.ObjectId(id) },
+          }).exec();
+          if (existing) {
+            throw new Error(`Article number "${trimmedArt}" is already assigned to bill ${existing.billId || 'another sale'}. Please enter a unique article number.`);
+          }
+          setData.articleNumber = trimmedArt;
+        } else {
+          delete setData.articleNumber;
+        }
+      } else if (!setData.articleNumber) {
+        delete setData.articleNumber;
+      }
+    }
+
     // Sequence validation:
     if (setData.status === "finance pending" && !sale.bullionCompleted && !setData.bullionCompleted) {
       throw new Error("Cannot update sale status: Bullion Desk must approve first");
@@ -1950,6 +2014,11 @@ async function updateWithLog(id, setData, logEntry) {
       const ReleaseModel = require("../models/release");
       const releases = await ReleaseModel.find({ _id: { $in: releaseIds } }).lean().exec();
       setData.release = releases;
+    }
+
+    if (setData.ornaments && Array.isArray(setData.ornaments)) {
+      const totalNet = setData.ornaments.reduce((acc, orn) => acc + (Number(orn.netWeight) || 0), 0);
+      setData.netWeight = parseFloat(totalNet.toFixed(2));
     }
 
     const isPledgedReleaseStage = sale.saleType === 'pledged' && !sale.assigneeCompleted;
@@ -2588,4 +2657,5 @@ module.exports = {
   triggerCompletedInvoiceWhatsApp,
   generateArticleNumber,
   assignArticleNumbersToSales,
+  checkArticleNumber,
 };

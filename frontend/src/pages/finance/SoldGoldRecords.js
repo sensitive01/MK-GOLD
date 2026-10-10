@@ -60,7 +60,7 @@ export default function SoldGoldRecords() {
   return (
     <>
       <Helmet>
-        <title> Gatty Sales | MK Gold </title>
+        <title> Gatty Sales | Finance </title>
       </Helmet>
 
       <Container maxWidth="xl">
@@ -172,7 +172,7 @@ export default function SoldGoldRecords() {
         </Card>
       </Container>
       
-      {/* Full Details Dialog */}
+      {/* Full Details Dialog (Includes Stage 1, Stage 2, Vendor Assay, Purity Photo, Certificate, Ornaments) */}
       <MeltingDetailDialog
         open={detailDialogOpen}
         onClose={() => setDetailDialogOpen(false)}

@@ -72,4 +72,13 @@ async function verifyFinancePayment(id, paymentId, payload) {
   }
 }
 
-export { getSales, consolidatedSaleReport, findSales, getSalesById, createSales, updateSales, deleteSalesById, verifyFinancePayment };
+async function checkArticleNumberApi(payload) {
+  try {
+    const response = await apiClient().post('/api/v1.0/branch/sales/check-article-number', payload);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
+export { getSales, consolidatedSaleReport, findSales, getSalesById, createSales, updateSales, deleteSalesById, verifyFinancePayment, checkArticleNumberApi };

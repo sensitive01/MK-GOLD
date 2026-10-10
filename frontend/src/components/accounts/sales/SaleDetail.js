@@ -41,7 +41,7 @@ import { useSelector } from 'react-redux';
 import { LoadingButton } from '@mui/lab';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { getSalesById, updateSales, verifyFinancePayment } from '../../../apis/accounts/sales';
+import { getSalesById, updateSales, verifyFinancePayment, checkArticleNumberApi } from '../../../apis/accounts/sales';
 import { createFile } from '../../../apis/branch/fileupload';
 import global from '../../../utils/global';
 import TimelineView from '../../TimelineView';
@@ -2037,7 +2037,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
   const isMovedToTransit = Boolean(
     hasTransitProofs ||
     (data?.transits && data.transits.length > 0) ||
-    ['intransit', 'moved', 'melted'].includes(data?.status?.toLowerCase())
+    ['intransit', 'moved', 'moved_to_melting', 'melted'].includes(data?.status?.toLowerCase())
   );
 
   const hasMeltingProofs = (data?.proof || []).some(isMeltingDoc);
@@ -2047,8 +2047,8 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
     data?.isMelted ||
     data?.meltingStatus === 'melted' ||
     data?.meltingStatus === 'partial' ||
-    data?.status?.toLowerCase() === 'melted' ||
-    data?.ornaments?.some(o => o.status === 'melted')
+    ['moved_to_melting', 'melted'].includes(data?.status?.toLowerCase()) ||
+    data?.ornaments?.some(o => ['moved_to_melting', 'melted'].includes(o.status))
   );
 
   return (
@@ -2692,6 +2692,8 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
   const [showOrnamentForm, setShowOrnamentForm] = useState(false);
   const [saleDetails, setSaleDetails] = useState(null);
   const [selectedBank, setSelectedBank] = useState(null);
+  const [articleNumberError, setArticleNumberError] = useState('');
+  const [isCheckingArticleNumber, setIsCheckingArticleNumber] = useState(false);
 
   const [ornamentValues, setOrnamentValues] = useState({
     ornamentType: '',
@@ -2726,10 +2728,37 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
       bankId: '',
       comments: '',
       proof: '',
+      articleNumber: '',
       isCompleted: false,
     },
     validationSchema: schema,
     onSubmit: async (values) => {
+      const isPledgedCheck = ((saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged') && !saleDetails?.assigneeCompleted;
+      const isCompleting = Boolean(values.isCompleted || saleDetails?.status === 'completed' || saleDetails?.financeCompleted);
+      const mustHaveArticle = type === 'finance' && !isPledgedCheck && isCompleting;
+
+      if (mustHaveArticle && (!values.articleNumber || !values.articleNumber.trim())) {
+        setArticleNumberError('Article number is required when marking as completed.');
+        alert('Article number is required when marking as completed.');
+        return;
+      }
+      if (articleNumberError) {
+        alert(articleNumberError);
+        return;
+      }
+      if (mustHaveArticle && values.articleNumber && values.articleNumber.trim() && values.articleNumber.trim() !== (saleDetails?.articleNumber || '').trim()) {
+        try {
+          const checkRes = await checkArticleNumberApi({ articleNumber: values.articleNumber.trim(), saleId: id });
+          if (checkRes?.status && checkRes?.data?.exists) {
+            const errMsg = checkRes.data.message || 'This article number is already assigned.';
+            setArticleNumberError(errMsg);
+            alert(errMsg);
+            return;
+          }
+        } catch (e) {
+          console.error('Error validating article number on submit:', e);
+        }
+      }
       if (type === 'finance') {
         const isPledged = (saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged';
         const isReleaseStage = isPledged && !saleDetails?.assigneeCompleted;
@@ -2852,6 +2881,12 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
           const isPhys = saleType === 'physical';
           payload.status = (isPhys || assigneeCompleted) ? 'completed' : 'release pending';
         }
+
+        const isPledged = (saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged';
+        const isReleaseStageCheck = isPledged && !saleDetails?.assigneeCompleted;
+        if (!isReleaseStageCheck && values.articleNumber && values.articleNumber.trim()) {
+          payload.articleNumber = values.articleNumber.trim();
+        }
       } else if (type === 'fund transfer') {
         payload.fundTransferAmount = values.amount;
         payload.fundTransferComments = values.comments;
@@ -2893,6 +2928,11 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
         if (res?.status && res?.data) {
           const sale = res.data;
           setSaleDetails(sale);
+          if (sale.articleNumber) {
+            setFieldValue('articleNumber', sale.articleNumber);
+          } else {
+            setFieldValue('articleNumber', '');
+          }
           if (type === 'finance') {
             const isPledgedStage = sale.saleType === 'pledged' && !sale.assigneeCompleted;
             if (isPledgedStage) {
@@ -2978,9 +3018,46 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
     setFileType('');
     setPdfBlobUrl(null);
     setSelectedBank(null);
+    setArticleNumberError('');
+    setIsCheckingArticleNumber(false);
     resetForm();
     handleClose();
   };
+
+  const isPledgedStage = ((saleDetails?.saleType || saleType || '').toLowerCase() === 'pledged') && !saleDetails?.assigneeCompleted;
+  const isCompletionActive = Boolean(values.isCompleted || saleDetails?.status === 'completed' || saleDetails?.financeCompleted);
+  const showArticleNumberField = type === 'finance' && !isPledgedStage && isCompletionActive;
+  const isArticleMissing = showArticleNumberField && (!values.articleNumber || !values.articleNumber.trim());
+
+  useEffect(() => {
+    if (!showArticleNumberField) {
+      setArticleNumberError('');
+      return;
+    }
+    const trimmed = (values.articleNumber || '').trim();
+    if (!trimmed || trimmed === (saleDetails?.articleNumber || '').trim()) {
+      setArticleNumberError('');
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsCheckingArticleNumber(true);
+      try {
+        const res = await checkArticleNumberApi({ articleNumber: trimmed, saleId: id });
+        if (res?.status && res?.data?.exists) {
+          setArticleNumberError(res.data.message || 'This article number is already assigned.');
+        } else {
+          setArticleNumberError('');
+        }
+      } catch (err) {
+        console.error('Error checking article number:', err);
+      } finally {
+        setIsCheckingArticleNumber(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [values.articleNumber, id, saleDetails?.articleNumber, showArticleNumberField]);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -3174,6 +3251,9 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                 </Grid>
               </>
             )}
+
+
+
             <Grid item xs={12}>
               <TextField
                 name="comments"
@@ -3311,11 +3391,52 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
                 <Checkbox
                   name="isCompleted"
                   checked={values.isCompleted}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (!e.target.checked && !(saleDetails?.status === 'completed' || saleDetails?.financeCompleted)) {
+                      setArticleNumberError('');
+                    }
+                  }}
                 />
                 <Typography variant="body2">Mark as completed (Moves to next stage)</Typography>
               </Stack>
             </Grid>
+
+            {showArticleNumberField && (
+              <Grid item xs={12}>
+                <TextField
+                  name="articleNumber"
+                  label="Article Number *"
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  placeholder="Enter manual article number (e.g. 101, 102)"
+                  value={values.articleNumber || ''}
+                  fullWidth
+                  onBlur={handleBlur}
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (articleNumberError) setArticleNumberError('');
+                  }}
+                  error={Boolean(articleNumberError || (touched.articleNumber && !values.articleNumber?.trim()))}
+                  helperText={
+                    articleNumberError ? (
+                      <span style={{ color: '#d32f2f', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                        ⚠️ {articleNumberError}
+                      </span>
+                    ) : (
+                      isCheckingArticleNumber
+                        ? 'Checking availability...'
+                        : (!values.articleNumber?.trim() ? 'Article number is mandatory to mark as completed.' : '')
+                    )
+                  }
+                  FormHelperTextProps={{
+                    sx: {
+                      color: articleNumberError || !values.articleNumber?.trim() ? '#d32f2f !important' : undefined,
+                    },
+                  }}
+                />
+              </Grid>
+            )}
           </Grid>
         </DialogContent>
         <DialogActions>
@@ -3324,7 +3445,7 @@ function VerificationModal({ open, id, type, handleClose, fetchData, saleType, a
             type="submit"
             variant="contained"
             loading={Boolean(loading || isSubmitting || isUploading)}
-            disabled={Boolean(loading || isSubmitting || isUploading)}
+            disabled={Boolean(loading || isSubmitting || isUploading || articleNumberError || isCheckingArticleNumber || isArticleMissing)}
             sx={{ color: '#fff' }}
           >
             Save & Update Status

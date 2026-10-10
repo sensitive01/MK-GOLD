@@ -286,6 +286,95 @@ export default function Melting() {
     return match ? match[0] : (lastPart || str);
   };
 
+  const getTransitArticleNumbers = (transit) => {
+    if (!transit) return [];
+    const sales = Array.isArray(transit.saleIds)
+      ? transit.saleIds
+      : Array.isArray(transit.sales)
+      ? transit.sales
+      : [];
+    const articles = [];
+    sales.forEach((sale) => {
+      const rawArt =
+        sale?.articleNumber ||
+        (sale?.ornaments && sale.ornaments.find((o) => o?.articleNumber)?.articleNumber);
+      if (rawArt) {
+        const formatted = formatArticleNumber(rawArt);
+        if (formatted && formatted !== '-') {
+          articles.push(formatted);
+        } else {
+          articles.push(String(rawArt).trim());
+        }
+      }
+    });
+    return articles;
+  };
+
+  const renderTransitIdsWithArticles = (row) => {
+    const transits = row?.transitIds?.length
+      ? row.transitIds
+      : row?.transitId
+      ? [row.transitId]
+      : [];
+
+    if (!transits.length) return 'N/A';
+
+    return transits.map((t, idx) => {
+      const tid = t?.transitId || (typeof t === 'string' ? t : 'N/A');
+      const arts = [];
+
+      if (t?.saleIds && Array.isArray(t.saleIds)) {
+        t.saleIds.forEach((s) => {
+          const raw = s?.articleNumber || (s?.ornaments && s.ornaments.find((o) => o?.articleNumber)?.articleNumber);
+          const formatted = formatArticleNumber(raw);
+          if (formatted && formatted !== '-' && !arts.includes(formatted)) {
+            arts.push(formatted);
+          }
+        });
+      }
+
+      if (!arts.length && transits.length === 1) {
+        if (row.saleIds && Array.isArray(row.saleIds)) {
+          row.saleIds.forEach((s) => {
+            const raw = s?.articleNumber || (s?.ornaments && s.ornaments.find((o) => o?.articleNumber)?.articleNumber);
+            const formatted = formatArticleNumber(raw);
+            if (formatted && formatted !== '-' && !arts.includes(formatted)) {
+              arts.push(formatted);
+            }
+          });
+        }
+        if (!arts.length && row.ornaments && Array.isArray(row.ornaments)) {
+          row.ornaments.forEach((o) => {
+            const formatted = formatArticleNumber(o?.articleNumber);
+            if (formatted && formatted !== '-' && !arts.includes(formatted)) {
+              arts.push(formatted);
+            }
+          });
+        }
+      }
+
+      return (
+        <Box component="span" key={t?._id || idx} sx={{ display: 'inline-block', mr: idx < transits.length - 1 ? 1 : 0 }}>
+          <Typography component="span" sx={{ fontWeight: 600 }}>{tid}</Typography>
+          {arts.length > 0 && (
+            <Typography
+              component="span"
+              sx={{
+                fontWeight: 600,
+                color: '#7b1fa2',
+                ml: 0.5,
+                fontSize: '0.8125rem',
+              }}
+            >
+              ({arts.join(', ')})
+            </Typography>
+          )}
+          {idx < transits.length - 1 ? ', ' : ''}
+        </Box>
+      );
+    });
+  };
+
   const getSalesForSelectedTransits = () => {
     let sales = [];
     selectedTransits.forEach(t => {
@@ -364,9 +453,12 @@ export default function Melting() {
       fineGoldDifference: 0
     };
 
-    if (meltProof) {
-      payload.meltProof = typeof meltProof === 'object' ? meltProof._id : meltProof;
+    if (!meltProof) {
+      setNotify({ open: true, message: 'Batch proof is mandatory to create melting batch', severity: 'warning' });
+      return;
     }
+
+    payload.meltProof = typeof meltProof === 'object' ? meltProof._id : meltProof;
 
     const res = await createMelting(payload);
     if (res.status) {
@@ -712,7 +804,7 @@ export default function Melting() {
                         <TableRow hover key={row._id} onClick={() => handleViewRow(row)} sx={{ cursor: 'pointer' }}>
                           <TableCell>{moment(row.createdAt).format('YYYY-MM-DD HH:mm')}</TableCell>
                           <TableCell sx={{ fontWeight: 600 }}>{row.batchNumber || '-'}</TableCell>
-                          <TableCell>{row.transitIds?.length ? row.transitIds.map(t => t.transitId).join(', ') : (row.transitId?.transitId || 'N/A')}</TableCell>
+                          <TableCell>{renderTransitIdsWithArticles(row)}</TableCell>
                           <TableCell>{row.saleIds?.length || 0}</TableCell>
                           <TableCell>{row.totalOrnaments}</TableCell>
                           <TableCell>{row.totalGrossWeight}</TableCell>
@@ -732,7 +824,7 @@ export default function Melting() {
                                     handleOpenSellDialog(row);
                                   }}
                                 >
-                                  Sell Bar
+                                  Process DC
                                 </Button>
                               ) : !row.isPreMeltCompleted ? (
                                 <Button 
@@ -1043,7 +1135,7 @@ export default function Melting() {
                 disabled={uploadLoading}
                 sx={{ mt: 2 }}
               >
-                {uploadLoading ? 'Uploading...' : 'Upload Batch Proof'}
+                {uploadLoading ? 'Uploading...' : 'Upload Batch Proof *'}
                 <input
                   type="file"
                   hidden
@@ -1372,9 +1464,9 @@ export default function Melting() {
         </DialogActions>
       </Dialog>
 
-      {/* Sell Bar Dialog */}
+      {/* Sell Bar / Process DC Dialog */}
       <Dialog open={openSellDialog} onClose={handleCloseSellDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>Sell Bar</DialogTitle>
+        <DialogTitle>Process DC</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <Typography variant="body2" color="textSecondary" gutterBottom>
@@ -1605,7 +1697,7 @@ export default function Melting() {
                   
                   <Typography variant="subtitle2">Transit IDs</Typography>
                   <Typography variant="body2" gutterBottom>
-                    {rowToView.transitIds?.length ? rowToView.transitIds.map(t => t.transitId).join(', ') : (rowToView.transitId?.transitId || 'N/A')}
+                    {renderTransitIdsWithArticles(rowToView)}
                   </Typography>
 
                   <Typography variant="subtitle2">Status</Typography>

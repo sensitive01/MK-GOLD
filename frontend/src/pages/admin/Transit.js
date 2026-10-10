@@ -35,6 +35,7 @@ import {
     TextField,
     InputAdornment,
     Tooltip,
+    FormHelperText,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
@@ -935,7 +936,7 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
     proof: Yup.string().required('Proof is required'),
   });
 
-  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setFieldValue, resetForm, setValues, submitCount } = useFormik({
+  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setFieldValue, resetForm, setValues, submitCount, setFieldTouched } = useFormik({
     initialValues: {
       saleIds: [],
       transitId: generateRandomTransitId(),
@@ -1019,6 +1020,7 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
       setLoading(false);
       if (response.status) {
         setFieldValue('proof', response.data?._id);
+        setFieldTouched('proof', true, false);
       } else {
         alert('File upload failed');
       }
@@ -1134,10 +1136,65 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
               <TextField name="transitMovedThrough" label="Transit Moved Through" value={values.transitMovedThrough} onChange={handleChange} onBlur={handleBlur} error={touched.transitMovedThrough && !!errors.transitMovedThrough} helperText={touched.transitMovedThrough && errors.transitMovedThrough} fullWidth />
             </Grid>
             <Grid item xs={12} sm={6}>
-               <input type="file" style={{ display: 'none' }} ref={fileInputRef} accept="image/*,application/pdf" onChange={handleFileUpload} />
-               <LoadingButton loading={loading} variant="outlined" onClick={() => fileInputRef.current?.click()} fullWidth color={touched.proof && !!errors.proof ? 'error' : 'primary'} sx={{ height: 56 }}>
-                 {values.proof ? 'Proof Uploaded' : 'Upload Proof (Image/PDF)'}
-               </LoadingButton>
+              <input
+                type="file"
+                style={{ display: 'none' }}
+                ref={fileInputRef}
+                accept="image/*,application/pdf"
+                onChange={handleFileUpload}
+              />
+              {(() => {
+                const hasProofError = (Boolean(touched.proof) || submitCount > 0) && (!values.proof || Boolean(errors.proof));
+                return (
+                  <Box sx={{ width: '100%' }}>
+                    <LoadingButton
+                      loading={loading}
+                      variant={values.proof ? 'contained' : 'outlined'}
+                      color={hasProofError ? 'error' : (values.proof ? 'success' : 'primary')}
+                      onClick={() => {
+                        setFieldTouched('proof', true, false);
+                        fileInputRef.current?.click();
+                      }}
+                      fullWidth
+                      sx={{
+                        height: 56,
+                        fontWeight: 600,
+                        textTransform: 'none',
+                        fontSize: '0.95rem',
+                        ...(hasProofError && {
+                          borderColor: 'error.main',
+                          borderWidth: 2,
+                          color: 'error.main',
+                          bgcolor: 'rgba(255, 72, 66, 0.04)',
+                          '&:hover': { borderWidth: 2, borderColor: 'error.dark' },
+                        }),
+                        ...(values.proof && {
+                          bgcolor: 'success.main',
+                          color: '#fff',
+                          '&:hover': { bgcolor: 'success.dark' },
+                        }),
+                      }}
+                    >
+                      {values.proof ? '✓ Proof Uploaded (Click to Change)' : 'Upload Proof (Image/PDF) *'}
+                    </LoadingButton>
+                    <FormHelperText
+                      error={hasProofError}
+                      sx={{
+                        mx: 1.5,
+                        mt: 0.5,
+                        fontWeight: hasProofError ? 600 : 500,
+                        color: hasProofError
+                          ? 'error.main'
+                          : (values.proof ? 'success.main' : 'error.main'),
+                      }}
+                    >
+                      {hasProofError
+                        ? (errors.proof || '* Proof is mandatory. Please upload an image or PDF.')
+                        : (values.proof ? '✓ Proof document attached' : '* Proof is mandatory')}
+                    </FormHelperText>
+                  </Box>
+                );
+              })()}
             </Grid>
             <Grid item xs={12}>
               <TextField name="notes" label="Notes" value={values.notes} onChange={handleChange} onBlur={handleBlur} fullWidth multiline rows={3} />
@@ -1146,7 +1203,19 @@ function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, pre
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <LoadingButton type="submit" variant="contained" loading={loading} sx={{ color: '#fff' }}>Create</LoadingButton>
+          <LoadingButton
+            type="submit"
+            variant="contained"
+            loading={loading}
+            onClick={() => {
+              if (!values.proof) {
+                setFieldTouched('proof', true, false);
+              }
+            }}
+            sx={{ color: '#fff' }}
+          >
+            Create
+          </LoadingButton>
         </DialogActions>
       </form>
     </Dialog>

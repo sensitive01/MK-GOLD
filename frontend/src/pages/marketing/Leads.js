@@ -830,14 +830,8 @@ export default function Leads({ title = "Leads Management" }) {
                           const lowerStatus = status?.toLowerCase();
                           const lastDisp = row.dispositions?.length > 0 ? row.dispositions[row.dispositions.length - 1].status : '';
 
-                          if (!row.dispositions || row.dispositions.length === 0) {
-                            return { '& .MuiTableCell-root': { color: theme.palette.error.main } };
-                          }
-                          if (lowerStatus === 'converted' || lastDisp === 'Business Closed') {
+                          if (lowerStatus === 'converted') {
                             return { '& .MuiTableCell-root': { color: theme.palette.primary.main } };
-                          }
-                          if (lastDisp === 'Follow Up' || lastDisp === 'Planning to Visit') {
-                            return { '& .MuiTableCell-root': { color: theme.palette.success.main } };
                           }
                           if (lowerStatus === 'rejected') {
                             return {
@@ -849,6 +843,12 @@ export default function Leads({ title = "Leads Management" }) {
                                 backgroundPosition: 'center'
                               }
                             };
+                          }
+                          if (!row.dispositions || row.dispositions.length === 0) {
+                            return { '& .MuiTableCell-root': { color: theme.palette.error.main } };
+                          }
+                          if (lastDisp === 'Follow Up' || lastDisp === 'Planning to Visit') {
+                            return { '& .MuiTableCell-root': { color: theme.palette.success.main } };
                           }
                           return { '& .MuiTableCell-root': { color: '#000' } };
                         }}

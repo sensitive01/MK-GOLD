@@ -147,6 +147,7 @@ adminRouter.get("/sales/get", sales.find);
 adminRouter.post("/sales/get", sales.find);
 adminRouter.get("/sales/get/:id", sales.findById);
 adminRouter.post("/sales/update/:id", sales.update);
+adminRouter.post("/sales/check-article-number", sales.checkArticleNumber);
 adminRouter.post("/sales/verify-finance-payment/:id/:paymentId", sales.verifyFinancePayment);
 adminRouter.post("/sales/delete/:id", canDelete, sales.remove);
 

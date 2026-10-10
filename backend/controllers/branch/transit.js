@@ -54,7 +54,7 @@ exports.findTransitData = async (req,res)=>{
             .populate('branch', 'branchName branchId')
             .populate({
                 path: 'saleIds',
-                select: 'ornaments billId'
+                select: 'ornaments billId articleNumber'
             })
             .sort({ createdAt: -1 });
         console.log("Transit FindData Length:", findData.length);

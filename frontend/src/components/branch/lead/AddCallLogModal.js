@@ -31,7 +31,6 @@ const DISPOSITIONS = [
   'Price issues',
   'Not Connected',
   'Not Feasible',
-  'Business Closed',
 ];
 
 export default function AddCallLogModal({ open, onClose, leadId, onSuccess }) {
@@ -90,7 +89,7 @@ export default function AddCallLogModal({ open, onClose, leadId, onSuccess }) {
         formData.append('documentTypes', 'Proof');
       });
     }
-    if (logForm.status === 'Callback' || logForm.status === 'Planning to Visit' || logForm.status === 'Follow Up' || logForm.status === 'Business Closed') {
+    if (logForm.status === 'Callback' || logForm.status === 'Planning to Visit' || logForm.status === 'Follow Up') {
       if (logForm.callbackDate) formData.append('callbackDate', logForm.callbackDate);
       if (logForm.callbackTime) formData.append('callbackTime', logForm.callbackTime);
     }
@@ -156,8 +155,7 @@ export default function AddCallLogModal({ open, onClose, leadId, onSuccess }) {
             </FormControl>
           </Grid>
           {(logForm.status === 'Visited Branch' ||
-            logForm.status === 'Planning to Visit' ||
-            logForm.status === 'Business Closed') && (
+            logForm.status === 'Planning to Visit') && (
             <Grid item xs={12}>
               <FormControl fullWidth>
                 <InputLabel>Select Branch</InputLabel>
@@ -177,8 +175,7 @@ export default function AddCallLogModal({ open, onClose, leadId, onSuccess }) {
           )}
           {(logForm.status === 'Callback' ||
             logForm.status === 'Planning to Visit' ||
-            logForm.status === 'Follow Up' ||
-            logForm.status === 'Business Closed') && (
+            logForm.status === 'Follow Up') && (
             <>
               <Grid item xs={12} sm={6}>
                 <TextField

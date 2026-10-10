@@ -117,6 +117,36 @@ const meltingSchema = new mongoose.Schema({
     paymentMode: {
         type: String
     },
+    dcStatus: {
+        type: String,
+        default: 'pending'
+    },
+    dcNumber: {
+        type: String
+    },
+    dcDate: {
+        type: Date
+    },
+    actualWeight: {
+        type: Number
+    },
+    actualPurity: {
+        type: Number
+    },
+    purityPhoto: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'fileuploads'
+    },
+    purityCertificate: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'fileuploads'
+    },
+    invoiceNumber: {
+        type: String
+    },
+    invoiceDate: {
+        type: Date
+    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'employees'

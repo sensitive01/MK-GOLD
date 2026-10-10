@@ -58,6 +58,8 @@ import FinanceDashboardLayout from './layouts/dashboard/finance';
 import FinanceDashboard from './pages/finance/Dashboard';
 import FinanceRelease from './pages/finance/Release';
 import FinanceAttendance from './pages/finance/Attendance';
+import FinanceSellGold from './pages/finance/SellGold';
+import FinanceVendor from './pages/finance/Vendor';
 import TelecallingDashboardLayout from './layouts/dashboard/telecalling';
 import TelecallingDashboard from './pages/telecalling/Dashboard';
 import Profile from './pages/Profile';
@@ -396,6 +398,8 @@ export default function Router() {
         { path: 'fund', element: <AccountsFund /> },
         { path: 'expense', element: <AccountsExpense /> },
         { path: 'sale', element: <AccountsSale /> },
+        { path: 'sell-gold', element: <FinanceSellGold /> },
+        { path: 'vendor', element: <FinanceVendor /> },
         { path: 'balancesheet', element: <AccountsBalancesheet /> },
         { path: 'leave', element: <AccountsLeave /> },
         { path: 'attendance', element: <FinanceAttendance /> },

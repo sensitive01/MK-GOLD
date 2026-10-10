@@ -124,9 +124,57 @@ export default function MeltingDetailDialog({ open, onClose, melting }) {
               Transit IDs
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, mb: 1.5 }}>
-              {melting.transitIds?.length
-                ? melting.transitIds.map((t) => t.transitId || t).join(', ')
-                : melting.transitId?.transitId || 'N/A'}
+              {(() => {
+                const transits = melting.transitIds?.length
+                  ? melting.transitIds
+                  : melting.transitId
+                  ? [melting.transitId]
+                  : [];
+                if (!transits.length) return 'N/A';
+
+                return transits.map((t, idx) => {
+                  const tid = t?.transitId || (typeof t === 'string' ? t : 'N/A');
+                  const arts = [];
+
+                  if (t?.saleIds && Array.isArray(t.saleIds)) {
+                    t.saleIds.forEach((s) => {
+                      const raw = s?.articleNumber || (s?.ornaments && s.ornaments.find((o) => o?.articleNumber)?.articleNumber);
+                      if (raw) {
+                        const str = String(raw).trim();
+                        const match = str.match(/\d{3,}/) || str.match(/\d+/);
+                        const display = match ? match[0] : str;
+                        if (display && !arts.includes(display)) arts.push(display);
+                      }
+                    });
+                  }
+
+                  if (!arts.length && transits.length === 1) {
+                    if (melting.ornaments && Array.isArray(melting.ornaments)) {
+                      melting.ornaments.forEach((o) => {
+                        const raw = o?.articleNumber;
+                        if (raw) {
+                          const str = String(raw).trim();
+                          const match = str.match(/\d{3,}/) || str.match(/\d+/);
+                          const display = match ? match[0] : str;
+                          if (display && !arts.includes(display)) arts.push(display);
+                        }
+                      });
+                    }
+                  }
+
+                  return (
+                    <Box component="span" key={t?._id || idx} sx={{ display: 'inline-block', mr: idx < transits.length - 1 ? 1 : 0 }}>
+                      <Typography component="span" sx={{ fontWeight: 600 }}>{tid}</Typography>
+                      {arts.length > 0 && (
+                        <Typography component="span" sx={{ color: '#7b1fa2', fontWeight: 600, ml: 0.5, fontSize: '0.8125rem' }}>
+                          ({arts.join(', ')})
+                        </Typography>
+                      )}
+                      {idx < transits.length - 1 ? ', ' : ''}
+                    </Box>
+                  );
+                });
+              })()}
             </Typography>
 
             <Typography variant="caption" color="text.secondary">
@@ -345,31 +393,91 @@ export default function MeltingDetailDialog({ open, onClose, melting }) {
             </>
           )}
 
-          {/* Sale Information (if sold) */}
-          {melting.status === 'sold' && (
+          {/* Sale & Vendor Settlement Information */}
+          {(melting.status === 'sold' || melting.actualWeight != null || melting.purityPhoto || melting.purityCertificate || melting.dcNumber) && (
             <>
               <Grid item xs={12}>
                 <Divider sx={{ my: 1 }} />
                 <Typography variant="subtitle1" sx={{ color: 'success.main', fontWeight: 700, mb: 1 }}>
-                  Sale Information
+                  Vendor Settlement & Assay Information
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="caption" color="text.secondary">
-                  Sold Amount
-                </Typography>
+
+              {melting.vendor && (
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary">Vendor Name</Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                    {melting.vendor?.name || (typeof melting.vendor === 'string' ? melting.vendor : 'N/A')}
+                  </Typography>
+                </Grid>
+              )}
+
+              {melting.invoiceNumber && (
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary">Invoice Number</Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 700, color: '#166534' }}>
+                    {melting.invoiceNumber}
+                  </Typography>
+                </Grid>
+              )}
+
+              <Grid item xs={12} sm={4}>
+                <Card sx={{ p: 1.5, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                  <Typography variant="caption" color="text.secondary">Gatty / Actual Weight</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#166534' }}>
+                    {melting.actualWeight != null ? `${Number(melting.actualWeight).toFixed(3)} g` : `${Number(melting.barWeight || 0).toFixed(3)} g`}
+                  </Typography>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Card sx={{ p: 1.5, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                  <Typography variant="caption" color="text.secondary">Actual Purity</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#166534' }}>
+                    {melting.actualPurity != null ? `${Number(melting.actualPurity).toFixed(2)} %` : `${Number(melting.barPurity || 0).toFixed(2)} %`}
+                  </Typography>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Card sx={{ p: 1.5, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                  <Typography variant="caption" color="text.secondary">Calculated Fine Gold</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: '#166534' }}>
+                    {(((Number(melting.actualWeight || melting.barWeight || 0)) * (Number(melting.actualPurity || melting.barPurity || 0))) / 100).toFixed(3)} g
+                  </Typography>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" color="text.secondary">Gold Rate</Typography>
                 <Typography variant="body1" sx={{ fontWeight: 700 }}>
-                  ₹ {Number(melting.sellAmount || 0).toLocaleString('en-IN')}
+                  ₹ {melting.goldRate ? Number(melting.goldRate).toLocaleString('en-IN') : 'N/A'}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="caption" color="text.secondary">
-                  Payment Mode
+
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" color="text.secondary">Sold Amount</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 700, color: 'success.main' }}>
+                  ₹ {Number(melting.sellAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" color="text.secondary">Payment Mode</Typography>
                 <Typography variant="body1" sx={{ fontWeight: 600 }}>
                   {melting.paymentMode || 'N/A'}
                 </Typography>
               </Grid>
+
+              {melting.dcNumber && (
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="caption" color="text.secondary">Delivery Challan Number</Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 600 }}>{melting.dcNumber}</Typography>
+                </Grid>
+              )}
+
+              {renderProofCard('Purity Photo (Bar / Scale)', melting.purityPhoto)}
+              {renderProofCard('Purity Certificate / Assay Report', melting.purityCertificate)}
             </>
           )}
 

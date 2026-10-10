@@ -43,7 +43,7 @@ async function create(req, res) {
       }));
       req.body.attachment = req.files[0].path;
     }
-    const createdData = await leadService.create(req.body);
+    const createdData = await leadService.create(req.body, req.user);
     res.json({
       status: true,
       message: "Lead created successfully!",
