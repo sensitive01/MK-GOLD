@@ -81,13 +81,17 @@ const formatArticleNumber = (art) => {
 
 const TABLE_HEAD = [
   { id: 'billId', label: 'Bill Id', alignRight: false },
-  { id: 'articleNumber', label: 'Article No', alignRight: false },
+  { id: 'articleNumber', label: 'Article No', alignRight: false, storeOnly: true },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: 'customer', label: 'Customer', alignRight: false },
-  { id: 'branchId', label: 'Branch Id', alignRight: false },
-  { id: 'branchName', label: 'Branch Name', alignRight: false },
-  { id: 'saleType', label: 'Sale Type', alignRight: false },
-  { id: 'purchaseType', label: 'Ornament Type', alignRight: false },
+  { id: 'branchId', label: 'Branch Id', alignRight: false, nonStoreOnly: true },
+  { id: 'branchName', label: 'Branch Name', alignRight: false, nonStoreOnly: true },
+  { id: 'branch', label: 'Branch', alignRight: false, storeOnly: true },
+  { id: 'saleType', label: 'Sale Type', alignRight: false, nonStoreOnly: true },
+  { id: 'purchaseType', label: 'Ornament Type', alignRight: false, nonStoreOnly: true },
+  { id: 'saleOrnamentType', label: 'Sale / Ornament Type', alignRight: false, storeOnly: true },
+  { id: 'executive', label: 'Executive', alignRight: false, storeOnly: true },
+  { id: 'grams', label: 'Grams', alignRight: false, storeOnly: true },
   { id: 'netAmount', label: 'Net Amount', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: '' },
@@ -141,8 +145,8 @@ export default function TransitSales() {
   const isAdmin = userType?.toLowerCase() === 'admin';
   const isStore = userType?.toLowerCase() === 'store' || window.location.pathname.startsWith('/store');
   const tableHead = useMemo(() => {
-    if (isStore) return TABLE_HEAD;
-    return TABLE_HEAD.filter((col) => col.id !== 'articleNumber');
+    if (isStore) return TABLE_HEAD.filter((col) => !col.nonStoreOnly);
+    return TABLE_HEAD.filter((col) => !col.storeOnly);
   }, [isStore]);
   const [visiblePhoneId, setVisiblePhoneId] = useState(null);
   const [page, setPage] = useState(0);
@@ -789,10 +793,55 @@ export default function TransitSales() {
                           '-'
                         )}
                       </TableCell>
-                      <TableCell align="left">{rowBranch?.branchId || '-'}</TableCell>
-                      <TableCell align="left">{rowBranch?.branchName || '-'}</TableCell>
-                      <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
-                      <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
+                      {isStore ? (
+                        <TableCell align="left">
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {rowBranch?.branchName || '-'}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            {rowBranch?.branchId || '-'}
+                          </Typography>
+                        </TableCell>
+                      ) : (
+                        <>
+                          <TableCell align="left">{rowBranch?.branchId || '-'}</TableCell>
+                          <TableCell align="left">{rowBranch?.branchName || '-'}</TableCell>
+                        </>
+                      )}
+                      {isStore ? (
+                        <TableCell align="left">
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {sentenceCase(saleType || '')}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            {sentenceCase(purchaseType || '')}
+                          </Typography>
+                        </TableCell>
+                      ) : (
+                        <>
+                          <TableCell align="left">{sentenceCase(saleType || '')}</TableCell>
+                          <TableCell align="left">{sentenceCase(purchaseType || '')}</TableCell>
+                        </>
+                      )}
+                      {isStore && (
+                        <TableCell align="left">
+                          {row.assignee ? (
+                            <>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {row.assignee.name || '-'}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                {row.assignee.phoneNumber || ''}
+                              </Typography>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                      )}
+                      {isStore && (
+                        <TableCell align="left">{row.netWeight != null ? `${row.netWeight}g` : '-'}</TableCell>
+                      )}
                       <TableCell align="left">&#8377; {row.payableAmount != null && Number(row.payableAmount) > 0 ? Math.round(row.payableAmount) : netAmount}</TableCell>
                       <TableCell align="left" onClick={(e) => e.stopPropagation()}>
                         <Status
