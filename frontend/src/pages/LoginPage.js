@@ -11,11 +11,20 @@ import { LoginForm } from '../sections/auth/login';
 // ----------------------------------------------------------------------
 
 const StyledRoot = styled('div')(({ theme }) => ({
+  minHeight: '100vh',
+  width: '100%',
+  overflowX: 'hidden',
+  [theme.breakpoints.down('md')]: {
+    backgroundImage: 'url("/assets/Splash/Splash-view.png")',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center center',
+    backgroundRepeat: 'no-repeat',
+    backgroundColor: '#0d0416',
+  },
   [theme.breakpoints.up('md')]: {
     display: 'flex',
-    minHeight: '100vh',
+    backgroundColor: '#f4f6f8',
   },
-  backgroundColor: '#f4f6f8',
 }));
 
 const StyledSection = styled('div')(({ theme }) => ({
@@ -48,6 +57,9 @@ const StyledContent = styled('div')(({ theme }) => ({
   justifyContent: 'center',
   flexDirection: 'column',
   padding: theme.spacing(12, 0),
+  [theme.breakpoints.down('md')]: {
+    padding: theme.spacing(3, 0),
+  },
 }));
 
 // ----------------------------------------------------------------------
@@ -94,6 +106,7 @@ export default function LoginPage() {
                 p: 4,
                 bgcolor: 'background.paper',
                 borderRadius: 2,
+                border: '1px solid #8A1B9F',
                 boxShadow: (theme) => theme.customShadows.z24,
                 textAlign: 'center',
               }}

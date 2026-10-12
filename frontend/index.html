@@ -12,7 +12,12 @@
     <link rel="manifest" href="/manifest.json" />
     <style>
       html, body {
-        background-color: #8810A6;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        min-height: 100%;
+        background-color: #0d0416;
+        overflow-x: hidden;
       }
     </style>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
@@ -27,8 +32,61 @@
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
+
+    <!-- Instant Pre-Hydration Splash Screen -->
+    <div id="mk-splash-screen" style="position:fixed;inset:0;z-index:9999999;background-color:#000;display:flex;align-items:center;justify-content:center;transition:opacity 0.4s ease-out;overflow:hidden;">
+      <video id="mk-splash-video" playsinline autoplay muted preload="auto" style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+      <button id="mk-splash-unmute" style="display:none;position:absolute;bottom:36px;left:50%;transform:translateX(-50%);padding:10px 22px;background:rgba(0,0,0,0.65);color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:30px;backdrop-filter:blur(8px);font-size:14px;font-weight:600;cursor:pointer;user-select:none;z-index:10000000;">🔊 Tap for Sound</button>
+    </div>
+
     <div id="root"></div>
     <div id="root-modal"></div>
+
+    <script>
+      (function() {
+        var isMobile = window.innerWidth <= 768 || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+        var video = document.getElementById('mk-splash-video');
+        var splash = document.getElementById('mk-splash-screen');
+        var unmuteBtn = document.getElementById('mk-splash-unmute');
+        if (!video || !splash) return;
+
+        video.src = isMobile ? '/assets/Splash/Mobile-splash.mp4' : '/assets/Splash/Website-splash.mp4';
+        video.playbackRate = 2.5;
+
+        function closeSplash() {
+          if (!splash || splash.style.opacity === '0') return;
+          splash.style.opacity = '0';
+          splash.style.pointerEvents = 'none';
+          setTimeout(function() {
+            if (splash.parentNode) splash.parentNode.removeChild(splash);
+          }, 400);
+        }
+
+        video.addEventListener('ended', closeSplash);
+        video.addEventListener('error', function(err) {
+          console.error('Splash video error:', err);
+          closeSplash();
+        });
+        setTimeout(closeSplash, 6000);
+
+        video.muted = false;
+        var p = video.play();
+        if (p !== undefined) {
+          p.catch(function() {
+            video.muted = true;
+            video.play();
+            if (unmuteBtn) {
+              unmuteBtn.style.display = 'flex';
+              unmuteBtn.onclick = function(e) {
+                e.stopPropagation();
+                video.muted = false;
+                unmuteBtn.style.display = 'none';
+              };
+            }
+          });
+        }
+      })();
+    </script>
     <script type="module" src="/src/index.js"></script>
   </body>
 </html>
