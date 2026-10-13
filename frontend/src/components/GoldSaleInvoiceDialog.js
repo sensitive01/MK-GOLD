@@ -3,6 +3,71 @@ import { Button, Dialog, DialogTitle, DialogContent, DialogActions, Box, Stack }
 import moment from 'moment';
 import Iconify from './iconify';
 
+function numberToWords(num) {
+  if (num === null || num === undefined || isNaN(num) || Number(num) === 0) return 'Zero Rupees Only';
+
+  const ones = [
+    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+  ];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  const convertLessThanOneThousand = (n) => {
+    let str = '';
+    if (n >= 100) {
+      str += `${ones[Math.floor(n / 100)]} Hundred `;
+      n %= 100;
+    }
+    if (n > 0) {
+      if (n < 20) {
+        str += ones[n];
+      } else {
+        str += tens[Math.floor(n / 10)];
+        if (n % 10 > 0) {
+          str += ` ${ones[n % 10]}`;
+        }
+      }
+    }
+    return str.trim();
+  };
+
+  const convertNumber = (n) => {
+    if (n === 0) return '';
+    let result = '';
+    if (n >= 10000000) {
+      result += `${convertNumber(Math.floor(n / 10000000))} Crore `;
+      n %= 10000000;
+    }
+    if (n >= 100000) {
+      result += `${convertNumber(Math.floor(n / 100000))} Lakh `;
+      n %= 100000;
+    }
+    if (n >= 1000) {
+      result += `${convertNumber(Math.floor(n / 1000))} Thousand `;
+      n %= 1000;
+    }
+    if (n > 0) {
+      result += convertLessThanOneThousand(n);
+    }
+    return result.trim();
+  };
+
+  const rounded = Number(num).toFixed(2);
+  const [wholePart, decimalPart] = rounded.split('.');
+  const whole = parseInt(wholePart, 10);
+  const paise = parseInt(decimalPart, 10);
+
+  let output = '';
+  if (whole > 0) {
+    output += `INR ${convertNumber(whole)} Rupees`;
+  }
+  if (paise > 0) {
+    if (output) output += ' and ';
+    output += `${convertLessThanOneThousand(paise)} Paise`;
+  }
+  return output ? `${output} Only` : 'Zero Rupees Only';
+}
+
 export default function GoldSaleInvoiceDialog({ open, onClose, melting, vendor }) {
   if (!melting) return null;
 
@@ -35,7 +100,16 @@ export default function GoldSaleInvoiceDialog({ open, onClose, melting, vendor }
   const actualPurity = melting?.actualPurity || melting?.barPurity || 0;
   const fineGold = ((Number(actualWeight) * Number(actualPurity)) / 100).toFixed(3);
   const goldRate = Number(melting?.goldRate) || 0;
-  const totalAmount = Number(melting?.sellAmount) || 0;
+  const calculatedBase = Number(fineGold) > 0 && goldRate > 0 ? Number(fineGold) * goldRate : 0;
+  const taxableAmount = Number(melting?.sellAmount) || calculatedBase;
+
+  const cgstRate = 1.5;
+  const sgstRate = 1.5;
+  const cgstAmount = (taxableAmount * cgstRate) / 100;
+  const sgstAmount = (taxableAmount * sgstRate) / 100;
+  const totalTaxAmount = cgstAmount + sgstAmount;
+  const netAmount = taxableAmount + totalTaxAmount;
+
   const invoiceNumber = melting?.invoiceNumber || `INV-${melting?.batchNumber || moment().format('YYYYMMDD')}`;
   const invoiceDate = melting?.invoiceDate ? moment(melting.invoiceDate).format('DD/MM/YYYY, HH:mm') : moment().format('DD/MM/YYYY, HH:mm');
 
@@ -164,7 +238,7 @@ export default function GoldSaleInvoiceDialog({ open, onClose, melting, vendor }
             <div style={{ marginBottom: '6px', fontWeight: 'bold', fontSize: '12px' }}>
               DESCRIPTION OF GOODS SOLD:
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #333', marginBottom: '16px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #333', marginBottom: '14px' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f2f2f2' }}>
                   <th style={{ border: '1px solid #333', padding: '6px', textAlign: 'center', width: '5%' }}>S.No</th>
@@ -198,25 +272,107 @@ export default function GoldSaleInvoiceDialog({ open, onClose, melting, vendor }
                     ₹{goldRate.toLocaleString('en-IN')}
                   </td>
                   <td style={{ border: '1px solid #333', padding: '8px 6px', textAlign: 'right', fontWeight: 'bold' }}>
-                    ₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>
                 <tr style={{ backgroundColor: '#fafafa', fontWeight: 'bold' }}>
-                  <td colSpan={3} style={{ border: '1px solid #333', padding: '8px 6px', textAlign: 'right' }}>Total:</td>
-                  <td style={{ border: '1px solid #333', padding: '8px 6px', textAlign: 'center' }}>{Number(actualWeight).toFixed(3)} g</td>
-                  <td style={{ border: '1px solid #333', padding: '8px 6px', textAlign: 'center' }}>-</td>
-                  <td style={{ border: '1px solid #333', padding: '8px 6px', textAlign: 'center' }}>{fineGold} g</td>
-                  <td style={{ border: '1px solid #333', padding: '8px 6px', textAlign: 'center' }}>-</td>
-                  <td style={{ border: '1px solid #333', padding: '8px 6px', textAlign: 'right', fontSize: '13px', color: '#1b5e20' }}>
-                    ₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <td colSpan={3} style={{ border: '1px solid #333', padding: '7px 6px', textAlign: 'right' }}>Total (Taxable Value):</td>
+                  <td style={{ border: '1px solid #333', padding: '7px 6px', textAlign: 'center' }}>{Number(actualWeight).toFixed(3)} g</td>
+                  <td style={{ border: '1px solid #333', padding: '7px 6px', textAlign: 'center' }}>-</td>
+                  <td style={{ border: '1px solid #333', padding: '7px 6px', textAlign: 'center' }}>{fineGold} g</td>
+                  <td style={{ border: '1px solid #333', padding: '7px 6px', textAlign: 'center' }}>-</td>
+                  <td style={{ border: '1px solid #333', padding: '7px 6px', textAlign: 'right', fontWeight: 'bold' }}>
+                    ₹{taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={7} style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                    CGST @ 1.5%:
+                  </td>
+                  <td style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                    ₹{cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={7} style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                    SGST @ 1.5%:
+                  </td>
+                  <td style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                    ₹{sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+                <tr style={{ backgroundColor: '#f0fdf4', fontWeight: 'bold' }}>
+                  <td colSpan={7} style={{ border: '1px solid #333', padding: '8px 8px', textAlign: 'right', fontSize: '12px', color: '#1b5e20' }}>
+                    Net Invoice Amount (Total Payable):
+                  </td>
+                  <td style={{ border: '1px solid #333', padding: '8px 8px', textAlign: 'right', fontSize: '13px', color: '#1b5e20' }}>
+                    ₹{netAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>
               </tbody>
             </table>
 
-            {/* Total in words */}
-            <div style={{ border: '1px solid #333', padding: '8px 12px', backgroundColor: '#f9f9f9', marginBottom: '20px', fontSize: '11px' }}>
-              <strong>Net Amount:</strong> ₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {/* GST Tax Breakdown Table */}
+            <div style={{ marginBottom: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+              TAX SUMMARY / GST BREAKDOWN:
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #333', marginBottom: '14px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f2f2f2' }}>
+                  <th style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'center', width: '15%' }}>HSN Code</th>
+                  <th style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'right', width: '25%' }}>Taxable Value (₹)</th>
+                  <th style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'right', width: '20%' }}>CGST (1.5%) (₹)</th>
+                  <th style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'right', width: '20%' }}>SGST (1.5%) (₹)</th>
+                  <th style={{ border: '1px solid #333', padding: '5px 8px', textAlign: 'right', width: '20%' }}>Total Tax (₹)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'center' }}>7108</td>
+                  <td style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'right' }}>
+                    ₹{taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'right' }}>
+                    ₹{cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'right' }}>
+                    ₹{sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'right', fontWeight: 'bold' }}>
+                    ₹{totalTaxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+                <tr style={{ backgroundColor: '#fafafa', fontWeight: 'bold' }}>
+                  <td style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'center' }}>Total</td>
+                  <td style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'right' }}>
+                    ₹{taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'right' }}>
+                    ₹{cgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'right' }}>
+                    ₹{sgstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td style={{ border: '1px solid #333', padding: '6px 8px', textAlign: 'right', color: '#1b5e20' }}>
+                    ₹{totalTaxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Total in words & Net Amount */}
+            <div style={{ border: '1px solid #333', padding: '8px 12px', backgroundColor: '#f9f9f9', marginBottom: '16px', fontSize: '11px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '12px' }}>
+                  <strong>Net Amount:</strong> <span style={{ color: '#1b5e20', fontSize: '13px', fontWeight: 'bold' }}>₹{netAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </span>
+                <span style={{ fontSize: '10px', color: '#555' }}>
+                  (Taxable: ₹{taxableAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + GST 3%: ₹{totalTaxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                </span>
+              </div>
+              <div style={{ borderTop: '1px dashed #ccc', paddingTop: '4px' }}>
+                <strong>Amount in Words:</strong> {numberToWords(netAmount)}
+              </div>
             </div>
 
             {/* Bank Details */}
