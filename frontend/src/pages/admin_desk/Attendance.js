@@ -29,6 +29,7 @@ import {
     Tab,
     TextField,
     Typography,
+    Link,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
@@ -50,6 +51,7 @@ import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashb
 // mock
 import { deleteAttendanceById, getAttendance, getBranchAttendanceStats, updateAttendance, getConsolidatedAttendance } from '../../apis/branch/attendance';
 import global from '../../utils/global';
+import { AttendanceLocation, getDetailedLocation, LogoutLocationStatus } from '../../utils/location';
 
 // ----------------------------------------------------------------------
 
@@ -107,21 +109,77 @@ export default function AdminDeskAttendance() {
   
   const [currentTab, setCurrentTab] = useState((isManager || isHRAdmin) ? 'all_attendance' : 'my_attendance');
 
-  const handleLogout = (id) => {
-    setLogoutId(id);
-    setOpenLogoutModal(true);
+  const [logoutLoc, setLogoutLoc] = useState(null);
+  const [logoutLocLoading, setLogoutLocLoading] = useState(false);
+  const [logoutLocError, setLogoutLocError] = useState('');
+
+  const fetchLogoutLocation = async () => {
+    setLogoutLocLoading(true);
+    setLogoutLocError('');
+    try {
+      const res = await getDetailedLocation();
+      if (res.success && res.data) {
+        setLogoutLoc(res.data);
+      } else {
+        setLogoutLoc(null);
+        setLogoutLocError(res.error || 'Location access is required to logout.');
+      }
+    } catch (e) {
+      setLogoutLoc(null);
+      setLogoutLocError(e.message || 'Location access is required to logout.');
+    } finally {
+      setLogoutLocLoading(false);
+    }
   };
 
-  const confirmLogout = () => {
-    updateAttendance(logoutId, { logoutTime: new Date() }).then(() => {
-      fetchData();
-      setOpenLogoutModal(false);
+  const handleLogout = (id) => {
+    setLogoutId(id);
+    setLogoutLoc(null);
+    setLogoutLocError('');
+    setOpenLogoutModal(true);
+    fetchLogoutLocation();
+  };
+
+  const confirmLogout = async () => {
+    if (!logoutLoc || !logoutLoc.latitude || !logoutLoc.longitude) {
       setNotify({
         open: true,
-        message: 'Logout marked successfully!',
-        severity: 'success',
+        message: logoutLocError || 'Location is mandatory to logout. Please allow location access.',
+        severity: 'error',
       });
-    });
+      return;
+    }
+
+    const payload = {
+      logoutTime: new Date(),
+      logoutLocation: logoutLoc,
+    };
+
+    updateAttendance(logoutId, payload)
+      .then((data) => {
+        if (data && data.status === false) {
+          setNotify({
+            open: true,
+            message: data.message || 'Logout failed',
+            severity: 'error',
+          });
+          return;
+        }
+        fetchData();
+        setOpenLogoutModal(false);
+        setNotify({
+          open: true,
+          message: 'Logout marked successfully!',
+          severity: 'success',
+        });
+      })
+      .catch((err) => {
+        setNotify({
+          open: true,
+          message: err.message || 'Error occurred while logging out',
+          severity: 'error',
+        });
+      });
   };
 
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
@@ -546,10 +604,20 @@ export default function AdminDeskAttendance() {
                             'No Image'
                           )}
                         </TableCell>
-                        <TableCell align="left">{moment(loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}</TableCell>
+                        <TableCell align="left">
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {moment(loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}
+                          </Typography>
+                          <AttendanceLocation location={row.location} />
+                        </TableCell>
                         <TableCell align="left">
                           {logoutTime ? (
-                            moment(logoutTime).format('DD-MM-YYYY HH:mm:ss')
+                            <>
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {moment(logoutTime).format('DD-MM-YYYY HH:mm:ss')}
+                              </Typography>
+                              <AttendanceLocation location={row.logoutLocation} />
+                            </>
                           ) : (
                             employee && auth.user.employee &&
                             (employee?._id?.toString() || employee?.toString()) === (auth.user.employee?._id?.toString() || auth.user.employee?.toString()) ? (
@@ -703,12 +771,27 @@ export default function AdminDeskAttendance() {
         </Box>
       </Modal>
 
-      <Modal open={openLogoutModal} onClose={() => setOpenLogoutModal(false)}>
+      <Modal open={openLogoutModal} onClose={() => { if (!logoutLocLoading) setOpenLogoutModal(false); }}>
         <Box sx={style}>
           <Typography variant="h6">Logout Confirmation</Typography>
-          <Typography sx={{ mt: 3 }}>Are you sure you want to logout?</Typography>
+          
+          <LogoutLocationStatus
+            loading={logoutLocLoading}
+            location={logoutLoc}
+            error={logoutLocError}
+            onRetry={fetchLogoutLocation}
+          />
+
+          <Typography sx={{ mt: 2 }}>Are you sure you want to logout?</Typography>
           <Stack direction="row" spacing={2} mt={3}>
-            <Button variant="contained" color="error" onClick={confirmLogout}>Logout</Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={confirmLogout}
+              disabled={logoutLocLoading || !logoutLoc || !logoutLoc.latitude}
+            >
+              Logout
+            </Button>
             <Button variant="contained" onClick={() => setOpenLogoutModal(false)}>Cancel</Button>
           </Stack>
         </Box>

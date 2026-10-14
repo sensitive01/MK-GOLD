@@ -30,6 +30,7 @@ import {
     Tab,
     TextField,
     Typography,
+    Link,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
@@ -54,6 +55,7 @@ import { deleteAttendanceById, getAttendance } from '../../apis/admin/attendance
 import { getBranchAttendanceStats, getConsolidatedAttendance } from '../../apis/branch/attendance';
 import CreateAttendance from '../../components/branch/attendance/CreateAttendance';
 import global from '../../utils/global';
+import { AttendanceLocation } from '../../utils/location';
 
 // ----------------------------------------------------------------------
 
@@ -498,8 +500,24 @@ export default function AuditorAttendance() {
                                 <img src={attendance?.uploadedFile?.startsWith('http') ? attendance.uploadedFile : `${global.baseURL}/${attendance?.uploadedFile}`} alt="attendance" style={{ width: '80px' }} />
                               ) : 'No Image'}
                             </TableCell>
-                            <TableCell align="left">{moment(row?.loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}</TableCell>
-                            <TableCell align="left">{row.logoutTime ? moment(row.logoutTime).format('DD-MM-YYYY HH:mm:ss') : 'N/A'}</TableCell>
+                            <TableCell align="left">
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {moment(row?.loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}
+                              </Typography>
+                              <AttendanceLocation location={row.location} />
+                            </TableCell>
+                            <TableCell align="left">
+                              {row.logoutTime ? (
+                                <>
+                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {moment(row.logoutTime).format('DD-MM-YYYY HH:mm:ss')}
+                                  </Typography>
+                                  <AttendanceLocation location={row.logoutLocation} />
+                                </>
+                              ) : (
+                                'N/A'
+                              )}
+                            </TableCell>
                             <TableCell align="right">
                             </TableCell>
                           </TableRow>

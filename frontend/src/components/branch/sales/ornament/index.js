@@ -255,16 +255,19 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
       prevCalcRef.current.rate !== rate
     ) {
       prevCalcRef.current = { netWeight, purity, rate };
-      const autoAmount = Math.round(((Number(netWeight) * Number(purity)) / 100) * Number(rate));
-      setFieldValue('calculatedAmount', autoAmount);
-      if (!values.isManualAmount) {
+      const numNetWeight = Number(netWeight) || 0;
+      const numPurity = Number(purity) || 0;
+      const numRate = Number(rate) || 0;
+
+      if (numPurity > 0 && numNetWeight > 0 && numRate > 0) {
+        const autoAmount = Math.round(((numNetWeight * numPurity) / 100) * numRate);
+        setFieldValue('calculatedAmount', autoAmount);
         setFieldValue('netAmount', autoAmount);
         setFieldValue('adjustment', 0);
-      } else {
-        setFieldValue('adjustment', Math.round(Number(values.netAmount || 0) - autoAmount));
+        setFieldValue('isManualAmount', false);
       }
     }
-  }, [ornamentModal, goldRate, silverRate, purchaseType, values.netWeight, values.purity, values.isManualAmount, values.netAmount, setFieldValue]);
+  }, [ornamentModal, goldRate, silverRate, purchaseType, values.netWeight, values.purity, values.netAmount, setFieldValue]);
 
   return (
     <>
@@ -687,55 +690,13 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                   error={touched.purity && errors.purity && true}
                   label={touched.purity && errors.purity ? errors.purity : 'Purity (%)'}
                   InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <Stack direction="row" alignItems="center" spacing={0.5}>
-                          <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                            %
-                          </Typography>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              color="primary"
-                              sx={{
-                                fontSize: '0.7rem',
-                                height: 24,
-                                py: 0,
-                                px: 0.75,
-                                ml: 0.5,
-                                textTransform: 'none',
-                                fontWeight: 600,
-                                whiteSpace: 'nowrap',
-                              }}
-                              onClick={() => {
-                                const netWt = parseFloat(values.netWeight) || 0;
-                                const amt = parseFloat(values.netAmount) || 0;
-                                const rate = purchaseType === 'gold' ? goldRate : purchaseType === 'silver' ? silverRate : 0;
-                                if (netWt > 0 && rate > 0 && amt > 0) {
-                                  const calcP = parseFloat(((amt * 100) / (netWt * rate)).toFixed(2));
-                                  setFieldValue('purity', calcP > 0 ? calcP : '');
-                                  setFieldValue('calculatedAmount', amt);
-                                  setFieldValue('adjustment', 0);
-                                  setFieldValue('isManualAmount', false);
-                                  prevCalcRef.current = { netWeight: values.netWeight, purity: calcP, rate };
-                                } else if (!netWt) {
-                                  alert('Please enter Gross Weight first to determine Net Weight.');
-                                } else if (!amt) {
-                                  alert('Please enter Net Amount to calculate Purity.');
-                                }
-                              }}
-                            >
-                              Calc Purity
-                            </Button>
-                        </Stack>
-                      </InputAdornment>
-                    ),
+                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
                   }}
                   helperText={
                     parseFloat(values.purity) > 100
                       ? 'Warning: Purity exceeds 100%'
-                      : values.netAmount && !values.purity
-                      ? "Click 'Calc Purity' to generate from Net Amount"
+                      : (!values.netWeight && values.netAmount)
+                      ? 'Enter Gross Weight to auto-calculate Purity'
                       : ''
                   }
                   FormHelperTextProps={{
@@ -744,8 +705,27 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                   fullWidth
                   onBlur={handleBlur}
                   onChange={(e) => {
-                    setFieldValue('purity', e.target.value);
-                    setFieldValue('isManualAmount', false);
+                    const pVal = e.target.value;
+                    const numPurity = pVal === '' ? 0 : Number(pVal);
+                    const netWt = parseFloat(values.netWeight) || 0;
+                    const rate = purchaseType === 'gold' ? goldRate : purchaseType === 'silver' ? silverRate : 0;
+
+                    setFieldValue('purity', pVal);
+
+                    if (pVal !== '' && netWt > 0 && rate > 0) {
+                      const calcAmt = Math.round(((netWt * numPurity) / 100) * rate);
+                      prevCalcRef.current = { netWeight: values.netWeight, purity: pVal, rate };
+                      setFieldValue('netAmount', calcAmt > 0 ? calcAmt : '');
+                      setFieldValue('calculatedAmount', calcAmt);
+                      setFieldValue('adjustment', 0);
+                      setFieldValue('isManualAmount', false);
+                    } else if (pVal === '') {
+                      prevCalcRef.current = { netWeight: values.netWeight, purity: '', rate };
+                      setFieldValue('netAmount', '');
+                      setFieldValue('calculatedAmount', 0);
+                      setFieldValue('adjustment', 0);
+                      setFieldValue('isManualAmount', false);
+                    }
                   }}
                 />
               </Grid>
@@ -785,11 +765,25 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                   onChange={(e) => {
                     const manualVal = e.target.value;
                     const numVal = manualVal === '' ? 0 : Number(manualVal);
-                    const calc = Number(values.calculatedAmount || 0);
-                    const adj = manualVal === '' ? 0 : Math.round(numVal - calc);
+                    const netWt = parseFloat(values.netWeight) || 0;
+                    const rate = purchaseType === 'gold' ? goldRate : purchaseType === 'silver' ? silverRate : 0;
+
                     setFieldValue('netAmount', manualVal);
-                    setFieldValue('isManualAmount', Boolean(manualVal !== '' && adj !== 0));
-                    setFieldValue('adjustment', adj);
+
+                    if (manualVal !== '' && netWt > 0 && rate > 0 && numVal > 0) {
+                      const calcP = parseFloat(((numVal * 100) / (netWt * rate)).toFixed(2));
+                      prevCalcRef.current = { netWeight: values.netWeight, purity: calcP, rate };
+                      setFieldValue('purity', calcP > 0 ? calcP : '');
+                      setFieldValue('calculatedAmount', numVal);
+                      setFieldValue('adjustment', 0);
+                      setFieldValue('isManualAmount', false);
+                    } else if (manualVal === '') {
+                      prevCalcRef.current = { netWeight: values.netWeight, purity: '', rate };
+                      setFieldValue('purity', '');
+                      setFieldValue('calculatedAmount', 0);
+                      setFieldValue('adjustment', 0);
+                      setFieldValue('isManualAmount', false);
+                    }
                   }}
                 />
               </Grid>

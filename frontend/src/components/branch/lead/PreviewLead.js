@@ -25,6 +25,7 @@ import {
   Stack,
   IconButton,
   Chip,
+  CircularProgress,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
@@ -339,9 +340,14 @@ function PreviewLead(props) {
     }
   };
 
-  const handleMoveToBusinessPreview = async () => {
+  const [openMoveToBusinessDialog, setOpenMoveToBusinessDialog] = useState(false);
+  const [movingToBusiness, setMovingToBusiness] = useState(false);
+
+  const handleConfirmMoveToBusiness = async () => {
     try {
+      setMovingToBusiness(true);
       const res = await moveToBusiness(props.id);
+      setMovingToBusiness(false);
       if (res && res.status) {
         if (props.setNotify) {
           props.setNotify({
@@ -351,6 +357,7 @@ function PreviewLead(props) {
           });
         }
         setData((prev) => ({ ...prev, isMovedToBusiness: true, movedToBusinessAt: new Date() }));
+        setOpenMoveToBusinessDialog(false);
         if (props.fetchData) {
           props.fetchData();
         }
@@ -362,6 +369,7 @@ function PreviewLead(props) {
         });
       }
     } catch (err) {
+      setMovingToBusiness(false);
       if (props.setNotify) {
         props.setNotify({
           open: true,
@@ -370,6 +378,10 @@ function PreviewLead(props) {
         });
       }
     }
+  };
+
+  const handleMoveToBusinessPreview = () => {
+    setOpenMoveToBusinessDialog(true);
   };
 
   const handleAssignSubmit = () => {
@@ -1287,6 +1299,107 @@ function PreviewLead(props) {
           </Stack>
         </Box>
       </Modal>
+
+      {/* Confirmation Dialog for Move to Business */}
+      <Dialog
+        open={openMoveToBusinessDialog}
+        onClose={() => {
+          if (!movingToBusiness) setOpenMoveToBusinessDialog(false);
+        }}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            p: 1,
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              bgcolor: 'rgba(138, 27, 159, 0.1)',
+              color: '#8A1B9F',
+            }}
+          >
+            <Iconify icon="eva:trending-up-fill" width={24} height={24} />
+          </Box>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#212B36' }}>
+            Move to Business
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ py: 1.5 }}>
+          <Typography variant="body1" sx={{ color: '#454F5B', lineHeight: 1.6, fontSize: '0.95rem' }}>
+            This lead will be passed to your TL for further business process, are you sure you want to move this lead to business ?
+          </Typography>
+          {data?.name && (
+            <Box
+              sx={{
+                mt: 2,
+                p: 1.5,
+                bgcolor: '#f4f6f8',
+                borderRadius: 1.5,
+                border: '1px solid #e0e0e0',
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#212B36' }}>
+                Lead: {data.name}
+              </Typography>
+              {data.mobile && (
+                <Typography variant="caption" sx={{ color: '#637381' }}>
+                  Mobile: {data.mobile}
+                </Typography>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, pt: 1, gap: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setOpenMoveToBusinessDialog(false)}
+            disabled={movingToBusiness}
+            sx={{
+              color: '#637381',
+              borderColor: '#919EAB52',
+              fontWeight: 600,
+              '&:hover': { borderColor: '#637381' },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmMoveToBusiness}
+            disabled={movingToBusiness}
+            startIcon={
+              movingToBusiness ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <Iconify icon="eva:trending-up-fill" />
+              )
+            }
+            sx={{
+              bgcolor: '#8A1B9F',
+              color: '#ffffff !important',
+              fontWeight: 600,
+              px: 2.5,
+              '&:hover': { bgcolor: '#731485' },
+              '&.Mui-disabled': {
+                bgcolor: 'rgba(138, 27, 159, 0.45)',
+                color: 'rgba(255, 255, 255, 0.8) !important',
+              },
+            }}
+          >
+            {movingToBusiness ? 'Moving...' : 'Move to Business'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 }

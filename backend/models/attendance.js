@@ -25,6 +25,20 @@ const Attendance = mongoose.model(
         type: mongoose.Schema.Types.ObjectId,
         ref: "branches",
       },
+      location: {
+        latitude: { type: Number },
+        longitude: { type: Number },
+        address: { type: String },
+        accuracy: { type: Number },
+        mapsUrl: { type: String },
+      },
+      logoutLocation: {
+        latitude: { type: Number },
+        longitude: { type: Number },
+        address: { type: String },
+        accuracy: { type: Number },
+        mapsUrl: { type: String },
+      },
     },
     { timestamps: true, strict: false }
   )

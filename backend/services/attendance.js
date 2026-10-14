@@ -167,6 +167,10 @@ async function count(query = {}) {
 
 async function create(payload) {
   try {
+    if (!payload.location || !payload.location.latitude || !payload.location.longitude) {
+      throw new Error("Location is mandatory to mark attendance. Please enable location/GPS access.");
+    }
+
     const attendanceDate = payload.attendanceDate ? new Date(payload.attendanceDate) : new Date();
     const startOfDay = new Date(attendanceDate);
     startOfDay.setHours(0, 0, 0, 0);
@@ -191,6 +195,9 @@ async function create(payload) {
 
 async function update(id, payload) {
   try {
+    if (payload.logoutTime && (!payload.logoutLocation || !payload.logoutLocation.latitude || !payload.logoutLocation.longitude)) {
+      throw new Error("Location is mandatory to logout. Please enable location/GPS access.");
+    }
     const filter = { _id: new mongoose.Types.ObjectId(id) };
     const update = { $set: payload };
     await Attendance.collection.updateOne(filter, update);

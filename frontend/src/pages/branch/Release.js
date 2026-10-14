@@ -1151,20 +1151,23 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
       const pVal = parseFloat(purity) || 0;
 
       const calculatedNetWeight = Math.max(0, gWt - sWt);
-      const calculatedNetAmount = Math.round(((calculatedNetWeight * pVal) / 100) * rate);
 
-      setOrnamentValues((prev) => {
-        const isManual = prev.isManualAmount;
-        const currentNet = isManual ? (parseFloat(prev.netAmount) || 0) : calculatedNetAmount;
-        const currentAdj = isManual ? Math.round(currentNet - calculatedNetAmount) : 0;
-        return {
+      if (pVal > 0 && rate > 0 && calculatedNetWeight > 0) {
+        const calculatedNetAmount = Math.round(((calculatedNetWeight * pVal) / 100) * rate);
+        setOrnamentValues((prev) => ({
           ...prev,
           netWeight: calculatedNetWeight || '',
           calculatedAmount: calculatedNetAmount || '',
-          netAmount: currentNet || '',
-          adjustment: currentAdj,
-        };
-      });
+          netAmount: calculatedNetAmount || '',
+          adjustment: 0,
+          isManualAmount: false,
+        }));
+      } else {
+        setOrnamentValues((prev) => ({
+          ...prev,
+          netWeight: calculatedNetWeight || '',
+        }));
+      }
     }
   }, [
     ornamentValues.ornamentType,
@@ -1567,6 +1570,11 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                             const isSilver = ['Anklets', 'Toe Ring'].includes(ornamentValues.ornamentType);
                             const rate = isSilver ? silverRate : goldRate;
 
+                            prevCalcRef.current = {
+                              ...prevCalcRef.current,
+                              purity: pVal,
+                            };
+
                             if (pVal !== '' && netWt > 0 && rate > 0) {
                               const calcAmt = Math.round(((netWt * numPurity) / 100) * rate);
                               setOrnamentValues({
@@ -1577,70 +1585,19 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                                 adjustment: 0,
                                 isManualAmount: false,
                               });
-                              prevCalcRef.current = {
-                                ...prevCalcRef.current,
-                                purity: pVal,
-                              };
                             } else {
                               setOrnamentValues({
                                 ...ornamentValues,
                                 purity: pVal,
+                                netAmount: '',
+                                calculatedAmount: '',
+                                adjustment: 0,
                                 isManualAmount: false,
                               });
                             }
                           }}
                           InputProps={{
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                <Stack direction="row" alignItems="center" spacing={0.5}>
-                                  <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                                    %
-                                  </Typography>
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    color="primary"
-                                    sx={{
-                                      fontSize: '0.65rem',
-                                      height: 22,
-                                      py: 0,
-                                      px: 0.5,
-                                      textTransform: 'none',
-                                      fontWeight: 600,
-                                      whiteSpace: 'nowrap',
-                                    }}
-                                    onClick={() => {
-                                      const gWt = parseFloat(ornamentValues.grossWeight) || 0;
-                                      const sWt = parseFloat(ornamentValues.stoneWeight) || 0;
-                                      const netWt = parseFloat(ornamentValues.netWeight) || Math.max(0, gWt - sWt);
-                                      const amt = parseFloat(ornamentValues.netAmount) || 0;
-                                      const isSilver = ['Anklets', 'Toe Ring'].includes(ornamentValues.ornamentType);
-                                      const rate = isSilver ? silverRate : goldRate;
-                                      if (netWt > 0 && rate > 0 && amt > 0) {
-                                        const calcP = parseFloat(((amt * 100) / (netWt * rate)).toFixed(2));
-                                        setOrnamentValues({
-                                          ...ornamentValues,
-                                          purity: calcP > 0 ? calcP : '',
-                                          calculatedAmount: amt,
-                                          adjustment: 0,
-                                          isManualAmount: false,
-                                        });
-                                        prevCalcRef.current = {
-                                          ...prevCalcRef.current,
-                                          purity: calcP,
-                                        };
-                                      } else if (!netWt) {
-                                        alert('Please enter Gross Weight first to determine Net Weight.');
-                                      } else if (!amt) {
-                                        alert('Please enter Net Amount to calculate Purity.');
-                                      }
-                                    }}
-                                  >
-                                    Calc Purity
-                                  </Button>
-                                </Stack>
-                              </InputAdornment>
-                            ),
+                            endAdornment: <InputAdornment position="end">%</InputAdornment>,
                           }}
                           helperText={
                             parseFloat(ornamentValues.purity) > 100
@@ -1671,14 +1628,40 @@ function VerificationModal({ open, id, type, handleClose, fetchData }) {
                           onChange={(e) => {
                             const manualVal = e.target.value;
                             const numVal = manualVal === '' ? 0 : Number(manualVal);
-                            const base = Number(ornamentValues.calculatedAmount || 0);
-                            const adj = manualVal === '' ? 0 : Math.round(numVal - base);
-                            setOrnamentValues({
-                              ...ornamentValues,
-                              netAmount: manualVal,
-                              isManualAmount: manualVal !== '',
-                              adjustment: adj,
-                            });
+                            const gWt = parseFloat(ornamentValues.grossWeight) || 0;
+                            const sWt = parseFloat(ornamentValues.stoneWeight) || 0;
+                            const netWt = parseFloat(ornamentValues.netWeight) || Math.max(0, gWt - sWt);
+                            const isSilver = ['Anklets', 'Toe Ring'].includes(ornamentValues.ornamentType);
+                            const rate = isSilver ? silverRate : goldRate;
+
+                            if (manualVal !== '' && netWt > 0 && rate > 0 && numVal > 0) {
+                              const calcP = parseFloat(((numVal * 100) / (netWt * rate)).toFixed(2));
+                              prevCalcRef.current = {
+                                ...prevCalcRef.current,
+                                purity: calcP,
+                              };
+                              setOrnamentValues({
+                                ...ornamentValues,
+                                netAmount: manualVal,
+                                purity: calcP > 0 ? calcP : '',
+                                calculatedAmount: numVal,
+                                adjustment: 0,
+                                isManualAmount: false,
+                              });
+                            } else {
+                              prevCalcRef.current = {
+                                ...prevCalcRef.current,
+                                purity: '',
+                              };
+                              setOrnamentValues({
+                                ...ornamentValues,
+                                netAmount: manualVal,
+                                purity: '',
+                                calculatedAmount: '',
+                                adjustment: 0,
+                                isManualAmount: false,
+                              });
+                            }
                           }}
                           fullWidth
                         />

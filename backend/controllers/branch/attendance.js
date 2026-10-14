@@ -19,6 +19,13 @@ async function findById(req, res) {
 
 async function create(req, res) {
   try {
+    if (!req.body.location || !req.body.location.latitude || !req.body.location.longitude) {
+      return res.json({
+        status: false,
+        message: "Location is mandatory to mark attendance. Please enable location/GPS access.",
+        data: {},
+      });
+    }
     if (req.user && req.user.branch) {
         if (!req.body.branch) {
             req.body.branch = req.user.branch?._id || req.user.branch;
@@ -45,6 +52,13 @@ async function create(req, res) {
 async function update(req, res) {
   try {
     if (req.body.logoutTime) {
+      if (!req.body.logoutLocation || !req.body.logoutLocation.latitude || !req.body.logoutLocation.longitude) {
+        return res.json({
+          status: false,
+          message: "Location is mandatory to logout. Please enable location/GPS access.",
+          data: {},
+        });
+      }
       const records = await attendanceService.findById(req.params.id);
       const record = records && records[0];
       if (record) {

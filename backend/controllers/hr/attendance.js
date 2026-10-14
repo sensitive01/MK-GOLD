@@ -19,6 +19,15 @@ async function findById(req, res) {
 
 async function update(req, res) {
   try {
+    if (req.body.logoutTime) {
+      if (!req.body.logoutLocation || !req.body.logoutLocation.latitude || !req.body.logoutLocation.longitude) {
+        return res.json({
+          status: false,
+          message: "Location is mandatory to logout. Please enable location/GPS access.",
+          data: {},
+        });
+      }
+    }
     if (req.file) {
       req.body.employeePhoto = `images/attendance/${req.file.originalname}`;
       fs.writeFileSync(`./public/${req.body.employeePhoto}`, req.file.buffer);

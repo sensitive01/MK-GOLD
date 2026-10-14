@@ -31,6 +31,7 @@ import {
     Tab,
     TextField,
     Typography,
+    Link,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
@@ -54,6 +55,7 @@ import { AttendanceListHead, AttendanceListToolbar } from '../../sections/@dashb
 import { getAttendance, getConsolidatedAttendance, getBranchAttendanceStats, updateAttendance } from '../../apis/accounts/attendance';
 import CreateAttendance from '../../components/branch/attendance/CreateAttendance';
 import global from '../../utils/global';
+import { AttendanceLocation, getDetailedLocation, LogoutLocationStatus } from '../../utils/location';
 
 // ----------------------------------------------------------------------
 
@@ -116,38 +118,93 @@ export default function FinanceAttendance() {
   const [logoutTimer, setLogoutTimer] = useState(null);
   const timerIntervalRef = useRef(null);
 
+  const [logoutLoc, setLogoutLoc] = useState(null);
+  const [logoutLocLoading, setLogoutLocLoading] = useState(false);
+  const [logoutLocError, setLogoutLocError] = useState('');
+
+  const fetchLogoutLocation = async () => {
+    setLogoutLocLoading(true);
+    setLogoutLocError('');
+    try {
+      const res = await getDetailedLocation();
+      if (res.success && res.data) {
+        setLogoutLoc(res.data);
+      } else {
+        setLogoutLoc(null);
+        setLogoutLocError(res.error || 'Location access is required to logout.');
+      }
+    } catch (e) {
+      setLogoutLoc(null);
+      setLogoutLocError(e.message || 'Location access is required to logout.');
+    } finally {
+      setLogoutLocLoading(false);
+    }
+  };
+
   const handleLogout = (record) => {
     setLogoutRecord(record);
     setLogoutTimer(null);
+    setLogoutLoc(null);
+    setLogoutLocError('');
     setOpenLogoutModal(true);
+    fetchLogoutLocation();
   };
 
-  const confirmLogout = () => {
-    updateAttendance(logoutRecord._id, { logoutTime: new Date() }).then(() => {
-      fetchData();
-      let secondsLeft = 5;
-      setLogoutTimer(secondsLeft);
-      const intervalId = setInterval(() => {
-        secondsLeft -= 1;
-        setLogoutTimer(secondsLeft);
-        if (secondsLeft <= 0) {
-          clearInterval(intervalId);
-          setOpenLogoutModal(false);
-          // if we wanted to also log the user out of the app we would dispatch(logout()) here
-          // but usually this is just punching out of attendance
-        }
-      }, 1000);
-      timerIntervalRef.current = intervalId;
-
+  const confirmLogout = async () => {
+    if (!logoutLoc || !logoutLoc.latitude || !logoutLoc.longitude) {
       setNotify({
         open: true,
-        message: 'Logout marked successfully!',
-        severity: 'success',
+        message: logoutLocError || 'Location is mandatory to logout. Please allow location access.',
+        severity: 'error',
       });
-    });
+      return;
+    }
+
+    const payload = {
+      logoutTime: new Date(),
+      logoutLocation: logoutLoc,
+    };
+
+    updateAttendance(logoutRecord._id, payload)
+      .then((data) => {
+        if (data && data.status === false) {
+          setNotify({
+            open: true,
+            message: data.message || 'Logout failed',
+            severity: 'error',
+          });
+          return;
+        }
+        fetchData();
+        let secondsLeft = 5;
+        setLogoutTimer(secondsLeft);
+        const intervalId = setInterval(() => {
+          secondsLeft -= 1;
+          setLogoutTimer(secondsLeft);
+          if (secondsLeft <= 0) {
+            clearInterval(intervalId);
+            setOpenLogoutModal(false);
+          }
+        }, 1000);
+        timerIntervalRef.current = intervalId;
+
+        setNotify({
+          open: true,
+          message: 'Logout marked successfully!',
+          severity: 'success',
+        });
+      })
+      .catch((err) => {
+        setNotify({
+          open: true,
+          message: err.message || 'Error occurred while logging out',
+          severity: 'error',
+        });
+      });
   };
 
   const handleCloseLogoutModal = () => {
+    if (logoutLocLoading) return;
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
@@ -646,14 +703,20 @@ export default function FinanceAttendance() {
                                 <img src={attendance?.uploadedFile?.startsWith('http') ? attendance.uploadedFile : `${global.baseURL}/${attendance?.uploadedFile}`} alt="attendance" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
                               ) : 'No Image'}
                             </TableCell>
-                            <TableCell align="left" sx={{ px: { xs: 1, sm: 2 }, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
-                              {moment(row?.loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}
+                            <TableCell align="left" sx={{ px: { xs: 1, sm: 2 } }}>
+                              <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, fontWeight: 500 }}>
+                                {moment(row?.loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}
+                              </Typography>
+                              <AttendanceLocation location={row.location} />
                             </TableCell>
                             <TableCell align="left" sx={{ px: { xs: 1, sm: 2 } }}>
                               {row.logoutTime ? (
-                                <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
-                                  {moment(row.logoutTime).format('DD-MM-YYYY HH:mm:ss')}
-                                </Typography>
+                                <>
+                                  <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, fontWeight: 500 }}>
+                                    {moment(row.logoutTime).format('DD-MM-YYYY HH:mm:ss')}
+                                  </Typography>
+                                  <AttendanceLocation location={row.logoutLocation} />
+                                </>
                               ) : (
                                 currentTab === 'my_attendance' && employee && auth.user.employee &&
                                 (employee?._id?.toString() || employee?.toString()) === (auth.user.employee?._id?.toString() || auth.user.employee?.toString()) ? (
@@ -777,6 +840,13 @@ export default function FinanceAttendance() {
             </Box>
           ) : (
             <>
+              <LogoutLocationStatus
+                loading={logoutLocLoading}
+                location={logoutLoc}
+                error={logoutLocError}
+                onRetry={fetchLogoutLocation}
+              />
+
               <Typography sx={{ color: '#475569', mb: 3 }}>
                 Are you sure you want to logout?
               </Typography>
@@ -784,6 +854,7 @@ export default function FinanceAttendance() {
                 <Button 
                   variant="contained" 
                   onClick={confirmLogout}
+                  disabled={logoutLocLoading || !logoutLoc || !logoutLoc.latitude}
                   sx={{ 
                     bgcolor: '#FF4842', 
                     color: '#fff', 

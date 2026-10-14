@@ -31,6 +31,7 @@ import {
     Tab,
     TextField,
     Typography,
+    Link,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
@@ -56,6 +57,7 @@ import { getBranchAttendanceStats } from '../../apis/branch/attendance';
 import CreateAttendance from '../../components/branch/attendance/CreateAttendance';
 import Payprocess from './Payprocess';
 import global from '../../utils/global';
+import { AttendanceLocation, getDetailedLocation, LogoutLocationStatus } from '../../utils/location';
 
 // ----------------------------------------------------------------------
 
@@ -114,34 +116,92 @@ export default function Attendance() {
   const timerIntervalRef = useRef(null);
   const dispatch = useDispatch();
 
+  const logoutLocPromiseRef = useRef(null);
+
+  const [logoutLoc, setLogoutLoc] = useState(null);
+  const [logoutLocLoading, setLogoutLocLoading] = useState(false);
+  const [logoutLocError, setLogoutLocError] = useState('');
+
+  const fetchLogoutLocation = async () => {
+    setLogoutLocLoading(true);
+    setLogoutLocError('');
+    try {
+      const res = await getDetailedLocation();
+      if (res.success && res.data) {
+        setLogoutLoc(res.data);
+      } else {
+        setLogoutLoc(null);
+        setLogoutLocError(res.error || 'Location access is required to logout.');
+      }
+    } catch (e) {
+      setLogoutLoc(null);
+      setLogoutLocError(e.message || 'Location access is required to logout.');
+    } finally {
+      setLogoutLocLoading(false);
+    }
+  };
+
   const handleLogout = (record) => {
     setLogoutRecord(record);
     setLogoutTimer(null);
+    setLogoutLoc(null);
+    setLogoutLocError('');
     setOpenLogoutModal(true);
+    fetchLogoutLocation();
   };
 
-  const confirmLogout = () => {
-    updateAttendance(logoutRecord._id, { logoutTime: new Date() }).then(() => {
-      fetchData();
-      let secondsLeft = 5;
-      setLogoutTimer(secondsLeft);
-      const intervalId = setInterval(() => {
-        secondsLeft -= 1;
-        setLogoutTimer(secondsLeft);
-        if (secondsLeft <= 0) {
-          clearInterval(intervalId);
-          setOpenLogoutModal(false);
-          dispatch(logout());
-        }
-      }, 1000);
-      timerIntervalRef.current = intervalId;
-
+  const confirmLogout = async () => {
+    if (!logoutLoc || !logoutLoc.latitude || !logoutLoc.longitude) {
       setNotify({
         open: true,
-        message: 'Logout marked successfully!',
-        severity: 'success',
+        message: logoutLocError || 'Location is mandatory to logout. Please allow location access.',
+        severity: 'error',
       });
-    });
+      return;
+    }
+
+    const payload = {
+      logoutTime: new Date(),
+      logoutLocation: logoutLoc,
+    };
+
+    updateAttendance(logoutRecord._id, payload)
+      .then((data) => {
+        if (data && data.status === false) {
+          setNotify({
+            open: true,
+            message: data.message || 'Logout failed',
+            severity: 'error',
+          });
+          return;
+        }
+        fetchData();
+        let secondsLeft = 5;
+        setLogoutTimer(secondsLeft);
+        const intervalId = setInterval(() => {
+          secondsLeft -= 1;
+          setLogoutTimer(secondsLeft);
+          if (secondsLeft <= 0) {
+            clearInterval(intervalId);
+            setOpenLogoutModal(false);
+            dispatch(logout());
+          }
+        }, 1000);
+        timerIntervalRef.current = intervalId;
+
+        setNotify({
+          open: true,
+          message: 'Logout marked successfully!',
+          severity: 'success',
+        });
+      })
+      .catch((err) => {
+        setNotify({
+          open: true,
+          message: err.message || 'Error occurred while logging out',
+          severity: 'error',
+        });
+      });
   };
 
   useEffect(() => {
@@ -540,10 +600,20 @@ export default function Attendance() {
                                 <img src={attendance?.uploadedFile?.startsWith('http') ? attendance.uploadedFile : `${global.baseURL}/${attendance?.uploadedFile}`} alt="attendance" style={{ width: '80px' }} />
                               ) : 'No Image'}
                             </TableCell>
-                            <TableCell align="left">{moment(row?.loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}</TableCell>
+                            <TableCell align="left">
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {moment(row?.loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}
+                              </Typography>
+                              <AttendanceLocation location={row.location} />
+                            </TableCell>
                             <TableCell align="left">
                               {logoutTime ? (
-                                moment(logoutTime).format('DD-MM-YYYY HH:mm:ss')
+                                <>
+                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {moment(logoutTime).format('DD-MM-YYYY HH:mm:ss')}
+                                  </Typography>
+                                  <AttendanceLocation location={row.logoutLocation} />
+                                </>
                               ) : (
                                 employee && auth.user.employee &&
                                 (employee?._id?.toString() || employee?.toString()) === (auth.user.employee?._id?.toString() || auth.user.employee?.toString()) ? (
@@ -602,7 +672,7 @@ export default function Attendance() {
 
       <Modal open={openDeleteModal} onClose={handleCloseDeleteModal}><Box sx={style}>{/* <Typography variant="h6">Delete Confirmation</Typography> */}<Typography sx={{ mt: 3 }}>Do you want to delete this record?</Typography><Stack direction="row" spacing={2} mt={3}>{/* <Button variant="contained" color="error" onClick={() => { if (deleteType === 'single') handleDelete(); else handleDeleteSelected(); }}>Delete</Button> */}<Button variant="contained" onClick={handleCloseDeleteModal}>Close</Button></Stack></Box></Modal>
 
-      <Modal open={openLogoutModal} onClose={() => { if (logoutTimer === null) setOpenLogoutModal(false); }}>
+      <Modal open={openLogoutModal} onClose={() => { if (logoutTimer === null && !logoutLocLoading) setOpenLogoutModal(false); }}>
         <Box sx={style}>
           <Typography variant="h6" sx={{ borderBottom: '1px solid #eee', pb: 1, mb: 2 }}>Logout Confirmation</Typography>
           
@@ -617,9 +687,24 @@ export default function Attendance() {
                 <Typography sx={{ mb: 1 }}><strong>Punctual :</strong> {logoutRecord ? getPunctuality(logoutRecord.loginTime || logoutRecord.createdAt, logoutRecord.employee?.shiftStartTime) : ''}</Typography>
                 <Typography><strong>Total Duration Worked Today:</strong> {logoutRecord ? getWorkedDuration(logoutRecord.loginTime || logoutRecord.createdAt) : ''}</Typography>
               </Box>
+
+              <LogoutLocationStatus
+                loading={logoutLocLoading}
+                location={logoutLoc}
+                error={logoutLocError}
+                onRetry={fetchLogoutLocation}
+              />
+
               <Typography sx={{ mt: 3, mb: 2, borderTop: '1px solid #eee', pt: 2 }}>Are you sure you want to logout?</Typography>
               <Stack direction="row" spacing={2}>
-                <Button variant="contained" color="error" onClick={confirmLogout}>Logout</Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={confirmLogout}
+                  disabled={logoutLocLoading || !logoutLoc || !logoutLoc.latitude}
+                >
+                  Logout
+                </Button>
                 <Button variant="contained" onClick={() => setOpenLogoutModal(false)}>Cancel</Button>
               </Stack>
             </>

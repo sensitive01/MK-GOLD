@@ -33,7 +33,7 @@ const StyledSection = styled('div')(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',
-  backgroundColor: '#8A1B9F', // Brand Purple
+  backgroundColor: '#8A1B9F',
   color: '#fff',
   padding: theme.spacing(0, 5),
   textAlign: 'center',

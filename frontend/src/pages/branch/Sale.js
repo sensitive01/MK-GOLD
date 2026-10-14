@@ -689,9 +689,17 @@ export default function Sale() {
                       id="branch-select"
                       label="Branch"
                       notched
+                      displayEmpty
                       name="branch"
                       value={values.branch}
                       onChange={(e) => handleBranchChange(e.target.value)}
+                      renderValue={(selected) => {
+                        if (!selected) {
+                          return <em>All Branches</em>;
+                        }
+                        const found = branches?.find((b) => b._id === selected);
+                        return found ? `${found.branchId} ${found.branchName}` : selected;
+                      }}
                     >
                       <MenuItem value="">
                         <em>All Branches</em>

@@ -31,6 +31,7 @@ import {
     Tab,
     TextField,
     Typography,
+    Link,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
@@ -55,6 +56,7 @@ import { deleteAttendanceById, getAttendance, getConsolidatedAttendance } from '
 import { getBranchAttendanceStats } from '../../apis/branch/attendance';
 import CreateAttendance from '../../components/branch/attendance/CreateAttendance';
 import global from '../../utils/global';
+import { AttendanceLocation } from '../../utils/location';
 import Payprocess from './Payprocess';
 
 // ----------------------------------------------------------------------
@@ -489,7 +491,13 @@ export default function Attendance() {
                     'Branch': e?.employee?.branchName || e?.branch?.name || '-',
                     'Date': moment(e?.attendanceDate || e?.loginTime || e?.createdAt).format('DD-MM-YYYY'),
                     'Login Time': e?.loginTime ? moment(e.loginTime).format('DD-MM-YYYY hh:mm:ss A') : (e?.createdAt ? moment(e.createdAt).format('DD-MM-YYYY hh:mm:ss A') : '-'),
+                    'Login Location': e?.location?.address || '-',
+                    'Login Latitude': e?.location?.latitude ?? '-',
+                    'Login Longitude': e?.location?.longitude ?? '-',
                     'Logout Time': e?.logoutTime ? moment(e.logoutTime).format('DD-MM-YYYY hh:mm:ss A') : 'Not Logged out',
+                    'Logout Location': e?.logoutLocation?.address || '-',
+                    'Logout Latitude': e?.logoutLocation?.latitude ?? '-',
+                    'Logout Longitude': e?.logoutLocation?.longitude ?? '-',
                     'Status': 'Present'
                   }));
                   handleExport(exportRows, 'Attendance');
@@ -575,8 +583,24 @@ export default function Attendance() {
                                 <img src={attendance?.uploadedFile?.startsWith('http') ? attendance.uploadedFile : `${global.baseURL}/${attendance?.uploadedFile}`} alt="attendance" style={{ width: '80px' }} />
                               ) : 'No Image'}
                             </TableCell>
-                            <TableCell align="left">{moment(row?.loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}</TableCell>
-                            <TableCell align="left">{row.logoutTime ? moment(row.logoutTime).format('DD-MM-YYYY HH:mm:ss') : 'Not Logged out'}</TableCell>
+                            <TableCell align="left">
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {moment(row?.loginTime || createdAt).format('DD-MM-YYYY HH:mm:ss')}
+                              </Typography>
+                              <AttendanceLocation location={row.location} />
+                            </TableCell>
+                            <TableCell align="left">
+                              {row.logoutTime ? (
+                                <>
+                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                    {moment(row.logoutTime).format('DD-MM-YYYY HH:mm:ss')}
+                                  </Typography>
+                                  <AttendanceLocation location={row.logoutLocation} />
+                                </>
+                              ) : (
+                                'Not Logged out'
+                              )}
+                            </TableCell>
                             <TableCell align="right">
                               <IconButton size="large" color="inherit" onClick={(e) => { setOpenId(_id); handleOpenMenu(e); }}>
                                 <Iconify icon={'eva:more-vertical-fill'} />
@@ -745,6 +769,7 @@ export default function Attendance() {
                     <TableCell>Login Time</TableCell>
                     <TableCell>Logout Time</TableCell>
                     <TableCell>Working Hours</TableCell>
+                    <TableCell>Location</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -764,6 +789,46 @@ export default function Attendance() {
                         <TableCell>{loginTime ? moment(loginTime).format('hh:mm A') : "N/A"}</TableCell>
                         <TableCell>{record.logoutTime ? moment(record.logoutTime).format('hh:mm A') : "Not Logged out"}</TableCell>
                         <TableCell>{workingHours}</TableCell>
+                        <TableCell>
+                          {record.location?.latitude ? (
+                            <Box>
+                              <Link
+                                href={record.location.mapsUrl || `https://www.google.com/maps?q=${record.location.latitude},${record.location.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  color: 'primary.main',
+                                  textDecoration: 'none',
+                                  '&:hover': { textDecoration: 'underline' },
+                                  display: 'block',
+                                  maxWidth: 150,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                                title={`${record.location.address || ''} - Click to view in Google Maps`}
+                              >
+                                {record.location.address || 'View on Map'}
+                              </Link>
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  display: 'block',
+                                  color: 'text.secondary',
+                                  fontSize: '0.68rem',
+                                  fontFamily: 'monospace',
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {Number(record.location.latitude).toFixed(5)}, {Number(record.location.longitude).toFixed(5)}
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <Typography variant="caption" color="text.secondary">-</Typography>
+                          )}
+                        </TableCell>
                       </TableRow>
                     );
                   })}
