@@ -1,19 +1,54 @@
 const transitModel = require("../../models/transit")
 const salesModel = require("../../models/sales")
+const { assignArticleNumbersToSales } = require("../../services/sales")
 
 exports.createTransitData = async (req,res)=>{
     try{
-        const createData = await transitModel.create(
-            req.body
-        )
+        const isCreatedByStore =
+            req.body.creatorType === 'store' ||
+            req.user?.userType === 'store' ||
+            req.body.status === 'moved' ||
+            String(req.body.createdBy).toLowerCase() === 'store';
+
+        let payload = { ...req.body };
+        if (isCreatedByStore) {
+            payload.status = 'moved';
+            payload.storeReceived = true;
+            payload.storeReceivedAt = new Date();
+            payload.storeReceivedBy = req.user?._id || req.body.createdBy;
+            if (req.body.proof) {
+                payload.storeProof = req.body.proof;
+            }
+            payload.storeNotes = req.body.notes || "Direct Store Entry";
+            payload.storeDeviations = 'no';
+            payload.deviations = 'no';
+            payload.deviationLogs = [
+                {
+                    actionBy: req.user?._id || req.body.createdBy,
+                    userType: 'store',
+                    action: 'store_create_and_receive',
+                    deviation: 'no',
+                    status: 'moved',
+                    notes: req.body.notes || 'Direct Store Entry',
+                    proof: req.body.proof || null,
+                    createdAt: new Date()
+                }
+            ];
+        }
+
+        const createData = await transitModel.create(payload);
         // Update the corresponding sales' statuses
-        if (req.body.saleIds && req.body.saleIds.length > 0) {
-            await salesModel.updateMany({ _id: { $in: req.body.saleIds } }, { status: 'intransit' });
+        if (payload.saleIds && payload.saleIds.length > 0) {
+            const saleStatus = isCreatedByStore ? 'moved' : 'intransit';
+            await salesModel.updateMany({ _id: { $in: payload.saleIds } }, { status: saleStatus });
+            if (isCreatedByStore) {
+                await assignArticleNumbersToSales(payload.saleIds);
+            }
         }
         
         res.json({
             status:true,
-            message:"",
+            message: isCreatedByStore ? "Transit created and moved into Store custody" : "",
             data:createData
         })
     }catch(err){
@@ -24,6 +59,213 @@ exports.createTransitData = async (req,res)=>{
         })
     }
 }
+
+exports.batchCreateTransitData = async (req, res) => {
+    try {
+        const {
+            saleIds = [],
+            deliveryBy,
+            transitMovedThrough = "Hand Delivery",
+            notes = "",
+            proof,
+            createdBy,
+            creatorType,
+            status: requestedStatus,
+            transitId
+        } = req.body;
+
+        const isCreatedByStore =
+            creatorType === 'store' ||
+            req.user?.userType === 'store' ||
+            requestedStatus === 'moved' ||
+            String(createdBy).toLowerCase() === 'store';
+
+        if (!saleIds || !Array.isArray(saleIds) || saleIds.length === 0) {
+            return res.status(400).json({
+                status: false,
+                message: "No sales selected for transit creation",
+                data: []
+            });
+        }
+
+        if (!proof) {
+            return res.status(400).json({
+                status: false,
+                message: "Proof document is mandatory",
+                data: []
+            });
+        }
+
+        // Find all selected sales and populate branch
+        const sales = await salesModel.find({ _id: { $in: saleIds } })
+            .populate('branch', 'branchName branchId');
+
+        if (!sales || sales.length === 0) {
+            return res.status(404).json({
+                status: false,
+                message: "Selected sales could not be found",
+                data: []
+            });
+        }
+
+        // Group sales by branch ID
+        const branchGroups = {};
+        for (const sale of sales) {
+            const branchId = String(sale.branch?._id || sale.branch);
+            if (!branchGroups[branchId]) {
+                branchGroups[branchId] = [];
+            }
+            branchGroups[branchId].push(sale);
+        }
+
+        const createdTransits = [];
+
+        // Helper to generate a candidate unique transit ID
+        const generateCandidateId = async () => {
+            for (let digits = 4; digits <= 10; digits++) {
+                const min = Math.pow(10, digits - 1);
+                const max = Math.pow(10, digits) - 1;
+                for (let attempt = 0; attempt < 50; attempt++) {
+                    const randNum = Math.floor(min + Math.random() * (max - min + 1));
+                    const candidate = `TR${randNum}`;
+                    const exists = await transitModel.findOne({ transitId: candidate }).lean();
+                    if (!exists) {
+                        return candidate;
+                    }
+                }
+            }
+            return `TR${Date.now()}`;
+        };
+
+        for (const [branchId, bSales] of Object.entries(branchGroups)) {
+            let totalNetWeight = 0;
+            let totalGrossWeight = 0;
+            let numberOfOrnaments = 0;
+            let physicalCount = 0;
+            let releaseCount = 0;
+            let minDate = null;
+            let maxDate = null;
+            const bSaleIds = [];
+
+            for (const s of bSales) {
+                bSaleIds.push(s._id);
+                totalNetWeight += Number(s.netWeight || 0);
+
+                const orns = s.ornaments || [];
+                let sGross = 0;
+                let sOrnCount = 0;
+                if (Array.isArray(orns) && orns.length > 0) {
+                    for (const o of orns) {
+                        sGross += Number(o.grossWeight || o.netWeight || 0);
+                        sOrnCount += Number(o.quantity || 1);
+                    }
+                } else {
+                    sGross = Number(s.grossWeight || s.netWeight || 0);
+                    sOrnCount = 1;
+                }
+                totalGrossWeight += sGross;
+                numberOfOrnaments += sOrnCount;
+
+                if (s.saleType === 'physical') {
+                    physicalCount++;
+                } else {
+                    releaseCount++;
+                }
+
+                const sDate = new Date(s.createdAt);
+                if (!minDate || sDate < minDate) minDate = sDate;
+                if (!maxDate || sDate > maxDate) maxDate = sDate;
+            }
+
+            const fromDate = minDate || new Date();
+            const toDate = maxDate || new Date();
+            const diffTime = Math.abs(toDate - fromDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const numberOfDays = Math.max(1, diffDays + 1);
+
+            let newTransitId = null;
+            if (createdTransits.length === 0 && transitId && typeof transitId === 'string' && transitId.trim()) {
+                const candidate = transitId.trim().toUpperCase();
+                const exists = await transitModel.findOne({ transitId: candidate }).lean();
+                if (!exists) {
+                    newTransitId = candidate;
+                }
+            }
+            if (!newTransitId) {
+                newTransitId = await generateCandidateId();
+            }
+
+            const transitPayload = {
+                transitId: newTransitId,
+                branch: branchId,
+                saleIds: bSaleIds,
+                numberOfPackets: bSales.length,
+                physical: physicalCount,
+                released: releaseCount,
+                numberOfOrnaments: numberOfOrnaments,
+                totalGrossWeight: Number(totalGrossWeight.toFixed(3)),
+                totalNetWeight: Number(totalNetWeight.toFixed(3)),
+                fromDate,
+                toDate,
+                numberOfDays,
+                packetWeight: [Number(totalGrossWeight.toFixed(3))],
+                deliveryBy: deliveryBy || "Hand Delivery",
+                transitMovedThrough: transitMovedThrough || "Hand Delivery",
+                notes: notes || "",
+                proof: proof,
+                status: isCreatedByStore ? "moved" : "intransit",
+                storeReceived: isCreatedByStore ? true : false,
+                storeReceivedAt: isCreatedByStore ? new Date() : undefined,
+                storeReceivedBy: isCreatedByStore ? (req.user?._id || createdBy) : undefined,
+                storeProof: isCreatedByStore ? proof : undefined,
+                storeNotes: isCreatedByStore ? (notes || "Direct Store Entry") : "",
+                deviations: "no",
+                storeDeviations: "no",
+                createdBy: createdBy || req.user?._id || "store"
+            };
+
+            if (isCreatedByStore) {
+                transitPayload.deviationLogs = [
+                    {
+                        actionBy: req.user?._id || createdBy,
+                        userType: 'store',
+                        action: 'store_create_and_receive',
+                        deviation: 'no',
+                        status: 'moved',
+                        notes: notes || 'Direct Store Entry',
+                        proof: proof || null,
+                        createdAt: new Date()
+                    }
+                ];
+            }
+
+            const newTransit = await transitModel.create(transitPayload);
+            const targetSaleStatus = isCreatedByStore ? 'moved' : 'intransit';
+            await salesModel.updateMany({ _id: { $in: bSaleIds } }, { status: targetSaleStatus });
+            if (isCreatedByStore) {
+                await assignArticleNumbersToSales(bSaleIds);
+            }
+
+            createdTransits.push(newTransit);
+        }
+
+        const transitIdsList = createdTransits.map(t => t.transitId).join(", ");
+        const statusMsg = isCreatedByStore ? "and moved into Store custody" : "for dispatch";
+        res.json({
+            status: true,
+            message: `Successfully created ${createdTransits.length} transit(s) (${transitIdsList}) ${statusMsg}!`,
+            data: createdTransits
+        });
+    } catch (err) {
+        console.error("Error in batchCreateTransitData:", err);
+        res.status(500).json({
+            status: false,
+            message: err.message,
+            data: []
+        });
+    }
+}
+
 
 exports.deleteTransitById = async (req,res)=>{
     try{
@@ -41,6 +283,24 @@ exports.deleteTransitById = async (req,res)=>{
         })
     }
 }
+
+exports.updateTransitData = async (req, res) => {
+    try {
+        const updateData = await transitModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json({
+            status: true,
+            message: "Transit updated successfully",
+            data: updateData
+        });
+    } catch (err) {
+        res.json({
+            status: false,
+            message: err.message,
+            data: {}
+        });
+    }
+};
+
 
 exports.findTransitData = async (req,res)=>{
     try{

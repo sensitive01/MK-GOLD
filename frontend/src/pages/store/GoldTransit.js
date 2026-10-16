@@ -48,8 +48,10 @@ import { getTransitMeltingStatus } from '../../utils/transit';
 import { TransitListHead, TransitListToolbar } from '../../sections/@dashboard/transit';
 import { findTransit, updateTransitStatus } from '../../apis/admin/transit';
 import { createFile } from '../../apis/admin/fileupload';
+import { getBranch } from '../../apis/admin/branch';
 import TransitPrint from '../../components/branch/transit/TransitPrint';
 import global from '../../utils/global';
+import { CreateTransitModal } from './Transit';
 
 const TABLE_HEAD = [
   { id: 'branch', label: 'Branch', alignRight: false },
@@ -188,6 +190,10 @@ export default function StoreGoldTransit() {
   // Print voucher state
   const [verifyTransitId, setVerifyTransitId] = useState(null);
 
+  // Create transit modal state
+  const [branches, setBranches] = useState([]);
+  const [openCreateModal, setOpenCreateModal] = useState(false);
+
   const [notify, setNotify] = useState({
     open: false,
     message: '',
@@ -211,6 +217,13 @@ export default function StoreGoldTransit() {
 
   useEffect(() => {
     fetchData();
+    getBranch()
+      .then((res) => {
+        if (Array.isArray(res?.data)) {
+          setBranches(res.data);
+        }
+      })
+      .catch((err) => console.error('Error fetching branches in Inward Transit:', err));
   }, [fetchData]);
 
   const handleOpenMenu = (event) => {
@@ -323,7 +336,7 @@ export default function StoreGoldTransit() {
   return (
     <>
       <Helmet>
-        <title> Transit | Store | MK Gold </title>
+        <title> Inward Transit | Store | MK Gold </title>
       </Helmet>
 
       <Snackbar
@@ -351,15 +364,15 @@ export default function StoreGoldTransit() {
           spacing={2}
         >
           <div>
-            <Typography variant="h4" sx={{ color: '#fff' }}>
-              Transit
+            <Typography variant="h4" sx={{ color: '#fff', fontWeight: 700 }}>
+              Inward Transit
             </Typography>
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', mt: 0.5 }}>
-              Receive and manage incoming gold transits from branches into store custody
+              Receive, create, and manage incoming gold transits from branches into store custody
             </Typography>
           </div>
 
-          <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+          <Stack direction="row" alignItems="center" spacing={1.5} flexWrap="wrap" useFlexGap>
             {isFilterApplied && (
               <Button
                 variant="contained"
@@ -374,8 +387,23 @@ export default function StoreGoldTransit() {
               variant="contained"
               startIcon={<Iconify icon="material-symbols:filter-alt" />}
               onClick={handleFilterOpen}
+              sx={{ bgcolor: '#fff', color: '#8A1B9F', fontWeight: 600, '&:hover': { bgcolor: '#f5f5f5' } }}
             >
               Filter
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={() => setOpenCreateModal(true)}
+              sx={{
+                bgcolor: '#FFD700',
+                color: '#000',
+                fontWeight: 700,
+                boxShadow: 3,
+                '&:hover': { bgcolor: '#e6c200' },
+              }}
+            >
+              New Transit
             </Button>
           </Stack>
         </Stack>
@@ -879,8 +907,8 @@ export default function StoreGoldTransit() {
             {submitLoading
               ? 'Processing...'
               : storeDeviation === 'yes'
-              ? 'Move into Store (Flag Deviation)'
-              : 'Receive & Move into Store'}
+                ? 'Move into Store (Flag Deviation)'
+                : 'Receive & Move into Store'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -944,6 +972,17 @@ export default function StoreGoldTransit() {
           onClose={() => setVerifyTransitId(null)}
         />
       )}
+
+      {/* Create Transit Modal */}
+      <CreateTransitModal
+        open={openCreateModal}
+        handleClose={() => setOpenCreateModal(false)}
+        fetchData={fetchData}
+        auth={auth}
+        branches={branches}
+        setNotify={setNotify}
+        onSuccessPrint={(id) => setVerifyTransitId(id)}
+      />
 
       {/* Backdrop loading */}
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>

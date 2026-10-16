@@ -147,6 +147,7 @@ import MeltingLeave from './pages/melting/Leave';
 
 import StoreDashboardLayout from './layouts/dashboard/store';
 import StoreDashboard from './pages/store/Dashboard';
+import StoreTransit from './pages/store/Transit';
 import StoreGoldTransit from './pages/store/GoldTransit';
 import StoreTransitOutwards from './pages/store/TransitOutwards';
 // ----------------------------------------------------------------------
@@ -420,7 +421,7 @@ export default function Router() {
         { path: 'leads', element: <BranchLeads /> },
         { path: 'attendance', element: <BranchAttendance /> },
         { path: 'leaves', element: <BranchLeave /> },
-        
+
       ],
     },
     {
@@ -510,6 +511,7 @@ export default function Router() {
         { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/store/dashboard" />, index: true },
         { path: 'dashboard', element: <StoreDashboard /> },
+        { path: 'transit', element: <StoreTransit /> },
         { path: 'gold-transit', element: <StoreGoldTransit /> },
         { path: 'transit-outwards', element: <StoreTransitOutwards /> },
         { path: 'transit-sales/:id', element: <AdminTransitSales /> },

@@ -27,6 +27,15 @@ async function createTransit(payload) {
   }
 }
 
+async function batchCreateTransit(payload) {
+  try {
+    const response = await apiClient().post('/api/v1.0/branch/transit/batch-create', payload);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
 async function updateTransit(id, payload) {
   try {
     const response = await apiClient().post(`/api/v1.0/branch/transit/update/${id}`, payload);
@@ -58,6 +67,7 @@ export {
   findTransit,
   getTransitById,
   createTransit,
+  batchCreateTransit,
   updateTransit,
   deleteTransitById,
   generateTransitId,

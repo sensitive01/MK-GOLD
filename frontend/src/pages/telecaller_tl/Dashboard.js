@@ -1,11 +1,13 @@
 import { Helmet } from 'react-helmet-async';
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
 // @mui
 import { Container, Grid, Link, Typography, Box } from '@mui/material';
 // apis
 import { getGoldRateByState } from '../../apis/branch/gold-rate';
+import { getLeadStats } from '../../apis/branch/lead';
 // sections
 import { AppWidgetSummary } from '../../sections/@dashboard/app';
 
@@ -13,9 +15,19 @@ import { AppWidgetSummary } from '../../sections/@dashboard/app';
 
 export default function TelecallerTLDashboard() {
   const auth = useSelector((state) => state.auth);
+  const navigate = useNavigate();
   const [goldRate, setGoldRate] = useState(null);
   const [silverRate, setSilverRate] = useState(null);
   const [loadingRates, setLoadingRates] = useState(true);
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    getLeadStats().then((res) => {
+      if (res?.data) {
+        setStats(res.data);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const state = auth.user?.branch?.address?.state || 'Karnataka';
@@ -82,6 +94,58 @@ export default function TelecallerTLDashboard() {
                 bgColor="#fff"
                 iconColor="#8A1B9F"
                 textColor="#000"
+              />
+            </Grid>
+          </Grid>
+        </Box>
+
+        <Box sx={{ mb: 5 }}>
+          <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
+            Business & Approval Pipeline
+          </Typography>
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={3}>
+              <AppWidgetSummary
+                title="Business Leads"
+                total={stats?.businessMoved || 0}
+                icon={'mdi:briefcase'}
+                bgColor="#FFF"
+                iconColor="#8A1B9F"
+                textColor="#000"
+                onClick={() => navigate('/telecaller-tl/leads')}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <AppWidgetSummary
+                title="Pending My Review"
+                total={stats?.tlPendingReview || 0}
+                icon={'mdi:clock-alert-outline'}
+                bgColor="#FFF7E6"
+                iconColor="#D46B08"
+                textColor="#000"
+                onClick={() => navigate('/telecaller-tl/leads')}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <AppWidgetSummary
+                title="With Bullion Desk"
+                total={stats?.bullionPendingReview || 0}
+                icon={'mdi:shield-check'}
+                bgColor="#E6F7FF"
+                iconColor="#096DD9"
+                textColor="#000"
+                onClick={() => navigate('/telecaller-tl/leads')}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <AppWidgetSummary
+                title="Converted Sales"
+                total={stats?.businessConverted || 0}
+                icon={'mdi:trophy-award'}
+                bgColor="#E8F5E9"
+                iconColor="#2E7D32"
+                textColor="#000"
+                onClick={() => navigate('/telecaller-tl/leads')}
               />
             </Grid>
           </Grid>

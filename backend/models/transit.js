@@ -9,7 +9,7 @@ const transitSchema = new mongoose.Schema({
     saleIds: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'sales',
-        required: true
+        required: false
     }],
     numberOfPackets : {
         required:true,

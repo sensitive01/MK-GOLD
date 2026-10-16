@@ -26,6 +26,13 @@ import {
   TablePagination,
   TableRow,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Tooltip,
+  Chip,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
@@ -37,7 +44,7 @@ import Scrollbar from '../../components/scrollbar';
 import { AttendanceListHead } from '../../sections/@dashboard/attendance';
 import LeadListToolbar from '../../sections/@dashboard/lead/LeadListToolbar';
 import LeadFilterSidebar from '../../sections/@dashboard/lead/LeadFilterSidebar';
-import { deleteLeadById, getLeads, bulkCreateLeads, markLeadsExclusive, tlApproveLead } from '../../apis/branch/lead';
+import { deleteLeadById, getLeads, bulkCreateLeads, markLeadsExclusive, tlApproveLead, tlRejectLead } from '../../apis/branch/lead';
 import global from '../../utils/global';
 
 // ----------------------------------------------------------------------
@@ -52,6 +59,8 @@ const TABLE_HEAD = [
   { id: 'movedDate', label: 'Moved Date', alignRight: false },
   { id: 'movedBy', label: 'Moved By (Telecaller)', alignRight: false },
   { id: 'tlStatus', label: 'TL Decision', alignRight: false },
+  { id: 'bullionStatus', label: 'Bullion Desk', alignRight: false },
+  { id: 'assignedExecutive', label: 'Assigned Exec', alignRight: false },
   { id: 'remarks', label: 'Remarks', alignRight: false },
   { id: 'disposition', label: 'Status', alignRight: false },
   { id: '' },
@@ -252,6 +261,48 @@ export default function TelecallerTLLeads({ title = "Telecaller-TL Business Lead
       }
     } catch (err) {
       setOpenBackdrop(false);
+      setNotify({
+        open: true,
+        message: err.message || 'Something went wrong',
+        severity: 'error',
+      });
+    }
+  };
+
+  const [openRejectModal, setOpenRejectModal] = useState(false);
+  const [rejectId, setRejectId] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejecting, setRejecting] = useState(false);
+
+  const handleRejectOpen = (id) => {
+    setRejectId(id);
+    setRejectReason('');
+    setOpenRejectModal(true);
+  };
+
+  const handleRejectSubmit = async () => {
+    if (!rejectId) return;
+    try {
+      setRejecting(true);
+      const res = await tlRejectLead(rejectId, rejectReason.trim());
+      setRejecting(false);
+      if (res?.status) {
+        setNotify({
+          open: true,
+          message: 'Lead rejected successfully',
+          severity: 'info',
+        });
+        setOpenRejectModal(false);
+        fetchData();
+      } else {
+        setNotify({
+          open: true,
+          message: res?.message || 'Failed to reject lead',
+          severity: 'error',
+        });
+      }
+    } catch (err) {
+      setRejecting(false);
       setNotify({
         open: true,
         message: err.message || 'Something went wrong',
@@ -547,35 +598,159 @@ export default function TelecallerTLLeads({ title = "Telecaller-TL Business Lead
                               <Iconify icon="eva:checkmark-circle-2-fill" sx={{ width: 14, height: 14 }} />
                               Approved
                             </Box>
+                          ) : row.tlStatus === 'rejected' ? (
+                            <Tooltip title={`Rejected by TL: ${row.tlRejectionReason || 'No reason provided'}`} arrow>
+                              <Box
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  px: 1.2,
+                                  py: 0.4,
+                                  borderRadius: 1,
+                                  bgcolor: '#ffebee',
+                                  color: '#d32f2f',
+                                  fontWeight: 600,
+                                  fontSize: '0.75rem',
+                                  whiteSpace: 'nowrap',
+                                  cursor: 'help',
+                                }}
+                              >
+                                <Iconify icon="eva:close-circle-fill" sx={{ width: 14, height: 14 }} />
+                                Rejected
+                              </Box>
+                            </Tooltip>
                           ) : (
-                            <Button
-                              variant="contained"
-                              size="small"
-                              startIcon={<Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: '#fff !important', width: 14, height: 14 }} />}
+                            <Stack direction="row" spacing={0.8} alignItems="center">
+                              <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: '#fff !important', width: 14, height: 14 }} />}
+                                sx={{
+                                  textTransform: 'none',
+                                  fontWeight: 600,
+                                  fontSize: '0.75rem',
+                                  py: 0.4,
+                                  px: 1.2,
+                                  borderRadius: 1,
+                                  color: '#fff !important',
+                                  bgcolor: '#2e7d32',
+                                  boxShadow: 'none',
+                                  '&:hover': {
+                                    bgcolor: '#1b5e20',
+                                    boxShadow: 'none',
+                                  },
+                                  '& .MuiButton-startIcon': { color: '#ffffff !important' },
+                                  '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleApprove(row._id);
+                                }}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                size="small"
+                                sx={{
+                                  textTransform: 'none',
+                                  fontWeight: 600,
+                                  fontSize: '0.75rem',
+                                  py: 0.4,
+                                  px: 1,
+                                  borderRadius: 1,
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRejectOpen(row._id);
+                                }}
+                              >
+                                Reject
+                              </Button>
+                            </Stack>
+                          )}
+                        </TableCell>
+                        <TableCell align="left">
+                          {row.bullionStatus === 'approved' ? (
+                            <Box
                               sx={{
-                                textTransform: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                px: 1.2,
+                                py: 0.4,
+                                borderRadius: 1,
+                                bgcolor: 'rgba(46, 125, 50, 0.12)',
+                                color: '#2e7d32',
                                 fontWeight: 600,
                                 fontSize: '0.75rem',
-                                py: 0.4,
-                                px: 1.4,
-                                borderRadius: 1,
-                                color: '#fff !important',
-                                bgcolor: '#2e7d32',
-                                boxShadow: 'none',
-                                '&:hover': {
-                                  bgcolor: '#1b5e20',
-                                  boxShadow: 'none',
-                                },
-                                '& .MuiButton-startIcon': { color: '#ffffff !important' },
-                                '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleApprove(row._id);
+                                whiteSpace: 'nowrap',
                               }}
                             >
-                              Approve
-                            </Button>
+                              <Iconify icon="eva:checkmark-circle-2-fill" sx={{ width: 14, height: 14 }} />
+                              Approved
+                            </Box>
+                          ) : row.bullionStatus === 'rejected' ? (
+                            <Tooltip title={`Bullion Rejection: ${row.bullionRejectionReason || 'No reason'}`} arrow>
+                              <Box
+                                sx={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  px: 1.2,
+                                  py: 0.4,
+                                  borderRadius: 1,
+                                  bgcolor: '#ffebee',
+                                  color: '#d32f2f',
+                                  fontWeight: 600,
+                                  fontSize: '0.75rem',
+                                  whiteSpace: 'nowrap',
+                                  cursor: 'help',
+                                }}
+                              >
+                                <Iconify icon="eva:close-circle-fill" sx={{ width: 14, height: 14 }} />
+                                Rejected
+                              </Box>
+                            </Tooltip>
+                          ) : (row.tlStatus === 'approved' || row.isMovedToBullionDesk) ? (
+                            <Box
+                              sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                px: 1.2,
+                                py: 0.4,
+                                borderRadius: 1,
+                                bgcolor: '#e6f7ff',
+                                color: '#096dd9',
+                                fontWeight: 600,
+                                fontSize: '0.75rem',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              <Iconify icon="eva:clock-fill" sx={{ width: 14, height: 14 }} />
+                              In Review
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" sx={{ color: 'text.disabled' }}>-</Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="left">
+                          {row.assignedExecutive?.employee?.name || row.assignedExecutiveName ? (
+                            <Tooltip title={row.assignedExecutive?.employee?.phoneNumber ? `Call: ${row.assignedExecutive.employee.phoneNumber}` : ''} arrow>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Iconify icon="eva:person-done-fill" sx={{ color: '#7b1fa2', width: 16, height: 16 }} />
+                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#4a148c', whiteSpace: 'nowrap' }}>
+                                  {row.assignedExecutive?.employee?.name || row.assignedExecutiveName}
+                                </Typography>
+                              </Box>
+                            </Tooltip>
+                          ) : row.bullionStatus === 'approved' ? (
+                            <Chip label="Awaiting Alloc" size="small" variant="outlined" color="info" sx={{ fontSize: '0.7rem', height: 22 }} />
+                          ) : (
+                            <Typography variant="body2" sx={{ color: 'text.disabled' }}>-</Typography>
                           )}
                         </TableCell>
                         <TableCell
@@ -645,12 +820,12 @@ export default function TelecallerTLLeads({ title = "Telecaller-TL Business Lead
                   })}
                   {emptyRows > 0 && (
                     <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={11} />
+                      <TableCell colSpan={13} />
                     </TableRow>
                   )}
                   {filteredData?.length === 0 && (
                     <TableRow>
-                      <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
+                      <TableCell align="center" colSpan={13} sx={{ py: 3 }}>
                         <Paper sx={{ textAlign: 'center' }}>
                           <Typography paragraph>No business leads found</Typography>
                         </Paper>
@@ -774,7 +949,49 @@ export default function TelecallerTLLeads({ title = "Telecaller-TL Business Lead
             <Typography variant="subtitle2">Follow Ups</Typography>
           </Card>
 
+          <Card
+            onClick={() => {
+              setPage(0);
+              setCurrentTab('converted');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            sx={{
+              flex: 1,
+              p: 2.5,
+              textAlign: 'center',
+              bgcolor: '#fff3d6',
+              color: '#7a4f01',
+              cursor: 'pointer',
+              outline: currentTab === 'converted' ? '3px solid #7a4f01' : 'none',
+              transform: currentTab === 'converted' ? 'scale(1.03)' : 'none',
+              transition: 'all 0.2s',
+            }}
+          >
+            <Typography variant="h3">{data?.filter((row) => row.status === 'converted').length || 0}</Typography>
+            <Typography variant="subtitle2">Converted Deals</Typography>
+          </Card>
 
+          <Card
+            onClick={() => {
+              setPage(0);
+              setCurrentTab('rejected');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            sx={{
+              flex: 1,
+              p: 2.5,
+              textAlign: 'center',
+              bgcolor: '#ffebee',
+              color: '#d32f2f',
+              cursor: 'pointer',
+              outline: currentTab === 'rejected' ? '3px solid #d32f2f' : 'none',
+              transform: currentTab === 'rejected' ? 'scale(1.03)' : 'none',
+              transition: 'all 0.2s',
+            }}
+          >
+            <Typography variant="h3">{data?.filter((row) => row.tlStatus === 'rejected' || row.bullionStatus === 'rejected' || row.status === 'rejected').length || 0}</Typography>
+            <Typography variant="subtitle2">Rejected Deals</Typography>
+          </Card>
         </Box>
       </Container>
 
@@ -902,6 +1119,40 @@ export default function TelecallerTLLeads({ title = "Telecaller-TL Business Lead
           </Stack>
         </Box>
       </Modal>
+
+      {/* Quick TL Reject Dialog */}
+      <Dialog open={openRejectModal} onClose={() => setOpenRejectModal(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ color: '#d32f2f', fontWeight: 'bold' }}>Reject Business Lead</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+            Are you sure you want to reject this lead? You can optionally enter a reason below so the telecaller understands why.
+          </Typography>
+          <TextField
+            fullWidth
+            label="Rejection Reason"
+            variant="outlined"
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            multiline
+            rows={3}
+            autoFocus
+            placeholder="e.g., Incomplete customer documents, Customer unreachable, etc."
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setOpenRejectModal(false)} disabled={rejecting}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleRejectSubmit}
+            disabled={rejecting}
+          >
+            {rejecting ? 'Rejecting...' : 'Confirm Reject'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <AddCallLogModal
         open={autoOpenLogModal}

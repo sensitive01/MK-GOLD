@@ -157,8 +157,10 @@ branchRouter.get("/transit/get", transit.findTransitData);
 branchRouter.post("/transit/get", transit.findTransitData);
 branchRouter.get("/transit/get/:id", transit.getTransitById);
 branchRouter.post("/transit/create", transit.createTransitData);
-// branchRouter.delete("/transit/delete/:id", transit.deleteTransitById);
-// branchRouter.post("/transit/delete/:id", transit.deleteTransitById);
+branchRouter.post("/transit/batch-create", transit.batchCreateTransitData);
+branchRouter.post("/transit/update/:id", transit.updateTransitData);
+branchRouter.post("/transit/delete/:id", transit.deleteTransitById);
+branchRouter.delete("/transit/delete/:id", transit.deleteTransitById);
 
 branchRouter.get("/file-upload/get", fileUpload.find);
 branchRouter.post("/file-upload/get", fileUpload.find);

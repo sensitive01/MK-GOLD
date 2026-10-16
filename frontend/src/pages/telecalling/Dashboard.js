@@ -90,6 +90,18 @@ export default function DashboardPage() {
 
           <Grid item xs={12} sm={6} md={3}>
             <AppWidgetSummary
+              title="Moved to Business"
+              total={stats?.businessMoved || 0}
+              icon={'mdi:trending-up'}
+              bgColor="#F3E5F5"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/telecalling/leads', { state: { tab: 'business' } })}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <AppWidgetSummary
               title="Converted (This Month)"
               total={stats?.businessConverted}
               icon={'mdi:briefcase-check'}

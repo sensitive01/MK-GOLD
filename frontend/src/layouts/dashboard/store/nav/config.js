@@ -1,3 +1,5 @@
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import MoveToInboxIcon from '@mui/icons-material/MoveToInbox';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -14,10 +16,15 @@ const navConfig = [
     path: '/store/dashboard',
     icon: icon('ic_analytics'),
   },
+  // {
+  //   title: 'Transit',
+  //   path: '/store/transit',
+  //   icon: <AssessmentIcon sx={{ width: 1, height: 1 }} />,
+  // },
   {
-    title: 'Transit',
+    title: 'Inward Transit',
     path: '/store/gold-transit',
-    icon: <LocalShippingIcon sx={{ width: 1, height: 1 }} />,
+    icon: <MoveToInboxIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Transit Outwards',

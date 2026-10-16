@@ -544,10 +544,26 @@ async function getLeadStats(user = null) {
       }
     }
 
-    console.log('Lead Stats Query:', query);
-    console.log('Stats Result:', { totalLeads, pendingLeads, goldRate, silverRate, todaysFollowups, businessConverted });
+    // Business Pipeline Stats
+    const businessMoved = await Lead.countDocuments({ ...query, isMovedToBusiness: true });
+    const tlPendingReview = await Lead.countDocuments({
+      ...query,
+      isMovedToBusiness: true,
+      $or: [{ tlStatus: "pending" }, { tlStatus: { $exists: false } }],
+      status: { $ne: "rejected" },
+    });
+    const bullionPendingReview = await Lead.countDocuments({
+      ...query,
+      isMovedToBusiness: true,
+      tlStatus: "approved",
+      $or: [{ bullionStatus: "pending" }, { bullionStatus: { $exists: false } }],
+      status: { $ne: "rejected" },
+    });
 
-    return { totalLeads, pendingLeads, goldRate, silverRate, todaysFollowups, businessConverted };
+    console.log('Lead Stats Query:', query);
+    console.log('Stats Result:', { totalLeads, pendingLeads, goldRate, silverRate, todaysFollowups, businessConverted, businessMoved, tlPendingReview, bullionPendingReview });
+
+    return { totalLeads, pendingLeads, goldRate, silverRate, todaysFollowups, businessConverted, businessMoved, tlPendingReview, bullionPendingReview };
   } catch (err) {
     throw err;
   }

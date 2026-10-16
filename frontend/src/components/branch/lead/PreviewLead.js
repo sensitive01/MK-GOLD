@@ -26,6 +26,11 @@ import {
   IconButton,
   Chip,
   CircularProgress,
+  Stepper,
+  Step,
+  StepLabel,
+  Alert,
+  Tooltip,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
@@ -513,7 +518,25 @@ function PreviewLead(props) {
             )
           )}
           {['telecaller_tl', 'telecaller-tl'].includes(auth?.user?.userType?.toLowerCase()) && (
-            data.tlStatus === 'approved' || data.isMovedToBullionDesk ? (
+            data.tlStatus === 'rejected' ? (
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 2,
+                  py: 0.8,
+                  borderRadius: 1,
+                  bgcolor: '#ffebee',
+                  color: '#d32f2f',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                }}
+              >
+                <Iconify icon="eva:close-circle-fill" sx={{ width: 18, height: 18 }} />
+                Rejected by TL
+              </Box>
+            ) : data.tlStatus === 'approved' || data.isMovedToBullionDesk ? (
               <Box
                 sx={{
                   display: 'inline-flex',
@@ -532,21 +555,35 @@ function PreviewLead(props) {
                 Approved & Moved to Bullion Desk
               </Box>
             ) : (
-              <Button
-                variant="contained"
-                onClick={handleTLApprove}
-                startIcon={<Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: '#ffffff !important' }} />}
-                sx={{
-                  bgcolor: '#2e7d32',
-                  color: '#ffffff !important',
-                  fontWeight: 600,
-                  '&:hover': { bgcolor: '#1b5e20' },
-                  '& .MuiButton-startIcon': { color: '#ffffff !important' },
-                  '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
-                }}
-              >
-                Approve
-              </Button>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Button
+                  variant="contained"
+                  onClick={handleTLApprove}
+                  startIcon={<Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: '#ffffff !important' }} />}
+                  sx={{
+                    bgcolor: '#2e7d32',
+                    color: '#ffffff !important',
+                    fontWeight: 600,
+                    '&:hover': { bgcolor: '#1b5e20' },
+                    '& .MuiButton-startIcon': { color: '#ffffff !important' },
+                    '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
+                  }}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => {
+                    setRejectReason('');
+                    setOpenRejectDialog(true);
+                  }}
+                  startIcon={<Iconify icon="eva:close-circle-fill" />}
+                  sx={{ fontWeight: 600 }}
+                >
+                  Reject
+                </Button>
+              </Stack>
             )
           )}
           {['bullion_desk', 'bullion-desk'].includes(auth?.user?.userType?.toLowerCase()) && (
@@ -640,6 +677,376 @@ function PreviewLead(props) {
           )}
         </Stack>
       </Stack>
+
+      {/* Business Details & Approval Journey Card */}
+      {(data.isMovedToBusiness || data.tlStatus || data.bullionStatus) && (
+        <Card
+          sx={{
+            p: 3,
+            mb: 4,
+            borderRadius: 2,
+            border: '1px solid #e1bee7',
+            background: 'linear-gradient(180deg, #faf5fc 0%, #ffffff 100%)',
+            boxShadow: '0 4px 20px rgba(138, 27, 159, 0.06)',
+          }}
+        >
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            justifyContent="space-between"
+            mb={2.5}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 1.5,
+                  bgcolor: '#8A1B9F',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Iconify icon="eva:briefcase-fill" width={22} height={22} />
+              </Box>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#330033' }}>
+                  Business Deal & Approval Journey
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#666' }}>
+                  Live tracking from Telecaller submission to Branch conversion
+                </Typography>
+              </Box>
+            </Box>
+
+            <Chip
+              label={
+                data.status === 'converted'
+                  ? 'Deal Converted / Closed'
+                  : data.tlStatus === 'rejected' || data.bullionStatus === 'rejected' || data.status === 'rejected'
+                  ? 'Deal Dropped / Rejected'
+                  : Boolean(data.assignedExecutive || data.assignedExecutiveName)
+                  ? 'Executive Visiting / In Progress'
+                  : data.bullionStatus === 'approved'
+                  ? 'Approved (Assigning Executive)'
+                  : data.tlStatus === 'approved' || data.isMovedToBullionDesk
+                  ? 'Waiting for Bullion Clearance'
+                  : 'Waiting for TL Approval'
+              }
+              color={
+                data.status === 'converted'
+                  ? 'success'
+                  : data.tlStatus === 'rejected' || data.bullionStatus === 'rejected' || data.status === 'rejected'
+                  ? 'error'
+                  : Boolean(data.assignedExecutive || data.assignedExecutiveName)
+                  ? 'secondary'
+                  : data.bullionStatus === 'approved'
+                  ? 'info'
+                  : 'warning'
+              }
+              size="small"
+              sx={{ fontWeight: 600, mt: { xs: 1, sm: 0 } }}
+            />
+          </Stack>
+
+          {/* Rejection Alert */}
+          {(data.tlStatus === 'rejected' || data.bullionStatus === 'rejected') && (
+            <Alert
+              severity="error"
+              icon={<Iconify icon="eva:alert-triangle-fill" />}
+              sx={{ mb: 3, borderRadius: 1.5, border: '1px solid #ffcdd2' }}
+            >
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Lead Rejected by {data.tlStatus === 'rejected' ? 'Team Leader (TL)' : 'Bullion Desk'}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.5 }}>
+                <strong>Reason:</strong> {data.tlRejectionReason || data.bullionRejectionReason || 'No specific rejection reason provided.'}
+              </Typography>
+            </Alert>
+          )}
+
+          {/* Multi-Stage Stepper */}
+          <Box sx={{ width: '100%', py: 1.5, px: { xs: 0, md: 1 }, overflowX: 'auto' }}>
+            <Stepper
+              activeStep={
+                data.status === 'converted'
+                  ? 5
+                  : Boolean(data.assignedExecutive || data.assignedExecutiveName)
+                  ? 4
+                  : data.bullionStatus === 'approved'
+                  ? 3
+                  : data.tlStatus === 'approved' || data.isMovedToBullionDesk
+                  ? 2
+                  : 1
+              }
+              alternativeLabel
+            >
+              {/* Step 1: Moved to Business */}
+              <Step completed={Boolean(data.isMovedToBusiness)}>
+                <StepLabel
+                  StepIconProps={{
+                    sx: {
+                      '&.Mui-completed': { color: '#2e7d32' },
+                      '&.Mui-active': { color: '#8A1B9F' },
+                    },
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.85rem' }}>
+                    1. Moved to Business
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                    By: {data.movedToBusinessBy?.employee?.name || data.movedToBusinessBy?.username || 'Telecaller'}
+                  </Typography>
+                  {data.movedToBusinessAt && (
+                    <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.72rem' }}>
+                      {moment(data.movedToBusinessAt).format('DD MMM, hh:mm A')}
+                    </Typography>
+                  )}
+                </StepLabel>
+              </Step>
+
+              {/* Step 2: TL Approval */}
+              <Step
+                completed={data.tlStatus === 'approved' || Boolean(data.isMovedToBullionDesk)}
+                error={data.tlStatus === 'rejected'}
+              >
+                <StepLabel
+                  StepIconProps={{
+                    sx: {
+                      '&.Mui-completed': { color: '#2e7d32' },
+                      '&.Mui-active': { color: '#8A1B9F' },
+                    },
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.85rem' }}>
+                    2. TL Approval
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: 'block',
+                      fontWeight: 600,
+                      color:
+                        data.tlStatus === 'approved' || data.isMovedToBullionDesk
+                          ? '#2e7d32'
+                          : data.tlStatus === 'rejected'
+                          ? '#d32f2f'
+                          : '#ed6c02',
+                    }}
+                  >
+                    {data.tlStatus === 'approved' || data.isMovedToBullionDesk
+                      ? `Approved by ${data.tlApprovedBy?.employee?.name || data.tlApprovedBy?.username || 'TL'}`
+                      : data.tlStatus === 'rejected'
+                      ? 'Rejected by TL'
+                      : 'Pending Review'}
+                  </Typography>
+                  {data.tlApprovedAt && (
+                    <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.72rem' }}>
+                      {moment(data.tlApprovedAt).format('DD MMM, hh:mm A')}
+                    </Typography>
+                  )}
+                </StepLabel>
+              </Step>
+
+              {/* Step 3: Bullion Desk */}
+              <Step
+                completed={data.bullionStatus === 'approved'}
+                error={data.bullionStatus === 'rejected'}
+              >
+                <StepLabel
+                  StepIconProps={{
+                    sx: {
+                      '&.Mui-completed': { color: '#2e7d32' },
+                      '&.Mui-active': { color: '#8A1B9F' },
+                    },
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.85rem' }}>
+                    3. Bullion Clearance
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: 'block',
+                      fontWeight: 600,
+                      color:
+                        data.bullionStatus === 'approved'
+                          ? '#2e7d32'
+                          : data.bullionStatus === 'rejected'
+                          ? '#d32f2f'
+                          : (data.tlStatus === 'approved' || data.isMovedToBullionDesk)
+                          ? '#1976d2'
+                          : 'text.secondary',
+                    }}
+                  >
+                    {data.bullionStatus === 'approved'
+                      ? `Approved by ${data.bullionApprovedBy?.employee?.name || data.bullionApprovedBy?.username || 'Bullion Desk'}`
+                      : data.bullionStatus === 'rejected'
+                      ? 'Rejected'
+                      : (data.tlStatus === 'approved' || data.isMovedToBullionDesk)
+                      ? 'In Review'
+                      : 'Waiting for TL'}
+                  </Typography>
+                  {data.bullionApprovedAt && (
+                    <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.72rem' }}>
+                      {moment(data.bullionApprovedAt).format('DD MMM, hh:mm A')}
+                    </Typography>
+                  )}
+                </StepLabel>
+              </Step>
+
+              {/* Step 4: Executive Assignment */}
+              <Step completed={Boolean(data.assignedExecutive || data.assignedExecutiveName)}>
+                <StepLabel
+                  StepIconProps={{
+                    sx: {
+                      '&.Mui-completed': { color: '#2e7d32' },
+                      '&.Mui-active': { color: '#8A1B9F' },
+                    },
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.85rem' }}>
+                    4. Executive Allocated
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: 'block',
+                      fontWeight: 600,
+                      color: Boolean(data.assignedExecutive || data.assignedExecutiveName) ? '#7b1fa2' : 'text.secondary',
+                    }}
+                  >
+                    {data.assignedExecutive?.employee?.name || data.assignedExecutiveName || (data.bullionStatus === 'approved' ? 'Awaiting Allocation' : 'Waiting')}
+                  </Typography>
+                  {data.assignedExecutive?.employee?.phoneNumber && (
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.72rem', display: 'block' }}>
+                      📞 {data.assignedExecutive.employee.phoneNumber}
+                    </Typography>
+                  )}
+                </StepLabel>
+              </Step>
+
+              {/* Step 5: Deal Conversion */}
+              <Step
+                completed={data.status === 'converted'}
+                error={data.status === 'rejected' && (data.tlStatus === 'rejected' || data.bullionStatus === 'rejected')}
+              >
+                <StepLabel
+                  StepIconProps={{
+                    sx: {
+                      '&.Mui-completed': { color: '#2e7d32' },
+                      '&.Mui-active': { color: '#8A1B9F' },
+                    },
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.85rem' }}>
+                    5. Deal Conversion
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: 'block',
+                      fontWeight: 600,
+                      color:
+                        data.status === 'converted'
+                          ? '#2e7d32'
+                          : data.status === 'rejected'
+                          ? '#d32f2f'
+                          : Boolean(data.assignedExecutive || data.assignedExecutiveName)
+                          ? '#ed6c02'
+                          : 'text.secondary',
+                    }}
+                  >
+                    {data.status === 'converted'
+                      ? 'Gold Purchased / Converted 🏆'
+                      : data.status === 'rejected'
+                      ? 'Rejected / Dropped'
+                      : Boolean(data.assignedExecutive || data.assignedExecutiveName)
+                      ? 'Branch Visit in Progress'
+                      : 'Pending'}
+                  </Typography>
+                </StepLabel>
+              </Step>
+            </Stepper>
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          {/* Business Details Quick Cards */}
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ p: 1.5, bgcolor: '#ffffff', borderRadius: 1.5, border: '1px solid #ede7f6' }}>
+                <Typography variant="caption" sx={{ color: '#8A1B9F', fontWeight: 600, textTransform: 'uppercase' }}>
+                  Metal & Type
+                </Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, textTransform: 'capitalize' }}>
+                  {data.category || 'Gold'} ({data.type || 'physical'})
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#444' }}>
+                  Weight: <strong>{data.weight ? `${data.weight} ${data.unit || 'gm'}` : 'N/A'}</strong>
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ p: 1.5, bgcolor: '#ffffff', borderRadius: 1.5, border: '1px solid #ede7f6' }}>
+                <Typography variant="caption" sx={{ color: '#8A1B9F', fontWeight: 600, textTransform: 'uppercase' }}>
+                  Financial Estimate
+                </Typography>
+                {data.type === 'pledged' ? (
+                  <>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#b71c1c' }}>
+                      Release: ₹{Number(data.releaseAmount || 0).toLocaleString('en-IN')}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#555', fontSize: '0.8rem' }}>
+                      Pledged: ₹{Number(data.pledgedAmount || 0).toLocaleString('en-IN')}
+                    </Typography>
+                  </>
+                ) : (
+                  <>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#2e7d32' }}>
+                      Physical Gold
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#555', fontSize: '0.8rem' }}>
+                      Direct Branch Purchase
+                    </Typography>
+                  </>
+                )}
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ p: 1.5, bgcolor: '#ffffff', borderRadius: 1.5, border: '1px solid #ede7f6' }}>
+                <Typography variant="caption" sx={{ color: '#8A1B9F', fontWeight: 600, textTransform: 'uppercase' }}>
+                  Target Branch
+                </Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  {data.branch?.branchName || (branches.find((b) => b._id === (data.branch?._id || data.branch))?.branchName) || 'Branch Not Assigned'}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#666', fontSize: '0.8rem' }}>
+                  Location: {[data.city, data.state].filter(Boolean).join(', ') || 'N/A'}
+                </Typography>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Box sx={{ p: 1.5, bgcolor: '#ffffff', borderRadius: 1.5, border: '1px solid #ede7f6' }}>
+                <Typography variant="caption" sx={{ color: '#8A1B9F', fontWeight: 600, textTransform: 'uppercase' }}>
+                  Assigned Executive
+                </Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  {data.assignedExecutive?.employee?.name || data.assignedExecutiveName || 'Not Assigned Yet'}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#666', fontSize: '0.8rem' }}>
+                  {data.assignedExecutive?.employee?.phoneNumber ? `📞 ${data.assignedExecutive.employee.phoneNumber}` : (data.bullionStatus === 'approved' ? 'Allocation Pending' : 'Waiting for Approval')}
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </Card>
+      )}
 
       <Grid container spacing={3}>
         <Grid item xs={12} sm={3}>

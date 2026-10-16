@@ -75,11 +75,12 @@ export default function StoreDashboard() {
   const totalOrnaments = movedTransits.reduce((acc, curr) => acc + (Number(curr.numberOfOrnaments) || 0), 0);
 
   const quickLinks = [
-    { title: 'Transit', path: '/store/gold-transit', icon: 'mdi:truck-delivery', bgColor: '#FFD700' },
-    { title: 'Transit Outwards', path: '/store/transit-outwards', icon: 'mdi:send', bgColor: '#fff' },
-    { title: 'Attendance', path: '/store/attendance', icon: 'mdi:clock-check', bgColor: '#FFD700' },
-    { title: 'Leaves', path: '/store/leave', icon: 'mdi:calendar-remove', bgColor: '#fff' },
-    { title: 'Profile', path: '/store/profile', icon: 'mdi:account-circle', bgColor: '#FFD700' },
+    { title: 'Transit', path: '/store/transit', icon: 'mdi:truck-delivery', bgColor: '#FFD700' },
+    { title: 'Inward Transit', path: '/store/gold-transit', icon: 'mdi:inbox-arrow-down', bgColor: '#fff' },
+    { title: 'Transit Outwards', path: '/store/transit-outwards', icon: 'mdi:send', bgColor: '#FFD700' },
+    { title: 'Attendance', path: '/store/attendance', icon: 'mdi:clock-check', bgColor: '#fff' },
+    { title: 'Leaves', path: '/store/leave', icon: 'mdi:calendar-remove', bgColor: '#FFD700' },
+    { title: 'Profile', path: '/store/profile', icon: 'mdi:account-circle', bgColor: '#fff' },
   ];
 
   return (

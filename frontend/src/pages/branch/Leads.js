@@ -33,6 +33,8 @@ import {
   DialogActions,
   Tabs,
   Tab,
+  Tooltip,
+  Chip,
 } from '@mui/material';
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
@@ -732,6 +734,9 @@ export default function Leads({ title = "Leads Management" }) {
         const lastDisp = row.dispositions[row.dispositions.length - 1].status;
         return ['Callback', 'Follow Up', 'Planning to Visit', 'Visited Branch'].includes(lastDisp);
       }
+      if (currentTab === 'business') {
+        return row.isMovedToBusiness === true;
+      }
       if (currentTab === 'rejected') {
         return row.status === 'rejected';
       }
@@ -932,6 +937,7 @@ export default function Leads({ title = "Leads Management" }) {
               <Tab value="pending" label="Pending" />
               <Tab value="my_leads" label="My Leads" />
               <Tab value="follow_ups" label="Follow Ups" />
+              <Tab value="business" label="My Business" />
               <Tab value="exclusive" label="Hot Leads" />
               <Tab value="rejected" label="Rejected" />
               <Tab value="converted" label="Converted" />
@@ -1053,24 +1059,148 @@ export default function Leads({ title = "Leads Management" }) {
                         {isTelecallerRole && (
                           <TableCell align="left" onClick={(e) => e.stopPropagation()}>
                             {row.isMovedToBusiness ? (
-                              <Box
-                                sx={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 0.5,
-                                  px: 1.2,
-                                  py: 0.4,
-                                  borderRadius: 1,
-                                  bgcolor: 'rgba(46, 125, 50, 0.12)',
-                                  color: '#2e7d32',
-                                  fontWeight: 600,
-                                  fontSize: '0.75rem',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                <Iconify icon="eva:checkmark-circle-2-fill" sx={{ width: 16, height: 16 }} />
-                                Moved to Business
-                              </Box>
+                              row.status === 'converted' ? (
+                                <Box
+                                  sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    px: 1.2,
+                                    py: 0.4,
+                                    borderRadius: 1,
+                                    bgcolor: 'rgba(46, 125, 50, 0.15)',
+                                    color: '#2e7d32',
+                                    fontWeight: 700,
+                                    fontSize: '0.75rem',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  <Iconify icon="eva:checkmark-circle-2-fill" sx={{ width: 16, height: 16 }} />
+                                  Converted 🏆
+                                </Box>
+                              ) : row.tlStatus === 'rejected' ? (
+                                <Tooltip title={`Rejected by TL: ${row.tlRejectionReason || 'No reason provided'}`} arrow>
+                                  <Box
+                                    sx={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 0.5,
+                                      px: 1.2,
+                                      py: 0.4,
+                                      borderRadius: 1,
+                                      bgcolor: '#ffebee',
+                                      color: '#d32f2f',
+                                      fontWeight: 600,
+                                      fontSize: '0.75rem',
+                                      whiteSpace: 'nowrap',
+                                      cursor: 'help',
+                                    }}
+                                  >
+                                    <Iconify icon="eva:close-circle-fill" sx={{ width: 16, height: 16 }} />
+                                    TL Rejected
+                                  </Box>
+                                </Tooltip>
+                              ) : row.bullionStatus === 'rejected' ? (
+                                <Tooltip title={`Rejected by Bullion: ${row.bullionRejectionReason || 'No reason provided'}`} arrow>
+                                  <Box
+                                    sx={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 0.5,
+                                      px: 1.2,
+                                      py: 0.4,
+                                      borderRadius: 1,
+                                      bgcolor: '#ffebee',
+                                      color: '#d32f2f',
+                                      fontWeight: 600,
+                                      fontSize: '0.75rem',
+                                      whiteSpace: 'nowrap',
+                                      cursor: 'help',
+                                    }}
+                                  >
+                                    <Iconify icon="eva:close-circle-fill" sx={{ width: 16, height: 16 }} />
+                                    Bullion Rejected
+                                  </Box>
+                                </Tooltip>
+                              ) : row.assignedExecutive || row.assignedExecutiveName ? (
+                                <Tooltip title={`Assigned: ${row.assignedExecutive?.employee?.name || row.assignedExecutiveName} ${row.assignedExecutive?.employee?.phoneNumber ? `(${row.assignedExecutive.employee.phoneNumber})` : ''}`} arrow>
+                                  <Box
+                                    sx={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 0.5,
+                                      px: 1.2,
+                                      py: 0.4,
+                                      borderRadius: 1,
+                                      bgcolor: '#f3e5f5',
+                                      color: '#7b1fa2',
+                                      fontWeight: 600,
+                                      fontSize: '0.75rem',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    <Iconify icon="eva:person-done-fill" sx={{ width: 16, height: 16 }} />
+                                    Exec: {row.assignedExecutive?.employee?.name || row.assignedExecutiveName}
+                                  </Box>
+                                </Tooltip>
+                              ) : row.bullionStatus === 'approved' ? (
+                                <Box
+                                  sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    px: 1.2,
+                                    py: 0.4,
+                                    borderRadius: 1,
+                                    bgcolor: '#e0f7fa',
+                                    color: '#00838f',
+                                    fontWeight: 600,
+                                    fontSize: '0.75rem',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  <Iconify icon="eva:clock-fill" sx={{ width: 16, height: 16 }} />
+                                  Bullion Cleared
+                                </Box>
+                              ) : row.tlStatus === 'approved' || row.isMovedToBullionDesk ? (
+                                <Box
+                                  sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    px: 1.2,
+                                    py: 0.4,
+                                    borderRadius: 1,
+                                    bgcolor: '#e8eaf6',
+                                    color: '#283593',
+                                    fontWeight: 600,
+                                    fontSize: '0.75rem',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  <Iconify icon="eva:clock-fill" sx={{ width: 16, height: 16 }} />
+                                  Bullion Review
+                                </Box>
+                              ) : (
+                                <Box
+                                  sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    px: 1.2,
+                                    py: 0.4,
+                                    borderRadius: 1,
+                                    bgcolor: '#fff3e0',
+                                    color: '#e65100',
+                                    fontWeight: 600,
+                                    fontSize: '0.75rem',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  <Iconify icon="eva:clock-outline" sx={{ width: 16, height: 16 }} />
+                                  TL Pending
+                                </Box>
+                              )
                             ) : (
                               <Button
                                 variant="contained"
@@ -1235,6 +1365,14 @@ export default function Leads({ title = "Leads Management" }) {
                 return ['Callback', 'Follow Up', 'Planning to Visit', 'Visited Branch'].includes(lastDisp);
               }).length || 0}</Typography>
               <Typography variant="subtitle2">Follow Ups</Typography>
+            </Card>
+            {/* My Business */}
+            <Card
+              onClick={() => { setPage(0); setCurrentTab('business'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              sx={{ flex: 1, p: 3, textAlign: 'center', bgcolor: '#ede7f6', color: '#512da8', cursor: 'pointer', outline: currentTab === 'business' ? '3px solid #512da8' : 'none', transform: currentTab === 'business' ? 'scale(1.05)' : 'none', transition: 'all 0.2s' }}
+            >
+              <Typography variant="h3">{data?.filter(row => row.isMovedToBusiness === true).length || 0}</Typography>
+              <Typography variant="subtitle2">My Business</Typography>
             </Card>
             {/* Exclusive */}
             <Card
