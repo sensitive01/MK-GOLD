@@ -297,7 +297,6 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
                 )}
               </Box>
             )}
-            {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && (
             <Button
               variant="contained"
               startIcon={<Iconify icon="eva:plus-fill" />}
@@ -327,7 +326,6 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
             >
               New Release
             </Button>
-          )}
         </Stack>
       </Stack>
         <Scrollbar>
@@ -378,7 +376,7 @@ function Release({ setNotify, selectedUser, selectedRelease, setSelectedRelease,
                       </span>
                     </TableCell>
                     <TableCell align="left">
-                      {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && !(selectedUser?.sales?.some(sale => sale.release?.includes(e._id))) && (
+                      {!(selectedUser?.sales?.some(sale => sale.release?.includes(e._id))) && (
                         <Stack direction="row" spacing={1}>
                           <Button
                             variant="contained"

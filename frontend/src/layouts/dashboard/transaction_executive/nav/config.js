@@ -16,7 +16,7 @@ const navConfig = [
     icon: icon('ic_analytics'),
   },
   {
-    title: 'Sales',
+    title: 'Billing',
     path: '/transaction-executive/sale',
     icon: <PointOfSaleIcon sx={{ width: 1, height: 1 }} />,
   },

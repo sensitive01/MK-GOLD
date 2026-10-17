@@ -455,7 +455,7 @@ export default function Sale() {
             mb={{ xs: 2.5, sm: 5 }}
           >
             <Typography variant="h4" gutterBottom sx={{ color: '#fff', fontSize: { xs: '1.5rem', sm: '2rem' }, fontWeight: 700, mb: { xs: 0, sm: 1 } }}>
-              Sale
+              Billing
             </Typography>
             <Stack
               direction="row"
@@ -482,20 +482,18 @@ export default function Sale() {
                   Create Transit for Selected
                 </Button>
               )}
-              {auth.user?.userType?.toLowerCase() !== 'transaction_executive' && (
-                <Button
-                  variant="contained"
-                  startIcon={<Iconify icon="eva:plus-fill" />}
-                  onClick={() => {
-                    setSaleIdToEdit(null);
-                    setToggleContainer(true);
-                    setToggleContainerType('create');
-                  }}
-                  sx={{ height: 40 }}
-                >
-                  New Sale
-                </Button>
-              )}
+              <Button
+                variant="contained"
+                startIcon={<Iconify icon="eva:plus-fill" />}
+                onClick={() => {
+                  setSaleIdToEdit(null);
+                  setToggleContainer(true);
+                  setToggleContainerType('create');
+                }}
+                sx={{ height: 40 }}
+              >
+                New Sale
+              </Button>
             </Stack>
           </Stack>
 

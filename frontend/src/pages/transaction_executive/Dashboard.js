@@ -145,9 +145,9 @@ export default function DashboardAppPage() {
           <Grid item xs={12} sm={6} md={3}>
             <Link href="/transaction-executive/sale" underline="none">
               <AppWidgetSummary
-                title="Sales"
+                title="Billing"
                 total={false}
-                icon={'mdi:sale'}
+                icon={'mdi:file-document-edit'}
                 bgColor="#FFD700"
                 iconColor="#8A1B9F"
                 textColor="#000"
