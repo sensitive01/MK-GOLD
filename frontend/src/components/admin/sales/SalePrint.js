@@ -400,14 +400,7 @@ export default function SalePrint({ id }) {
                         &#8377; {serviceChargesAmount.toLocaleString('en-IN')}
                       </td>
                     </tr> */}
-                    <tr>
-                      <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>
-                        Ornaments Row Total :
-                      </td>
-                      <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>
-                        &#8377; {ornamentsRowTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                    </tr>
+
                     {isPledged && (
                       <tr>
                         <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>
