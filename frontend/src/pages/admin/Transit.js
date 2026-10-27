@@ -705,20 +705,66 @@ export default function Transit() {
             <Typography variant="subtitle2" gutterBottom>
               Store Proof Attachment:
             </Typography>
-            {selectedTransitObj?.storeProof?.uploadedFile || selectedTransitObj?.receivedProof?.uploadedFile ? (
-              (() => {
-                const proofUrl = selectedTransitObj.storeProof?.uploadedFile || selectedTransitObj.receivedProof?.uploadedFile;
-                return proofUrl.toLowerCase().endsWith('.pdf') ? (
-                  <Box component="iframe" src={proofUrl.startsWith('http') ? proofUrl : `${global.BASE_URL}/${proofUrl}`} title="store-proof" sx={{ width: '100%', height: 260, border: 'none', mb: 2 }} />
-                ) : (
-                  <Box component="img" src={proofUrl.startsWith('http') ? proofUrl : `${global.BASE_URL}/${proofUrl}`} alt="store-proof" sx={{ width: '100%', maxHeight: 260, objectFit: 'contain', mb: 2 }} />
+            {(() => {
+              let proofs = [];
+              if (Array.isArray(selectedTransitObj?.storeProofs) && selectedTransitObj.storeProofs.length > 0) {
+                proofs = selectedTransitObj.storeProofs;
+              } else if (selectedTransitObj?.storeProof) {
+                proofs = [selectedTransitObj.storeProof];
+              } else if (selectedTransitObj?.receivedProof) {
+                proofs = [selectedTransitObj.receivedProof];
+              }
+
+              const validList = proofs.map((p, idx) => {
+                if (!p) return null;
+                if (typeof p === 'object' && p.uploadedFile) {
+                  return { url: p.uploadedFile, name: p.uploadName || p.fileName || `Store Proof ${idx + 1}` };
+                }
+                if (typeof p === 'string' && (p.startsWith('http') || p.includes('/'))) {
+                  return { url: p, name: `Store Proof ${idx + 1}` };
+                }
+                return null;
+              }).filter(Boolean);
+
+              if (validList.length === 0) {
+                return (
+                  <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+                    No store proof attached.
+                  </Typography>
                 );
-              })()
-            ) : (
-              <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-                No store proof attached.
-              </Typography>
-            )}
+              }
+
+              return (
+                <Stack spacing={1.5} sx={{ mb: 2 }}>
+                  {validList.map((item, idx) => {
+                    const fullUrl = item.url.startsWith('http') ? item.url : `${global.BASE_URL}/${item.url}`;
+                    const isPdf = item.url.toLowerCase().endsWith('.pdf');
+                    return (
+                      <Box key={idx} sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1 }}>
+                        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                            {validList.length > 1 ? `Store Proof ${idx + 1}` : 'Store Proof'}
+                          </Typography>
+                          <Button
+                            size="small"
+                            variant="text"
+                            startIcon={<Iconify icon="eva:external-link-fill" />}
+                            onClick={() => window.open(fullUrl, '_blank')}
+                          >
+                            Open Original
+                          </Button>
+                        </Stack>
+                        {isPdf ? (
+                          <Box component="iframe" src={fullUrl} title={`store-proof-${idx}`} sx={{ width: '100%', height: 220, border: 'none' }} />
+                        ) : (
+                          <Box component="img" src={fullUrl} alt={`store-proof-${idx}`} sx={{ width: '100%', maxHeight: 220, objectFit: 'contain' }} />
+                        )}
+                      </Box>
+                    );
+                  })}
+                </Stack>
+              );
+            })()}
 
             {/* Origin Branch Proof & Details */}
             <Typography variant="subtitle2" sx={{ borderTop: '1px solid #eee', pt: 1.5, color: 'text.primary', fontWeight: 700 }}>
@@ -730,6 +776,46 @@ export default function Transit() {
             <Typography variant="body2" sx={{ mb: 1 }}>
               <strong>Branch Dispatch Notes:</strong> {selectedTransitObj?.notes || 'No dispatch notes.'}
             </Typography>
+            {(() => {
+              let branchProofs = [];
+              if (Array.isArray(selectedTransitObj?.proofs) && selectedTransitObj.proofs.length > 0) {
+                branchProofs = selectedTransitObj.proofs;
+              } else if (selectedTransitObj?.proof) {
+                branchProofs = [selectedTransitObj.proof];
+              }
+
+              const validBranchList = branchProofs.map((p, idx) => {
+                if (!p) return null;
+                if (typeof p === 'object' && p.uploadedFile) {
+                  return { url: p.uploadedFile, name: p.uploadName || p.fileName || `Dispatch Proof ${idx + 1}` };
+                }
+                if (typeof p === 'string' && (p.startsWith('http') || p.includes('/'))) {
+                  return { url: p, name: `Dispatch Proof ${idx + 1}` };
+                }
+                return null;
+              }).filter(Boolean);
+
+              if (validBranchList.length === 0) return null;
+
+              return (
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1, mb: 1.5 }}>
+                  {validBranchList.map((item, idx) => {
+                    const fullUrl = item.url.startsWith('http') ? item.url : `${global.BASE_URL}/${item.url}`;
+                    return (
+                      <Button
+                        key={idx}
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Iconify icon="eva:external-link-fill" />}
+                        onClick={() => window.open(fullUrl, '_blank')}
+                      >
+                        {validBranchList.length > 1 ? `Dispatch Proof ${idx + 1}` : 'View Dispatch Proof'}
+                      </Button>
+                    );
+                  })}
+                </Stack>
+              );
+            })()}
 
             {/* Admin Resolution */}
             <Typography variant="h6" gutterBottom sx={{ mt: 2, borderTop: '2px solid #ccc', pt: 2, color: 'primary.main' }}>

@@ -1455,7 +1455,9 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
             (t.proof && String(t.proof) === String(p._id)) ||
             (t.receivedProof && String(t.receivedProof) === String(p._id)) ||
             (t.storeProof && String(t.storeProof) === String(p._id)) ||
-            (t.adminProof && String(t.adminProof) === String(p._id))
+            (t.adminProof && String(t.adminProof) === String(p._id)) ||
+            (Array.isArray(t.proofs) && t.proofs.some(id => String(id?._id || id) === String(p._id))) ||
+            (Array.isArray(t.storeProofs) && t.storeProofs.some(id => String(id?._id || id) === String(p._id)))
         );
 
         const transitRef = matchedTransit?.transitId || p.documentNo || '-';
@@ -1624,7 +1626,11 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           m =>
             (m.meltProof && String(m.meltProof) === String(p._id)) ||
             (m.preMeltProof && String(m.preMeltProof) === String(p._id)) ||
-            (m.afterMeltProof && String(m.afterMeltProof) === String(p._id))
+            (m.afterMeltProof && String(m.afterMeltProof) === String(p._id)) ||
+            (m.purityPhoto && String(m.purityPhoto) === String(p._id)) ||
+            (Array.isArray(m.meltProofs) && m.meltProofs.some(id => String(id?._id || id) === String(p._id))) ||
+            (Array.isArray(m.preMeltProofs) && m.preMeltProofs.some(id => String(id?._id || id) === String(p._id))) ||
+            (Array.isArray(m.afterMeltProofs) && m.afterMeltProofs.some(id => String(id?._id || id) === String(p._id)))
         );
 
         const batchRef = matchedMelting?.batchId || p.documentNo || '-';

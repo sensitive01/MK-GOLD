@@ -812,6 +812,14 @@ function CreateSale(props) {
                     });
                     return;
                   }
+                  if (showOrnaments && ornaments?.some((o) => !o.purity || Number(o.purity) <= 0)) {
+                    props.setNotify({
+                      open: true,
+                      message: 'All ornaments must have a valid purity (%) specified',
+                      severity: 'error',
+                    });
+                    return;
+                  }
                   if (values.saleType === 'pledged' && !isReleaseCompleted) {
                     setOpenConfirmModal(true);
                   } else {

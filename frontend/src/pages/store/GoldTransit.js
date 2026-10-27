@@ -183,6 +183,7 @@ export default function StoreGoldTransit() {
   const [storeNotes, setStoreNotes] = useState('');
   const [storeDeviation, setStoreDeviation] = useState('no');
   const [storeProof, setStoreProof] = useState(null);
+  const [storeProofs, setStoreProofs] = useState([]);
   const [storeProofName, setStoreProofName] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -262,27 +263,55 @@ export default function StoreGoldTransit() {
   const selectedTransitObj = data?.find((item) => item._id === openId);
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
       setUploadLoading(true);
-      const formData = new FormData();
-      formData.append('uploadedFile', file);
-      formData.append('uploadName', 'store_transit_received_proof');
-      formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
-      const response = await createFile(formData);
+      const uploadedList = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('uploadedFile', file);
+        formData.append('uploadName', 'store_transit_received_proof');
+        formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
+        try {
+          const response = await createFile(formData);
+          if (response.status && response.data?._id) {
+            uploadedList.push({
+              _id: response.data._id,
+              name: file.name,
+              url: response.data.uploadedFile,
+            });
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
       setUploadLoading(false);
-      if (response.status) {
-        setStoreProof(response.data?._id);
-        setStoreProofName(file.name);
-        setNotify({ open: true, message: 'Store receipt proof uploaded successfully', severity: 'success' });
+      if (uploadedList.length > 0) {
+        setStoreProofs((prev) => {
+          const updated = [...prev, ...uploadedList];
+          setStoreProof(updated[0]?._id);
+          setStoreProofName(updated[0]?.name || '');
+          return updated;
+        });
+        setNotify({ open: true, message: `${uploadedList.length} proof file(s) uploaded successfully`, severity: 'success' });
       } else {
         setNotify({ open: true, message: 'File upload failed', severity: 'error' });
       }
+      e.target.value = '';
     }
   };
 
+  const handleRemoveStoreProof = (idx) => {
+    setStoreProofs((prev) => {
+      const updated = prev.filter((_, i) => i !== idx);
+      setStoreProof(updated[0]?._id || null);
+      setStoreProofName(updated[0]?.name || '');
+      return updated;
+    });
+  };
+
   const handleStoreReceiveSubmit = async () => {
-    if (!storeProof) {
+    if (!storeProof && storeProofs.length === 0) {
       setNotify({ open: true, message: 'Proof upload is required to receive transit into store', severity: 'warning' });
       return;
     }
@@ -291,7 +320,8 @@ export default function StoreGoldTransit() {
     const payload = {
       action: 'store_receive',
       deviations: storeDeviation,
-      storeProof: typeof storeProof === 'object' ? storeProof._id : storeProof,
+      storeProof: storeProofs[0]?._id || (typeof storeProof === 'object' ? storeProof._id : storeProof),
+      storeProofs: storeProofs.map((p) => p._id),
       storeNotes,
     };
 
@@ -713,6 +743,7 @@ export default function StoreGoldTransit() {
               setStoreNotes('');
               setStoreDeviation('no');
               setStoreProof(null);
+              setStoreProofs([]);
               setStoreProofName('');
               setReceiveModalOpen(true);
             }}
@@ -840,18 +871,80 @@ export default function StoreGoldTransit() {
               Upload photo of received parcel, intact seal, or calibration scale reading.
             </Typography>
             <Button
-              variant="outlined"
+              variant={storeProofs.length > 0 ? 'contained' : 'outlined'}
+              color={storeProofs.length > 0 ? 'success' : 'primary'}
               component="label"
               disabled={uploadLoading}
-              startIcon={<Iconify icon="eva:upload-fill" />}
+              startIcon={<Iconify icon={storeProofs.length > 0 ? 'eva:checkmark-circle-2-fill' : 'eva:upload-fill'} />}
             >
-              {uploadLoading ? 'Uploading...' : storeProofName ? 'Change Proof Photo' : 'Upload Store Proof Photo'}
-              <input type="file" hidden accept="image/*,.pdf" onChange={handleFileUpload} />
+              {uploadLoading
+                ? 'Uploading...'
+                : storeProofs.length > 0
+                ? `✓ ${storeProofs.length} Proof(s) Uploaded (Add More)`
+                : 'Upload Store Proof Photo(s) *'}
+              <input type="file" multiple hidden accept="image/*,.pdf" onChange={handleFileUpload} />
             </Button>
-            {storeProofName && (
-              <Typography variant="body2" sx={{ color: 'success.main', mt: 1 }}>
-                Uploaded: {storeProofName}
-              </Typography>
+
+            {storeProofs.length > 0 && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
+                {storeProofs.map((p, idx) => {
+                  const fullUrl = p.url?.startsWith('http') ? p.url : `${global.BASE_URL}/${p.url}`;
+                  const isPdf = p.url?.toLowerCase().endsWith('.pdf') || p.name?.toLowerCase().endsWith('.pdf');
+                  return (
+                    <Card
+                      key={p._id || idx}
+                      variant="outlined"
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        p: 0.5,
+                        pl: 1,
+                        pr: 0.5,
+                        gap: 1,
+                        bgcolor: '#f8fafc',
+                        borderRadius: 1,
+                        maxWidth: 240,
+                      }}
+                    >
+                      {isPdf ? (
+                        <Iconify icon="mdi:file-pdf-box" width={22} sx={{ color: 'error.main' }} />
+                      ) : (
+                        <Box
+                          component="img"
+                          src={fullUrl}
+                          alt={p.name}
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            objectFit: 'cover',
+                            borderRadius: 0.5,
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => window.open(fullUrl, '_blank')}
+                        />
+                      )}
+                      <Typography
+                        variant="caption"
+                        noWrap
+                        sx={{ maxWidth: 110, fontWeight: 600, cursor: 'pointer' }}
+                        title={p.name}
+                        onClick={() => window.open(fullUrl, '_blank')}
+                      >
+                        {p.name || `Proof ${idx + 1}`}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleRemoveStoreProof(idx)}
+                        title="Remove file"
+                        sx={{ p: 0.25 }}
+                      >
+                        <Iconify icon="eva:trash-2-outline" width={14} />
+                      </IconButton>
+                    </Card>
+                  );
+                })}
+              </Box>
             )}
 
             {/* Deviations radio */}

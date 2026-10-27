@@ -69,6 +69,26 @@ function isAccounts(req, res, next) {
 
 function isBranch(req, res, next) {
   const userType = req.user?.userType?.toLowerCase();
+
+  if (userType === "employee" || userType === "general_employee") {
+    const url = (req.originalUrl || req.path || "").toLowerCase();
+    const isAllowed =
+      url.includes("/attendance") ||
+      url.includes("/leave") ||
+      url.includes("/profile") ||
+      url.includes("/file-upload") ||
+      url.includes("/employee") ||
+      url.includes("/branch");
+    if (isAllowed) {
+      return next();
+    }
+    return res.status(403).json({
+      status: false,
+      message: "Forbidden: General Employee only has access to attendance and leaves",
+      data: {},
+    });
+  }
+
   if (
     userType === "branch" ||
     userType === "assistant_branch_manager" ||
@@ -92,7 +112,6 @@ function isBranch(req, res, next) {
   ) {
     return next();
   }
-
 
   return res.status(401).json({
     status: false,

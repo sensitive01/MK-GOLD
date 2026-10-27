@@ -71,6 +71,8 @@ export default function Melting({ onlyCompleted = false }) {
   const [actualStoneWastage, setActualStoneWastage] = useState('');
   const [preMeltProof, setPreMeltProof] = useState(null);
   const [preMeltProofName, setPreMeltProofName] = useState('');
+  const [preMeltProofs, setPreMeltProofs] = useState([]);
+  const [activePreProofIdx, setActivePreProofIdx] = useState(0);
   const [preMeltNotes, setPreMeltNotes] = useState('');
   const [isPreMeltCompleted, setIsPreMeltCompleted] = useState(false);
   const [barWeight, setBarWeight] = useState('');
@@ -79,6 +81,7 @@ export default function Melting({ onlyCompleted = false }) {
   const [meltProof, setMeltProof] = useState(null);
   const [afterMeltProof, setAfterMeltProof] = useState(null);
   const [afterMeltProofName, setAfterMeltProofName] = useState('');
+  const [afterMeltProofs, setAfterMeltProofs] = useState([]);
   const [uploadLoading, setUploadLoading] = useState(false);
 
   // Process DC state
@@ -420,13 +423,22 @@ export default function Melting({ onlyCompleted = false }) {
       ? (Number(row.actualGrossWeight) - Number(row.actualNetWeight)).toFixed(2)
       : (row.actualStoneWastage !== undefined && row.actualStoneWastage !== null ? row.actualStoneWastage : '');
     setActualStoneWastage(stoneW);
-    setPreMeltProof(row.preMeltProof || null);
+    const preProofs = Array.isArray(row.preMeltProofs) && row.preMeltProofs.length > 0
+      ? row.preMeltProofs
+      : (row.preMeltProof ? [row.preMeltProof] : []);
+    setPreMeltProofs(preProofs);
+    setPreMeltProof(preProofs[0] || null);
     setPreMeltProofName('');
+    setActivePreProofIdx(0);
     setPreMeltNotes(row.preMeltNotes || row.notes || '');
     setBarWeight(row.barWeight || '');
     setBarPurity(row.barPurity || '');
     setMeltUpdateNotes(row.meltUpdateNotes || '');
-    setAfterMeltProof(row.afterMeltProof || null);
+    const afterProofs = Array.isArray(row.afterMeltProofs) && row.afterMeltProofs.length > 0
+      ? row.afterMeltProofs
+      : (row.afterMeltProof ? [row.afterMeltProof] : []);
+    setAfterMeltProofs(afterProofs);
+    setAfterMeltProof(afterProofs[0] || null);
     setAfterMeltProofName('');
     setOpenUpdateDialog(true);
   };
@@ -464,8 +476,12 @@ export default function Melting({ onlyCompleted = false }) {
       preMeltNotes,
       notes: preMeltNotes || selectedMelting?.notes || ''
     };
-    if (preMeltProof) {
+    if (preMeltProofs && preMeltProofs.length > 0) {
+      payload.preMeltProofs = preMeltProofs.map(p => (typeof p === 'object' ? p._id : p));
+      payload.preMeltProof = typeof preMeltProofs[0] === 'object' ? preMeltProofs[0]._id : preMeltProofs[0];
+    } else if (preMeltProof) {
       payload.preMeltProof = typeof preMeltProof === 'object' ? preMeltProof._id : preMeltProof;
+      payload.preMeltProofs = [payload.preMeltProof];
     }
     const res = await updateMelting(selectedMelting._id, payload);
     if (res.status) {
@@ -481,6 +497,11 @@ export default function Melting({ onlyCompleted = false }) {
     setOpenUpdateDialog(false);
     setSelectedMelting(null);
     setPreMeltNotes('');
+    setPreMeltProofs([]);
+    setPreMeltProof(null);
+    setAfterMeltProofs([]);
+    setAfterMeltProof(null);
+    setActivePreProofIdx(0);
   };
 
   const handleOpenSellDialog = (row) => {
@@ -593,8 +614,12 @@ export default function Melting({ onlyCompleted = false }) {
       status: 'melt_updated'
     };
     
-    if (afterMeltProof) {
+    if (afterMeltProofs && afterMeltProofs.length > 0) {
+      payload.afterMeltProofs = afterMeltProofs.map(p => (typeof p === 'object' ? p._id : p));
+      payload.afterMeltProof = typeof afterMeltProofs[0] === 'object' ? afterMeltProofs[0]._id : afterMeltProofs[0];
+    } else if (afterMeltProof) {
       payload.afterMeltProof = typeof afterMeltProof === 'object' ? afterMeltProof._id : afterMeltProof;
+      payload.afterMeltProofs = [payload.afterMeltProof];
     }
     
     const res = await updateMelting(selectedMelting._id, payload);
@@ -642,43 +667,90 @@ export default function Melting({ onlyCompleted = false }) {
   };
 
   const handlePreFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
       setUploadLoading(true);
-      const formData = new FormData();
-      formData.append('uploadedFile', file);
-      formData.append('uploadName', 'pre_melt_proof');
-      formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
-      const response = await createFile(formData);
+      const newProofs = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('uploadedFile', file);
+        formData.append('uploadName', 'pre_melt_proof');
+        formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
+        try {
+          const response = await createFile(formData);
+          if (response.status && response.data) {
+            newProofs.push({ ...response.data, fileName: file.name });
+          }
+        } catch (err) {
+          console.error('Error uploading pre-melt file:', err);
+        }
+      }
       setUploadLoading(false);
-      if (response.status) {
-        setPreMeltProof(response.data);
-        setPreMeltProofName(file.name);
-        setNotify({ open: true, message: 'Pre-melt proof uploaded successfully', severity: 'success' });
+      if (newProofs.length > 0) {
+        setPreMeltProofs((prev) => {
+          const updated = [...prev, ...newProofs];
+          setPreMeltProof(updated[0] || null);
+          return updated;
+        });
+        setNotify({ open: true, message: `${newProofs.length} Pre-melt proof(s) uploaded successfully`, severity: 'success' });
       } else {
         setNotify({ open: true, message: 'File upload failed', severity: 'error' });
       }
+      e.target.value = '';
     }
   };
 
+  const handleRemovePreProof = (indexToRemove) => {
+    setPreMeltProofs((prev) => {
+      const updated = prev.filter((_, idx) => idx !== indexToRemove);
+      setPreMeltProof(updated[0] || null);
+      if (activePreProofIdx >= updated.length) {
+        setActivePreProofIdx(Math.max(0, updated.length - 1));
+      }
+      return updated;
+    });
+  };
+
   const handleAfterFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
       setUploadLoading(true);
-      const formData = new FormData();
-      formData.append('uploadedFile', file);
-      formData.append('uploadName', 'after_melt_proof');
-      formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
-      const response = await createFile(formData);
+      const newProofs = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('uploadedFile', file);
+        formData.append('uploadName', 'after_melt_proof');
+        formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
+        try {
+          const response = await createFile(formData);
+          if (response.status && response.data) {
+            newProofs.push({ ...response.data, fileName: file.name });
+          }
+        } catch (err) {
+          console.error('Error uploading after-melt file:', err);
+        }
+      }
       setUploadLoading(false);
-      if (response.status) {
-        setAfterMeltProof(response.data);
-        setAfterMeltProofName(file.name);
-        setNotify({ open: true, message: 'After Melt Proof uploaded successfully', severity: 'success' });
+      if (newProofs.length > 0) {
+        setAfterMeltProofs((prev) => {
+          const updated = [...prev, ...newProofs];
+          setAfterMeltProof(updated[0] || null);
+          return updated;
+        });
+        setNotify({ open: true, message: `${newProofs.length} After-melt proof(s) uploaded successfully`, severity: 'success' });
       } else {
         setNotify({ open: true, message: 'File upload failed', severity: 'error' });
       }
+      e.target.value = '';
     }
+  };
+
+  const handleRemoveAfterProof = (indexToRemove) => {
+    setAfterMeltProofs((prev) => {
+      const updated = prev.filter((_, idx) => idx !== indexToRemove);
+      setAfterMeltProof(updated[0] || null);
+      return updated;
+    });
   };
 
   return (
@@ -1273,45 +1345,111 @@ export default function Melting({ onlyCompleted = false }) {
                   }}
                 >
                   {!isPreMeltCompleted && (
-                    <input type="file" hidden onChange={handlePreFileUpload} disabled={uploadLoading} />
+                    <input type="file" multiple hidden onChange={handlePreFileUpload} disabled={uploadLoading} />
                   )}
 
-                  {preMeltProof && typeof preMeltProof === 'object' && preMeltProof.uploadedFile ? (
-                    preMeltProof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
-                      <Stack alignItems="center" spacing={0.5}>
-                        <Iconify icon="mdi:file-pdf-box" width={40} sx={{ color: 'error.main' }} />
-                        <Typography variant="caption" noWrap sx={{ maxWidth: 160 }}>
-                          {preMeltProofName || 'Proof PDF'}
+                  {(() => {
+                    const activeProof = preMeltProofs[activePreProofIdx] || preMeltProofs[0] || preMeltProof;
+                    if (activeProof && typeof activeProof === 'object' && activeProof.uploadedFile) {
+                      const fileUrl = activeProof.uploadedFile;
+                      const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${global.BASE_URL}/${fileUrl}`;
+                      const isPdf = fileUrl.toLowerCase().endsWith('.pdf');
+                      return (
+                        <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', height: '100%', justifyContent: 'center' }}>
+                          {isPdf ? (
+                            <Stack alignItems="center" spacing={0.5} onClick={() => window.open(fullUrl, '_blank')} sx={{ cursor: 'pointer' }}>
+                              <Iconify icon="mdi:file-pdf-box" width={38} sx={{ color: 'error.main' }} />
+                              <Typography variant="caption" noWrap sx={{ maxWidth: 140, fontWeight: 600 }}>
+                                {activeProof.fileName || 'Proof PDF'}
+                              </Typography>
+                            </Stack>
+                          ) : (
+                            <Box
+                              component="img"
+                              src={fullUrl}
+                              alt="Pre-Melt Proof"
+                              title="Click to view full image"
+                              onClick={(e) => { e.stopPropagation(); window.open(fullUrl, '_blank'); }}
+                              sx={{ maxHeight: preMeltProofs.length > 1 ? 75 : 90, maxWidth: '100%', objectFit: 'contain', borderRadius: 0.5, cursor: 'pointer' }}
+                            />
+                          )}
+
+                          {/* Mini thumbnails if multiple pre-melt proofs */}
+                          {preMeltProofs.length > 1 && (
+                            <Stack direction="row" spacing={0.75} sx={{ mt: 0.75, maxWidth: '100%', overflowX: 'auto', py: 0.25 }}>
+                              {preMeltProofs.map((p, idx) => {
+                                const pUrl = p?.uploadedFile || '';
+                                const pFull = pUrl.startsWith('http') ? pUrl : `${global.BASE_URL}/${pUrl}`;
+                                const isCurrent = activePreProofIdx === idx;
+                                return (
+                                  <Box
+                                    key={p._id || idx}
+                                    onClick={(e) => { e.stopPropagation(); setActivePreProofIdx(idx); }}
+                                    title={`View photo ${idx + 1}`}
+                                    sx={{
+                                      width: 24,
+                                      height: 24,
+                                      borderRadius: 0.5,
+                                      border: isCurrent ? '2px solid #7b1fa2' : '1px solid #ccc',
+                                      overflow: 'hidden',
+                                      cursor: 'pointer',
+                                      flexShrink: 0,
+                                      opacity: isCurrent ? 1 : 0.6,
+                                      '&:hover': { opacity: 1 },
+                                    }}
+                                  >
+                                    <Box
+                                      component="img"
+                                      src={pFull}
+                                      alt={`thumb-${idx}`}
+                                      sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                  </Box>
+                                );
+                              })}
+                            </Stack>
+                          )}
+
+                          {!isPreMeltCompleted && (
+                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+                              <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                                + Add More ({preMeltProofs.length})
+                              </Typography>
+                              {preMeltProofs.length > 0 && (
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemovePreProof(activePreProofIdx);
+                                  }}
+                                  title="Remove current photo"
+                                  sx={{ p: 0.25 }}
+                                >
+                                  <Iconify icon="eva:trash-2-outline" width={16} />
+                                </IconButton>
+                              )}
+                            </Stack>
+                          )}
+                        </Box>
+                      );
+                    }
+                    if (preMeltProof) {
+                      return (
+                        <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 600 }}>
+                          {preMeltProofName || 'Proof Uploaded'}
                         </Typography>
-                        {!isPreMeltCompleted && (
-                          <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>Click to change</Typography>
-                        )}
+                      );
+                    }
+                    return (
+                      <Stack alignItems="center" spacing={0.5}>
+                        <Iconify icon="eva:cloud-upload-outline" width={28} sx={{ color: 'text.secondary' }} />
+                        <Typography variant="body2" color="text.secondary">
+                          {uploadLoading ? 'Uploading...' : 'Upload Proofs'}
+                        </Typography>
                       </Stack>
-                    ) : (
-                      <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                        <Box
-                          component="img"
-                          src={preMeltProof.uploadedFile.startsWith('http') ? preMeltProof.uploadedFile : `${global.BASE_URL}/${preMeltProof.uploadedFile}`}
-                          alt="Proof"
-                          sx={{ maxHeight: 90, maxWidth: '100%', objectFit: 'contain', borderRadius: 0.5 }}
-                        />
-                        {!isPreMeltCompleted && (
-                          <Typography variant="caption" sx={{ color: 'primary.main', mt: 0.5, fontWeight: 600 }}>Click to change</Typography>
-                        )}
-                      </Box>
-                    )
-                  ) : preMeltProof ? (
-                    <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 600 }}>
-                      {preMeltProofName || 'Proof Uploaded'}
-                    </Typography>
-                  ) : (
-                    <Stack alignItems="center" spacing={0.5}>
-                      <Iconify icon="eva:cloud-upload-outline" width={28} sx={{ color: 'text.secondary' }} />
-                      <Typography variant="body2" color="text.secondary">
-                        {uploadLoading ? 'Uploading...' : 'Upload Proof'}
-                      </Typography>
-                    </Stack>
-                  )}
+                    );
+                  })()}
                 </Box>
               </Grid>
 
@@ -1426,6 +1564,7 @@ export default function Melting({ onlyCompleted = false }) {
                       variant="contained"
                       component="label"
                       disabled={uploadLoading}
+                      startIcon={<Iconify icon={afterMeltProofs.length > 0 ? "eva:checkmark-circle-2-fill" : "eva:cloud-upload-fill"} />}
                       sx={{
                         bgcolor: '#ffb300',
                         color: '#000',
@@ -1435,41 +1574,95 @@ export default function Melting({ onlyCompleted = false }) {
                       }}
                       fullWidth
                     >
-                      {uploadLoading ? 'Uploading...' : 'Upload After Melt Proof'}
-                      <input type="file" hidden onChange={handleAfterFileUpload} />
+                      {uploadLoading
+                        ? 'Uploading Proofs...'
+                        : afterMeltProofs.length > 0
+                        ? `Upload More After Melt Proofs (${afterMeltProofs.length} uploaded)`
+                        : 'Upload After Melt Proof(s)'}
+                      <input type="file" multiple hidden onChange={handleAfterFileUpload} />
                     </Button>
                   </Grid>
 
-                  {afterMeltProof && typeof afterMeltProof === 'object' && afterMeltProof.uploadedFile ? (
+                  {afterMeltProofs.length > 0 && (
                     <Grid item xs={12}>
-                      {afterMeltProof.uploadedFile.toLowerCase().endsWith('.pdf') ? (
-                        <Box
-                          component="iframe"
-                          src={afterMeltProof.uploadedFile.startsWith('http') ? afterMeltProof.uploadedFile : `${global.BASE_URL}/${afterMeltProof.uploadedFile}`}
-                          title="Proof"
-                          sx={{ width: '100%', height: 180, border: 'none' }}
-                        />
-                      ) : (
-                        <Box
-                          component="img"
-                          src={afterMeltProof.uploadedFile.startsWith('http') ? afterMeltProof.uploadedFile : `${global.BASE_URL}/${afterMeltProof.uploadedFile}`}
-                          alt="Proof"
-                          sx={{ width: '100%', maxHeight: 180, objectFit: 'contain' }}
-                        />
-                      )}
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: 1.5,
+                          p: 1.5,
+                          bgcolor: '#faf5ff',
+                          borderRadius: 1,
+                          border: '1px solid #e9d5ff',
+                        }}
+                      >
+                        {afterMeltProofs.map((item, idx) => {
+                          const fileUrl = item?.uploadedFile || '';
+                          const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${global.BASE_URL}/${fileUrl}`;
+                          const isPdf =
+                            fileUrl.toLowerCase().endsWith('.pdf') ||
+                            (item.fileName && item.fileName.toLowerCase().endsWith('.pdf'));
+                          return (
+                            <Card
+                              key={item._id || idx}
+                              variant="outlined"
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                p: 1,
+                                gap: 1.5,
+                                bgcolor: '#fff',
+                                borderColor: '#d8b4fe',
+                                borderRadius: 1,
+                                maxWidth: 280,
+                                flexGrow: 1,
+                              }}
+                            >
+                              {isPdf ? (
+                                <Iconify icon="mdi:file-pdf-box" width={36} sx={{ color: 'error.main', flexShrink: 0 }} />
+                              ) : (
+                                <Box
+                                  component="img"
+                                  src={fullUrl}
+                                  alt="After Melt Proof"
+                                  sx={{
+                                    width: 48,
+                                    height: 48,
+                                    objectFit: 'cover',
+                                    borderRadius: 1,
+                                    border: '1px solid #e2e8f0',
+                                    flexShrink: 0,
+                                    cursor: 'pointer',
+                                  }}
+                                  onClick={() => window.open(fullUrl, '_blank')}
+                                />
+                              )}
+                              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                                <Typography variant="caption" noWrap sx={{ display: 'block', fontWeight: 600, color: 'text.primary' }}>
+                                  {item.fileName || item.uploadName || `Photo ${idx + 1}`}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  sx={{ color: 'primary.main', cursor: 'pointer', fontWeight: 600 }}
+                                  onClick={() => window.open(fullUrl, '_blank')}
+                                >
+                                  View full size
+                                </Typography>
+                              </Box>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleRemoveAfterProof(idx)}
+                                title="Remove photo"
+                              >
+                                <Iconify icon="eva:trash-2-outline" width={18} />
+                              </IconButton>
+                            </Card>
+                          );
+                        })}
+                      </Box>
                     </Grid>
-                  ) : afterMeltProof ? (
-                    <Grid item xs={12}>
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <Typography variant="body2" sx={{ color: 'success.main' }}>
-                          {afterMeltProofName || 'After Melt Proof uploaded successfully!'}
-                        </Typography>
-                        <IconButton size="small" onClick={() => { setAfterMeltProof(null); setAfterMeltProofName(''); }} sx={{ color: 'error.main' }}>
-                          <Iconify icon="eva:close-fill" />
-                        </IconButton>
-                      </Stack>
-                    </Grid>
-                  ) : null}
+                  )}
                 </Grid>
               </Box>
             )}

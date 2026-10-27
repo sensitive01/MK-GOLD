@@ -11,15 +11,18 @@ async function find(query = {}, user = null) {
       "branch_executive", 
       "transaction_executive", 
       "telecalling",
-      "bullion_desk"
+      "bullion_desk",
+      "employee",
+      "general_employee"
     ].some(role => type.includes(role));
 
     if (isBranchRole) {
       query.branch = user.branch?._id || user.branch;
-      
-      // Only restrict to self for non-management/non-sales roles if needed, 
-      // but for now, allow branch roles to see branch employees.
-      // (Removed the restrict-to-self logic for these branch roles)
+      if (type === "employee" || type === "general_employee") {
+        if (user.employee?._id || user.employee) {
+          query._id = user.employee?._id || user.employee;
+        }
+      }
     }
 
     if (query.createdAt && "$gte" in query.createdAt) {

@@ -89,7 +89,37 @@ function BullionApprovalSection({
         comments: bullionComment.trim(),
       };
       if (showPayableAmount && payableAmount !== '' && !isNaN(Number(payableAmount))) {
-        payload.payableAmount = Number(payableAmount);
+        const numPayable = Number(payableAmount);
+        payload.payableAmount = numPayable;
+
+        // Auto-calculate difference against base payout and save to adjustments
+        const isPledged = (data?.saleType || '').toLowerCase() === 'pledged';
+        const currentRate = data?.purchaseType?.toLowerCase() === 'silver' ? (data?.silverRate || 0) : (data?.goldRate || 0);
+        const ornamentsTotal = (data?.ornaments && data.ornaments.length > 0)
+          ? data.ornaments.reduce((sum, orn) => {
+              const systemAmount = (orn.calculatedAmount !== undefined && orn.calculatedAmount !== null && Number(orn.calculatedAmount) > 0)
+                ? Number(orn.calculatedAmount)
+                : (currentRate > 0 && orn.netWeight && orn.purity)
+                ? Math.round(((Number(orn.netWeight) * Number(orn.purity)) / 100) * Number(currentRate))
+                : (Number(orn.netAmount || 0) - (Number(orn.adjustment) || 0));
+              return sum + systemAmount;
+            }, 0)
+          : Number(data?.netAmount || 0);
+
+        const releaseChargesTotal = isPledged
+          ? Math.round((data?.release || []).reduce((prev, cur) => prev + Number(cur?.payableAmount || 0), 0))
+          : 0;
+
+        const basePayout = isPledged ? Math.max(0, ornamentsTotal - releaseChargesTotal) : ornamentsTotal;
+        const diff = Math.round(numPayable - basePayout);
+        payload.adjustments = diff;
+        payload.totalAdjustment = diff;
+
+        if (Array.isArray(data?.ornaments) && data.ornaments.length === 1) {
+          const singleOrn = { ...data.ornaments[0] };
+          singleOrn.adjustment = diff;
+          payload.ornaments = [singleOrn];
+        }
       }
       const response = await updateSales(id, payload);
       if (response.status) {
@@ -200,7 +230,28 @@ function BullionApprovalSection({
                   label="Payable Amount (₹)"
                   value={payableAmount}
                   onChange={(e) => setPayableAmount(e.target.value)}
-                  helperText="Review or adjust payable amount before approving"
+                  helperText={
+                    (() => {
+                      const isPledged = (data?.saleType || '').toLowerCase() === 'pledged';
+                      const currentRate = data?.purchaseType?.toLowerCase() === 'silver' ? (data?.silverRate || 0) : (data?.goldRate || 0);
+                      const ornamentsTotal = (data?.ornaments && data.ornaments.length > 0)
+                        ? data.ornaments.reduce((sum, orn) => {
+                            const systemAmount = (orn.calculatedAmount !== undefined && orn.calculatedAmount !== null && Number(orn.calculatedAmount) > 0)
+                              ? Number(orn.calculatedAmount)
+                              : (currentRate > 0 && orn.netWeight && orn.purity)
+                              ? Math.round(((Number(orn.netWeight) * Number(orn.purity)) / 100) * Number(currentRate))
+                              : (Number(orn.netAmount || 0) - (Number(orn.adjustment) || 0));
+                            return sum + systemAmount;
+                          }, 0)
+                        : Number(data?.netAmount || 0);
+                      const releaseChargesTotal = isPledged
+                        ? Math.round((data?.release || []).reduce((prev, cur) => prev + Number(cur?.payableAmount || 0), 0))
+                        : 0;
+                      const basePayout = isPledged ? Math.max(0, ornamentsTotal - releaseChargesTotal) : ornamentsTotal;
+                      const diff = Math.round((Number(payableAmount) || 0) - basePayout);
+                      return `Base: ₹${basePayout.toLocaleString('en-IN')} | Adjustment: ${diff >= 0 ? `+₹${diff.toLocaleString('en-IN')}` : `-₹${Math.abs(diff).toLocaleString('en-IN')}`}`;
+                    })()
+                  }
                   InputProps={{
                     startAdornment: <InputAdornment position="start">₹</InputAdornment>,
                   }}
@@ -1632,7 +1683,9 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
             (t.proof && String(t.proof) === String(p._id)) ||
             (t.receivedProof && String(t.receivedProof) === String(p._id)) ||
             (t.storeProof && String(t.storeProof) === String(p._id)) ||
-            (t.adminProof && String(t.adminProof) === String(p._id))
+            (t.adminProof && String(t.adminProof) === String(p._id)) ||
+            (Array.isArray(t.proofs) && t.proofs.some(id => String(id?._id || id) === String(p._id))) ||
+            (Array.isArray(t.storeProofs) && t.storeProofs.some(id => String(id?._id || id) === String(p._id)))
         );
 
         const transitRef = matchedTransit?.transitId || p.documentNo || '-';
@@ -1801,7 +1854,11 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           m =>
             (m.meltProof && String(m.meltProof) === String(p._id)) ||
             (m.preMeltProof && String(m.preMeltProof) === String(p._id)) ||
-            (m.afterMeltProof && String(m.afterMeltProof) === String(p._id))
+            (m.afterMeltProof && String(m.afterMeltProof) === String(p._id)) ||
+            (m.purityPhoto && String(m.purityPhoto) === String(p._id)) ||
+            (Array.isArray(m.meltProofs) && m.meltProofs.some(id => String(id?._id || id) === String(p._id))) ||
+            (Array.isArray(m.preMeltProofs) && m.preMeltProofs.some(id => String(id?._id || id) === String(p._id))) ||
+            (Array.isArray(m.afterMeltProofs) && m.afterMeltProofs.some(id => String(id?._id || id) === String(p._id)))
         );
 
         const batchRef = matchedMelting?.batchId || p.documentNo || '-';

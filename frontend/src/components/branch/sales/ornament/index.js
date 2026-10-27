@@ -103,7 +103,11 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
     grossWeight: Yup.string().required('Gross weight is required'),
     stoneWeight: Yup.string().required('Stone weight is required'),
     netWeight: Yup.string().required('Net weight is required'),
-    purity: Yup.string().required('Purity is required'),
+    purity: Yup.number()
+      .typeError('Purity is required')
+      .required('Purity is required')
+      .min(0.01, 'Purity must be greater than 0%')
+      .max(100, 'Purity cannot exceed 100%'),
     netAmount: Yup.string().required('Net amount is required'),
     billDate: Yup.string().when('hasBill', {
       is: true,
@@ -132,11 +136,29 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
     },
     validationSchema: schema,
     onSubmit: (values) => {
+      const numPurity = Number(values.purity);
+      if (!values.purity || isNaN(numPurity) || numPurity <= 0) {
+        setNotify({
+          open: true,
+          message: 'Purity is mandatory and must be greater than 0%',
+          severity: 'error',
+        });
+        return;
+      }
+      if (numPurity > 100) {
+        setNotify({
+          open: true,
+          message: 'Purity cannot exceed 100%',
+          severity: 'error',
+        });
+        return;
+      }
       const calcAmount = Number(values.calculatedAmount || 0);
       const finalNetAmount = Number(values.netAmount || 0);
       const adj = Math.round(finalNetAmount - calcAmount);
       const ornamentData = {
         ...values,
+        purity: numPurity,
         netAmount: finalNetAmount,
         calculatedAmount: calcAmount,
         adjustment: adj,
@@ -630,10 +652,22 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                   onChange={(e) => {
                     const gross = parseFloat(e.target.value) || 0;
                     const stone = parseFloat(values.stoneWeight) || 0;
+                    const net = Math.max(0, gross - stone);
+                    const netStr = net.toFixed(2);
+                    const numPurity = parseFloat(values.purity) || 0;
+                    const rate = purchaseType === 'gold' ? goldRate : purchaseType === 'silver' ? silverRate : 0;
+                    let newCalc = values.calculatedAmount;
+                    let newNet = values.netAmount;
+                    if (numPurity > 0 && rate > 0) {
+                      newCalc = Math.round(((net * numPurity) / 100) * rate);
+                      newNet = newCalc > 0 ? newCalc : '';
+                    }
                     setValues({
                       ...values,
                       grossWeight: e.target.value,
-                      netWeight: (gross - stone).toFixed(2),
+                      netWeight: netStr,
+                      netAmount: newNet,
+                      calculatedAmount: newCalc,
                     });
                   }}
                 />
@@ -654,10 +688,22 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
                   onChange={(e) => {
                     const stone = parseFloat(e.target.value) || 0;
                     const gross = parseFloat(values.grossWeight) || 0;
+                    const net = Math.max(0, gross - stone);
+                    const netStr = net.toFixed(2);
+                    const numPurity = parseFloat(values.purity) || 0;
+                    const rate = purchaseType === 'gold' ? goldRate : purchaseType === 'silver' ? silverRate : 0;
+                    let newCalc = values.calculatedAmount;
+                    let newNet = values.netAmount;
+                    if (numPurity > 0 && rate > 0) {
+                      newCalc = Math.round(((net * numPurity) / 100) * rate);
+                      newNet = newCalc > 0 ? newCalc : '';
+                    }
                     setValues({
                       ...values,
                       stoneWeight: e.target.value,
-                      netWeight: (gross - stone).toFixed(2),
+                      netWeight: netStr,
+                      netAmount: newNet,
+                      calculatedAmount: newCalc,
                     });
                   }}
                 />
@@ -684,23 +730,24 @@ function Ornament({ setNotify, ornaments, setOrnaments, goldRate, silverRate, pu
               {/* Row 3: Purity & Net Amount */}
               <Grid item xs={12} sm={6}>
                 <TextField
+                  required
                   name="purity"
                   type="number"
                   value={values.purity}
-                  error={touched.purity && errors.purity && true}
-                  label={touched.purity && errors.purity ? errors.purity : 'Purity (%)'}
+                  error={Boolean(touched.purity && errors.purity)}
+                  label={touched.purity && errors.purity ? errors.purity : 'Purity (%) *'}
                   InputProps={{
                     endAdornment: <InputAdornment position="end">%</InputAdornment>,
                   }}
                   helperText={
-                    parseFloat(values.purity) > 100
+                    touched.purity && errors.purity
+                      ? errors.purity
+                      : parseFloat(values.purity) > 100
                       ? 'Warning: Purity exceeds 100%'
-                      : (!values.netWeight && values.netAmount)
-                      ? 'Enter Gross Weight to auto-calculate Purity'
-                      : ''
+                      : 'Mandatory purity percentage (e.g. 91.6, 98)'
                   }
                   FormHelperTextProps={{
-                    sx: { color: parseFloat(values.purity) > 100 ? 'error.main' : 'primary.main' },
+                    sx: { color: (touched.purity && errors.purity) || parseFloat(values.purity) > 100 ? 'error.main' : 'text.secondary' },
                   }}
                   fullWidth
                   onBlur={handleBlur}

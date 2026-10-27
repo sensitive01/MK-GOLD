@@ -67,6 +67,10 @@ const meltingSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'fileuploads'
     },
+    preMeltProofs: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'fileuploads'
+    }],
     preMeltNotes: {
         type: String,
         default: ""
@@ -97,10 +101,18 @@ const meltingSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'fileuploads'
     },
+    meltProofs: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'fileuploads'
+    }],
     afterMeltProof: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'fileuploads'
     },
+    afterMeltProofs: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'fileuploads'
+    }],
     meltUpdatedAt: {
         type: Date
     },

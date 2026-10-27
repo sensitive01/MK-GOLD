@@ -294,15 +294,33 @@ async function find(query = {}) {
           from: "fileuploads",
           let: { 
             transitProofIds: { 
-              $filter: {
+              $reduce: {
                 input: {
                   $concatArrays: [
-                    { $map: { input: "$transits", as: "t", in: "$$t.proof" } },
-                    { $map: { input: "$transits", as: "t", in: "$$t.receivedProof" } }
+                    { $map: { input: "$transits", as: "t", in: { $ifNull: ["$$t.proofs", []] } } },
+                    { $map: { input: "$transits", as: "t", in: { $ifNull: ["$$t.storeProofs", []] } } },
+                    {
+                      $map: {
+                        input: "$transits",
+                        as: "t",
+                        in: {
+                          $filter: {
+                            input: [
+                              "$$t.proof",
+                              "$$t.receivedProof",
+                              "$$t.storeProof",
+                              "$$t.adminProof"
+                            ],
+                            as: "p",
+                            cond: { $ne: ["$$p", null] }
+                          }
+                        }
+                      }
+                    }
                   ]
                 },
-                as: "pid",
-                cond: { $ne: ["$$pid", null] }
+                initialValue: [],
+                in: { $setUnion: ["$$value", "$$this"] }
               }
             } 
           },
@@ -342,16 +360,35 @@ async function find(query = {}) {
           from: "fileuploads",
           let: { 
             meltingProofIds: { 
-              $filter: {
+              $reduce: {
                 input: {
                   $concatArrays: [
-                    { $map: { input: "$meltings", as: "m", in: "$$m.meltProof" } },
-                    { $map: { input: "$meltings", as: "m", in: "$$m.preMeltProof" } },
-                    { $map: { input: "$meltings", as: "m", in: "$$m.afterMeltProof" } }
+                    { $map: { input: "$meltings", as: "m", in: { $ifNull: ["$$m.meltProofs", []] } } },
+                    { $map: { input: "$meltings", as: "m", in: { $ifNull: ["$$m.preMeltProofs", []] } } },
+                    { $map: { input: "$meltings", as: "m", in: { $ifNull: ["$$m.afterMeltProofs", []] } } },
+                    {
+                      $map: {
+                        input: "$meltings",
+                        as: "m",
+                        in: {
+                          $filter: {
+                            input: [
+                              "$$m.meltProof",
+                              "$$m.preMeltProof",
+                              "$$m.afterMeltProof",
+                              "$$m.purityPhoto",
+                              "$$m.purityCertificate"
+                            ],
+                            as: "p",
+                            cond: { $ne: ["$$p", null] }
+                          }
+                        }
+                      }
+                    }
                   ]
                 },
-                as: "pid",
-                cond: { $ne: ["$$pid", null] }
+                initialValue: [],
+                in: { $setUnion: ["$$value", "$$this"] }
               }
             } 
           },
@@ -937,17 +974,33 @@ async function findById(id) {
           from: "fileuploads",
           let: { 
             transitProofIds: { 
-              $filter: {
+              $reduce: {
                 input: {
                   $concatArrays: [
-                    { $map: { input: "$transits", as: "t", in: "$$t.proof" } },
-                    { $map: { input: "$transits", as: "t", in: "$$t.receivedProof" } },
-                    { $map: { input: "$transits", as: "t", in: "$$t.storeProof" } },
-                    { $map: { input: "$transits", as: "t", in: "$$t.adminProof" } }
+                    { $map: { input: "$transits", as: "t", in: { $ifNull: ["$$t.proofs", []] } } },
+                    { $map: { input: "$transits", as: "t", in: { $ifNull: ["$$t.storeProofs", []] } } },
+                    {
+                      $map: {
+                        input: "$transits",
+                        as: "t",
+                        in: {
+                          $filter: {
+                            input: [
+                              "$$t.proof",
+                              "$$t.receivedProof",
+                              "$$t.storeProof",
+                              "$$t.adminProof"
+                            ],
+                            as: "p",
+                            cond: { $ne: ["$$p", null] }
+                          }
+                        }
+                      }
+                    }
                   ]
                 },
-                as: "pid",
-                cond: { $ne: ["$$pid", null] }
+                initialValue: [],
+                in: { $setUnion: ["$$value", "$$this"] }
               }
             } 
           },
@@ -986,16 +1039,35 @@ async function findById(id) {
           from: "fileuploads",
           let: { 
             meltingProofIds: { 
-              $filter: {
+              $reduce: {
                 input: {
                   $concatArrays: [
-                    { $map: { input: "$meltings", as: "m", in: "$$m.meltProof" } },
-                    { $map: { input: "$meltings", as: "m", in: "$$m.preMeltProof" } },
-                    { $map: { input: "$meltings", as: "m", in: "$$m.afterMeltProof" } }
+                    { $map: { input: "$meltings", as: "m", in: { $ifNull: ["$$m.meltProofs", []] } } },
+                    { $map: { input: "$meltings", as: "m", in: { $ifNull: ["$$m.preMeltProofs", []] } } },
+                    { $map: { input: "$meltings", as: "m", in: { $ifNull: ["$$m.afterMeltProofs", []] } } },
+                    {
+                      $map: {
+                        input: "$meltings",
+                        as: "m",
+                        in: {
+                          $filter: {
+                            input: [
+                              "$$m.meltProof",
+                              "$$m.preMeltProof",
+                              "$$m.afterMeltProof",
+                              "$$m.purityPhoto",
+                              "$$m.purityCertificate"
+                            ],
+                            as: "p",
+                            cond: { $ne: ["$$p", null] }
+                          }
+                        }
+                      }
+                    }
                   ]
                 },
-                as: "pid",
-                cond: { $ne: ["$$pid", null] }
+                initialValue: [],
+                in: { $setUnion: ["$$value", "$$this"] }
               }
             } 
           },
@@ -1570,6 +1642,14 @@ async function create(payload) {
       },
     ];
     
+    if (payload.ornaments && Array.isArray(payload.ornaments)) {
+      for (const orn of payload.ornaments) {
+        if (!orn.purity || Number(orn.purity) <= 0) {
+          throw new Error(`Ornament "${orn.ornamentType || 'Item'}" must have a valid purity greater than 0%`);
+        }
+      }
+    }
+
     let sale = new Sales(payload);
     const savedSale = await sale.save();
 
@@ -1603,10 +1683,10 @@ async function update(id, payload) {
           }
           payload.articleNumber = trimmedArt;
         } else {
-          delete payload.articleNumber;
+          payload.articleNumber = '';
         }
       } else if (!payload.articleNumber) {
-        delete payload.articleNumber;
+        payload.articleNumber = '';
       }
     }
 
@@ -1868,10 +1948,10 @@ async function updateWithLog(id, setData, logEntry) {
           }
           setData.articleNumber = trimmedArt;
         } else {
-          delete setData.articleNumber;
+          setData.articleNumber = '';
         }
       } else if (!setData.articleNumber) {
-        delete setData.articleNumber;
+        setData.articleNumber = '';
       }
     }
 

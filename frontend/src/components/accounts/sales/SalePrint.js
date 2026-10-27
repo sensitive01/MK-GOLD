@@ -111,25 +111,42 @@ export default function SalePrint({ id }) {
   const averagePurity = totalNetWeight > 0 ? (totalFineWeight / totalNetWeight) * 100 : 0;
 
   // Valuation summary logic
-  const netAmount = data?.netAmount || 0;
-  const marginPercent = data?.margin || 0;
-  const marginAmount = Math.round((netAmount * marginPercent) / 100);
-  const serviceChargesAmount = marginAmount;
-  const serviceChargesPercent = marginPercent;
+  const isPledged = data?.saleType === 'pledged';
+  const ornamentsRowTotal = totalValue;
+  const releasingCharges = isPledged
+    ? Math.round(data?.release?.reduce((prev, cur) => prev + (cur?.payableAmount || 0), 0) || 0)
+    : 0;
+  const basePayout = isPledged ? Math.max(0, ornamentsRowTotal - releasingCharges) : ornamentsRowTotal;
 
-  const releaseChargesAmount = Math.round(data?.release?.reduce((prev, cur) => prev + (cur?.payableAmount || 0), 0) || 0);
-  const totalAdjustments = data?.totalAdjustment ?? data?.adjustments ?? (
-    data?.ornaments?.reduce((sum, orn) => {
-      let adj = orn.adjustment;
-      if (adj === undefined || adj === null) {
-        const sysVal = (currentRate > 0 && orn.netWeight && orn.purity)
-          ? Math.round(((Number(orn.netWeight) * Number(orn.purity)) / 100) * Number(currentRate))
-          : Number(orn.calculatedAmount || orn.netAmount || 0);
-        adj = Number(orn.netAmount || 0) - sysVal;
-      }
-      return sum + (Number(adj) || 0);
-    }, 0) || 0
-  );
+  let totalAdjustments = 0;
+  if (data?.totalAdjustment !== undefined && data?.totalAdjustment !== null) {
+    totalAdjustments = Number(data.totalAdjustment);
+  } else if (data?.adjustments !== undefined && data?.adjustments !== null) {
+    totalAdjustments = Number(data.adjustments);
+  } else if (data?.payableAmount !== undefined && data?.payableAmount !== null && basePayout > 0) {
+    totalAdjustments = Math.round(Number(data.payableAmount)) - basePayout;
+  } else {
+    totalAdjustments = (
+      data?.ornaments?.reduce((sum, orn) => {
+        let adj = orn.adjustment;
+        if (adj === undefined || adj === null) {
+          const sysVal = (currentRate > 0 && orn.netWeight && orn.purity)
+            ? Math.round(((Number(orn.netWeight) * Number(orn.purity)) / 100) * Number(currentRate))
+            : Number(orn.calculatedAmount || orn.netAmount || 0);
+          adj = Number(orn.netAmount || 0) - sysVal;
+        }
+        return sum + (Number(adj) || 0);
+      }, 0) || 0
+    );
+  }
+
+  const paybackAmount = data?.payableAmount !== undefined && data?.payableAmount !== null
+    ? Math.round(Number(data.payableAmount))
+    : Math.max(0, basePayout + totalAdjustments);
+
+  const finalTotalAmount = isPledged
+    ? (releasingCharges + paybackAmount)
+    : paybackAmount;
 
   return (
     <>
@@ -383,26 +400,61 @@ export default function SalePrint({ id }) {
                         &#8377; {serviceChargesAmount.toLocaleString('en-IN')}
                       </td>
                     </tr> */}
-                    {data?.saleType === 'pledged' && (
+                    <tr>
+                      <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>
+                        Ornaments Row Total :
+                      </td>
+                      <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>
+                        &#8377; {ornamentsRowTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                    {isPledged && (
                       <tr>
-                        <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>Release Charges =</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>
+                          Releasing Charges :
+                        </td>
                         <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>
-                          &#8377; {releaseChargesAmount.toLocaleString('en-IN')}
+                          &#8377; {releasingCharges.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                       </tr>
                     )}
-                    {Boolean(totalAdjustments) && (
+                    <tr>
+                      <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>
+                        Adjustments :
+                      </td>
+                      <td
+                        style={{
+                          border: '1px solid #000',
+                          padding: '6px',
+                          textAlign: 'right',
+                          fontWeight: 'bold',
+                          fontSize: '13px',
+                          color: totalAdjustments < 0 ? '#d32f2f' : totalAdjustments > 0 ? '#2e7d32' : '#000',
+                        }}
+                      >
+                        {totalAdjustments === 0
+                          ? '0'
+                          : totalAdjustments > 0
+                          ? `+${totalAdjustments.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : `-${Math.abs(totalAdjustments).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                      </td>
+                    </tr>
+                    {isPledged && (
                       <tr>
-                        <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>Adjustments =</td>
-                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px', color: totalAdjustments < 0 ? '#d32f2f' : '#2e7d32' }}>
-                          &#8377; {totalAdjustments > 0 ? `+${Math.round(totalAdjustments).toLocaleString('en-IN')}` : `-${Math.abs(Math.round(totalAdjustments)).toLocaleString('en-IN')}`}
+                        <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', fontSize: '12px' }}>
+                          Payback Amount :
+                        </td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>
+                          &#8377; {paybackAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                       </tr>
                     )}
                     <tr style={{ backgroundColor: '#FFD700' }}>
-                      <td style={{ border: '1px solid #000', padding: '8px 6px', fontWeight: 'bold', fontSize: '13px' }}>Total Amount =</td>
+                      <td style={{ border: '1px solid #000', padding: '8px 6px', fontWeight: 'bold', fontSize: '13px' }}>
+                        Total Amount :
+                      </td>
                       <td style={{ border: '1px solid #000', padding: '8px 6px', textAlign: 'right', fontWeight: 'bold', fontSize: '15px' }}>
-                        &#8377; {Math.abs(Math.round(data?.payableAmount || 0)).toLocaleString('en-IN')}
+                        &#8377; {finalTotalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
                   </tbody>

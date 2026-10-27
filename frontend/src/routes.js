@@ -150,6 +150,7 @@ import StoreDashboard from './pages/store/Dashboard';
 import StoreTransit from './pages/store/Transit';
 import StoreGoldTransit from './pages/store/GoldTransit';
 import StoreTransitOutwards from './pages/store/TransitOutwards';
+import EmployeeDashboardLayout from './layouts/dashboard/employee';
 // ----------------------------------------------------------------------
 
 function Protected({ children }) {
@@ -516,6 +517,22 @@ export default function Router() {
         { path: 'gold-transit', element: <StoreGoldTransit /> },
         { path: 'transit-outwards', element: <StoreTransitOutwards /> },
         { path: 'transit-sales/:id', element: <AdminTransitSales /> },
+        { path: 'attendance', element: <BranchAttendance /> },
+        { path: 'leave', element: <BranchLeave /> },
+        { path: 'leaves', element: <BranchLeave /> },
+      ],
+    },
+    {
+      path: '/employee',
+      element: (
+        <Protected>
+          <EmployeeDashboardLayout />
+        </Protected>
+      ),
+      children: [
+        { path: 'profile', element: <Profile /> },
+        { element: <Navigate to="/employee/attendance" />, index: true },
+        { path: 'dashboard', element: <Navigate to="/employee/attendance" /> },
         { path: 'attendance', element: <BranchAttendance /> },
         { path: 'leave', element: <BranchLeave /> },
         { path: 'leaves', element: <BranchLeave /> },

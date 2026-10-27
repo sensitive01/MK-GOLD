@@ -104,6 +104,7 @@ function UpdateUser(props) {
 
   const filteredEmployees = employees?.filter((e) => {
     if (!values.userType) return true;
+    if (values.userType === 'employee' || values.userType === 'general_employee') return true;
     const userTypeObj = global.userTypes?.find(t => t.value === values.userType);
     if (!userTypeObj) return true;
     

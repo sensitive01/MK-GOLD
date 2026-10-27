@@ -894,6 +894,7 @@ export function CreateTransitModal({ open, handleClose, fetchData, auth, branche
   const [batchDeliveryBy, setBatchDeliveryBy] = useState('');
   const [batchTransitMovedThrough, setBatchTransitMovedThrough] = useState('Hand Delivery');
   const [batchNotes, setBatchNotes] = useState('');
+  const [batchProofs, setBatchProofs] = useState([]);
   const [batchProof, setBatchProof] = useState('');
   const [batchProofName, setBatchProofName] = useState('');
   const [batchProofLoading, setBatchProofLoading] = useState(false);
@@ -938,6 +939,7 @@ export function CreateTransitModal({ open, handleClose, fetchData, auth, branche
     if (open) {
       fetchUntransitedSales();
       setSelectedSaleIds([]);
+      setBatchProofs([]);
       setBatchProof('');
       setBatchProofName('');
       setBatchDeliveryBy('');
@@ -1064,33 +1066,60 @@ export function CreateTransitModal({ open, handleClose, fetchData, auth, branche
     };
   }, [selectedSalesList]);
 
-  // Upload proof for batch
+  // Upload proof for batch (multiple files support)
   const handleBatchProofUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
       setBatchProofLoading(true);
-      const formData = new FormData();
-      formData.append('uploadedFile', file);
-      formData.append('uploadName', 'transit_proof');
-      formData.append(
-        'uploadId',
-        [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')
-      );
-      try {
-        const response = await createFile(formData);
-        setBatchProofLoading(false);
-        if (response.status) {
-          setBatchProof(response.data?._id);
-          setBatchProofName(file.name);
-          setNotify({ open: true, message: 'Dispatch proof uploaded successfully!', severity: 'success' });
-        } else {
-          setNotify({ open: true, message: 'Proof upload failed', severity: 'error' });
+      const newUploaded = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('uploadedFile', file);
+        formData.append('uploadName', 'transit_proof');
+        formData.append(
+          'uploadId',
+          [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')
+        );
+        try {
+          const response = await createFile(formData);
+          if (response && response.status && response.data) {
+            newUploaded.push({
+              _id: response.data._id,
+              name: file.name,
+              url: response.data.uploadedFile,
+            });
+          }
+        } catch (err) {
+          console.error('Error uploading file:', file.name, err);
         }
-      } catch (err) {
-        setBatchProofLoading(false);
-        setNotify({ open: true, message: 'Proof upload error', severity: 'error' });
       }
+      setBatchProofLoading(false);
+      if (newUploaded.length > 0) {
+        setBatchProofs((prev) => {
+          const updated = [...prev, ...newUploaded];
+          setBatchProof(updated[0]?._id || '');
+          setBatchProofName(updated[0]?.name || '');
+          return updated;
+        });
+        setNotify({
+          open: true,
+          message: `${newUploaded.length} proof file(s) uploaded successfully!`,
+          severity: 'success',
+        });
+      } else {
+        setNotify({ open: true, message: 'Proof upload failed', severity: 'error' });
+      }
+      if (multiFileInputRef.current) multiFileInputRef.current.value = '';
     }
+  };
+
+  const handleRemoveBatchProof = (idx) => {
+    setBatchProofs((prev) => {
+      const updated = prev.filter((_, i) => i !== idx);
+      setBatchProof(updated[0]?._id || '');
+      setBatchProofName(updated[0]?.name || '');
+      return updated;
+    });
   };
 
   // Submit batch multi-branch creation
@@ -1107,7 +1136,7 @@ export function CreateTransitModal({ open, handleClose, fetchData, auth, branche
       setNotify({ open: true, message: 'Delivery Person / Staff name is required', severity: 'warning' });
       return;
     }
-    if (!batchProof) {
+    if (batchProofs.length === 0 && !batchProof) {
       setNotify({ open: true, message: 'Proof document is mandatory', severity: 'warning' });
       return;
     }
@@ -1120,7 +1149,8 @@ export function CreateTransitModal({ open, handleClose, fetchData, auth, branche
         deliveryBy: batchDeliveryBy.trim(),
         transitMovedThrough: batchTransitMovedThrough,
         notes: batchNotes.trim(),
-        proof: batchProof,
+        proof: batchProofs[0]?._id || batchProof,
+        proofs: batchProofs.map((p) => p._id),
         createdBy: auth.user?._id || 'store',
         creatorType: 'store',
         status: 'moved',
@@ -1610,6 +1640,7 @@ export function CreateTransitModal({ open, handleClose, fetchData, auth, branche
               <Grid item xs={12} sm={3}>
                 <input
                   type="file"
+                  multiple
                   style={{ display: 'none' }}
                   ref={multiFileInputRef}
                   accept="image/*,application/pdf"
@@ -1617,19 +1648,117 @@ export function CreateTransitModal({ open, handleClose, fetchData, auth, branche
                 />
                 <LoadingButton
                   fullWidth
-                  variant={batchProof ? 'contained' : 'outlined'}
-                  color={batchProof ? 'success' : 'primary'}
+                  variant={batchProofs.length > 0 ? 'contained' : 'outlined'}
+                  color={batchProofs.length > 0 ? 'success' : 'primary'}
                   loading={batchProofLoading}
                   onClick={() => multiFileInputRef.current?.click()}
+                  startIcon={<Iconify icon={batchProofs.length > 0 ? 'eva:checkmark-circle-2-fill' : 'eva:cloud-upload-fill'} />}
                   sx={{
                     height: 40,
                     fontWeight: 600,
                     textTransform: 'none',
                   }}
                 >
-                  {batchProof ? `✓ Proof Uploaded` : 'Upload Dispatch Proof *'}
+                  {batchProofs.length > 0
+                    ? `✓ ${batchProofs.length} Proof(s) (Add More)`
+                    : 'Upload Dispatch Proofs *'}
                 </LoadingButton>
               </Grid>
+
+              {batchProofs.length > 0 && (
+                <Grid item xs={12}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 1.5,
+                      p: 1.5,
+                      bgcolor: '#f8fafc',
+                      borderRadius: 1,
+                      border: '1px solid #e2e8f0',
+                    }}
+                  >
+                    {batchProofs.map((item, idx) => {
+                      const fileUrl = item.url || '';
+                      const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${global.BASE_URL}/${fileUrl}`;
+                      const isPdf =
+                        fileUrl.toLowerCase().endsWith('.pdf') ||
+                        (item.name && item.name.toLowerCase().endsWith('.pdf'));
+                      return (
+                        <Card
+                          key={item._id || idx}
+                          variant="outlined"
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            p: 0.75,
+                            pl: 1,
+                            pr: 0.5,
+                            gap: 1,
+                            bgcolor: '#fff',
+                            borderColor: '#cbd5e1',
+                            borderRadius: 1,
+                            maxWidth: 240,
+                          }}
+                        >
+                          {isPdf ? (
+                            <Iconify icon="mdi:file-pdf-box" width={28} sx={{ color: 'error.main', flexShrink: 0 }} />
+                          ) : (
+                            <Box
+                              component="img"
+                              src={fullUrl}
+                              alt={item.name}
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                objectFit: 'cover',
+                                borderRadius: 0.5,
+                                border: '1px solid #e2e8f0',
+                                flexShrink: 0,
+                                cursor: 'pointer',
+                              }}
+                              onClick={() => window.open(fullUrl, '_blank')}
+                            />
+                          )}
+                          <Typography
+                            variant="caption"
+                            noWrap
+                            sx={{
+                              flexGrow: 1,
+                              maxWidth: 120,
+                              fontWeight: 600,
+                              color: 'text.primary',
+                              cursor: 'pointer',
+                            }}
+                            title={item.name}
+                            onClick={() => window.open(fullUrl, '_blank')}
+                          >
+                            {item.name || `Proof ${idx + 1}`}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => window.open(fullUrl, '_blank')}
+                            title="View proof"
+                            sx={{ p: 0.5 }}
+                          >
+                            <Iconify icon="eva:external-link-outline" width={16} />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleRemoveBatchProof(idx)}
+                            title="Remove file"
+                            sx={{ p: 0.5 }}
+                          >
+                            <Iconify icon="eva:trash-2-outline" width={16} />
+                          </IconButton>
+                        </Card>
+                      );
+                    })}
+                  </Box>
+                </Grid>
+              )}
 
               <Grid item xs={12}>
                 <TextField
@@ -1657,7 +1786,7 @@ export function CreateTransitModal({ open, handleClose, fetchData, auth, branche
           variant="contained"
           loading={batchSubmitting}
           onClick={handleBatchSubmit}
-          disabled={selectedSaleIds.length === 0 || !batchDeliveryBy.trim() || !batchProof}
+          disabled={selectedSaleIds.length === 0 || !batchDeliveryBy.trim() || (batchProofs.length === 0 && !batchProof)}
           sx={{
             bgcolor: '#8A1B9F',
             color: '#fff',

@@ -38,7 +38,7 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { sentenceCase } from 'change-case';
 import moment from 'moment';
-import { getSalesById, updateSales, verifyFinancePayment } from '../../../apis/admin/sales';
+import { getSalesById, updateSales, verifyFinancePayment, checkArticleNumberApi } from '../../../apis/admin/sales';
 import { createFile } from '../../../apis/branch/fileupload';
 import global from '../../../utils/global';
 import TimelineView from '../../TimelineView';
@@ -71,30 +71,86 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
   const [purityProofFileName, setPurityProofFileName] = useState('');
   const [savingOrnament, setSavingOrnament] = useState(false);
   const [ornamentError, setOrnamentError] = useState('');
+  const [articleNumberError, setArticleNumberError] = useState('');
 
   // Form validation
   const schema = Yup.object({
-    payableAmount: Yup.string().required('Payable amount is required'),
+    payableAmount: Yup.number().typeError('Payable amount must be a number').required('Payable amount is required'),
+    adjustments: Yup.number().typeError('Adjustments must be a number').nullable(),
+    articleNumber: Yup.string().nullable(),
   });
 
-  const { handleSubmit, handleChange, handleBlur, values, setFieldValue, touched, errors } = useFormik({
+  const { handleSubmit, handleChange, handleBlur, values, setFieldValue, touched, errors, isSubmitting } = useFormik({
     initialValues: {
       payableAmount: 0,
+      adjustments: 0,
+      articleNumber: '',
     },
     validationSchema: schema,
-    onSubmit: (values) => {
-      updateSales(id, values).then((data) => {
-        if (data.status === false) {
-          setNotify({
-            open: true,
-            message: 'Data not update',
-            severity: 'error',
+    onSubmit: async (formValues) => {
+      // Validate article number if modified
+      if (
+        formValues.articleNumber &&
+        formValues.articleNumber.trim() &&
+        formValues.articleNumber.trim() !== (data?.articleNumber || '').trim()
+      ) {
+        try {
+          const checkRes = await checkArticleNumberApi({
+            articleNumber: formValues.articleNumber.trim(),
+            saleId: id || data?._id,
           });
+          if (checkRes?.status && checkRes?.data?.exists) {
+            const errMsg = checkRes.data.message || 'This article number is already assigned.';
+            setArticleNumberError(errMsg);
+            if (setNotify) {
+              setNotify({
+                open: true,
+                message: errMsg,
+                severity: 'error',
+              });
+            }
+            return;
+          }
+        } catch (e) {
+          console.error('Error validating article number on submit:', e);
+        }
+      }
+
+      const payload = {
+        payableAmount: Number(formValues.payableAmount),
+        adjustments: Number(formValues.adjustments || 0),
+        totalAdjustment: Number(formValues.adjustments || 0),
+        articleNumber: (formValues.articleNumber || '').trim(),
+      };
+
+      if (Array.isArray(data?.ornaments) && data.ornaments.length === 1) {
+        const singleOrn = { ...data.ornaments[0] };
+        singleOrn.adjustment = Number(formValues.adjustments || 0);
+        payload.ornaments = [singleOrn];
+      }
+
+      updateSales(id || data?._id, payload).then((res) => {
+        if (res.status === false) {
+          if (setNotify) {
+            setNotify({
+              open: true,
+              message: res.message || 'Data not update',
+              severity: 'error',
+            });
+          }
         } else {
-          setNotify({
-            open: true,
-            message: 'Data update',
-            severity: 'success',
+          if (setNotify) {
+            setNotify({
+              open: true,
+              message: 'Sale updated successfully',
+              severity: 'success',
+            });
+          }
+          getSalesById(id || data?._id).then((refreshed) => {
+            if (refreshed?.status && refreshed?.data) {
+              setData(refreshed.data);
+              if (onSaleLoaded) onSaleLoaded(refreshed.data);
+            }
           });
         }
       });
@@ -104,17 +160,51 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
   useEffect(() => {
     if (id) {
       setOpenBackdrop(true);
-      getSalesById(id).then((data) => {
-        if (data && data.status && data.data) {
-          setData(data.data);
+      getSalesById(id).then((res) => {
+        if (res && res.status && res.data) {
+          const sale = res.data;
+          setData(sale);
           if (onSaleLoaded) {
-            onSaleLoaded(data.data);
+            onSaleLoaded(sale);
           }
-          setFieldValue('payableAmount', Math.round(data.data.payableAmount ?? 0));
-        } else if (data && data.message && setNotify) {
+          setFieldValue('articleNumber', sale.articleNumber || '');
+          const loadedPayable = Math.round(sale.payableAmount ?? 0);
+          setFieldValue('payableAmount', loadedPayable);
+
+          const isPledged = (sale.saleType || '').toLowerCase() === 'pledged';
+          const currentRate = sale.purchaseType?.toLowerCase() === 'silver' ? (sale.silverRate || 0) : (sale.goldRate || 0);
+          const ornamentsTotal = (sale.ornaments && sale.ornaments.length > 0)
+            ? sale.ornaments.reduce((sum, orn) => {
+                const systemAmount = (orn.calculatedAmount !== undefined && orn.calculatedAmount !== null && Number(orn.calculatedAmount) > 0)
+                  ? Number(orn.calculatedAmount)
+                  : (currentRate > 0 && orn.netWeight && orn.purity)
+                  ? Math.round(((Number(orn.netWeight) * Number(orn.purity)) / 100) * Number(currentRate))
+                  : (Number(orn.netAmount || 0) - (Number(orn.adjustment) || 0));
+                return sum + systemAmount;
+              }, 0)
+            : Number(sale.netAmount || 0);
+
+          const releaseChargesTotal = isPledged
+            ? Math.round((sale.release || []).reduce((prev, cur) => prev + Number(cur?.payableAmount || 0), 0))
+            : 0;
+
+          const basePayout = isPledged ? Math.max(0, ornamentsTotal - releaseChargesTotal) : ornamentsTotal;
+
+          let initialAdj = 0;
+          if (sale.totalAdjustment !== undefined && sale.totalAdjustment !== null) {
+            initialAdj = Number(sale.totalAdjustment);
+          } else if (sale.adjustments !== undefined && sale.adjustments !== null) {
+            initialAdj = Number(sale.adjustments);
+          } else if (loadedPayable > 0 && basePayout > 0) {
+            initialAdj = loadedPayable - basePayout;
+          } else {
+            initialAdj = (sale.ornaments || []).reduce((sum, orn) => sum + (Number(orn.adjustment) || 0), 0);
+          }
+          setFieldValue('adjustments', Math.round(initialAdj));
+        } else if (res && res.message && setNotify) {
           setNotify({
             open: true,
-            message: data.message,
+            message: res.message,
             severity: 'error',
           });
         }
@@ -1801,7 +1891,9 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
             (t.proof && String(t.proof) === String(p._id)) ||
             (t.receivedProof && String(t.receivedProof) === String(p._id)) ||
             (t.storeProof && String(t.storeProof) === String(p._id)) ||
-            (t.adminProof && String(t.adminProof) === String(p._id))
+            (t.adminProof && String(t.adminProof) === String(p._id)) ||
+            (Array.isArray(t.proofs) && t.proofs.some(id => String(id?._id || id) === String(p._id))) ||
+            (Array.isArray(t.storeProofs) && t.storeProofs.some(id => String(id?._id || id) === String(p._id)))
         );
 
         const transitRef = matchedTransit?.transitId || p.documentNo || '-';
@@ -1970,7 +2062,11 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           m =>
             (m.meltProof && String(m.meltProof) === String(p._id)) ||
             (m.preMeltProof && String(m.preMeltProof) === String(p._id)) ||
-            (m.afterMeltProof && String(m.afterMeltProof) === String(p._id))
+            (m.afterMeltProof && String(m.afterMeltProof) === String(p._id)) ||
+            (m.purityPhoto && String(m.purityPhoto) === String(p._id)) ||
+            (Array.isArray(m.meltProofs) && m.meltProofs.some(id => String(id?._id || id) === String(p._id))) ||
+            (Array.isArray(m.preMeltProofs) && m.preMeltProofs.some(id => String(id?._id || id) === String(p._id))) ||
+            (Array.isArray(m.afterMeltProofs) && m.afterMeltProofs.some(id => String(id?._id || id) === String(p._id)))
         );
 
         const batchRef = matchedMelting?.batchId || p.documentNo || '-';
@@ -2771,10 +2867,49 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                       <TableRow tabIndex={-1}>
                         <TableCell align="left">
                           Bill Id: {data?.billId}
-                          {data?.articleNumber && (
-                            <Box component="span" sx={{ display: 'block', color: 'primary.main', fontWeight: 600, fontSize: '0.8125rem', mt: 0.5 }}>
-                              Article No: {data.articleNumber}
+                          {isAdmin ? (
+                            <Box sx={{ mt: 1, maxWidth: 220 }}>
+                              <TextField
+                                size="small"
+                                name="articleNumber"
+                                label="Article No"
+                                value={values?.articleNumber ?? ''}
+                                onChange={(e) => {
+                                  setFieldValue('articleNumber', e.target.value);
+                                  if (articleNumberError) setArticleNumberError('');
+                                }}
+                                onBlur={async () => {
+                                  const trimmed = (values?.articleNumber || '').trim();
+                                  if (trimmed && trimmed !== (data?.articleNumber || '').trim()) {
+                                    try {
+                                      const checkRes = await checkArticleNumberApi({
+                                        articleNumber: trimmed,
+                                        saleId: id || data?._id,
+                                      });
+                                      if (checkRes?.status && checkRes?.data?.exists) {
+                                        setArticleNumberError(checkRes.data.message || 'Already assigned');
+                                      } else {
+                                        setArticleNumberError('');
+                                      }
+                                    } catch (err) {
+                                      console.error(err);
+                                    }
+                                  } else {
+                                    setArticleNumberError('');
+                                  }
+                                }}
+                                error={Boolean(articleNumberError)}
+                                helperText={articleNumberError || ''}
+                                fullWidth
+                                placeholder="Enter article no"
+                              />
                             </Box>
+                          ) : (
+                            data?.articleNumber && (
+                              <Box component="span" sx={{ display: 'block', color: 'primary.main', fontWeight: 600, fontSize: '0.8125rem', mt: 0.5 }}>
+                                Article No: {data.articleNumber}
+                              </Box>
+                            )
                           )}
                         </TableCell>
                         <TableCell align="left">Branch: {sentenceCase(data.branch?.branchName ?? '')}</TableCell>
@@ -2789,75 +2924,95 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                         </TableCell>
                         <TableCell align="left">Net Weight: {data.netWeight != null ? `${Number(data.netWeight).toFixed(2)} g` : '-'}</TableCell>
                       </TableRow>
-                      <TableRow tabIndex={-1}>
-                        <TableCell align="left">Net Amount: ₹{Math.round(data.netAmount || 0).toLocaleString('en-IN')}</TableCell>
-                        <TableCell align="left">
-                          Margin Amount:{' '}
-                          ₹{Math.round(
-                            data.status === 'approved'
-                              ? (data.netAmount -
-                                  (data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0) || 0) -
-                                  values?.payableAmount)
-                              : ((data.netAmount * data.margin) / 100)
-                          ).toLocaleString('en-IN')}{' '}
-                          ({data.margin}%)
-                        </TableCell>
-                        {data?.saleType?.toLowerCase() !== 'physical' && (
-                          <TableCell align="left">
-                            Release Amount:{' '}
-                            ₹{Math.round(data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0) || 0).toLocaleString('en-IN')}
-                          </TableCell>
-                        )}
-                        {Boolean(
-                          data?.totalAdjustment ?? data?.adjustments ?? (
-                            data?.ornaments?.reduce((sum, orn) => sum + (Number(orn.adjustment) || (Number(orn.netAmount || 0) - Number(orn.calculatedAmount || orn.netAmount || 0))), 0)
-                          )
-                        ) && (
-                          <TableCell align="left">
-                            Adjustments:{' '}
-                            <Box
-                              component="span"
-                              sx={{
-                                fontWeight: 'bold',
-                                color:
-                                  (data?.totalAdjustment ?? data?.adjustments ?? (
-                                    data?.ornaments?.reduce((sum, orn) => sum + (Number(orn.adjustment) || (Number(orn.netAmount || 0) - Number(orn.calculatedAmount || orn.netAmount || 0))), 0)
-                                  )) > 0
-                                    ? 'success.main'
-                                    : 'error.main',
-                              }}
-                            >
-                              {(data?.totalAdjustment ?? data?.adjustments ?? (
-                                data?.ornaments?.reduce((sum, orn) => sum + (Number(orn.adjustment) || (Number(orn.netAmount || 0) - Number(orn.calculatedAmount || orn.netAmount || 0))), 0)
-                              )) > 0
-                                ? `+₹${Math.round(data?.totalAdjustment ?? data?.adjustments ?? (
-                                    data?.ornaments?.reduce((sum, orn) => sum + (Number(orn.adjustment) || (Number(orn.netAmount || 0) - Number(orn.calculatedAmount || orn.netAmount || 0))), 0)
-                                  )).toLocaleString('en-IN')}`
-                                : `-₹${Math.abs(Math.round(data?.totalAdjustment ?? data?.adjustments ?? (
-                                    data?.ornaments?.reduce((sum, orn) => sum + (Number(orn.adjustment) || (Number(orn.netAmount || 0) - Number(orn.calculatedAmount || orn.netAmount || 0))), 0)
-                                  ))).toLocaleString('en-IN')}`}
-                            </Box>
-                          </TableCell>
-                        )}
-                        <TableCell align="left" colSpan={1}>
-                          {['pending', 'bullion pending'].includes(data.status) ? (
-                            <TextField
-                              name="payableAmount"
-                              type={'number'}
-                              value={Math.round(values?.payableAmount)}
-                              error={touched.payableAmount && errors.payableAmount && true}
-                              label={
-                                touched.payableAmount && errors.payableAmount ? errors.payableAmount : 'Payable Amount'
-                              }
-                              fullWidth
-                              onBlur={handleBlur}
-                              onChange={handleChange}
-                            />
-                          ) : (
-                            <>Payable Amount: ₹{Math.abs(Math.round(data.payableAmount || 0)).toLocaleString('en-IN')}</>
-                          )}
-                        </TableCell>
-                      </TableRow>
+                      {(() => {
+                        const isPledged = (data?.saleType || '').toLowerCase() === 'pledged';
+                        const currentRate = data?.purchaseType?.toLowerCase() === 'silver' ? (data?.silverRate || 0) : (data?.goldRate || 0);
+                        const ornamentsTotal = (data?.ornaments && data.ornaments.length > 0)
+                          ? data.ornaments.reduce((sum, orn) => {
+                              const systemAmount = (orn.calculatedAmount !== undefined && orn.calculatedAmount !== null && Number(orn.calculatedAmount) > 0)
+                                ? Number(orn.calculatedAmount)
+                                : (currentRate > 0 && orn.netWeight && orn.purity)
+                                ? Math.round(((Number(orn.netWeight) * Number(orn.purity)) / 100) * Number(currentRate))
+                                : (Number(orn.netAmount || 0) - (Number(orn.adjustment) || 0));
+                              return sum + systemAmount;
+                            }, 0)
+                          : Number(data?.netAmount || 0);
+
+                        const releaseChargesTotal = isPledged
+                          ? Math.round((data?.release || []).reduce((prev, cur) => prev + Number(cur?.payableAmount || 0), 0))
+                          : 0;
+
+                        const basePayout = isPledged ? Math.max(0, ornamentsTotal - releaseChargesTotal) : ornamentsTotal;
+
+                        return (
+                          <TableRow tabIndex={-1}>
+                            <TableCell align="left">Net Amount: ₹{Math.round(data.netAmount || 0).toLocaleString('en-IN')}</TableCell>
+                            <TableCell align="left">
+                              Margin Amount:{' '}
+                              ₹{Math.round(
+                                data.status === 'approved'
+                                  ? (data.netAmount -
+                                      (data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0) || 0) -
+                                      values?.payableAmount)
+                                  : ((data.netAmount * data.margin) / 100)
+                              ).toLocaleString('en-IN')}{' '}
+                              ({data.margin}%)
+                            </TableCell>
+                            {data?.saleType?.toLowerCase() !== 'physical' && (
+                              <TableCell align="left">
+                                Release Amount:{' '}
+                                ₹{Math.round(data.release?.reduce((prev, cur) => prev + +cur.payableAmount, 0) || 0).toLocaleString('en-IN')}
+                              </TableCell>
+                            )}
+                            <TableCell align="left">
+                              Adjustments:{' '}
+                              <Box
+                                component="span"
+                                sx={{
+                                  fontWeight: 'bold',
+                                  color:
+                                    (values?.adjustments ?? 0) > 0
+                                      ? 'success.main'
+                                      : (values?.adjustments ?? 0) < 0
+                                      ? 'error.main'
+                                      : 'text.secondary',
+                                }}
+                              >
+                                {(values?.adjustments ?? 0) > 0
+                                  ? `+₹${Math.round(values?.adjustments).toLocaleString('en-IN')}`
+                                  : (values?.adjustments ?? 0) < 0
+                                  ? `-₹${Math.abs(Math.round(values?.adjustments)).toLocaleString('en-IN')}`
+                                  : '₹0'}
+                              </Box>
+                            </TableCell>
+                            <TableCell align="left" colSpan={1}>
+                              {(isAdmin || ['pending', 'bullion pending'].includes(data.status)) ? (
+                                <TextField
+                                  size="small"
+                                  name="payableAmount"
+                                  type="number"
+                                  value={values?.payableAmount ?? ''}
+                                  label="Payable Amount"
+                                  onChange={(e) => {
+                                    const raw = e.target.value;
+                                    const payVal = raw === '' ? '' : Number(raw);
+                                    setFieldValue('payableAmount', payVal);
+                                    const newAdj = (Number(payVal) || 0) - basePayout;
+                                    setFieldValue('adjustments', Math.round(newAdj));
+                                  }}
+                                  InputProps={{
+                                    startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                                  }}
+                                  helperText={`Base: ₹${basePayout.toLocaleString('en-IN')}`}
+                                  sx={{ maxWidth: 200 }}
+                                />
+                              ) : (
+                                <>Payable Amount: ₹{Math.abs(Math.round(data.payableAmount || 0)).toLocaleString('en-IN')}</>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })()}
                       {/* <TableRow tabIndex={-1}>
                         <TableCell align="left">Status: {sentenceCase(data.status || '')}</TableCell>
                         {data.paymentType === 'partial' && (
@@ -2895,9 +3050,9 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 <TimelineView timeline={data.timeline} />
               </Grid>
 
-              {['pending', 'bullion pending'].includes(data.status) && (
+              {(isAdmin || ['pending', 'bullion pending'].includes(data.status)) && (
                 <Grid item xs={12}>
-                  <LoadingButton size="large" type="submit" variant="contained">
+                  <LoadingButton size="large" type="submit" variant="contained" loading={isSubmitting}>
                     Update
                   </LoadingButton>
                 </Grid>

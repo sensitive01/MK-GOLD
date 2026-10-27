@@ -65,10 +65,14 @@ const transitSchema = new mongoose.Schema({
         default:""
     },
     proof:{
-        required:true,
+        required:false,
         type:mongoose.Schema.Types.ObjectId,
         ref: 'fileuploads'
     },
+    proofs: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'fileuploads'
+    }],
     deviations: {
         type: String,
         enum: ['yes', 'no'],
@@ -97,6 +101,10 @@ const transitSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'fileuploads'
     },
+    storeProofs: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'fileuploads'
+    }],
     storeNotes: {
         type: String,
         default: ""
@@ -163,6 +171,10 @@ const transitSchema = new mongoose.Schema({
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'fileuploads'
             },
+            proofs: [{
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'fileuploads'
+            }],
             createdAt: {
                 type: Date,
                 default: Date.now

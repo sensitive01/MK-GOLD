@@ -8,8 +8,10 @@ exports.findTransitData = async (req, res) => {
         const findData = await transitModel.find(query)
             .populate('branch', 'branchName branchId address city state')
             .populate('proof')
+            .populate('proofs')
             .populate('receivedProof')
             .populate('storeProof')
+            .populate('storeProofs')
             .populate('adminProof')
             .populate('storeReceivedBy', 'username')
             .populate('adminReceivedBy', 'username')
@@ -145,7 +147,12 @@ exports.updateTransitStatus = async (req, res) => {
             updatePayload.storeReceivedBy = req.user?._id;
             updatePayload.storeNotes = notes;
             updatePayload.receivedNotes = notes;
-            if (proofId) {
+            const sProofs = req.body.storeProofs || req.body.proofs || (proofId ? [proofId] : []);
+            if (sProofs.length > 0) {
+                updatePayload.storeProofs = sProofs;
+                updatePayload.storeProof = sProofs[0];
+                updatePayload.receivedProof = sProofs[0];
+            } else if (proofId) {
                 updatePayload.storeProof = proofId;
                 updatePayload.receivedProof = proofId;
             }
@@ -157,7 +164,8 @@ exports.updateTransitStatus = async (req, res) => {
                 deviation: finalDeviations,
                 status: finalStatus,
                 notes: notes || '',
-                proof: proofId || null,
+                proof: proofId || (sProofs[0] || null),
+                proofs: sProofs,
                 createdAt: new Date()
             };
 
@@ -296,7 +304,10 @@ exports.getTransitSales = async (req, res) => {
         const transit = await transitModel.findById(req.params.id)
             .populate('branch', 'branchName branchId address city state')
             .populate('proof')
+            .populate('proofs')
+            .populate('receivedProof')
             .populate('storeProof')
+            .populate('storeProofs')
             .populate('adminProof')
             .populate('storeReceivedBy', 'username')
             .populate('adminReceivedBy', 'username')
@@ -306,6 +317,7 @@ exports.getTransitSales = async (req, res) => {
                 populate: { path: 'employee', select: 'firstName lastName employeeId' }
             })
             .populate('deviationLogs.proof')
+            .populate('deviationLogs.proofs')
             .populate({
                 path: 'saleIds',
                 populate: [

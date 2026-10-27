@@ -107,7 +107,7 @@ export default function Attendance() {
   const [logoutTimer, setLogoutTimer] = useState(null);
   const timerIntervalRef = useRef(null);
   const [deleteType, setDeleteType] = useState('single');
-  const userType = auth.user.userType?.toLowerCase();
+  const userType = auth?.user?.userType?.toLowerCase() || '';
   const isManager = ['branch', 'assistant_branch_manager'].includes(userType);
   const isHRAdmin = ['hr', 'admin'].includes(userType);
   
@@ -366,7 +366,7 @@ export default function Attendance() {
         }
       });
     },
-    [currentTab, auth.user.employee, values.fromDate, values.toDate]
+    [currentTab, auth?.user?.employee, values.fromDate, values.toDate]
   );
 
   useEffect(() => {
@@ -711,8 +711,8 @@ export default function Attendance() {
                               <AttendanceLocation location={row.logoutLocation} />
                             </>
                           ) : (
-                            employee && auth.user.employee &&
-                            (employee?._id?.toString() || employee?.toString()) === (auth.user.employee?._id?.toString() || auth.user.employee?.toString()) ? (
+                            employee && auth?.user?.employee &&
+                            (employee?._id?.toString() || employee?.toString()) === (auth?.user?.employee?._id?.toString() || auth?.user?.employee?.toString()) ? (
                               <Button
                                 variant="outlined"
                                 size="small"

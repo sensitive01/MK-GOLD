@@ -41,57 +41,65 @@ export default function LoginForm() {
   });
 
   if (auth.isAuthenticated === true) {
-    const userType = auth.user.userType?.toLowerCase();
+    if (!auth.user) {
+      return null;
+    }
+    const rawType = auth.user.userType || auth.user.usertype || auth.user.role || '';
+    const userType = String(rawType).trim().toLowerCase();
+
     if (userType === 'admin' || userType === 'subadmin') {
-      return <Navigate to="/admin/dashboard" />;
+      return <Navigate to="/admin/dashboard" replace />;
     }
     if (userType === 'hr') {
-      return <Navigate to="/hr/dashboard" />;
+      return <Navigate to="/hr/dashboard" replace />;
     }
     if (userType === 'accounts') {
-      return <Navigate to="/accounts/dashboard" />;
+      return <Navigate to="/accounts/dashboard" replace />;
     }
     if (userType === 'finance') {
-      return <Navigate to="/finance/dashboard" />;
+      return <Navigate to="/finance/dashboard" replace />;
     }
     if (
       userType === 'branch' ||
       userType === 'assistant_branch_manager' ||
       userType === 'branch_executive'
     ) {
-      return <Navigate to="/branch/dashboard" />;
+      return <Navigate to="/branch/dashboard" replace />;
     }
     if (userType === 'telecalling') {
-      return <Navigate to="/telecalling/dashboard" />;
+      return <Navigate to="/telecalling/dashboard" replace />;
     }
     if (userType === 'transaction_executive') {
-      return <Navigate to="/transaction-executive/dashboard" />;
+      return <Navigate to="/transaction-executive/dashboard" replace />;
     }
     if (userType === 'operations') {
-      return <Navigate to="/operations/dashboard" />;
+      return <Navigate to="/operations/dashboard" replace />;
     }
     if (userType === 'bullion_desk') {
-      return <Navigate to="/bullion-desk/dashboard" />;
+      return <Navigate to="/bullion-desk/dashboard" replace />;
     }
     if (userType === 'auditor') {
-      return <Navigate to="/auditor/dashboard" />;
+      return <Navigate to="/auditor/dashboard" replace />;
     }
     if (userType === 'marketing') {
-      return <Navigate to="/marketing/dashboard" />;
+      return <Navigate to="/marketing/dashboard" replace />;
     }
     if (userType === 'telecaller_tl' || userType === 'telecaller-tl') {
-      return <Navigate to="/telecaller-tl/dashboard" />;
+      return <Navigate to="/telecaller-tl/dashboard" replace />;
     }
     if (userType === 'admin_desk') {
-      return <Navigate to="/admin-desk/dashboard" />;
+      return <Navigate to="/admin-desk/dashboard" replace />;
     }
     if (userType === 'melting') {
-      return <Navigate to="/melting/dashboard" />;
+      return <Navigate to="/melting/dashboard" replace />;
     }
     if (userType === 'store') {
-      return <Navigate to="/store/dashboard" />;
+      return <Navigate to="/store/dashboard" replace />;
     }
-    return <Navigate to="/404" />;
+    if (userType === 'employee' || userType === 'general_employee' || userType.includes('employee')) {
+      return <Navigate to="/employee/attendance" replace />;
+    }
+    return <Navigate to="/employee/attendance" replace />;
   }
 
   function AlertComponent(props, ref) {

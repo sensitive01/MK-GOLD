@@ -33,56 +33,64 @@ MeltingDetailDialog.propTypes = {
 export default function MeltingDetailDialog({ open, onClose, melting }) {
   if (!melting) return null;
 
-  const renderProofCard = (title, proof) => {
-    if (!proof) return null;
-    const fileUrl = proof?.uploadedFile || (typeof proof === 'string' ? proof : null);
-    if (!fileUrl) return null;
-    const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${global.BASE_URL}/${fileUrl}`;
-    const isPdf = fileUrl.toLowerCase().endsWith('.pdf');
+  const renderProofCard = (title, proofOrProofs) => {
+    if (!proofOrProofs) return null;
+    const proofsList = Array.isArray(proofOrProofs)
+      ? proofOrProofs.filter(Boolean)
+      : [proofOrProofs];
+    if (proofsList.length === 0) return null;
 
-    return (
-      <Grid item xs={12}>
-        <Card variant="outlined" sx={{ p: 2, bgcolor: '#fafafa', borderRadius: 1.5 }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-              {title}
-            </Typography>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<Iconify icon="eva:external-link-outline" />}
-              onClick={() => window.open(fullUrl, '_blank')}
-            >
-              {isPdf ? 'Open PDF' : 'View Full Image'}
-            </Button>
-          </Stack>
-          {isPdf ? (
-            <Box
-              component="iframe"
-              src={fullUrl}
-              title={title}
-              sx={{ width: '100%', height: 320, border: '1px solid #e0e0e0', borderRadius: 1 }}
-            />
-          ) : (
-            <Box
-              component="img"
-              src={fullUrl}
-              alt={title}
-              sx={{
-                width: '100%',
-                maxHeight: 320,
-                objectFit: 'contain',
-                borderRadius: 1,
-                bgcolor: '#fff',
-                border: '1px solid #eee',
-                cursor: 'pointer',
-              }}
-              onClick={() => window.open(fullUrl, '_blank')}
-            />
-          )}
-        </Card>
-      </Grid>
-    );
+    return proofsList.map((proof, idx) => {
+      const fileUrl = proof?.uploadedFile || (typeof proof === 'string' ? proof : null);
+      if (!fileUrl) return null;
+      const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${global.BASE_URL}/${fileUrl}`;
+      const isPdf = fileUrl.toLowerCase().endsWith('.pdf');
+      const displayTitle = proofsList.length > 1 ? `${title} (${idx + 1}/${proofsList.length})` : title;
+
+      return (
+        <Grid item xs={12} key={proof?._id || idx}>
+          <Card variant="outlined" sx={{ p: 2, bgcolor: '#fafafa', borderRadius: 1.5 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                {displayTitle}
+              </Typography>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<Iconify icon="eva:external-link-outline" />}
+                onClick={() => window.open(fullUrl, '_blank')}
+              >
+                {isPdf ? 'Open PDF' : 'View Full Image'}
+              </Button>
+            </Stack>
+            {isPdf ? (
+              <Box
+                component="iframe"
+                src={fullUrl}
+                title={displayTitle}
+                sx={{ width: '100%', height: 320, border: '1px solid #e0e0e0', borderRadius: 1 }}
+              />
+            ) : (
+              <Box
+                component="img"
+                src={fullUrl}
+                alt={displayTitle}
+                sx={{
+                  width: '100%',
+                  maxHeight: 320,
+                  objectFit: 'contain',
+                  borderRadius: 1,
+                  bgcolor: '#fff',
+                  border: '1px solid #eee',
+                  cursor: 'pointer',
+                }}
+                onClick={() => window.open(fullUrl, '_blank')}
+              />
+            )}
+          </Card>
+        </Grid>
+      );
+    });
   };
 
   return (
@@ -303,7 +311,7 @@ export default function MeltingDetailDialog({ open, onClose, melting }) {
                 </Grid>
               )}
 
-              {renderProofCard('Pre-Melt Proof / Verification Photo', melting.preMeltProof)}
+              {renderProofCard('Pre-Melt Proof / Verification Photo', (melting.preMeltProofs && melting.preMeltProofs.length > 0) ? melting.preMeltProofs : melting.preMeltProof)}
             </>
           )}
 
@@ -389,7 +397,7 @@ export default function MeltingDetailDialog({ open, onClose, melting }) {
                 </Grid>
               )}
 
-              {renderProofCard('After-Melt Bar Proof / Photo', melting.afterMeltProof)}
+              {renderProofCard('After-Melt Bar Proof / Photo', (melting.afterMeltProofs && melting.afterMeltProofs.length > 0) ? melting.afterMeltProofs : melting.afterMeltProof)}
             </>
           )}
 

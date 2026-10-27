@@ -49,11 +49,16 @@ async function create(payload) {
     if (payload.loginMethod === 'otp') {
       payload.password = 'no-password';
     }
-    if (!payload.username && payload.employee) {
+    if (payload.employee) {
       const Employee = require("../models/employee");
       const emp = await Employee.findById(payload.employee);
-      if (emp && emp.phoneNumber) {
-        payload.username = emp.phoneNumber;
+      if (emp) {
+        if (!payload.username && emp.phoneNumber) {
+          payload.username = emp.phoneNumber;
+        }
+        if (!payload.branch && emp.branch) {
+          payload.branch = emp.branch;
+        }
       }
     }
     let goldRate = new User(payload);

@@ -17,8 +17,11 @@ async function find(query = {}) {
     })
     .populate('saleIds')
     .populate('meltProof')
+    .populate('meltProofs')
     .populate('preMeltProof')
+    .populate('preMeltProofs')
     .populate('afterMeltProof')
+    .populate('afterMeltProofs')
     .populate('purityPhoto')
     .populate('purityCertificate')
     .populate('createdBy', 'name')
@@ -28,9 +31,25 @@ async function find(query = {}) {
 }
 
 async function create(payload) {
-  if (!payload.meltProof) {
+  if (!payload.meltProof && (!payload.meltProofs || payload.meltProofs.length === 0)) {
     throw new Error('Batch proof is mandatory to create melting batch');
   }
+  if (payload.meltProofs && Array.isArray(payload.meltProofs) && payload.meltProofs.length > 0) {
+    if (!payload.meltProof) payload.meltProof = payload.meltProofs[0];
+  } else if (payload.meltProof) {
+    payload.meltProofs = [payload.meltProof];
+  }
+  if (payload.preMeltProofs && Array.isArray(payload.preMeltProofs) && payload.preMeltProofs.length > 0) {
+    if (!payload.preMeltProof) payload.preMeltProof = payload.preMeltProofs[0];
+  } else if (payload.preMeltProof) {
+    payload.preMeltProofs = [payload.preMeltProof];
+  }
+  if (payload.afterMeltProofs && Array.isArray(payload.afterMeltProofs) && payload.afterMeltProofs.length > 0) {
+    if (!payload.afterMeltProof) payload.afterMeltProof = payload.afterMeltProofs[0];
+  } else if (payload.afterMeltProof) {
+    payload.afterMeltProofs = [payload.afterMeltProof];
+  }
+
   const item = new Model(payload);
   return await item.save();
 }
@@ -44,6 +63,19 @@ async function update(id, payload) {
       throw new Error('Purity certificate is mandatory for vendor settlement');
     }
   }
+
+  if (payload.preMeltProofs && Array.isArray(payload.preMeltProofs) && payload.preMeltProofs.length > 0) {
+    if (!payload.preMeltProof) payload.preMeltProof = payload.preMeltProofs[0];
+  } else if (payload.preMeltProof) {
+    payload.preMeltProofs = [payload.preMeltProof];
+  }
+
+  if (payload.afterMeltProofs && Array.isArray(payload.afterMeltProofs) && payload.afterMeltProofs.length > 0) {
+    if (!payload.afterMeltProof) payload.afterMeltProof = payload.afterMeltProofs[0];
+  } else if (payload.afterMeltProof) {
+    payload.afterMeltProofs = [payload.afterMeltProof];
+  }
+
   return await Model.findByIdAndUpdate(id, payload, { new: true }).exec();
 }
 

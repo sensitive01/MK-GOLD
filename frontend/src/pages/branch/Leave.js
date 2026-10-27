@@ -102,7 +102,7 @@ export default function Leave() {
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
   const [logModal, setLogModal] = useState({ open: false, logs: [] });
   const auth = useSelector((state) => state.auth);
-  const userType = auth.user.userType?.toLowerCase();
+  const userType = auth?.user?.userType?.toLowerCase() || '';
   const isManager = userType === 'branch';
   const [currentTab, setCurrentTab] = useState(isManager ? 'requests' : 'my_leaves');
 
@@ -129,13 +129,13 @@ export default function Leave() {
 
   const fetchData = (query = {}) => {
     if (currentTab === 'my_leaves') {
-      query.employee = auth.user.employee?._id || auth.user.employee;
+      query.employee = auth?.user?.employee?._id || auth?.user?.employee;
     }
     getLeave(query).then((data) => {
       let filtered = data.data;
       if (currentTab === 'requests' && isManager) {
           // Exclude own leaves from requests list
-          const myIdStr = String(auth.user.employee?._id || auth.user.employee);
+          const myIdStr = String(auth?.user?.employee?._id || auth?.user?.employee || '');
           filtered = data.data.filter(item => String(item.employee?._id || item.employee) !== myIdStr);
       }
       setData(filtered);

@@ -130,6 +130,7 @@ export default {
     { label: 'Admin Desk', value: 'admin_desk' },
     { label: 'Melting', value: 'melting' },
     { label: 'Store', value: 'store' },
+    { label: 'General Employee', value: 'employee' },
   ],
   employmentTypes: [
     { label: 'Full Time', value: 'full-time' },

@@ -11,13 +11,22 @@ exports.createTransitData = async (req,res)=>{
             String(req.body.createdBy).toLowerCase() === 'store';
 
         let payload = { ...req.body };
+        if (payload.proofs && Array.isArray(payload.proofs) && payload.proofs.length > 0) {
+            if (!payload.proof) payload.proof = payload.proofs[0];
+        } else if (payload.proof) {
+            payload.proofs = [payload.proof];
+        }
+
         if (isCreatedByStore) {
             payload.status = 'moved';
             payload.storeReceived = true;
             payload.storeReceivedAt = new Date();
             payload.storeReceivedBy = req.user?._id || req.body.createdBy;
-            if (req.body.proof) {
-                payload.storeProof = req.body.proof;
+            if (payload.proof) {
+                payload.storeProof = payload.proof;
+            }
+            if (payload.proofs) {
+                payload.storeProofs = payload.proofs;
             }
             payload.storeNotes = req.body.notes || "Direct Store Entry";
             payload.storeDeviations = 'no';
@@ -30,7 +39,7 @@ exports.createTransitData = async (req,res)=>{
                     deviation: 'no',
                     status: 'moved',
                     notes: req.body.notes || 'Direct Store Entry',
-                    proof: req.body.proof || null,
+                    proof: payload.proof || null,
                     createdAt: new Date()
                 }
             ];
@@ -68,6 +77,7 @@ exports.batchCreateTransitData = async (req, res) => {
             transitMovedThrough = "Hand Delivery",
             notes = "",
             proof,
+            proofs = [],
             createdBy,
             creatorType,
             status: requestedStatus,
@@ -88,13 +98,16 @@ exports.batchCreateTransitData = async (req, res) => {
             });
         }
 
-        if (!proof) {
+        const proofList = Array.isArray(proofs) && proofs.length > 0 ? proofs : (proof ? [proof] : []);
+
+        if (proofList.length === 0) {
             return res.status(400).json({
                 status: false,
                 message: "Proof document is mandatory",
                 data: []
             });
         }
+        const primaryProof = proofList[0];
 
         // Find all selected sales and populate branch
         const sales = await salesModel.find({ _id: { $in: saleIds } })
@@ -212,12 +225,14 @@ exports.batchCreateTransitData = async (req, res) => {
                 deliveryBy: deliveryBy || "Hand Delivery",
                 transitMovedThrough: transitMovedThrough || "Hand Delivery",
                 notes: notes || "",
-                proof: proof,
+                proof: primaryProof,
+                proofs: proofList,
                 status: isCreatedByStore ? "moved" : "intransit",
                 storeReceived: isCreatedByStore ? true : false,
                 storeReceivedAt: isCreatedByStore ? new Date() : undefined,
                 storeReceivedBy: isCreatedByStore ? (req.user?._id || createdBy) : undefined,
-                storeProof: isCreatedByStore ? proof : undefined,
+                storeProof: isCreatedByStore ? primaryProof : undefined,
+                storeProofs: isCreatedByStore ? proofList : undefined,
                 storeNotes: isCreatedByStore ? (notes || "Direct Store Entry") : "",
                 deviations: "no",
                 storeDeviations: "no",
@@ -233,7 +248,7 @@ exports.batchCreateTransitData = async (req, res) => {
                         deviation: 'no',
                         status: 'moved',
                         notes: notes || 'Direct Store Entry',
-                        proof: proof || null,
+                        proof: primaryProof || null,
                         createdAt: new Date()
                     }
                 ];
@@ -312,6 +327,10 @@ exports.findTransitData = async (req,res)=>{
         console.log("Transit Query:", query);
         const findData = await transitModel.find(query)
             .populate('branch', 'branchName branchId')
+            .populate('proof')
+            .populate('proofs')
+            .populate('storeProof')
+            .populate('storeProofs')
             .populate({
                 path: 'saleIds',
                 select: 'ornaments billId articleNumber'
@@ -381,6 +400,10 @@ exports.getTransitById = async (req, res) => {
     try {
         const data = await transitModel.findById(req.params.id)
             .populate('branch')
+            .populate('proof')
+            .populate('proofs')
+            .populate('storeProof')
+            .populate('storeProofs')
             .populate({ path: 'saleIds', populate: { path: 'customer' } });
             
         if (!data) {

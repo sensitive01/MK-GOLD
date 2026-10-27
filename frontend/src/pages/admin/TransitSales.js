@@ -566,27 +566,59 @@ export default function TransitSales() {
                   <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
                     <strong>Notes:</strong> {transitDetails.notes || 'No notes provided by branch.'}
                   </Typography>
-                  {transitDetails.proof?.uploadedFile ? (
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<Iconify icon="eva:external-link-fill" />}
-                      onClick={() =>
-                        window.open(
-                          transitDetails.proof.uploadedFile.startsWith('http')
-                            ? transitDetails.proof.uploadedFile
-                            : `${global.BASE_URL}/${transitDetails.proof.uploadedFile}`,
-                          '_blank'
-                        )
+                  {(() => {
+                    let rawProofs = [];
+                    if (Array.isArray(transitDetails.proofs) && transitDetails.proofs.length > 0) {
+                      rawProofs = transitDetails.proofs;
+                    } else if (transitDetails.proof) {
+                      rawProofs = [transitDetails.proof];
+                    }
+
+                    const validProofs = rawProofs.map((p, idx) => {
+                      if (!p) return null;
+                      if (typeof p === 'object' && p.uploadedFile) {
+                        return { url: p.uploadedFile, name: p.uploadName || p.fileName || `Proof ${idx + 1}` };
                       }
-                    >
-                      View Dispatch Proof
-                    </Button>
-                  ) : (
-                    <Typography variant="caption" color="text.secondary">
-                      No dispatch proof attached
-                    </Typography>
-                  )}
+                      if (typeof p === 'string' && (p.startsWith('http') || p.includes('/'))) {
+                        return { url: p, name: `Proof ${idx + 1}` };
+                      }
+                      return null;
+                    }).filter(Boolean);
+
+                    if (validProofs.length === 0 && transitDetails.proof?.uploadedFile) {
+                      validProofs.push({
+                        url: transitDetails.proof.uploadedFile,
+                        name: 'View Dispatch Proof'
+                      });
+                    }
+
+                    if (validProofs.length === 0) {
+                      return (
+                        <Typography variant="caption" color="text.secondary">
+                          No dispatch proof attached
+                        </Typography>
+                      );
+                    }
+
+                    return (
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+                        {validProofs.map((p, idx) => {
+                          const fullUrl = p.url.startsWith('http') ? p.url : `${global.BASE_URL}/${p.url}`;
+                          return (
+                            <Button
+                              key={idx}
+                              size="small"
+                              variant="outlined"
+                              startIcon={<Iconify icon="eva:external-link-fill" />}
+                              onClick={() => window.open(fullUrl, '_blank')}
+                            >
+                              {validProofs.length > 1 ? `Proof ${idx + 1}` : 'View Dispatch Proof'}
+                            </Button>
+                          );
+                        })}
+                      </Stack>
+                    );
+                  })()}
                 </Box>
               </Grid>
 
@@ -616,22 +648,56 @@ export default function TransitSales() {
                       <Typography variant="body2" sx={{ mt: 0.5, mb: 1, fontSize: '0.85rem' }}>
                         <strong>Store Remarks:</strong> {transitDetails.storeNotes || transitDetails.receivedNotes || 'None'}
                       </Typography>
-                      {(transitDetails.storeProof?.uploadedFile || transitDetails.receivedProof?.uploadedFile) && (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<Iconify icon="eva:external-link-fill" />}
-                          onClick={() => {
-                            const proofUrl = transitDetails.storeProof?.uploadedFile || transitDetails.receivedProof?.uploadedFile;
-                            window.open(
-                              proofUrl.startsWith('http') ? proofUrl : `${global.BASE_URL}/${proofUrl}`,
-                              '_blank'
-                            );
-                          }}
-                        >
-                          View Store Proof
-                        </Button>
-                      )}
+                      {(() => {
+                        let rawStoreProofs = [];
+                        if (Array.isArray(transitDetails.storeProofs) && transitDetails.storeProofs.length > 0) {
+                          rawStoreProofs = transitDetails.storeProofs;
+                        } else if (transitDetails.storeProof) {
+                          rawStoreProofs = [transitDetails.storeProof];
+                        } else if (transitDetails.receivedProof) {
+                          rawStoreProofs = [transitDetails.receivedProof];
+                        }
+
+                        const validStoreProofs = rawStoreProofs.map((p, idx) => {
+                          if (!p) return null;
+                          if (typeof p === 'object' && p.uploadedFile) {
+                            return { url: p.uploadedFile, name: p.uploadName || p.fileName || `Store Proof ${idx + 1}` };
+                          }
+                          if (typeof p === 'string' && (p.startsWith('http') || p.includes('/'))) {
+                            return { url: p, name: `Store Proof ${idx + 1}` };
+                          }
+                          return null;
+                        }).filter(Boolean);
+
+                        if (validStoreProofs.length === 0 && (transitDetails.storeProof?.uploadedFile || transitDetails.receivedProof?.uploadedFile)) {
+                          const singleUrl = transitDetails.storeProof?.uploadedFile || transitDetails.receivedProof?.uploadedFile;
+                          validStoreProofs.push({
+                            url: singleUrl,
+                            name: 'View Store Proof'
+                          });
+                        }
+
+                        if (validStoreProofs.length === 0) return null;
+
+                        return (
+                          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+                            {validStoreProofs.map((p, idx) => {
+                              const fullUrl = p.url.startsWith('http') ? p.url : `${global.BASE_URL}/${p.url}`;
+                              return (
+                                <Button
+                                  key={idx}
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<Iconify icon="eva:external-link-fill" />}
+                                  onClick={() => window.open(fullUrl, '_blank')}
+                                >
+                                  {validStoreProofs.length > 1 ? `Store Proof ${idx + 1}` : 'View Store Proof'}
+                                </Button>
+                              );
+                            })}
+                          </Stack>
+                        );
+                      })()}
                     </>
                   ) : (
                     <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mt: 1 }}>
