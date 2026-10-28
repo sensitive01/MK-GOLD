@@ -606,39 +606,52 @@ function PreviewLead(props) {
                 Rejected
               </Box>
             ) : data.bullionStatus === 'approved' ? (
-              <Box
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                  px: 2,
-                  py: 0.8,
-                  borderRadius: 1,
-                  bgcolor: 'rgba(46, 125, 50, 0.12)',
-                  color: '#2e7d32',
-                  fontWeight: 600,
-                  fontSize: '0.85rem',
-                }}
-              >
-                <Iconify icon="eva:checkmark-circle-2-fill" sx={{ width: 18, height: 18 }} />
-                Bullion Approved
-              </Box>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Box
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    px: 2,
+                    py: 0.8,
+                    borderRadius: 1,
+                    bgcolor: 'rgba(46, 125, 50, 0.12)',
+                    color: '#2e7d32',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                  }}
+                >
+                  <Iconify icon="eva:checkmark-circle-2-fill" sx={{ width: 18, height: 18 }} />
+                  Bullion Approved
+                </Box>
+                {auth?.user?.userType === 'bullion_desk' && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={handleOpenAssignModal}
+                    startIcon={<Iconify icon="eva:person-add-fill" />}
+                    sx={{ color: '#8A1B9F', borderColor: '#8A1B9F', fontWeight: 600 }}
+                  >
+                    {data.assignedExecutive || data.assignedExecutiveName ? 'Change Executive' : 'Assign Executive'}
+                  </Button>
+                )}
+              </Stack>
             ) : (
               <Stack direction="row" spacing={1} alignItems="center">
                 <Button
                   variant="contained"
-                  onClick={handleBullionApprove}
-                  startIcon={<Iconify icon="eva:checkmark-circle-2-fill" sx={{ color: '#ffffff !important' }} />}
+                  onClick={handleOpenAssignModal}
+                  startIcon={<Iconify icon="eva:person-add-fill" sx={{ color: '#ffffff !important' }} />}
                   sx={{
-                    bgcolor: '#2e7d32',
+                    bgcolor: '#8A1B9F',
                     color: '#ffffff !important',
                     fontWeight: 600,
-                    '&:hover': { bgcolor: '#1b5e20' },
+                    '&:hover': { bgcolor: '#731485' },
                     '& .MuiButton-startIcon': { color: '#ffffff !important' },
                     '& svg': { color: '#ffffff !important', fill: '#ffffff !important' },
                   }}
                 >
-                  Approve
+                  Assign Executive
                 </Button>
                 <Button
                   variant="outlined"

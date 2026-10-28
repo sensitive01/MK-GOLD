@@ -9,25 +9,32 @@ const GoldRate = require("../models/goldrate");
 async function find(query = {}, user = null) {
   try {
     const userType = user?.userType?.toLowerCase();
+    const userObjId = user?._id && mongoose.Types.ObjectId.isValid(user._id)
+      ? new mongoose.Types.ObjectId(user._id)
+      : user?._id;
+
     if (
-      userType === "branch" ||
-      userType === "assistant_branch_manager" ||
+      userType === "transaction_executive" ||
       userType === "branch_executive" ||
-      userType === "transaction_executive"
+      userType === "branch" ||
+      userType === "assistant_branch_manager"
     ) {
-      const branchId = user.branch?._id || user.branch;
-      const branchOrCondition = [
-        { assignedExecutive: user._id },
-        ...(branchId ? [{ branch: branchId, assignedExecutive: { $in: [null, undefined] } }] : [])
-      ];
-      if (query.$or) {
-        query.$and = [
-          { $or: query.$or },
-          { $or: branchOrCondition }
-        ];
+      // Branch roles (Transaction Executive, Branch Executive, Branch Manager, Assistant Branch Manager)
+      // MUST ONLY see leads directly assigned to their specific user account.
+      // If a lead is not assigned, it will NOT show in any branch login.
+      const execCondition = {
+        $or: [
+          { assignedExecutive: userObjId },
+          { assignedExecutive: String(user._id) }
+        ]
+      };
+      if (query.$and) {
+        query.$and.push(execCondition);
+      } else if (query.$or) {
+        query.$and = [{ $or: query.$or }, execCondition];
         delete query.$or;
       } else {
-        query.$or = branchOrCondition;
+        query.$or = execCondition.$or;
       }
     } else if (userType === "telecalling") {
       // Telecallers only see unclaimed leads, or leads they have specifically claimed
@@ -479,10 +486,12 @@ async function getLeadStats(user = null) {
       userType === "branch_executive" ||
       userType === "transaction_executive"
     ) {
-      const branchId = user.branch?._id || user.branch;
+      const userObjId = user?._id && mongoose.Types.ObjectId.isValid(user._id)
+        ? new mongoose.Types.ObjectId(user._id)
+        : user?._id;
       query.$or = [
-        { assignedExecutive: user._id },
-        ...(branchId ? [{ branch: branchId, assignedExecutive: { $in: [null, undefined] } }] : [])
+        { assignedExecutive: userObjId },
+        { assignedExecutive: String(user._id) }
       ];
     } else if (userType === "telecalling") {
         query.leadSource = { $in: ["telecalling", "marketing"] };
@@ -644,9 +653,15 @@ async function markExclusive(ids, isExclusive, user = null) {
 async function assignExecutive(id, payload, user = null) {
   try {
     const updateData = {};
-    if (payload.branch) updateData.branch = payload.branch;
+    if (payload.branch) {
+      updateData.branch = mongoose.Types.ObjectId.isValid(payload.branch)
+        ? new mongoose.Types.ObjectId(payload.branch)
+        : payload.branch;
+    }
     if (payload.assignedExecutive) {
-      updateData.assignedExecutive = payload.assignedExecutive;
+      updateData.assignedExecutive = mongoose.Types.ObjectId.isValid(payload.assignedExecutive)
+        ? new mongoose.Types.ObjectId(payload.assignedExecutive)
+        : payload.assignedExecutive;
       updateData.bullionStatus = "approved";
       updateData.bullionApprovedAt = new Date();
     }

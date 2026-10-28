@@ -749,10 +749,10 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
                                 }}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleApproveLead(row._id);
+                                  handleOpenAssignModal(row);
                                 }}
                               >
-                                Approve
+                                Assign Executive
                               </Button>
                               <Button
                                 variant="outlined"
