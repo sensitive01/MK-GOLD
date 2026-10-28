@@ -14,6 +14,7 @@ import QrCodeIcon from '@mui/icons-material/QrCode';
 import StoreIcon from '@mui/icons-material/Store';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 import SettingsIcon from '@mui/icons-material/Settings';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -115,7 +116,13 @@ const navConfig = [
     icon: <CampaignIcon sx={{ width: 1, height: 1 }} />,
   },
   {
+    title: 'Task Management',
+    path: '/admin/tasks',
+    icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
     title: 'Settings',
+
     icon: <SettingsIcon sx={{ width: 1, height: 1 }} />,
     children: [
       {

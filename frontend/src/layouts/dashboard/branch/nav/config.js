@@ -6,6 +6,8 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import SellIcon from '@mui/icons-material/Sell';
 import RequestPageIcon from '@mui/icons-material/RequestPage';
 import QrCodeIcon from '@mui/icons-material/QrCode';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
+
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -77,7 +79,13 @@ const navConfig = [
     icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
   },
   {
+    title: 'My Tasks',
+    path: '/branch/tasks',
+    icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
     title: 'Walkins',
+
     path: '/branch/qr-enquiry',
     icon: <QrCodeIcon sx={{ width: 1, height: 1 }} />,
   },

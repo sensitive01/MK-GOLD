@@ -9,6 +9,7 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import SellIcon from '@mui/icons-material/Sell';
 import SafetyCheckIcon from '@mui/icons-material/SafetyCheck';
 import RequestPageIcon from '@mui/icons-material/RequestPage';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -21,6 +22,11 @@ const navConfig = [
     title: 'dashboard',
     path: '/admin/dashboard',
     icon: icon('ic_analytics'),
+  },
+  {
+    title: 'My Tasks',
+    path: '/master/tasks',
+    icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'gold-rate',

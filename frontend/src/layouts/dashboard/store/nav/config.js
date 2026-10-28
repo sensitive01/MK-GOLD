@@ -4,6 +4,7 @@ import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DescriptionIcon from '@mui/icons-material/Description';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import SvgColor from '../../../../components/svg-color';
 
 // ----------------------------------------------------------------------
@@ -30,6 +31,11 @@ const navConfig = [
     title: 'Transit Outwards',
     path: '/store/transit-outwards',
     icon: <FlightTakeoffIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'My Tasks',
+    path: '/store/tasks',
+    icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Attendance',

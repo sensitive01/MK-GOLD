@@ -2,6 +2,7 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import DescriptionIcon from '@mui/icons-material/Description';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -24,6 +25,11 @@ const navConfig = [
     title: 'Funds',
     path: '/transaction-executive/fund',
     icon: <AttachMoneyIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'My Tasks',
+    path: '/transaction-executive/tasks',
+    icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Leave',

@@ -57,6 +57,7 @@ export default function DashboardAppPage() {
     { title: 'Releases', path: '/bullion-desk/release', icon: 'mdi:file-document-check', bgColor: '#FFD700' },
     { title: 'Leave', path: '/bullion-desk/leave', icon: 'mdi:calendar-remove', bgColor: '#fff' },
     { title: 'Attendance', path: '/bullion-desk/attendance', icon: 'mdi:clock-check', bgColor: '#FFD700' },
+    { title: 'Tasks', path: '/bullion-desk/tasks', icon: 'mdi:clipboard-check-outline', bgColor: '#fff' },
   ];
 
   const branchQuickLinks = [
@@ -66,7 +67,9 @@ export default function DashboardAppPage() {
     { title: 'Funds', path: '/branch/fund', icon: 'mdi:bank', bgColor: '#FFD700' },
     { title: 'Leave', path: '/branch/leave', icon: 'mdi:calendar-remove', bgColor: '#fff' },
     { title: 'Attendance', path: '/branch/attendance', icon: 'mdi:clock-check', bgColor: '#FFD700' },
+    { title: 'Tasks', path: '/branch/tasks', icon: 'mdi:clipboard-check-outline', bgColor: '#fff' },
   ];
+
 
   const quickLinks = isBullionDesk ? bullionQuickLinks : branchQuickLinks;
 

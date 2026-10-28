@@ -30,6 +30,8 @@ import AdminEmployeeUserTabs from './pages/admin/EmployeeUserTabs';
 import AdminOrnament from './pages/admin/Ornament';
 import AdminDesignation from './pages/admin/Designation';
 import AdminAnnouncement from './pages/admin/Announcements';
+import AdminTasks from './pages/admin/TaskManagement';
+import EmployeeTasks from './pages/employee/Tasks';
 import AdminQREnquiry from './pages/admin/QREnquiry';
 import AdminTransit from './pages/admin/Transit';
 import AdminTransitSales from './pages/admin/TransitSales';
@@ -203,6 +205,7 @@ export default function Router() {
         { path: 'settings', element: <AdminSettings /> },
         { path: 'designation', element: <AdminDesignation /> },
         { path: 'announcement', element: <AdminAnnouncement /> },
+        { path: 'tasks', element: <AdminTasks /> },
         { path: 'qr-enquiry', element: <AdminQREnquiry /> },
         { path: 'transit', element: <AdminTransit /> },
         { path: 'transit-sales/:id', element: <AdminTransitSales /> },
@@ -236,6 +239,7 @@ export default function Router() {
         { path: 'payprocess', element: <HrPayprocess /> },
         { path: 'leads', element: <HrLeads /> },
         { path: 'expense', element: <HrExpense /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -259,6 +263,7 @@ export default function Router() {
         { path: 'balancesheet', element: <AccountsBalancesheet /> },
         { path: 'leave', element: <AccountsLeave /> },
         { path: 'attendance', element: <BranchAttendance /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -287,6 +292,7 @@ export default function Router() {
         { path: 'qr-enquiry', element: <BranchQREnquiry /> },
         { path: 'transit', element: <BranchTransit /> },
         { path: 'transit-sales/:id', element: <AdminTransitSales /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -306,6 +312,7 @@ export default function Router() {
         { path: 'attendance', element: <BranchAttendance /> },
         { path: 'release', element: <BranchRelease /> },
         { path: 'gold-rate', element: <BranchGoldRate /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -319,6 +326,7 @@ export default function Router() {
         { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/master/dashboard" />, index: true },
         { path: 'dashboard', element: <MasterDashboard /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -342,6 +350,7 @@ export default function Router() {
         { path: 'sell-gold', element: <AuditorSellGold /> },
         { path: 'leave', element: <BranchLeave /> },
         { path: 'attendance', element: <AuditorAttendance /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -357,6 +366,7 @@ export default function Router() {
         { path: 'dashboard', element: <OperationsDashboard /> },
         { path: 'leave', element: <BranchLeave /> },
         { path: 'attendance', element: <BranchAttendance /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -382,6 +392,7 @@ export default function Router() {
         { path: 'release', element: <MeltingRelease /> },
         { path: 'attendance', element: <MeltingAttendance /> },
         { path: 'leave', element: <MeltingLeave /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -406,6 +417,7 @@ export default function Router() {
         { path: 'leave', element: <AccountsLeave /> },
         { path: 'attendance', element: <FinanceAttendance /> },
         { path: 'release', element: <FinanceRelease /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -422,7 +434,7 @@ export default function Router() {
         { path: 'leads', element: <BranchLeads /> },
         { path: 'attendance', element: <BranchAttendance /> },
         { path: 'leaves', element: <BranchLeave /> },
-
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -443,6 +455,7 @@ export default function Router() {
         { path: 'sale', element: <BranchSale /> },
         { path: 'billing', element: <BranchSale /> },
         { path: 'leads', element: <BranchLeads /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -466,6 +479,7 @@ export default function Router() {
         { path: 'calendar', element: <MarketingCalendar /> },
         { path: 'leads', element: <MarketingLeads /> },
         { path: 'telecallers', element: <MarketingTelecallers /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -484,6 +498,7 @@ export default function Router() {
         { path: 'attendance', element: <MarketingAttendance /> },
         { path: 'leave', element: <MarketingLeave /> },
         { path: 'expense', element: <MarketingExpense /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -500,6 +515,7 @@ export default function Router() {
         { path: 'attendance', element: <AdminDeskAttendance /> },
         { path: 'leave', element: <AdminDeskLeave /> },
         { path: 'expense', element: <AdminDeskExpense /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -520,6 +536,7 @@ export default function Router() {
         { path: 'attendance', element: <BranchAttendance /> },
         { path: 'leave', element: <BranchLeave /> },
         { path: 'leaves', element: <BranchLeave /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {
@@ -536,6 +553,7 @@ export default function Router() {
         { path: 'attendance', element: <BranchAttendance /> },
         { path: 'leave', element: <BranchLeave /> },
         { path: 'leaves', element: <BranchLeave /> },
+        { path: 'tasks', element: <EmployeeTasks /> },
       ],
     },
     {

@@ -52,6 +52,11 @@ const navConfig = [
     path: '/hr/expense',
     icon: <MonetizationOnIcon sx={{ width: 1, height: 1 }} />,
   },
+  {
+    title: 'My Tasks',
+    path: '/hr/tasks',
+    icon: icon('ic_analytics'),
+  },
 ];
 
 export default navConfig;

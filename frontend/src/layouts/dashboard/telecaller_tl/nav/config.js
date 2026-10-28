@@ -3,6 +3,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
 import GroupsIcon from '@mui/icons-material/Groups';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -25,6 +26,11 @@ const navConfig = [
     title: 'Leads',
     path: '/telecaller-tl/leads',
     icon: <GroupsIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'My Tasks',
+    path: '/telecaller-tl/tasks',
+    icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Attendance',

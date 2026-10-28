@@ -6,6 +6,7 @@ import SellIcon from '@mui/icons-material/Sell';
 import RequestPageIcon from '@mui/icons-material/RequestPage';
 import TimeToLeaveIcon from '@mui/icons-material/TimeToLeave';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -58,6 +59,11 @@ const navConfig = [
     title: 'Balancesheet',
     path: '/accounts/balancesheet',
     icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'My Tasks',
+    path: '/accounts/tasks',
+    icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'leaves',

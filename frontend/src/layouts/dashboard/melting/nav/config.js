@@ -64,6 +64,11 @@ const navConfig = [
     icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
   },
   {
+    title: 'My Tasks',
+    path: '/melting/tasks',
+    icon: icon('ic_analytics'),
+  },
+  {
     title: 'Leaves',
     path: '/melting/leave',
     icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,

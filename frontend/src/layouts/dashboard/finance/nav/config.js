@@ -78,6 +78,11 @@ const navConfig = [
     icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
   },
   {
+    title: 'My Tasks',
+    path: '/finance/tasks',
+    icon: icon('ic_analytics'),
+  },
+  {
     title: 'Releases',
     path: '/finance/release',
     icon: <RequestPageIcon sx={{ width: 1, height: 1 }} />,

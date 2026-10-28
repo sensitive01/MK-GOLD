@@ -6,6 +6,7 @@ import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DescriptionIcon from '@mui/icons-material/Description';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -48,6 +49,11 @@ const navConfig = [
     title: 'Sell Gold',
     path: '/auditor/sell-gold',
     icon: <PointOfSaleIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'My Tasks',
+    path: '/auditor/tasks',
+    icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Leaves',
