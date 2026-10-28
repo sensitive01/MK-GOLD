@@ -36,6 +36,7 @@ const designation = require("../controllers/admin/designation");
 const qrEnquiry = require("../controllers/qrEnquiry");
 const transit = require("../controllers/admin/transit");
 const vendor = require("../controllers/admin/vendor");
+const task = require("../controllers/admin/task");
 
 const { isAdmin, canDelete, enforceAuditorReadOnly } = require("../middlewares/authorization");
 const multer = require("../config/multer");
@@ -80,6 +81,15 @@ adminRouter.get("/announcement/get/:id", announcement.findById);
 adminRouter.post("/announcement/create", multer.single("uploadedFile"), announcement.create);
 adminRouter.post("/announcement/update/:id", multer.single("uploadedFile"), announcement.update);
 adminRouter.post("/announcement/delete/:id", canDelete, announcement.remove);
+
+adminRouter.get("/task/get", task.find);
+adminRouter.post("/task/get", task.find);
+adminRouter.get("/task/get/:id", task.findById);
+adminRouter.post("/task/create", (multer.taskUpload || multer).array("attachments", 10), task.create);
+adminRouter.post("/task/update/:id", (multer.taskUpload || multer).array("attachments", 10), task.update);
+adminRouter.post("/task/status/:id", task.updateStatus);
+adminRouter.post("/task/delete/:id", canDelete, task.remove);
+
 
 adminRouter.get("/designation/get", designation.find);
 adminRouter.post("/designation/get", designation.find);

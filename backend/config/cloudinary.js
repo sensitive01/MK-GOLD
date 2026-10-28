@@ -16,4 +16,13 @@ const storage = new CloudinaryStorage({
   },
 });
 
-module.exports = { cloudinary, storage };
+const taskStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => ({
+    folder: 'mk_gold_tasks',
+    resource_type: 'auto',
+  }),
+});
+
+module.exports = { cloudinary, storage, taskStorage };
+

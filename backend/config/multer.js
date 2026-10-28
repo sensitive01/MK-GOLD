@@ -1,3 +1,8 @@
-const { storage } = require("./cloudinary");
+const { storage, taskStorage } = require("./cloudinary");
 const multer = require("multer");
-module.exports = multer({ storage: storage });
+
+const defaultUpload = multer({ storage: storage });
+defaultUpload.taskUpload = multer({ storage: taskStorage });
+
+module.exports = defaultUpload;
+

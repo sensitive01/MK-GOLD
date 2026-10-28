@@ -17,6 +17,7 @@ const accountsRouter = require("./routes/accounts");
 const branchRouter = require("./routes/branch");
 const customerRouter = require("./routes/customer");
 const announcementRouter = require("./routes/announcement");
+const taskRouter = require("./routes/task");
 const publicRouter = require("./routes/public");
 const campaignRouter = require("./routes/campaign");
 const webhookRouter = require("./routes/webhook");
@@ -75,7 +76,9 @@ app.use("/api/v1.0/accounts", accountsRouter);
 app.use("/api/v1.0/branch", branchRouter);
 app.use("/api/v1.0/customer", customerRouter);
 app.use("/api/v1.0/announcement", announcementRouter);
+app.use("/api/v1.0/task", taskRouter);
 app.use("/api/v1.0/public", publicRouter);
+
 app.use("/api/v1.0/campaign", campaignRouter);
 app.use("/api/v1.0/schedule", require("./routes/schedule"));
 app.use("/api/v1.0/webhook", webhookRouter);
