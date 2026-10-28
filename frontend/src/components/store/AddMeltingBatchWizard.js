@@ -92,6 +92,7 @@ export default function AddMeltingBatchWizard({ open, onClose, onSuccess }) {
   // Step 3: Summary & Notes
   const [notes, setNotes] = useState('');
   const [batchNumber, setBatchNumber] = useState('');
+  const [generatingBatchNo, setGeneratingBatchNo] = useState(false);
   const [meltProof, setMeltProof] = useState(null);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [proofError, setProofError] = useState(false);
@@ -150,6 +151,22 @@ export default function AddMeltingBatchWizard({ open, onClose, onSuccess }) {
       fetchAvailableTransits();
     }
   }, [open, fetchAvailableTransits]);
+
+  const handleGenerateBatchNumber = async () => {
+    setGeneratingBatchNo(true);
+    try {
+      const res = await getNextBatchNumber();
+      if (res?.data?.batchNumber) {
+        setBatchNumber(res.data.batchNumber);
+      } else {
+        setBatchNumber(`MB-${moment().format('YYMMDD')}-001`);
+      }
+    } catch (e) {
+      setBatchNumber(`MB-${moment().format('YYMMDD')}-001`);
+    } finally {
+      setGeneratingBatchNo(false);
+    }
+  };
 
   // Handle Step 0: Transit Selection
   const handleToggleTransit = (transit) => {
@@ -886,14 +903,25 @@ export default function AddMeltingBatchWizard({ open, onClose, onSuccess }) {
 
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        label="Batch Number *"
-                        placeholder="e.g. MB-261008-101"
-                        value={batchNumber}
-                        onChange={(e) => setBatchNumber(e.target.value)}
-                        helperText="Physical batch identifier or melting tag number"
-                      />
+                      <Stack direction="row" spacing={1} alignItems="flex-start">
+                        <TextField
+                          fullWidth
+                          label="Batch Number *"
+                          placeholder="e.g. MB-261028-001"
+                          value={batchNumber}
+                          onChange={(e) => setBatchNumber(e.target.value.toUpperCase())}
+                          helperText="Physical batch identifier (editable or auto-generate)"
+                        />
+                        <Button
+                          variant="outlined"
+                          disabled={generatingBatchNo}
+                          onClick={handleGenerateBatchNumber}
+                          sx={{ height: 53, minWidth: 120, textTransform: 'none', fontWeight: 600 }}
+                          startIcon={generatingBatchNo ? <CircularProgress size={16} /> : <Iconify icon="eva:refresh-fill" />}
+                        >
+                          Auto
+                        </Button>
+                      </Stack>
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Card

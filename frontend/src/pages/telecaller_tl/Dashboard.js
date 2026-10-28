@@ -75,8 +75,8 @@ export default function TelecallerTLDashboard() {
           <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
             Today's Rates ({auth.user?.branch?.address?.state || 'Karnataka'})
           </Typography>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={3}>
+          <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+            <Grid item xs={6} sm={6} md={3}>
               <AppWidgetSummary
                 title="Gold Rate (per Gram)"
                 total={loadingRates ? 'Loading...' : (goldRate ? `₹ ${goldRate}` : 'Not Set')}
@@ -86,7 +86,7 @@ export default function TelecallerTLDashboard() {
                 textColor="#000"
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <AppWidgetSummary
                 title="Silver Rate (per Gram)"
                 total={loadingRates ? 'Loading...' : (silverRate ? `₹ ${silverRate}` : 'Not Set')}
@@ -103,8 +103,8 @@ export default function TelecallerTLDashboard() {
           <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
             Business & Approval Pipeline
           </Typography>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={3}>
+          <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+            <Grid item xs={6} sm={6} md={3}>
               <AppWidgetSummary
                 title="Business Leads"
                 total={stats?.businessMoved || 0}
@@ -115,7 +115,7 @@ export default function TelecallerTLDashboard() {
                 onClick={() => navigate('/telecaller-tl/leads')}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <AppWidgetSummary
                 title="Pending My Review"
                 total={stats?.tlPendingReview || 0}
@@ -126,7 +126,7 @@ export default function TelecallerTLDashboard() {
                 onClick={() => navigate('/telecaller-tl/leads')}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <AppWidgetSummary
                 title="With Bullion Desk"
                 total={stats?.bullionPendingReview || 0}
@@ -137,7 +137,7 @@ export default function TelecallerTLDashboard() {
                 onClick={() => navigate('/telecaller-tl/leads')}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <AppWidgetSummary
                 title="Converted Sales"
                 total={stats?.businessConverted || 0}
@@ -155,57 +155,65 @@ export default function TelecallerTLDashboard() {
           Quick Links
         </Typography>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/telecaller-tl/leads" underline="none">
-              <AppWidgetSummary
-                title="Leads"
-                total={false}
-                icon={'mdi:account-group'}
-                bgColor="#fff"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+        <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Leads"
+              total={false}
+              icon={'mdi:account-group'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/telecaller-tl/leads')}
+            />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/telecaller-tl/expense" underline="none">
-              <AppWidgetSummary
-                title="Expenses"
-                total={false}
-                icon={'mdi:wallet'}
-                bgColor="#FFD700"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Expenses"
+              total={false}
+              icon={'mdi:wallet'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/telecaller-tl/expense')}
+            />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/telecaller-tl/leave" underline="none">
-              <AppWidgetSummary
-                title="Leave"
-                total={false}
-                icon={'mdi:calendar-remove'}
-                bgColor="#FFD700"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Leave"
+              total={false}
+              icon={'mdi:calendar-remove'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/telecaller-tl/leave')}
+            />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/telecaller-tl/attendance" underline="none">
-              <AppWidgetSummary
-                title="Attendance"
-                total={false}
-                icon={'mdi:clock-check'}
-                bgColor="#fff"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Attendance"
+              total={false}
+              icon={'mdi:clock-check'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/telecaller-tl/attendance')}
+            />
+          </Grid>
+
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="My Tasks"
+              total={false}
+              icon={'mdi:clipboard-check-outline'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/telecaller-tl/tasks')}
+            />
           </Grid>
         </Grid>
       </Container>

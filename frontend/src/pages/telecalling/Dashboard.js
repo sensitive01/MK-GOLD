@@ -27,8 +27,8 @@ export default function DashboardPage() {
           TELECALLING Dashboard
         </Typography>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Total Leads"
               total={stats?.totalLeads}
@@ -40,7 +40,7 @@ export default function DashboardPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Pending Leads"
               total={stats?.pendingLeads}
@@ -52,7 +52,7 @@ export default function DashboardPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Gold Rate"
               total={stats?.goldRate}
@@ -64,7 +64,7 @@ export default function DashboardPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Silver Rate"
               total={stats?.silverRate}
@@ -76,7 +76,7 @@ export default function DashboardPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's Followups"
               total={stats?.todaysFollowups}
@@ -88,7 +88,7 @@ export default function DashboardPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Moved to Business"
               total={stats?.businessMoved || 0}
@@ -100,7 +100,7 @@ export default function DashboardPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Converted (This Month)"
               total={stats?.businessConverted}
@@ -109,6 +109,18 @@ export default function DashboardPage() {
               iconColor="#2E7D32"
               textColor="#000"
               onClick={() => navigate('/telecalling/leads', { state: { tab: 'converted' } })}
+            />
+          </Grid>
+
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="My Tasks"
+              total={false}
+              icon={'mdi:clipboard-check-outline'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/telecalling/tasks')}
             />
           </Grid>
         </Grid>

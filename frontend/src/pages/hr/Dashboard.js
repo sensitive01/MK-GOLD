@@ -32,8 +32,8 @@ export default function DashboardAppPage() {
           Hi, Welcome back
         </Typography>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's gold rate"
               total={count?.todayGoldRate}
@@ -45,7 +45,7 @@ export default function DashboardAppPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's silver rate"
               total={count?.todaySilverRate}
@@ -57,7 +57,7 @@ export default function DashboardAppPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary 
               title="Total employees" 
               total={count?.totalEmployee} 
@@ -69,7 +69,7 @@ export default function DashboardAppPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Present today"
               total={count?.totalPresent}
@@ -80,7 +80,7 @@ export default function DashboardAppPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Absent today"
               total={count?.totalAbsent}
@@ -91,7 +91,7 @@ export default function DashboardAppPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Late today"
               total={count?.totalLate}
@@ -102,7 +102,7 @@ export default function DashboardAppPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Female Employees"
               total={count?.femaleEmployeeCount}
@@ -113,7 +113,7 @@ export default function DashboardAppPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Male Employees"
               total={count?.maleEmployeeCount}
@@ -124,7 +124,7 @@ export default function DashboardAppPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Leaves Applied Today"
               total={count?.leavesTodayCount}
@@ -135,7 +135,7 @@ export default function DashboardAppPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Permissions Requested Today"
               total={count?.permissionsTodayCount}
@@ -146,7 +146,7 @@ export default function DashboardAppPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Expenses Today"
               total={count?.expensesTodayCount}
@@ -154,6 +154,18 @@ export default function DashboardAppPage() {
               bgColor="#fff"
               iconColor="#8A1B9F"
               textColor="#000"
+            />
+          </Grid>
+
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="My Tasks"
+              total={false}
+              icon={'mdi:clipboard-check-outline'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/hr/tasks')}
             />
           </Grid>
 

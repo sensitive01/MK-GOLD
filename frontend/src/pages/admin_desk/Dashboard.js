@@ -1,9 +1,10 @@
 import { Helmet } from 'react-helmet-async';
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
 // @mui
-import { Container, Grid, Link, Typography, Box } from '@mui/material';
+import { Container, Grid, Typography, Box } from '@mui/material';
 // apis
 import { getGoldRateByState } from '../../apis/branch/gold-rate';
 // sections
@@ -12,6 +13,7 @@ import { AppWidgetSummary } from '../../sections/@dashboard/app';
 // ----------------------------------------------------------------------
 
 export default function AdminDeskDashboard() {
+  const navigate = useNavigate();
   const auth = useSelector((state) => state.auth);
   const [goldRate, setGoldRate] = useState(null);
   const [silverRate, setSilverRate] = useState(null);
@@ -63,8 +65,8 @@ export default function AdminDeskDashboard() {
           <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
             Today's Rates ({auth.user?.branch?.address?.state || 'Karnataka'})
           </Typography>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={3}>
+          <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+            <Grid item xs={6} sm={6} md={3}>
               <AppWidgetSummary
                 title="Gold Rate (per Gram)"
                 total={loadingRates ? 'Loading...' : (goldRate ? `₹ ${goldRate}` : 'Not Set')}
@@ -74,7 +76,7 @@ export default function AdminDeskDashboard() {
                 textColor="#000"
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <AppWidgetSummary
                 title="Silver Rate (per Gram)"
                 total={loadingRates ? 'Loading...' : (silverRate ? `₹ ${silverRate}` : 'Not Set')}
@@ -91,84 +93,89 @@ export default function AdminDeskDashboard() {
           Quick Links
         </Typography>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/admin-desk/customer" underline="none">
-              <AppWidgetSummary
-                title="Customers"
-                total={false}
-                icon={'mdi:account-group'}
-                bgColor="#fff"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+        <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Customers"
+              total={false}
+              icon={'mdi:account-group'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/admin-desk/customer')}
+            />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/admin-desk/sale" underline="none">
-              <AppWidgetSummary
-                title="Billing"
-                total={false}
-                icon={'mdi:file-document-edit'}
-                bgColor="#FFD700"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Billing"
+              total={false}
+              icon={'mdi:file-document-edit'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/admin-desk/sale')}
+            />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/admin-desk/expense" underline="none">
-              <AppWidgetSummary
-                title="Expenses"
-                total={false}
-                icon={'mdi:wallet'}
-                bgColor="#fff"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Expenses"
+              total={false}
+              icon={'mdi:wallet'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/admin-desk/expense')}
+            />
           </Grid>
           
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/admin-desk/fund" underline="none">
-              <AppWidgetSummary
-                title="Funds"
-                total={false}
-                icon={'mdi:bank'}
-                bgColor="#FFD700"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Funds"
+              total={false}
+              icon={'mdi:bank'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/admin-desk/fund')}
+            />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/admin-desk/leave" underline="none">
-              <AppWidgetSummary
-                title="Leave"
-                total={false}
-                icon={'mdi:calendar-remove'}
-                bgColor="#fff"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Leave"
+              total={false}
+              icon={'mdi:calendar-remove'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/admin-desk/leave')}
+            />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/admin-desk/attendance" underline="none">
-              <AppWidgetSummary
-                title="Attendance"
-                total={false}
-                icon={'mdi:clock-check'}
-                bgColor="#FFD700"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Attendance"
+              total={false}
+              icon={'mdi:clock-check'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/admin-desk/attendance')}
+            />
           </Grid>
 
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="My Tasks"
+              total={false}
+              icon={'mdi:clipboard-check-outline'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/admin-desk/tasks')}
+            />
+          </Grid>
         </Grid>
       </Container>
     </>

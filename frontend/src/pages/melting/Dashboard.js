@@ -32,8 +32,8 @@ export default function DashboardPage() {
           MELTING Dashboard
         </Typography>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's gold rate"
               total={count?.todayGoldRate}
@@ -45,7 +45,7 @@ export default function DashboardPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's Physical Bills"
               total={count?.todayPhysicalBills}
@@ -57,7 +57,7 @@ export default function DashboardPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's Pledged Bills"
               total={count?.todayPledgeBills}
@@ -69,7 +69,7 @@ export default function DashboardPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's Gross Weight"
               total={count?.totalGrossWeight ? count.totalGrossWeight.toFixed(2) + ' g' : '0 g'}
@@ -81,7 +81,7 @@ export default function DashboardPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's Silver Rate"
               total={count?.todaySilverRate}
@@ -93,7 +93,7 @@ export default function DashboardPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's Silver Bills"
               total={count?.todaySilverBills}
@@ -105,7 +105,7 @@ export default function DashboardPage() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's Silver Gross Weight"
               total={count?.totalSilverGrossWeight ? count.totalSilverGrossWeight.toFixed(2) + ' g' : '0 g'}
@@ -114,6 +114,18 @@ export default function DashboardPage() {
               iconColor="#8A1B9F"
               textColor="#000"
               onClick={() => navigate('/melting/sale')}
+            />
+          </Grid>
+
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="My Tasks"
+              total={false}
+              icon={'mdi:clipboard-check-outline'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/melting/tasks')}
             />
           </Grid>
         </Grid>

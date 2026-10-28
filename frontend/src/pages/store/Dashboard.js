@@ -270,20 +270,15 @@ export default function StoreDashboard() {
         <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }} sx={{ mb: 4 }}>
           {quickLinks.map((link) => (
             <Grid item xs={6} sm={4} md={2.4} key={link.title}>
-              <Link
+              <AppWidgetSummary
+                title={link.title}
+                total={false}
+                icon={link.icon}
+                bgColor={link.bgColor}
+                iconColor="#8A1B9F"
+                textColor="#000"
                 onClick={() => navigate(link.path)}
-                underline="none"
-                sx={{ cursor: 'pointer' }}
-              >
-                <AppWidgetSummary
-                  title={link.title}
-                  total={false}
-                  icon={link.icon}
-                  bgColor={link.bgColor}
-                  iconColor="#8A1B9F"
-                  textColor="#000"
-                />
-              </Link>
+              />
             </Grid>
           ))}
         </Grid>

@@ -54,8 +54,8 @@ export default function AppWidgetSummary({
   return (
     <Card
       sx={{
-        py: { xs: 2.5, sm: 3.5, md: 5 },
-        px: { xs: 1.5, sm: 2 },
+        py: total === false ? { xs: 1.75, sm: 2.5, md: 4 } : { xs: 2, sm: 3.5, md: 5 },
+        px: { xs: 1, sm: 2 },
         boxShadow: (theme) => theme.customShadows.z8,
         textAlign: 'center',
         color: textColor || ((theme) => theme.palette[color].darker),
@@ -66,7 +66,7 @@ export default function AppWidgetSummary({
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        minHeight: { xs: 145, sm: 180, md: 220 },
+        minHeight: total === false ? { xs: 105, sm: 140, md: 180 } : { xs: 130, sm: 170, md: 220 },
         transition: (theme) => 
           theme.transitions.create(['transform', 'box-shadow', 'background-color'], {
             duration: theme.transitions.duration.shorter,
@@ -99,7 +99,7 @@ export default function AppWidgetSummary({
           {typeof total === 'number' ? (disableShorten ? fNumber(total) : fShortenNumber(total)) : total || 0}
         </Typography>
       ) : (
-        <Box sx={{ height: { xs: 24, sm: 36, md: 48 } }} /> // Placeholder to maintain equal height when total is hidden
+        <Box sx={{ height: { xs: 6, sm: 12, md: 24 } }} /> // Placeholder to maintain equal height when total is hidden
       )}
 
       <Typography

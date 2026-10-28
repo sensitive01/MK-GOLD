@@ -1,9 +1,10 @@
 import { Helmet } from 'react-helmet-async';
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
 // @mui
-import { Container, Grid, Link, Typography, Box } from '@mui/material';
+import { Container, Grid, Typography, Box } from '@mui/material';
 // apis
 import { getGoldRateByState } from '../../apis/branch/gold-rate';
 // sections
@@ -12,6 +13,7 @@ import { AppWidgetSummary } from '../../sections/@dashboard/app';
 // ----------------------------------------------------------------------
 
 export default function MarketingDashboard() {
+  const navigate = useNavigate();
   const auth = useSelector((state) => state.auth);
   const [goldRate, setGoldRate] = useState(null);
   const [silverRate, setSilverRate] = useState(null);
@@ -63,8 +65,8 @@ export default function MarketingDashboard() {
           <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
             Today's Rates ({auth.user?.branch?.address?.state || 'Karnataka'})
           </Typography>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={3}>
+          <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+            <Grid item xs={6} sm={6} md={3}>
               <AppWidgetSummary
                 title="Gold Rate (per Gram)"
                 total={loadingRates ? 'Loading...' : (goldRate ? `₹ ${goldRate}` : 'Not Set')}
@@ -74,7 +76,7 @@ export default function MarketingDashboard() {
                 textColor="#000"
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <AppWidgetSummary
                 title="Silver Rate (per Gram)"
                 total={loadingRates ? 'Loading...' : (silverRate ? `₹ ${silverRate}` : 'Not Set')}
@@ -91,72 +93,78 @@ export default function MarketingDashboard() {
           Quick Links
         </Typography>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/marketing/leads" underline="none">
-              <AppWidgetSummary
-                title="Leads"
-                total={false}
-                icon={'mdi:account-group'}
-                bgColor="#fff"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+        <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Leads"
+              total={false}
+              icon={'mdi:account-group'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/marketing/leads')}
+            />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/marketing/expense" underline="none">
-              <AppWidgetSummary
-                title="Expenses"
-                total={false}
-                icon={'mdi:wallet'}
-                bgColor="#FFD700"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Expenses"
+              total={false}
+              icon={'mdi:wallet'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/marketing/expense')}
+            />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/marketing/campaigns" underline="none">
-              <AppWidgetSummary
-                title="Campaigns"
-                total={false}
-                icon={'mdi:bullhorn'}
-                bgColor="#fff"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Campaigns"
+              total={false}
+              icon={'mdi:bullhorn'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/marketing/campaigns')}
+            />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/marketing/leave" underline="none">
-              <AppWidgetSummary
-                title="Leave"
-                total={false}
-                icon={'mdi:calendar-remove'}
-                bgColor="#FFD700"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Leave"
+              total={false}
+              icon={'mdi:calendar-remove'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/marketing/leave')}
+            />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Link href="/marketing/attendance" underline="none">
-              <AppWidgetSummary
-                title="Attendance"
-                total={false}
-                icon={'mdi:clock-check'}
-                bgColor="#fff"
-                iconColor="#8A1B9F"
-                textColor="#000"
-              />
-            </Link>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Attendance"
+              total={false}
+              icon={'mdi:clock-check'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/marketing/attendance')}
+            />
           </Grid>
 
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="My Tasks"
+              total={false}
+              icon={'mdi:clipboard-check-outline'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/marketing/tasks')}
+            />
+          </Grid>
         </Grid>
       </Container>
     </>

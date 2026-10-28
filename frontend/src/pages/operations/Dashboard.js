@@ -62,8 +62,8 @@ export default function DashboardPage() {
           <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
             Today's Rates ({auth.user?.branch?.address?.state || 'Karnataka'})
           </Typography>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6} md={3}>
+          <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+            <Grid item xs={6} sm={6} md={3}>
               <AppWidgetSummary
                 title="Gold Rate (per Gram)"
                 total={loadingRates ? 'Loading...' : (goldRate ? `₹ ${goldRate}` : 'Not Set')}
@@ -73,7 +73,7 @@ export default function DashboardPage() {
                 textColor="#000"
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <AppWidgetSummary
                 title="Silver Rate (per Gram)"
                 total={loadingRates ? 'Loading...' : (silverRate ? `₹ ${silverRate}` : 'Not Set')}
@@ -85,6 +85,46 @@ export default function DashboardPage() {
             </Grid>
           </Grid>
         </Box>
+
+        <Typography variant="h6" sx={{ mb: 2, color: '#fff', opacity: 0.9 }}>
+          Quick Links
+        </Typography>
+
+        <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Attendance"
+              total={false}
+              icon={'mdi:clock-check'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/operations/attendance')}
+            />
+          </Grid>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="Leave"
+              total={false}
+              icon={'mdi:calendar-remove'}
+              bgColor="#FFD700"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/operations/leave')}
+            />
+          </Grid>
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="My Tasks"
+              total={false}
+              icon={'mdi:clipboard-check-outline'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/operations/tasks')}
+            />
+          </Grid>
+        </Grid>
       </Container>
     </>
   );

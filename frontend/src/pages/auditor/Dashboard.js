@@ -33,8 +33,8 @@ export default function AuditorDashboard() {
           Hi, Welcome back
         </Typography>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's gold rate"
               total={count?.todayGoldRate}
@@ -47,7 +47,7 @@ export default function AuditorDashboard() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's silver rate"
               total={count?.todaySilverRate}
@@ -60,7 +60,7 @@ export default function AuditorDashboard() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's customers"
               total={count?.todayCustomers}
@@ -71,7 +71,7 @@ export default function AuditorDashboard() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's bills"
               total={count?.todayBills}
@@ -82,7 +82,7 @@ export default function AuditorDashboard() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today’s physical bills"
               total={count?.todayPhysicalBills}
@@ -94,7 +94,7 @@ export default function AuditorDashboard() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Today's pledge bills"
               total={count?.todayPledgeBills}
@@ -105,7 +105,7 @@ export default function AuditorDashboard() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Total gross weight"
               total={count?.totalGrossWeight}
@@ -117,7 +117,7 @@ export default function AuditorDashboard() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Total net amount"
               total={count?.totalNetAmount}
@@ -129,7 +129,7 @@ export default function AuditorDashboard() {
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <AppWidgetSummary
               title="Total expenses"
               total={count?.totalExpenses}
@@ -137,6 +137,18 @@ export default function AuditorDashboard() {
               bgColor="#FFD700"
               iconColor="#8A1B9F"
               textColor="#000"
+            />
+          </Grid>
+
+          <Grid item xs={6} sm={6} md={3}>
+            <AppWidgetSummary
+              title="My Tasks"
+              total={false}
+              icon={'mdi:clipboard-check-outline'}
+              bgColor="#fff"
+              iconColor="#8A1B9F"
+              textColor="#000"
+              onClick={() => navigate('/auditor/tasks')}
             />
           </Grid>
 

@@ -1,9 +1,10 @@
 import { Helmet } from 'react-helmet-async';
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
 // @mui
-import { Container, Grid, Link, Typography, Box } from '@mui/material';
+import { Container, Grid, Typography, Box } from '@mui/material';
 // apis
 import { getGoldRateByState } from '../../apis/branch/gold-rate';
 // sections
@@ -12,6 +13,7 @@ import { AppWidgetSummary } from '../../sections/@dashboard/app';
 // ----------------------------------------------------------------------
 
 export default function DashboardAppPage() {
+  const navigate = useNavigate();
   const auth = useSelector((state) => state.auth);
   const [goldRate, setGoldRate] = useState(null);
   const [silverRate, setSilverRate] = useState(null);
@@ -145,16 +147,15 @@ export default function DashboardAppPage() {
         <Grid container spacing={{ xs: 1.5, sm: 2.5, md: 3 }}>
           {quickLinks.map((link) => (
             <Grid item xs={6} sm={6} md={3} key={link.title}>
-              <Link href={link.path} underline="none">
-                <AppWidgetSummary
-                  title={link.title}
-                  total={false}
-                  icon={link.icon}
-                  bgColor={link.bgColor}
-                  iconColor="#8A1B9F"
-                  textColor="#000"
-                />
-              </Link>
+              <AppWidgetSummary
+                title={link.title}
+                total={false}
+                icon={link.icon}
+                bgColor={link.bgColor}
+                iconColor="#8A1B9F"
+                textColor="#000"
+                onClick={() => navigate(link.path)}
+              />
             </Grid>
           ))}
         </Grid>

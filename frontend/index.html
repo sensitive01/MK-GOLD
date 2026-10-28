@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -44,11 +44,21 @@
 
     <script>
       (function() {
+        var splash = document.getElementById('mk-splash-screen');
+        if (!splash) return;
+
+        // Only play splash video once per session on initial landing (/ or /login), never when navigating inside the app
+        var isInitialEntry = window.location.pathname === '/' || window.location.pathname === '/login';
+        if (sessionStorage.getItem('mk_splash_shown') || !isInitialEntry) {
+          if (splash.parentNode) splash.parentNode.removeChild(splash);
+          return;
+        }
+        sessionStorage.setItem('mk_splash_shown', 'true');
+
         var isMobile = window.innerWidth <= 768 || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
         var video = document.getElementById('mk-splash-video');
-        var splash = document.getElementById('mk-splash-screen');
         var unmuteBtn = document.getElementById('mk-splash-unmute');
-        if (!video || !splash) return;
+        if (!video) return;
 
         video.src = isMobile ? '/assets/Splash/Mobile-splash.mp4' : '/assets/Splash/Website-splash.mp4';
         video.playbackRate = 2.5;

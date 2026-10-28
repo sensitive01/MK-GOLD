@@ -40,6 +40,9 @@ import {
   Checkbox,
   Chip,
   FormHelperText,
+  InputAdornment,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 
@@ -158,6 +161,7 @@ export default function StoreTransitOutwards() {
   const [selectedSales, setSelectedSales] = useState([]);
   const [selectedOrnaments, setSelectedOrnaments] = useState([]);
   const [batchNumber, setBatchNumber] = useState('');
+  const [generatingBatchNo, setGeneratingBatchNo] = useState(false);
   const [notes, setNotes] = useState('');
   const [batchProof, setBatchProof] = useState(null);
   const [batchProofLoading, setBatchProofLoading] = useState(false);
@@ -300,6 +304,25 @@ export default function StoreTransitOutwards() {
     }
     setSelectedOrnaments([]);
     setOpenWizard(true);
+  };
+
+  // Auto-generate next batch number on demand
+  const handleGenerateBatchNumber = async () => {
+    setGeneratingBatchNo(true);
+    try {
+      const res = await getNextBatchNumber();
+      if (res?.data?.batchNumber) {
+        setBatchNumber(res.data.batchNumber);
+      } else {
+        setBatchNumber(`MB-${moment().format('YYMMDD')}-001`);
+      }
+      setNotify({ open: true, message: 'Batch number generated successfully!', severity: 'info' });
+    } catch (e) {
+      setBatchNumber(`MB-${moment().format('YYMMDD')}-001`);
+      setNotify({ open: true, message: 'Generated fallback batch number', severity: 'info' });
+    } finally {
+      setGeneratingBatchNo(false);
+    }
   };
 
   const handleToggleTransit = (transit) => {
@@ -468,6 +491,10 @@ export default function StoreTransitOutwards() {
 
   // Submit and create melting batch
   const handleProceedToMelt = async () => {
+    if (!batchNumber || !batchNumber.trim()) {
+      setNotify({ open: true, message: 'Please enter or auto-generate a Melting Batch Number', severity: 'warning' });
+      return;
+    }
     if (selectedOrnaments.length === 0) {
       setNotify({ open: true, message: 'Please select at least one ornament for melting', severity: 'warning' });
       return;
@@ -1261,12 +1288,43 @@ export default function StoreTransitOutwards() {
           {activeStep === 3 && (
             <Box>
               <Card sx={{ p: 2.5, mb: 3, bgcolor: '#faf5ff', border: '1px solid #e9d5ff' }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={6} sm={4}>
-                    <Typography variant="caption" color="text.secondary">Melting Batch No</Typography>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#7b1fa2' }}>
-                      {batchNumber}
-                    </Typography>
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      size="small"
+                      fullWidth
+                      label="Melting Batch No"
+                      placeholder="e.g. MB-261028-001"
+                      value={batchNumber}
+                      onChange={(e) => setBatchNumber(e.target.value.toUpperCase())}
+                      InputProps={{
+                        sx: {
+                          fontWeight: 700,
+                          color: '#7b1fa2',
+                          bgcolor: '#fff',
+                          fontSize: '0.95rem',
+                        },
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <Tooltip title="Auto-generate next sequential batch number">
+                              <IconButton
+                                size="small"
+                                onClick={handleGenerateBatchNumber}
+                                disabled={generatingBatchNo}
+                                edge="end"
+                                sx={{ color: '#7b1fa2' }}
+                              >
+                                {generatingBatchNo ? (
+                                  <CircularProgress size={16} color="inherit" />
+                                ) : (
+                                  <Iconify icon="eva:refresh-fill" width={18} height={18} />
+                                )}
+                              </IconButton>
+                            </Tooltip>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
                   </Grid>
                   <Grid item xs={6} sm={4}>
                     <Typography variant="caption" color="text.secondary">Selected Transits</Typography>
