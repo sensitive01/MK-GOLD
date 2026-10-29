@@ -27,6 +27,7 @@ import AdminSettings from './pages/admin/Settings';
 import AdminRegistrationOTP from './pages/admin/RegistrationOTP';
 import AdminPurchaseTabs from './pages/admin/PurchaseTabs';
 import AdminEmployeeUserTabs from './pages/admin/EmployeeUserTabs';
+import AdminLoginLogs from './pages/admin/LoginLogs';
 import AdminOrnament from './pages/admin/Ornament';
 import AdminDesignation from './pages/admin/Designation';
 import AdminAnnouncement from './pages/admin/Announcements';
@@ -193,6 +194,7 @@ export default function Router() {
         { path: 'employee', element: <Navigate to="/admin/employee/details" replace /> },
         { path: 'employee/details', element: <AdminEmployee /> },
         { path: 'employee/user', element: <AdminEmployeeUserTabs /> },
+        { path: 'employee/login-logs', element: <AdminLoginLogs /> },
         { path: 'employee/attendance', element: <AdminAttendance /> },
         { path: 'employee/leave', element: <AdminLeave /> },
         { path: 'report', element: <AdminReport /> },

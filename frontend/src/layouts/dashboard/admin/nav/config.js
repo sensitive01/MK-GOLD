@@ -15,6 +15,7 @@ import StoreIcon from '@mui/icons-material/Store';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 import SettingsIcon from '@mui/icons-material/Settings';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import HistoryIcon from '@mui/icons-material/History';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -61,6 +62,11 @@ const navConfig = [
         title: 'Users',
         path: '/admin/employee/user',
         icon: icon('ic_user'),
+      },
+      {
+        title: 'Login Logs',
+        path: '/admin/employee/login-logs',
+        icon: <HistoryIcon sx={{ width: 1, height: 1 }} />,
       },
     ]
   },

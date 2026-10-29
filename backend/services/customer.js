@@ -62,6 +62,23 @@ async function find(query = {}) {
             {
               $match: {
                 $expr: {
+                  $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }]
+                }
+              }
+            },
+            { $sort: { createdAt: 1 } }
+          ],
+          as: "kycProofs",
+        },
+      },
+      {
+        $lookup: {
+          from: "fileuploads",
+          let: { customerId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
                   $and: [
                     { $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }] },
                     { $eq: ["$uploadType", "upload_id"] }
@@ -184,6 +201,23 @@ async function findById(id) {
             { $sort: { createdAt: -1 } }
           ],
           as: "profileImage",
+        },
+      },
+      {
+        $lookup: {
+          from: "fileuploads",
+          let: { customerId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: [{ $toString: "$uploadId" }, { $toString: "$$customerId" }]
+                }
+              }
+            },
+            { $sort: { createdAt: 1 } }
+          ],
+          as: "kycProofs",
         },
       },
       {

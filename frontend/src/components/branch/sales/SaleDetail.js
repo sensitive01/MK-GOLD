@@ -24,13 +24,16 @@ import {
   Avatar,
   Chip,
   InputAdornment,
+  Checkbox,
+  FormControlLabel,
+  Alert,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import Iconify from '../../iconify';
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
 import Link from '@mui/material/Link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { sentenceCase } from 'change-case';
 import moment from 'moment';
 import { useSelector } from 'react-redux';
@@ -49,6 +52,15 @@ function BullionApprovalSection({
   isReleaseBullionApproval,
   setNotify,
   onActionComplete,
+  showBullionVerification = false,
+  isAllVerified = true,
+  verifiedCount = 0,
+  totalRequiredCount = 0,
+  requiredKycKeys = [],
+  requiredOrnamentKeys = [],
+  requiredReleaseKeys = [],
+  requiredProofKeys = [],
+  checkedVerifications = {},
 }) {
   const [openRejectDialog, setOpenRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -273,6 +285,54 @@ function BullionApprovalSection({
             </Grid>
           </Grid>
 
+          {showBullionVerification && totalRequiredCount > 0 && (
+            <Box sx={{ mb: 2 }}>
+              {!isAllVerified ? (
+                <Alert
+                  severity="warning"
+                  icon={<Iconify icon="eva:alert-triangle-fill" width={22} />}
+                  sx={{
+                    fontWeight: 600,
+                    borderRadius: 1.5,
+                    border: '1px solid',
+                    borderColor: 'warning.light',
+                  }}
+                >
+                  Verification Required: Please check and verify all proofs and items before accepting ({verifiedCount} of {totalRequiredCount} verified).
+                  {(() => {
+                    const pendingCategories = [];
+                    const pendingKyc = requiredKycKeys.filter(k => !checkedVerifications[k]).length;
+                    const pendingOrn = requiredOrnamentKeys.filter(k => !checkedVerifications[k]).length;
+                    const pendingRel = requiredReleaseKeys.filter(k => !checkedVerifications[k]).length;
+                    const pendingProof = requiredProofKeys.filter(k => !checkedVerifications[k]).length;
+                    if (pendingKyc > 0) pendingCategories.push(`${pendingKyc} KYC proof${pendingKyc > 1 ? 's' : ''}`);
+                    if (pendingOrn > 0) pendingCategories.push(`${pendingOrn} ornament${pendingOrn > 1 ? 's' : ''}`);
+                    if (pendingRel > 0) pendingCategories.push(`${pendingRel} release record${pendingRel > 1 ? 's' : ''}`);
+                    if (pendingProof > 0) pendingCategories.push(`${pendingProof} proof document${pendingProof > 1 ? 's' : ''}`);
+                    return pendingCategories.length > 0 ? (
+                      <Typography variant="caption" sx={{ display: 'block', mt: 0.5, fontWeight: 500 }}>
+                        Remaining to verify: {pendingCategories.join(', ')}.
+                      </Typography>
+                    ) : null;
+                  })()}
+                </Alert>
+              ) : (
+                <Alert
+                  severity="success"
+                  icon={<Iconify icon="eva:checkmark-circle-2-fill" width={22} />}
+                  sx={{
+                    fontWeight: 600,
+                    borderRadius: 1.5,
+                    border: '1px solid',
+                    borderColor: 'success.light',
+                  }}
+                >
+                  All {totalRequiredCount} verification items have been checked. You can now accept this {isReleaseBullionApproval ? 'release' : 'sale'}.
+                </Alert>
+              )}
+            </Box>
+          )}
+
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
             spacing={1.5}
@@ -297,6 +357,7 @@ function BullionApprovalSection({
               variant="contained"
               color="success"
               loading={actionLoading}
+              disabled={actionLoading || (showBullionVerification && !isAllVerified)}
               sx={{ width: { xs: '100%', sm: 'auto' } }}
               onClick={handleApprove}
             >
@@ -342,6 +403,228 @@ function BullionApprovalSection({
   );
 }
 
+function buildAllProofs(data) {
+  if (!data) return [];
+  const manualProofUrls = [];
+  if (data?.financePayments) {
+    data.financePayments.forEach(fp => {
+      if (fp.proof) manualProofUrls.push(fp.proof);
+      if (fp.verifiedProof) manualProofUrls.push(fp.verifiedProof);
+    });
+  }
+  if (data?.financeProof) manualProofUrls.push(data.financeProof);
+  if (data?.verifiedFinanceProof) manualProofUrls.push(data.verifiedFinanceProof);
+  if (data?.assigneeProof) manualProofUrls.push(data.assigneeProof);
+  if (data?.fundTransferProof) manualProofUrls.push(data.fundTransferProof);
+
+  data?.release?.forEach(r => {
+    if (r.financeProof) manualProofUrls.push(r.financeProof);
+    if (r.assigneeProof) manualProofUrls.push(r.assigneeProof);
+    if (r.fundTransferProof) manualProofUrls.push(r.fundTransferProof);
+  });
+
+  const isFinanceDoc = (p) => {
+    const uName = (p.uploadName || '').toLowerCase();
+    const dType = (p.documentType || '').toLowerCase();
+    return (
+      ['finance_proof', 'sale_finance_proof', 'sale_proof', 'release_finance_proof', 'verified_bank_proof'].includes(uName) ||
+      dType.includes('finance') ||
+      dType.includes('verified bank payment')
+    );
+  };
+
+  const ornamentFileUrls = new Set();
+  (data?.ornaments || []).forEach(o => {
+    if (o.ornamentPhoto) ornamentFileUrls.add(o.ornamentPhoto);
+    if (o.billProof) ornamentFileUrls.add(o.billProof);
+  });
+
+  const isTransitDoc = (p) =>
+    ['transit_proof', 'transit_received_proof', 'store_transit_received_proof', 'admin_transit_proof'].includes(p?.uploadName) ||
+    (p?.documentType && p.documentType.toLowerCase().includes('transit')) ||
+    (p?.uploadName && p.uploadName.toLowerCase().includes('transit'));
+
+  const isMeltingDoc = (p) =>
+    ['melt_proof', 'pre_melt_proof', 'after_melt_proof'].includes(p?.uploadName) ||
+    (p?.documentType && p.documentType.toLowerCase().includes('melt')) ||
+    (p?.uploadName && p.uploadName.toLowerCase().includes('melt'));
+
+  const bankProofUrls = new Set();
+  (data?.customer?.bank || []).forEach(b => {
+    if (b.proof?.uploadedFile) bankProofUrls.add(b.proof.uploadedFile);
+  });
+  if (data?.bank?.proof?.uploadedFile) bankProofUrls.add(data.bank.proof.uploadedFile);
+  if (typeof data?.bank?.proof === 'string') bankProofUrls.add(data.bank.proof);
+  if (data?.financePayments) {
+    data.financePayments.forEach(fp => {
+      if (fp.bank?.proof?.uploadedFile) bankProofUrls.add(fp.bank.proof.uploadedFile);
+      if (typeof fp.bank?.proof === 'string') bankProofUrls.add(fp.bank.proof);
+    });
+  }
+  data?.release?.forEach(r => {
+    if (r.bank?.proof?.uploadedFile) bankProofUrls.add(r.bank.proof.uploadedFile);
+    if (typeof r.bank?.proof === 'string') bankProofUrls.add(r.bank.proof);
+  });
+
+  const isBankDoc = (p) => {
+    if (!p) return false;
+    if (p.uploadedFile && bankProofUrls.has(p.uploadedFile)) return true;
+    const uName = (p.uploadName || '').toLowerCase();
+    const dType = (p.documentType || '').toLowerCase();
+    return (
+      uName === 'bank_proof' ||
+      uName === 'passbook_proof' ||
+      uName === 'cheque_proof' ||
+      uName.includes('bank_proof') ||
+      dType.includes('bank proof') ||
+      dType.includes('passbook') ||
+      dType.includes('cancelled cheque')
+    );
+  };
+
+  const baseProofs = [...(data?.proof || [])]
+    .filter(p => !ornamentFileUrls.has(p.uploadedFile) && !manualProofUrls.includes(p.uploadedFile) && !isTransitDoc(p) && !isMeltingDoc(p) && !isFinanceDoc(p) && !isBankDoc(p))
+    .map(p => ({ ...p }));
+
+  const allProofs = [...baseProofs];
+
+  const isPhysical = data?.saleType === 'physical';
+  if (data?.assigneeProof) {
+    allProofs.push({ uploadedFile: data.assigneeProof, documentType: isPhysical ? 'Assignee Proof' : 'Release Assignee Proof', documentNo: 'N/A', _id: 'assignee' });
+  }
+
+  data?.release?.forEach(r => {
+    if (r.assigneeProof) {
+      allProofs.push({ uploadedFile: r.assigneeProof, documentType: 'Release Assignee Proof', documentNo: 'N/A', _id: `rel_assignee_${r._id}` });
+    }
+  });
+
+  data?.ornaments?.forEach((orn, idx) => {
+    const typeLabel = orn.ornamentType || `Ornament #${idx + 1}`;
+    if (orn.ornamentPhoto) {
+      allProofs.push({
+        uploadedFile: orn.ornamentPhoto,
+        documentType: `Ornament Photo (${typeLabel})`,
+        displayType: `Ornament Photo (${typeLabel})`,
+        documentNo: 'N/A',
+        _id: `orn_photo_${idx}`,
+      });
+    }
+    if (orn.billProof) {
+      const formattedDate = orn.billDate ? (orn.billDate.split('T')[0] || orn.billDate) : 'N/A';
+      allProofs.push({
+        uploadedFile: orn.billProof,
+        documentType: `Ornament Purchase Bill (${typeLabel})`,
+        displayType: `Ornament Purchase Bill (${typeLabel})`,
+        documentNo: formattedDate,
+        _id: `orn_bill_${idx}`,
+      });
+    }
+  });
+
+  allProofs.forEach((e, idx) => {
+    e._id = e._id || (e.uploadedFile ? `proof_${e.uploadedFile}` : `proof_idx_${idx}`);
+    const releaseDoc = data?.release?.flatMap((r) => r.proofDocuments || [])?.find((doc) => doc.documentFile === e.uploadedFile);
+    let docType = e.documentType || releaseDoc?.documentType;
+    let displayType = docType ? sentenceCase(docType) : 'Release Document';
+    
+    if (!docType && e.uploadName && e.uploadName !== 'Release Document' && e.uploadName !== 'release') {
+      if (e.uploadName === 'finance_proof') {
+        displayType = isPhysical ? 'Finance Proof' : 'Sale Finance Proof';
+      } else if (e.uploadName === 'sale_finance_proof' || e.uploadName === 'sale_proof') {
+        displayType = 'Sale Finance Proof';
+      } else if (e.uploadName === 'transit_proof') {
+        displayType = 'Transit Dispatch Proof';
+      } else if (e.uploadName === 'transit_received_proof') {
+        displayType = 'Transit Received Proof';
+      } else if (e.uploadName === 'melt_proof') {
+        displayType = 'Initial Batch Proof (Before Melt)';
+      } else if (e.uploadName === 'pre_melt_proof') {
+        displayType = 'Pre-Melt Proof (Stage 1)';
+      } else if (e.uploadName === 'after_melt_proof') {
+        displayType = 'After Melt Proof';
+      } else {
+        displayType = e.uploadName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      }
+    } else if (docType === 'Release Finance Proof' || docType === 'Finance Proof') {
+        displayType = isPhysical ? 'Finance Proof' : (docType === 'Release Finance Proof' ? 'Release Finance Proof' : 'Finance Proof');
+    } else if (docType === 'Sale Finance Proof') {
+        displayType = 'Sale Finance Proof';
+    }
+
+    if (displayType.toLowerCase() === 'sale finance proof') displayType = 'Sale Finance Proof';
+    if (displayType.toLowerCase() === 'release finance proof' || displayType.toLowerCase() === 'release finance document') displayType = 'Release Finance Proof';
+    
+    e.baseDisplayType = displayType;
+    e.documentNo = e.documentNo || releaseDoc?.documentNo || 'N/A';
+
+    if (!e.bankDetails) {
+      if (e.uploadName === 'finance_proof') {
+        if (e.documentNo && e.documentNo.includes(' - ')) {
+          const parts = e.documentNo.split(' | ');
+          e.bankDetails = parts[0];
+          if (parts[1] && parts[1].startsWith('₹')) {
+            e.amount = parts[1].replace('₹', '').replace(/,/g, '');
+          }
+        } else {
+          e.bankDetails = '-';
+        }
+      } else {
+        e.bankDetails = '-';
+      }
+    }
+  });
+
+  const proofTypeTotals = {};
+  allProofs.forEach(e => {
+    const typeKey = e.baseDisplayType || 'Document';
+    proofTypeTotals[typeKey] = (proofTypeTotals[typeKey] || 0) + 1;
+  });
+
+  const proofTypeCounters = {};
+  allProofs.forEach(e => {
+    const typeKey = e.baseDisplayType || 'Document';
+    if (proofTypeTotals[typeKey] > 1 && typeKey.toLowerCase().includes('finance proof')) {
+      proofTypeCounters[typeKey] = (proofTypeCounters[typeKey] || 0) + 1;
+      e.displayType = `${typeKey} ${proofTypeCounters[typeKey]}`;
+    } else {
+      e.displayType = typeKey;
+    }
+  });
+
+  const getCategoryInfo = (proof) => {
+    const uploadName = proof.uploadName || '';
+    const docType = (proof.documentType || proof.baseDisplayType || '').toLowerCase();
+    const id = String(proof._id || '');
+
+    if (
+      id.startsWith('rel_') ||
+      (docType.includes('release') && !docType.includes('sale finance')) ||
+      uploadName === 'release' ||
+      (!isPhysical && uploadName === 'finance_proof' && id.startsWith('rel_'))
+    ) {
+      return { rank: 1, label: 'Release' };
+    }
+
+    return { rank: 2, label: 'Sale' };
+  };
+
+  allProofs.forEach(e => {
+    const cat = getCategoryInfo(e);
+    e.categoryRank = cat.rank;
+    e.categoryLabel = cat.label;
+  });
+
+  allProofs.sort((a, b) => {
+    if (a.categoryRank !== b.categoryRank) {
+      return a.categoryRank - b.categoryRank;
+    }
+    return 0;
+  });
+
+  return allProofs;
+}
+
 export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoaded }) {
   const auth = useSelector((state) => state.auth);
   const [data, setData] = useState({});
@@ -351,6 +634,73 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
 
   const userType = auth.user?.userType?.toLowerCase();
   const isAdmin = userType === 'admin';
+  const isBullionDeskUser =
+    userType === 'bullion_desk' ||
+    (typeof window !== 'undefined' && window.location.pathname.includes('/bullion-desk'));
+  const showBullionVerification = Boolean(isBullionDeskUser && data?.status === 'bullion pending');
+
+  const [checkedVerifications, setCheckedVerifications] = useState({});
+
+  useEffect(() => {
+    setCheckedVerifications({});
+  }, [id, data?._id]);
+
+  const handleToggleVerification = (key, checked) => {
+    setCheckedVerifications((prev) => ({
+      ...prev,
+      [key]: checked,
+    }));
+  };
+
+  const allProofs = useMemo(() => buildAllProofs(data), [data]);
+
+  const requiredKycKeys = useMemo(() => {
+    const proofs = (data?.customer?.kycProofs || []).filter(
+      (p) => p.uploadType !== 'profile_image' && p.uploadName !== 'profile_image' && p.uploadType !== 'profileImage'
+    );
+    return proofs
+      .map((p, idx) => {
+        const isSig =
+          p?.uploadType?.toLowerCase() === 'signature' ||
+          p?.uploadName?.toLowerCase() === 'signature' ||
+          p?.documentType?.toLowerCase() === 'signature';
+        if (isSig) return null;
+        return `kyc_${p._id || idx}`;
+      })
+      .filter(Boolean);
+  }, [data?.customer?.kycProofs]);
+
+  const requiredOrnamentKeys = useMemo(() => {
+    return (data?.ornaments || []).map((o, idx) => `ornament_${o._id || idx}`);
+  }, [data?.ornaments]);
+
+  const requiredReleaseKeys = useMemo(() => {
+    if (data?.saleType === 'physical' || !Array.isArray(data?.release) || data.release.length === 0) {
+      return [];
+    }
+    return data.release.map((r, idx) => `release_${r._id || idx}`);
+  }, [data?.saleType, data?.release]);
+
+  const requiredProofKeys = useMemo(() => {
+    return allProofs.map((p, idx) => `proof_${p._id || idx}`);
+  }, [allProofs]);
+
+  const allRequiredKeys = useMemo(() => {
+    if (!showBullionVerification) return [];
+    return [
+      ...requiredKycKeys,
+      ...requiredOrnamentKeys,
+      ...requiredReleaseKeys,
+      ...requiredProofKeys,
+    ];
+  }, [showBullionVerification, requiredKycKeys, requiredOrnamentKeys, requiredReleaseKeys, requiredProofKeys]);
+
+  const totalRequiredCount = allRequiredKeys.length;
+  const verifiedCount = useMemo(() => {
+    return allRequiredKeys.filter((key) => Boolean(checkedVerifications[key])).length;
+  }, [allRequiredKeys, checkedVerifications]);
+  const isAllVerified = totalRequiredCount === 0 || verifiedCount === totalRequiredCount;
+
   const [visiblePhoneField, setVisiblePhoneField] = useState(null);
   const isAuthorized = ['bullion_desk', 'admin'].includes(userType);
 
@@ -398,6 +748,11 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           <Table>
             <TableHead>
               <TableRow>
+                {showBullionVerification && (
+                  <TableCell align="center" sx={{ width: 50, fontWeight: 700 }}>
+                    Verify
+                  </TableCell>
+                )}
                 <TableCell align="left">Ornament Type</TableCell>
                 <TableCell align="left">Source</TableCell>
                 <TableCell align="left">Quantity</TableCell>
@@ -412,101 +767,123 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
               </TableRow>
             </TableHead>
             <TableBody>
-              {data?.ornaments?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => (
-                <TableRow hover key={index} tabIndex={-1}>
-                  <TableCell align="left">{sentenceCase(e.ornamentType || '')}</TableCell>
-                  <TableCell align="left">{e.source || '-'}</TableCell>
-                  <TableCell align="left">{e.quantity}</TableCell>
-                  <TableCell align="center">
-                    {e.ornamentPhoto ? (
-                      <a
-                        href={e.ornamentPhoto.startsWith('http') ? e.ornamentPhoto : `${global.baseURL}/${e.ornamentPhoto}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ display: 'inline-block' }}
-                      >
-                        <Avatar
-                          src={e.ornamentPhoto.startsWith('http') ? e.ornamentPhoto : `${global.baseURL}/${e.ornamentPhoto}`}
-                          variant="rounded"
-                          sx={{
-                            width: 40,
-                            height: 40,
-                            border: '1px solid #e0e0e0',
-                            mx: 'auto',
-                            cursor: 'pointer',
-                            '&:hover': { opacity: 0.8 },
-                          }}
+              {data?.ornaments?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => {
+                const ornIndex = page * rowsPerPage + index;
+                const ornKey = `ornament_${e._id || ornIndex}`;
+                const isChecked = Boolean(checkedVerifications[ornKey]);
+                return (
+                  <TableRow
+                    hover
+                    key={index}
+                    tabIndex={-1}
+                    sx={{
+                      bgcolor: (showBullionVerification && isChecked) ? alpha('#22c55e', 0.05) : 'inherit',
+                    }}
+                  >
+                    {showBullionVerification && (
+                      <TableCell align="center" padding="checkbox">
+                        <Checkbox
+                          size="small"
+                          checked={isChecked}
+                          onChange={(event) => handleToggleVerification(ornKey, event.target.checked)}
+                          color="success"
                         />
-                      </a>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        -
-                      </Typography>
+                      </TableCell>
                     )}
-                  </TableCell>
-                  <TableCell align="left">{e.grossWeight?.toFixed(2)}</TableCell>
-                  <TableCell align="left">{e.stoneWeight?.toFixed(2)}</TableCell>
-                  <TableCell align="left">{e.netWeight?.toFixed(2)}</TableCell>
-                  <TableCell align="left">{e.purity}</TableCell>
-                  <TableCell align="left">
-                    ₹{Math.round(
-                      (e.calculatedAmount !== undefined && e.calculatedAmount !== null && Number(e.calculatedAmount) > 0)
-                        ? Number(e.calculatedAmount)
-                        : ((data?.purchaseType === 'silver' ? data?.silverRate : data?.goldRate) > 0 && e.netWeight && e.purity)
-                        ? Math.round(((Number(e.netWeight) * Number(e.purity)) / 100) * Number(data?.purchaseType === 'silver' ? data?.silverRate : data?.goldRate))
-                        : (Number(e.netAmount || 0) - (Number(e.adjustment) || 0))
-                    ).toLocaleString('en-IN')}
-                  </TableCell>
-                  <TableCell align="left">
-                    ₹{Math.round(e.netAmount || 0).toLocaleString('en-IN')}
-                    {Boolean(e.adjustment) && (
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          display: 'block',
-                          color: e.adjustment > 0 ? 'success.main' : 'error.main',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {e.adjustment > 0 ? `+₹${Number(e.adjustment).toLocaleString('en-IN')}` : `-₹${Math.abs(Number(e.adjustment)).toLocaleString('en-IN')}`}
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell align="center">
-                    {e.hasBill ? (
-                      e.billProof ? (
+                    <TableCell align="left">{sentenceCase(e.ornamentType || '')}</TableCell>
+                    <TableCell align="left">{e.source || '-'}</TableCell>
+                    <TableCell align="left">{e.quantity}</TableCell>
+                    <TableCell align="center">
+                      {e.ornamentPhoto ? (
                         <a
-                          href={e.billProof.startsWith('http') ? e.billProof : `${global.baseURL}/${e.billProof}`}
+                          href={e.ornamentPhoto.startsWith('http') ? e.ornamentPhoto : `${global.baseURL}/${e.ornamentPhoto}`}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ textDecoration: 'none' }}
+                          style={{ display: 'inline-block' }}
                         >
-                          <Chip
-                            size="small"
-                            color="primary"
-                            label={`Bill: ${e.billDate || 'Yes'}`}
-                            icon={<Iconify icon="eva:external-link-outline" />}
-                            clickable
-                            sx={{ fontWeight: 500 }}
+                          <Avatar
+                            src={e.ornamentPhoto.startsWith('http') ? e.ornamentPhoto : `${global.baseURL}/${e.ornamentPhoto}`}
+                            variant="rounded"
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              border: '1px solid #e0e0e0',
+                              mx: 'auto',
+                              cursor: 'pointer',
+                              '&:hover': { opacity: 0.8 },
+                            }}
                           />
                         </a>
                       ) : (
-                        <Chip size="small" color="primary" label={`Bill: ${e.billDate || 'Yes'}`} sx={{ fontWeight: 500 }} />
-                      )
-                    ) : (
-                      <Chip size="small" variant="outlined" label="No Bill" sx={{ color: 'text.secondary' }} />
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+                        <Typography variant="body2" color="text.secondary">
+                          -
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell align="left">{e.grossWeight?.toFixed(2)}</TableCell>
+                    <TableCell align="left">{e.stoneWeight?.toFixed(2)}</TableCell>
+                    <TableCell align="left">{e.netWeight?.toFixed(2)}</TableCell>
+                    <TableCell align="left">{e.purity}</TableCell>
+                    <TableCell align="left">
+                      ₹{Math.round(
+                        (e.calculatedAmount !== undefined && e.calculatedAmount !== null && Number(e.calculatedAmount) > 0)
+                          ? Number(e.calculatedAmount)
+                          : ((data?.purchaseType === 'silver' ? data?.silverRate : data?.goldRate) > 0 && e.netWeight && e.purity)
+                          ? Math.round(((Number(e.netWeight) * Number(e.purity)) / 100) * Number(data?.purchaseType === 'silver' ? data?.silverRate : data?.goldRate))
+                          : (Number(e.netAmount || 0) - (Number(e.adjustment) || 0))
+                      ).toLocaleString('en-IN')}
+                    </TableCell>
+                    <TableCell align="left">
+                      ₹{Math.round(e.netAmount || 0).toLocaleString('en-IN')}
+                      {Boolean(e.adjustment) && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            display: 'block',
+                            color: e.adjustment > 0 ? 'success.main' : 'error.main',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {e.adjustment > 0 ? `+₹${Number(e.adjustment).toLocaleString('en-IN')}` : `-₹${Math.abs(Number(e.adjustment)).toLocaleString('en-IN')}`}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell align="center">
+                      {e.hasBill ? (
+                        e.billProof ? (
+                          <a
+                            href={e.billProof.startsWith('http') ? e.billProof : `${global.baseURL}/${e.billProof}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ textDecoration: 'none' }}
+                          >
+                            <Chip
+                              size="small"
+                              color="primary"
+                              label={`Bill: ${e.billDate || 'Yes'}`}
+                              icon={<Iconify icon="eva:external-link-outline" />}
+                              clickable
+                              sx={{ fontWeight: 500 }}
+                            />
+                          </a>
+                        ) : (
+                          <Chip size="small" color="primary" label={`Bill: ${e.billDate || 'Yes'}`} sx={{ fontWeight: 500 }} />
+                        )
+                      ) : (
+                        <Chip size="small" variant="outlined" label="No Bill" sx={{ color: 'text.secondary' }} />
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={11} />
+                  <TableCell colSpan={showBullionVerification ? 12 : 11} />
                 </TableRow>
               )}
               {data?.ornaments?.length === 0 && (
                 <TableRow>
-                  <TableCell align="center" colSpan={11} sx={{ py: 3 }}>
+                  <TableCell align="center" colSpan={showBullionVerification ? 12 : 11} sx={{ py: 3 }}>
                     <Paper
                       sx={{
                         textAlign: 'center',
@@ -533,6 +910,9 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                     },
                   }}
                 >
+                  {showBullionVerification && (
+                    <TableCell align="center">-</TableCell>
+                  )}
                   <TableCell align="left">
                     Total
                   </TableCell>
@@ -611,6 +991,11 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           <Table>
             <TableHead>
               <TableRow>
+                {showBullionVerification && (
+                  <TableCell align="center" sx={{ width: 50, fontWeight: 700 }}>
+                    Verify
+                  </TableCell>
+                )}
                 <TableCell align="left">Pledge Id</TableCell>
                 <TableCell align="left">Pledged In</TableCell>
                 <TableCell align="left">Weight (Grams)</TableCell>
@@ -622,26 +1007,48 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
               </TableRow>
             </TableHead>
             <TableBody>
-              {data?.release?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e) => (
-                <TableRow hover key={e._id} tabIndex={-1}>
-                  <TableCell align="left">{e.pledgeId || '-'}</TableCell>
-                  <TableCell align="left">{sentenceCase(e.pledgedIn || '') || '-'}</TableCell>
-                  <TableCell align="left">{e.weight != null && !isNaN(e.weight) ? Number(e.weight).toFixed(2) : '-'}</TableCell>
-                  <TableCell align="left">{e.averagePurity != null && !isNaN(e.averagePurity) && e.averagePurity !== '' ? `${e.averagePurity}%` : '-'}</TableCell>
-                  <TableCell align="left">{e.pledgeAmount != null && !isNaN(e.pledgeAmount) ? Math.round(e.pledgeAmount) : '-'}</TableCell>
-                  <TableCell align="left">{e.pledgedDate ? moment(e.pledgedDate).format('YYYY-MM-DD') : '-'}</TableCell>
-                  <TableCell align="left">{e.payableAmount != null && !isNaN(e.payableAmount) ? Math.round(e.payableAmount) : '-'}</TableCell>
-                  <TableCell align="left">{sentenceCase(e.paymentType || '') || '-'}</TableCell>
-                </TableRow>
-              ))}
+              {data?.release?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((e, index) => {
+                const relIndex = page * rowsPerPage + index;
+                const relKey = `release_${e._id || relIndex}`;
+                const isChecked = Boolean(checkedVerifications[relKey]);
+                return (
+                  <TableRow
+                    hover
+                    key={e._id || index}
+                    tabIndex={-1}
+                    sx={{
+                      bgcolor: (showBullionVerification && isChecked) ? alpha('#22c55e', 0.05) : 'inherit',
+                    }}
+                  >
+                    {showBullionVerification && (
+                      <TableCell align="center" padding="checkbox">
+                        <Checkbox
+                          size="small"
+                          checked={isChecked}
+                          onChange={(event) => handleToggleVerification(relKey, event.target.checked)}
+                          color="success"
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell align="left">{e.pledgeId || '-'}</TableCell>
+                    <TableCell align="left">{sentenceCase(e.pledgedIn || '') || '-'}</TableCell>
+                    <TableCell align="left">{e.weight != null && !isNaN(e.weight) ? Number(e.weight).toFixed(2) : '-'}</TableCell>
+                    <TableCell align="left">{e.averagePurity != null && !isNaN(e.averagePurity) && e.averagePurity !== '' ? `${e.averagePurity}%` : '-'}</TableCell>
+                    <TableCell align="left">{e.pledgeAmount != null && !isNaN(e.pledgeAmount) ? Math.round(e.pledgeAmount) : '-'}</TableCell>
+                    <TableCell align="left">{e.pledgedDate ? moment(e.pledgedDate).format('YYYY-MM-DD') : '-'}</TableCell>
+                    <TableCell align="left">{e.payableAmount != null && !isNaN(e.payableAmount) ? Math.round(e.payableAmount) : '-'}</TableCell>
+                    <TableCell align="left">{sentenceCase(e.paymentType || '') || '-'}</TableCell>
+                  </TableRow>
+                );
+              })}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={8} />
+                  <TableCell colSpan={showBullionVerification ? 9 : 8} />
                 </TableRow>
               )}
               {data?.release?.length === 0 && (
                 <TableRow>
-                  <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
+                  <TableCell align="center" colSpan={showBullionVerification ? 9 : 8} sx={{ py: 3 }}>
                     <Paper
                       sx={{
                         textAlign: 'center',
@@ -668,6 +1075,9 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                     },
                   }}
                 >
+                  {showBullionVerification && (
+                    <TableCell align="center">-</TableCell>
+                  )}
                   <TableCell colSpan={2} align="left">
                     Total
                   </TableCell>
@@ -1237,223 +1647,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
 
   function Proof() {
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(8);
-
-    const manualProofUrls = [];
-    if (data?.financePayments) {
-      data.financePayments.forEach(fp => {
-        if (fp.proof) manualProofUrls.push(fp.proof);
-        if (fp.verifiedProof) manualProofUrls.push(fp.verifiedProof);
-      });
-    }
-    if (data?.financeProof) manualProofUrls.push(data.financeProof);
-    if (data?.verifiedFinanceProof) manualProofUrls.push(data.verifiedFinanceProof);
-    if (data?.assigneeProof) manualProofUrls.push(data.assigneeProof);
-    if (data?.fundTransferProof) manualProofUrls.push(data.fundTransferProof);
-
-    data?.release?.forEach(r => {
-      if (r.financeProof) manualProofUrls.push(r.financeProof);
-      if (r.assigneeProof) manualProofUrls.push(r.assigneeProof);
-      if (r.fundTransferProof) manualProofUrls.push(r.fundTransferProof);
-    });
-
-    const isFinanceDoc = (p) => {
-      const uName = (p.uploadName || '').toLowerCase();
-      const dType = (p.documentType || '').toLowerCase();
-      return (
-        ['finance_proof', 'sale_finance_proof', 'sale_proof', 'release_finance_proof', 'verified_bank_proof'].includes(uName) ||
-        dType.includes('finance') ||
-        dType.includes('verified bank payment')
-      );
-    };
-
-    const ornamentFileUrls = new Set();
-    (data?.ornaments || []).forEach(o => {
-      if (o.ornamentPhoto) ornamentFileUrls.add(o.ornamentPhoto);
-      if (o.billProof) ornamentFileUrls.add(o.billProof);
-    });
-
-    const isTransitDoc = (p) =>
-      ['transit_proof', 'transit_received_proof', 'store_transit_received_proof', 'admin_transit_proof'].includes(p?.uploadName) ||
-      (p?.documentType && p.documentType.toLowerCase().includes('transit')) ||
-      (p?.uploadName && p.uploadName.toLowerCase().includes('transit'));
-
-    const isMeltingDoc = (p) =>
-      ['melt_proof', 'pre_melt_proof', 'after_melt_proof'].includes(p?.uploadName) ||
-      (p?.documentType && p.documentType.toLowerCase().includes('melt')) ||
-      (p?.uploadName && p.uploadName.toLowerCase().includes('melt'));
-
-    const bankProofUrls = new Set();
-    (data?.customer?.bank || []).forEach(b => {
-      if (b.proof?.uploadedFile) bankProofUrls.add(b.proof.uploadedFile);
-    });
-    if (data?.bank?.proof?.uploadedFile) bankProofUrls.add(data.bank.proof.uploadedFile);
-    if (typeof data?.bank?.proof === 'string') bankProofUrls.add(data.bank.proof);
-    if (data?.financePayments) {
-      data.financePayments.forEach(fp => {
-        if (fp.bank?.proof?.uploadedFile) bankProofUrls.add(fp.bank.proof.uploadedFile);
-        if (typeof fp.bank?.proof === 'string') bankProofUrls.add(fp.bank.proof);
-      });
-    }
-    data?.release?.forEach(r => {
-      if (r.bank?.proof?.uploadedFile) bankProofUrls.add(r.bank.proof.uploadedFile);
-      if (typeof r.bank?.proof === 'string') bankProofUrls.add(r.bank.proof);
-    });
-
-    const isBankDoc = (p) => {
-      if (!p) return false;
-      if (p.uploadedFile && bankProofUrls.has(p.uploadedFile)) return true;
-      const uName = (p.uploadName || '').toLowerCase();
-      const dType = (p.documentType || '').toLowerCase();
-      return (
-        uName === 'bank_proof' ||
-        uName === 'passbook_proof' ||
-        uName === 'cheque_proof' ||
-        uName.includes('bank_proof') ||
-        dType.includes('bank proof') ||
-        dType.includes('passbook') ||
-        dType.includes('cancelled cheque')
-      );
-    };
-
-    const baseProofs = [...(data?.proof || [])]
-      .filter(p => !ornamentFileUrls.has(p.uploadedFile) && !manualProofUrls.includes(p.uploadedFile) && !isTransitDoc(p) && !isMeltingDoc(p) && !isFinanceDoc(p) && !isBankDoc(p))
-      .map(p => ({ ...p }));
-
-    const allProofs = [...baseProofs];
-
-    const isPhysical = data?.saleType === 'physical';
-    if (data?.assigneeProof) {
-      allProofs.push({ uploadedFile: data.assigneeProof, documentType: isPhysical ? 'Assignee Proof' : 'Release Assignee Proof', documentNo: 'N/A', _id: 'assignee' });
-    }
-
-    data?.release?.forEach(r => {
-      if (r.assigneeProof) {
-        allProofs.push({ uploadedFile: r.assigneeProof, documentType: 'Release Assignee Proof', documentNo: 'N/A', _id: `rel_assignee_${r._id}` });
-      }
-    });
-
-    data?.ornaments?.forEach((orn, idx) => {
-      const typeLabel = orn.ornamentType || `Ornament #${idx + 1}`;
-      if (orn.ornamentPhoto) {
-        allProofs.push({
-          uploadedFile: orn.ornamentPhoto,
-          documentType: `Ornament Photo (${typeLabel})`,
-          displayType: `Ornament Photo (${typeLabel})`,
-          documentNo: 'N/A',
-          _id: `orn_photo_${idx}`,
-        });
-      }
-      if (orn.billProof) {
-        const formattedDate = orn.billDate ? (orn.billDate.split('T')[0] || orn.billDate) : 'N/A';
-        allProofs.push({
-          uploadedFile: orn.billProof,
-          documentType: `Ornament Purchase Bill (${typeLabel})`,
-          displayType: `Ornament Purchase Bill (${typeLabel})`,
-          documentNo: formattedDate,
-          _id: `orn_bill_${idx}`,
-        });
-      }
-    });
-
-    allProofs.forEach(e => {
-       const releaseDoc = data?.release?.flatMap((r) => r.proofDocuments || [])?.find((doc) => doc.documentFile === e.uploadedFile);
-       let docType = e.documentType || releaseDoc?.documentType;
-       let displayType = docType ? sentenceCase(docType) : 'Release Document';
-       
-       if (!docType && e.uploadName && e.uploadName !== 'Release Document' && e.uploadName !== 'release') {
-         if (e.uploadName === 'finance_proof') {
-           displayType = isPhysical ? 'Finance Proof' : 'Sale Finance Proof';
-         } else if (e.uploadName === 'sale_finance_proof' || e.uploadName === 'sale_proof') {
-           displayType = 'Sale Finance Proof';
-         } else if (e.uploadName === 'transit_proof') {
-           displayType = 'Transit Dispatch Proof';
-         } else if (e.uploadName === 'transit_received_proof') {
-           displayType = 'Transit Received Proof';
-         } else if (e.uploadName === 'melt_proof') {
-           displayType = 'Initial Batch Proof (Before Melt)';
-         } else if (e.uploadName === 'pre_melt_proof') {
-           displayType = 'Pre-Melt Proof (Stage 1)';
-         } else if (e.uploadName === 'after_melt_proof') {
-           displayType = 'After Melt Proof';
-         } else {
-           displayType = e.uploadName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-         }
-       } else if (docType === 'Release Finance Proof' || docType === 'Finance Proof') {
-           displayType = isPhysical ? 'Finance Proof' : (docType === 'Release Finance Proof' ? 'Release Finance Proof' : 'Finance Proof');
-       } else if (docType === 'Sale Finance Proof') {
-           displayType = 'Sale Finance Proof';
-       }
-
-       if (displayType.toLowerCase() === 'sale finance proof') displayType = 'Sale Finance Proof';
-       if (displayType.toLowerCase() === 'release finance proof' || displayType.toLowerCase() === 'release finance document') displayType = 'Release Finance Proof';
-       
-       e.baseDisplayType = displayType;
-       e.documentNo = e.documentNo || releaseDoc?.documentNo || 'N/A';
-
-       if (!e.bankDetails) {
-         if (e.uploadName === 'finance_proof') {
-           if (e.documentNo && e.documentNo.includes(' - ')) {
-             const parts = e.documentNo.split(' | ');
-             e.bankDetails = parts[0];
-             if (parts[1] && parts[1].startsWith('₹')) {
-               e.amount = parts[1].replace('₹', '').replace(/,/g, '');
-             }
-           } else {
-             e.bankDetails = '-';
-           }
-         } else {
-           e.bankDetails = '-';
-         }
-       }
-    });
-
-    const proofTypeTotals = {};
-    allProofs.forEach(e => {
-      const typeKey = e.baseDisplayType || 'Document';
-      proofTypeTotals[typeKey] = (proofTypeTotals[typeKey] || 0) + 1;
-    });
-
-    const proofTypeCounters = {};
-    allProofs.forEach(e => {
-      const typeKey = e.baseDisplayType || 'Document';
-      if (proofTypeTotals[typeKey] > 1 && typeKey.toLowerCase().includes('finance proof')) {
-        proofTypeCounters[typeKey] = (proofTypeCounters[typeKey] || 0) + 1;
-        e.displayType = `${typeKey} ${proofTypeCounters[typeKey]}`;
-      } else {
-        e.displayType = typeKey;
-      }
-    });
-
-    const getCategoryInfo = (proof) => {
-      const uploadName = proof.uploadName || '';
-      const docType = (proof.documentType || proof.baseDisplayType || '').toLowerCase();
-      const id = String(proof._id || '');
-
-      if (
-        id.startsWith('rel_') ||
-        (docType.includes('release') && !docType.includes('sale finance')) ||
-        uploadName === 'release' ||
-        (!isPhysical && uploadName === 'finance_proof' && id.startsWith('rel_'))
-      ) {
-        return { rank: 1, label: 'Release' };
-      }
-
-      return { rank: 2, label: 'Sale' };
-    };
-
-    allProofs.forEach(e => {
-      const cat = getCategoryInfo(e);
-      e.categoryRank = cat.rank;
-      e.categoryLabel = cat.label;
-    });
-
-    allProofs.sort((a, b) => {
-      if (a.categoryRank !== b.categoryRank) {
-        return a.categoryRank - b.categoryRank;
-      }
-      return 0;
-    });
+    const [rowsPerPage, setRowsPerPage] = useState(24);
 
     const handleChangePage = (event, newPage) => {
       setPage(newPage);
@@ -1464,7 +1658,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
       setRowsPerPage(parseInt(event.target.value, 10));
     };
 
-    if (allProofs.length === 0) {
+    if (!allProofs || allProofs.length === 0) {
       return null;
     }
 
@@ -1476,6 +1670,9 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
         <Box sx={{ mb: 2 }}>
         <Grid container spacing={2}>
           {allProofs.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((e, index) => {
+            const proofIndex = page * rowsPerPage + index;
+            const proofKey = `proof_${e._id || proofIndex}`;
+            const isChecked = Boolean(checkedVerifications[proofKey]);
             const isImage = Boolean(e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i));
             const fileUrl = e?.uploadedFile?.startsWith('http')
               ? e.uploadedFile
@@ -1490,7 +1687,8 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                     flexDirection: 'column',
                     borderRadius: 1.5,
                     border: '1px solid',
-                    borderColor: 'divider',
+                    borderColor: isChecked ? 'success.main' : 'divider',
+                    bgcolor: (showBullionVerification && isChecked) ? alpha('#22c55e', 0.04) : 'background.paper',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
                     transition: 'all 0.2s ease-in-out',
                     '&:hover': {
@@ -1634,6 +1832,46 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                       </Stack>
                     )}
                   </Box>
+
+                  {/* Bullion Desk Verification Checkbox */}
+                  {showBullionVerification && (
+                    <Box
+                      sx={{
+                        p: 1,
+                        pt: 0.75,
+                        borderTop: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: isChecked ? alpha('#22c55e', 0.08) : 'transparent',
+                        borderRadius: '0 0 8px 8px',
+                        transition: 'background-color 0.2s',
+                      }}
+                    >
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={isChecked}
+                            onChange={(event) => handleToggleVerification(proofKey, event.target.checked)}
+                            color="success"
+                          />
+                        }
+                        label={
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: '0.78rem',
+                              color: isChecked ? 'success.main' : 'text.secondary',
+                              userSelect: 'none',
+                            }}
+                          >
+                            {isChecked ? 'Verified' : 'Verify Document'}
+                          </Typography>
+                        }
+                        sx={{ m: 0, width: '100%' }}
+                      />
+                    </Box>
+                  )}
                 </Card>
               </Grid>
             );
@@ -1641,7 +1879,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
         </Grid>
 
         <TablePagination
-          rowsPerPageOptions={[4, 8, 12, 24]}
+          rowsPerPageOptions={[4, 8, 12, 24, 48]}
           component="div"
           count={allProofs.length || 0}
           rowsPerPage={rowsPerPage}
@@ -2004,138 +2242,202 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
     }
 
     return (
-      <Stack
-        direction="row"
-        spacing={1.5}
-        alignItems="stretch"
-        justifyContent={{ xs: 'center', lg: 'flex-end' }}
-        sx={{
-          flexWrap: 'wrap',
-          gap: 1.5,
-          width: { xs: '100%', lg: 'auto' },
-          flexShrink: 0,
-        }}
-      >
-        {kycProofs.map((e, index) => {
-          const isSignature =
-            e?.uploadType?.toLowerCase() === 'signature' ||
-            e?.uploadName?.toLowerCase() === 'signature' ||
-            e?.documentType?.toLowerCase() === 'signature';
+      <Box sx={{ width: '100%', mt: 2.5, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+        <Typography
+          variant="subtitle2"
+          sx={{
+            mb: 1.5,
+            fontWeight: 700,
+            color: 'text.secondary',
+            textTransform: 'uppercase',
+            letterSpacing: 0.5,
+            fontSize: '0.75rem',
+          }}
+        >
+          Customer KYC Documents & Proofs
+        </Typography>
+        <Grid container spacing={2}>
+          {kycProofs.map((e, index) => {
+            const isSignature =
+              e?.uploadType?.toLowerCase() === 'signature' ||
+              e?.uploadName?.toLowerCase() === 'signature' ||
+              e?.documentType?.toLowerCase() === 'signature';
 
-          const docName = isSignature
-            ? 'Signature'
-            : (e?.documentType
-                ? sentenceCase(e.documentType)
-                : data?.customer?.chooseId
-                ? sentenceCase(data.customer.chooseId)
-                : sentenceCase(e.uploadType || 'ID Proof'));
+            const kycKey = `kyc_${e._id || index}`;
+            const isChecked = Boolean(checkedVerifications[kycKey]);
 
-          const docNumber = !isSignature ? (e?.documentNo || data?.customer?.idNo || '') : '';
-          const fileUrl = e?.uploadedFile?.startsWith('http')
-            ? e.uploadedFile
-            : `${global.baseURL}/${e?.uploadedFile}`;
-          const isImage = Boolean(e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i));
+            const docName = isSignature
+              ? 'Signature'
+              : (e?.documentType
+                  ? sentenceCase(e.documentType)
+                  : data?.customer?.chooseId
+                  ? sentenceCase(data.customer.chooseId)
+                  : sentenceCase(e.uploadType || 'ID Proof'));
 
-          return (
-            <Card
-              key={e._id || index}
-              sx={{
-                p: 1.25,
-                borderRadius: 1.5,
-                border: '1px solid',
-                borderColor: 'divider',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                bgcolor: 'background.paper',
-                width: { xs: '100%', sm: 190, md: 210 },
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'all 0.2s',
-                '&:hover': {
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  borderColor: 'primary.main',
-                },
-              }}
-            >
-              <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1} sx={{ minHeight: 24 }}>
-                <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
-                  <Iconify
-                    icon={isSignature ? 'fluent:signature-24-filled' : 'mdi:card-account-details-outline'}
-                    width={18}
-                    sx={{ color: isSignature ? 'info.main' : 'primary.main', flexShrink: 0 }}
-                  />
-                  <Typography variant="subtitle2" noWrap sx={{ fontWeight: 700, fontSize: '0.8rem' }}>
-                    {docName}
-                  </Typography>
-                </Stack>
-                {docNumber && (
-                  <Chip
-                    size="small"
-                    label={docNumber}
-                    variant="outlined"
-                    color="primary"
-                    sx={{ fontWeight: 600, fontSize: '0.7rem', height: 20, ml: 0.5, flexShrink: 0 }}
-                  />
-                )}
-              </Stack>
+            const docNumber = !isSignature ? (e?.documentNo || data?.customer?.idNo || '') : '';
+            const fileUrl = e?.uploadedFile?.startsWith('http')
+              ? e.uploadedFile
+              : `${global.baseURL}/${e?.uploadedFile}`;
+            const isImage = Boolean(e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i));
 
-              <Box
-                sx={{
-                  width: '100%',
-                  height: 105,
-                  borderRadius: 1,
-                  bgcolor: isSignature ? '#ffffff' : 'background.neutral',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  p: 0.5,
-                }}
-              >
-                {isImage ? (
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
+            return (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={e._id || index}>
+                <Card
+                  sx={{
+                    p: 1.5,
+                    height: '100%',
+                    borderRadius: 1.5,
+                    border: '1px solid',
+                    borderColor: (showBullionVerification && !isSignature && isChecked) ? 'success.main' : 'divider',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    bgcolor: (showBullionVerification && !isSignature && isChecked) ? alpha('#22c55e', 0.03) : 'background.paper',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                      borderColor: 'primary.main',
+                    },
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    mb={1.25}
+                    spacing={1}
+                    sx={{ minHeight: 28 }}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0, flexGrow: 1 }}>
+                      <Iconify
+                        icon={isSignature ? 'fluent:signature-24-filled' : 'mdi:card-account-details-outline'}
+                        width={20}
+                        sx={{ color: isSignature ? 'info.main' : 'primary.main', flexShrink: 0 }}
+                      />
+                      <Typography
+                        variant="subtitle2"
+                        noWrap
+                        title={docName}
+                        sx={{ fontWeight: 700, fontSize: '0.85rem' }}
+                      >
+                        {docName}
+                      </Typography>
+                    </Stack>
+                    {docNumber && (
+                      <Chip
+                        size="small"
+                        label={docNumber}
+                        variant="outlined"
+                        color="primary"
+                        sx={{ fontWeight: 600, fontSize: '0.72rem', height: 22, flexShrink: 0 }}
+                      />
+                    )}
+                  </Stack>
+
+                  <Box
+                    sx={{
                       width: '100%',
-                      height: '100%',
+                      height: 120,
+                      borderRadius: 1,
+                      bgcolor: isSignature ? '#ffffff' : 'background.neutral',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      overflow: 'hidden',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      p: 0.5,
                     }}
                   >
-                    <img
-                      src={fileUrl}
-                      alt={docName}
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '100%',
-                        objectFit: 'contain',
-                        borderRadius: 4,
+                    {isImage ? (
+                      <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <img
+                          src={fileUrl}
+                          alt={docName}
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain',
+                            borderRadius: 4,
+                          }}
+                        />
+                      </a>
+                    ) : (
+                      <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ textDecoration: 'none', textAlign: 'center' }}
+                      >
+                        <img src="/assets/doc.svg" alt="document" style={{ width: '40px', margin: '0 auto' }} />
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          sx={{ mt: 0.5, color: 'primary.main', fontWeight: 600, fontSize: '0.72rem' }}
+                        >
+                          View Document
+                        </Typography>
+                      </a>
+                    )}
+                  </Box>
+
+                  {showBullionVerification && !isSignature && (
+                    <Box
+                      sx={{
+                        mt: 1.25,
+                        pt: 0.75,
+                        borderTop: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: isChecked ? alpha('#22c55e', 0.08) : 'transparent',
+                        borderRadius: 1,
+                        px: 0.5,
+                        transition: 'background-color 0.2s',
                       }}
-                    />
-                  </a>
-                ) : (
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ textDecoration: 'none', textAlign: 'center' }}
-                  >
-                    <img src="/assets/doc.svg" alt="document" style={{ width: '40px', margin: '0 auto' }} />
-                    <Typography variant="caption" display="block" sx={{ mt: 0.5, color: 'primary.main', fontWeight: 600, fontSize: '0.68rem' }}>
-                      View Document
-                    </Typography>
-                  </a>
-                )}
-              </Box>
-            </Card>
-          );
-        })}
-      </Stack>
+                    >
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={isChecked}
+                            onChange={(event) => handleToggleVerification(kycKey, event.target.checked)}
+                            color="success"
+                          />
+                        }
+                        label={
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: '0.8rem',
+                              color: isChecked ? 'success.main' : 'text.secondary',
+                              userSelect: 'none',
+                            }}
+                          >
+                            {isChecked ? 'Verified' : 'Verify Proof'}
+                          </Typography>
+                        }
+                        sx={{ m: 0, width: '100%' }}
+                      />
+                    </Box>
+                  )}
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </Box>
     );
   }
 
@@ -2183,7 +2485,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                     p.documentType !== 'signature' &&
                     p.uploadedFile
                 );
-                const proof = data?.customer?.addressProofs?.find(p => String(p.uploadId) === String(e._id)) || kycDocProof;
+                const proof = data?.customer?.addressProofs?.find(p => String(p.uploadId) === String(e._id)) || (index === 0 ? kycDocProof : null);
                 return (
                   <TableRow hover key={e._id} tabIndex={-1}>
                     <TableCell align="left">{sentenceCase(e.address || '')}</TableCell>
@@ -2194,30 +2496,47 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                     <TableCell align="left">{e.label}</TableCell>
                     <TableCell align="left">
                       {proof?.uploadedFile ? (
-                        proof?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
+                        <Stack direction="row" alignItems="center" spacing={1}>
                           <a
                             href={proof.uploadedFile.startsWith('http') ? proof.uploadedFile : `${global.baseURL}/${proof.uploadedFile}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ cursor: 'pointer' }}
+                            style={{ cursor: 'pointer', display: 'inline-flex' }}
                           >
-                            <img
-                              src={proof.uploadedFile.startsWith('http') ? proof.uploadedFile : `${global.baseURL}/${proof.uploadedFile}`}
-                              alt="document"
-                              style={{ width: '80px' }}
-                            />
+                            {proof?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
+                              <Box
+                                component="img"
+                                src={proof.uploadedFile.startsWith('http') ? proof.uploadedFile : `${global.baseURL}/${proof.uploadedFile}`}
+                                alt="document"
+                                sx={{
+                                  width: 70,
+                                  height: 48,
+                                  objectFit: 'contain',
+                                  borderRadius: 1,
+                                  border: '1px solid',
+                                  borderColor: 'divider',
+                                  p: 0.25,
+                                  bgcolor: '#fff',
+                                  '&:hover': {
+                                    borderColor: 'primary.main',
+                                    transform: 'scale(1.05)',
+                                    transition: 'all 0.2s',
+                                  },
+                                }}
+                              />
+                            ) : (
+                              <img src="/assets/doc.svg" alt="document" style={{ width: '40px' }} />
+                            )}
                           </a>
-                        ) : (
-                          <a
-                            href={proof.uploadedFile.startsWith('http') ? proof.uploadedFile : `${global.baseURL}/${proof.uploadedFile}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <img src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />
-                          </a>
-                        )
-                      ) : 'N/A'}
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                            {proof.documentType || 'Proof'}
+                          </Typography>
+                        </Stack>
+                      ) : (
+                        <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
+                          No Proof
+                        </Typography>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -2300,119 +2619,117 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
               </Typography>
               <Box sx={{ p: { xs: 2, sm: 2.5 }, bgcolor: 'background.neutral', borderRadius: 2 }}>
                 <Stack
-                  direction={{ xs: 'column', lg: 'row' }}
-                  spacing={{ xs: 2, sm: 3 }}
-                  alignItems={{ xs: 'center', lg: 'flex-start' }}
-                  justifyContent="space-between"
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={{ xs: 2, sm: 2.5 }}
+                  alignItems={{ xs: 'center', sm: 'flex-start' }}
+                  sx={{ width: '100%' }}
                 >
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={{ xs: 2, sm: 2.5 }}
-                    alignItems={{ xs: 'center', sm: 'flex-start' }}
-                    sx={{ flexGrow: 1, width: { xs: '100%', lg: 'auto' } }}
+                  <Avatar
+                    src={data?.customer?.profileImage?.uploadedFile ? (data.customer.profileImage.uploadedFile.startsWith('http')
+                      ? data.customer.profileImage.uploadedFile
+                      : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`) : null}
+                    imgProps={{
+                      onError: (e) => {
+                        e.target.style.display = 'none';
+                      },
+                    }}
+                    alt={data?.customer?.name}
+                    sx={{
+                      width: { xs: 72, sm: 84 },
+                      height: { xs: 72, sm: 84 },
+                      flexShrink: 0,
+                      bgcolor: 'primary.main',
+                      color: '#fff',
+                      fontSize: '1.75rem',
+                      fontWeight: 700,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                      border: '2px solid',
+                      borderColor: 'divider',
+                    }}
                   >
-                    <Avatar
-                      src={data?.customer?.profileImage?.uploadedFile ? (data.customer.profileImage.uploadedFile.startsWith('http')
-                        ? data.customer.profileImage.uploadedFile
-                        : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`) : null}
-                      alt={data?.customer?.name}
-                      sx={{
-                        width: { xs: 72, sm: 84 },
-                        height: { xs: 72, sm: 84 },
-                        flexShrink: 0,
-                        bgcolor: 'primary.main',
-                        color: '#fff',
-                        fontSize: '1.75rem',
-                        fontWeight: 700,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                        border: '2px solid',
-                        borderColor: 'divider',
-                      }}
-                    >
-                      {(data?.customer?.name || 'C').charAt(0).toUpperCase()}
-                    </Avatar>
+                    {(data?.customer?.name || 'C').charAt(0).toUpperCase()}
+                  </Avatar>
+                  <Stack
+                    spacing={0.75}
+                    sx={{
+                      width: '100%',
+                      alignItems: { xs: 'center', sm: 'flex-start' },
+                      textAlign: { xs: 'center', sm: 'left' },
+                    }}
+                  >
+                    <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.2 }}>
+                      {data?.customer?.name || 'N/A'}
+                    </Typography>
                     <Stack
-                      spacing={0.75}
-                      sx={{
-                        width: '100%',
-                        alignItems: { xs: 'center', sm: 'flex-start' },
-                        textAlign: { xs: 'center', sm: 'left' },
-                      }}
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={{ xs: 0.75, sm: 2 }}
+                      alignItems="center"
+                      justifyContent={{ xs: 'center', sm: 'flex-start' }}
+                      sx={{ color: 'text.secondary', flexWrap: 'wrap' }}
                     >
-                      <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.2 }}>
-                        {data?.customer?.name || 'N/A'}
-                      </Typography>
-                      <Stack
-                        direction={{ xs: 'column', sm: 'row' }}
-                        spacing={{ xs: 0.75, sm: 2 }}
-                        alignItems="center"
-                        justifyContent={{ xs: 'center', sm: 'flex-start' }}
-                        sx={{ color: 'text.secondary', flexWrap: 'wrap' }}
-                      >
-                        {data?.customer?.email && (
-                          <Stack direction="row" spacing={0.5} alignItems="center">
-                            <Iconify icon="eva:email-fill" width={16} sx={{ color: 'primary.main', flexShrink: 0 }} />
-                            <Typography variant="body2">{data?.customer?.email}</Typography>
-                          </Stack>
+                      {data?.customer?.email && (
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Iconify icon="eva:email-fill" width={16} sx={{ color: 'primary.main', flexShrink: 0 }} />
+                          <Typography variant="body2">{data?.customer?.email}</Typography>
+                        </Stack>
+                      )}
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Iconify icon="eva:phone-fill" width={16} sx={{ color: 'primary.main', flexShrink: 0 }} />
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {isAdmin || visiblePhoneField === 'primary'
+                            ? data?.customer?.phoneNumber || 'N/A'
+                            : global.maskPhoneNumber(data?.customer?.phoneNumber) || data?.customer?.phoneNumber || 'N/A'}
+                        </Typography>
+                        {!isAdmin && data?.customer?.phoneNumber && (
+                          <IconButton
+                            size="small"
+                            onClick={() => setVisiblePhoneField(visiblePhoneField === 'primary' ? null : 'primary')}
+                            sx={{ p: 0.25 }}
+                          >
+                            <Iconify icon={visiblePhoneField === 'primary' ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={16} height={16} />
+                          </IconButton>
                         )}
-                        <Stack direction="row" spacing={0.5} alignItems="center">
-                          <Iconify icon="eva:phone-fill" width={16} sx={{ color: 'primary.main', flexShrink: 0 }} />
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            {isAdmin || visiblePhoneField === 'primary'
-                              ? data?.customer?.phoneNumber || 'N/A'
-                              : global.maskPhoneNumber(data?.customer?.phoneNumber) || data?.customer?.phoneNumber || 'N/A'}
-                          </Typography>
-                          {!isAdmin && data?.customer?.phoneNumber && (
-                            <IconButton
-                              size="small"
-                              onClick={() => setVisiblePhoneField(visiblePhoneField === 'primary' ? null : 'primary')}
-                              sx={{ p: 0.25 }}
-                            >
-                              <Iconify icon={visiblePhoneField === 'primary' ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={16} height={16} />
-                            </IconButton>
-                          )}
-                        </Stack>
-                        <Stack direction="row" spacing={0.5} alignItems="center">
-                          <Iconify icon="eva:phone-outline" width={16} sx={{ color: 'text.disabled', flexShrink: 0 }} />
-                          <Typography variant="body2">
-                            Alt: {(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
-                              ? (isAdmin || visiblePhoneField === 'alt'
-                                  ? (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
-                                  : (global.maskPhoneNumber(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) || (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)))
-                              : 'N/A'}
-                          </Typography>
-                          {!isAdmin && (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) && (
-                            <IconButton
-                              size="small"
-                              onClick={() => setVisiblePhoneField(visiblePhoneField === 'alt' ? null : 'alt')}
-                              sx={{ p: 0.25 }}
-                            >
-                              <Iconify icon={visiblePhoneField === 'alt' ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={16} height={16} />
-                            </IconButton>
-                          )}
-                        </Stack>
                       </Stack>
-                      <Stack
-                        direction="row"
-                        spacing={0.75}
-                        sx={{
-                          mt: 0.5,
-                          flexWrap: 'wrap',
-                          gap: 0.75,
-                          justifyContent: { xs: 'center', sm: 'flex-start' },
-                        }}
-                      >
-                        <Chip size="small" variant="outlined" label={`Gender: ${data?.customer?.gender || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
-                        <Chip size="small" variant="outlined" label={`Marital Status: ${data?.customer?.maritalStatus || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
-                        {data?.customer?.employmentStatus && (
-                          <Chip size="small" variant="outlined" label={`Employment: ${data?.customer?.employmentStatus}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Iconify icon="eva:phone-outline" width={16} sx={{ color: 'text.disabled', flexShrink: 0 }} />
+                        <Typography variant="body2">
+                          Alt: {(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
+                            ? (isAdmin || visiblePhoneField === 'alt'
+                                ? (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
+                                : (global.maskPhoneNumber(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) || (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)))
+                            : 'N/A'}
+                        </Typography>
+                        {!isAdmin && (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) && (
+                          <IconButton
+                            size="small"
+                            onClick={() => setVisiblePhoneField(visiblePhoneField === 'alt' ? null : 'alt')}
+                            sx={{ p: 0.25 }}
+                          >
+                            <Iconify icon={visiblePhoneField === 'alt' ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={16} height={16} />
+                          </IconButton>
                         )}
-                        <Chip size="small" variant="outlined" label={`Source: ${data?.customer?.source || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
                       </Stack>
                     </Stack>
+                    <Stack
+                      direction="row"
+                      spacing={0.75}
+                      sx={{
+                        mt: 0.5,
+                        flexWrap: 'wrap',
+                        gap: 0.75,
+                        justifyContent: { xs: 'center', sm: 'flex-start' },
+                      }}
+                    >
+                      <Chip size="small" variant="outlined" label={`Gender: ${data?.customer?.gender || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
+                      <Chip size="small" variant="outlined" label={`Marital Status: ${data?.customer?.maritalStatus || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
+                      {data?.customer?.employmentStatus && (
+                        <Chip size="small" variant="outlined" label={`Employment: ${data?.customer?.employmentStatus}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
+                      )}
+                      <Chip size="small" variant="outlined" label={`Source: ${data?.customer?.source || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
+                    </Stack>
                   </Stack>
-                  <KycProof />
                 </Stack>
+                <KycProof />
               </Box>
             </Grid>
             {data?.customer?.address && data.customer.address.length > 0 && (
@@ -2762,6 +3079,15 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
               isReleaseBullionApproval={isReleaseBullionApproval}
               setNotify={setNotify}
               onActionComplete={onActionComplete}
+              showBullionVerification={showBullionVerification}
+              isAllVerified={isAllVerified}
+              verifiedCount={verifiedCount}
+              totalRequiredCount={totalRequiredCount}
+              requiredKycKeys={requiredKycKeys}
+              requiredOrnamentKeys={requiredOrnamentKeys}
+              requiredReleaseKeys={requiredReleaseKeys}
+              requiredProofKeys={requiredProofKeys}
+              checkedVerifications={checkedVerifications}
             />
           </Grid>
         </Card>

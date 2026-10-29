@@ -1,4 +1,4 @@
-import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid, Tab, Tabs, Box, Button, Typography, IconButton } from '@mui/material';
+import { TextField, FormControl, InputLabel, Select, MenuItem, Card, Grid, Tab, Tabs, Box, Button, Typography, IconButton, Chip, Divider } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
@@ -28,6 +28,60 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
   const [uploadIdPreview, setUploadIdPreview] = useState(null);
   const [uploadPanPreview, setUploadPanPreview] = useState(null);
   const [signaturePreview, setSignaturePreview] = useState(null);
+
+  // Multiple ID Proofs State
+  const [idProofs, setIdProofs] = useState([
+    { id: 1, chooseId: '', idNo: '', file: null, preview: null, isExisting: false },
+  ]);
+
+  const handleAddIdProof = () => {
+    setIdProofs((prev) => [
+      ...prev,
+      { id: Date.now() + Math.random(), chooseId: '', idNo: '', file: null, preview: null, isExisting: false },
+    ]);
+  };
+
+  const handleRemoveIdProof = (id) => {
+    setIdProofs((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      if (next.length > 0 && typeof setFieldValue === 'function') {
+        setFieldValue('chooseId', next[0].chooseId);
+        setFieldValue('idNo', next[0].idNo);
+        setFieldValue('uploadId', next[0].file);
+      }
+      return next;
+    });
+  };
+
+  const handleIdProofChange = (id, field, value) => {
+    setIdProofs((prev) =>
+      prev.map((item, index) => {
+        if (item.id === id) {
+          const updated = { ...item, [field]: value };
+          if (index === 0 && typeof setFieldValue === 'function') {
+            setFieldValue(field === 'chooseId' ? 'chooseId' : 'idNo', value);
+          }
+          return updated;
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleIdProofFileChange = (id, file) => {
+    setIdProofs((prev) =>
+      prev.map((item, index) => {
+        if (item.id === id) {
+          const preview = file ? URL.createObjectURL(file) : null;
+          if (index === 0 && typeof setFieldValue === 'function') {
+            setFieldValue('uploadId', file);
+          }
+          return { ...item, file, preview, isExisting: false };
+        }
+        return item;
+      })
+    );
+  };
 
   useEffect(() => {
     setBranch(auth.user.branch);
@@ -67,6 +121,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
     handleBlur,
     values,
     setValues,
+    setFieldValue,
     touched,
     errors,
     resetForm,
@@ -98,6 +153,10 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         });
         return;
       }
+      const primaryChooseId = idProofs[0]?.chooseId || values.chooseId || '';
+      const primaryIdNo = idProofs[0]?.idNo || values.idNo || '';
+      const activeIdProofs = idProofs.filter((p) => p.chooseId || p.idNo).map((p) => ({ chooseId: p.chooseId, idNo: p.idNo }));
+
       const payload = {
         branch: branch?._id,
         name: values.name,
@@ -110,8 +169,9 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         source: values.source,
         status: values.status,
         enqID: enquiryId,
-        chooseId: values.chooseId,
-        idNo: values.idNo,
+        chooseId: primaryChooseId,
+        idNo: primaryIdNo,
+        idProofs: activeIdProofs,
         panCardNumber: values.panCardNumber ? values.panCardNumber.trim().toUpperCase() : '',
       };
       createCustomer(payload).then((data) => {
@@ -141,17 +201,20 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
               });
           }
 
-          if (values.uploadId && values.uploadId instanceof File) {
-            const formData = new FormData();
-            formData.append('uploadId', uploadId);
-            formData.append('uploadName', uploadName);
-            formData.append('uploadType', 'upload_id');
-            formData.append('uploadedFile', values.uploadId);
-            formData.append('documentType', values.chooseId);
-            formData.append('documentNo', values.idNo);
-            createFile(formData).then((res) => {
-              if (!res.status) console.error('ID document upload failed:', res.message);
-            });
+          for (let i = 0; i < idProofs.length; i++) {
+            const proof = idProofs[i];
+            if (proof.file && proof.file instanceof File) {
+              const formData = new FormData();
+              formData.append('uploadId', uploadId);
+              formData.append('uploadName', uploadName);
+              formData.append('uploadType', 'upload_id');
+              formData.append('uploadedFile', proof.file);
+              formData.append('documentType', proof.chooseId || 'ID Document');
+              formData.append('documentNo', proof.idNo || '');
+              createFile(formData).then((res) => {
+                if (!res.status) console.error('ID document upload failed:', res.message);
+              });
+            }
           }
 
           if (values.uploadPan && values.uploadPan instanceof File) {
@@ -184,6 +247,7 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
           setUploadIdPreview(null);
           setUploadPanPreview(null);
           setSignaturePreview(null);
+          setIdProofs([{ id: 1, chooseId: '', idNo: '', file: null, preview: null, isExisting: false }]);
           form.current.reset();
           resetForm();
           setNotify({
@@ -393,154 +457,229 @@ function CreateCustomer({ setToggleContainer, setNotify }) {
         )}
 
         {tabValue === 1 && (
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth error={touched.chooseId && errors.chooseId && true}>
-                <InputLabel id="select-label">Select chooseId</InputLabel>
-                <Select
-                  labelId="select-label"
-                  id="select"
-                  label={touched.chooseId && errors.chooseId ? errors.chooseId : 'Select chooseId'}
-                  name="chooseId"
-                  value={values.chooseId}
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                >
-                  <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
-                  <MenuItem value="Driving License">Driving License</MenuItem>
-                  <MenuItem value="Passport">Passport</MenuItem>
-                  <MenuItem value="Ration Card">Ration Card</MenuItem>
-                  <MenuItem value="Others">Others</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                name="idNo"
-                value={values.idNo}
-                error={touched.idNo && errors.idNo && true}
-                label={touched.idNo && errors.idNo ? errors.idNo : 'Id No'}
-                fullWidth
-                onBlur={handleBlur}
-                onChange={handleChange}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                name="panCardNumber"
-                value={values.panCardNumber}
-                error={touched.panCardNumber && errors.panCardNumber && true}
-                label={touched.panCardNumber && errors.panCardNumber ? errors.panCardNumber : 'PAN Card Number'}
-                placeholder="e.g. ABCDE1234F"
-                fullWidth
-                inputProps={{ style: { textTransform: 'uppercase' }, maxLength: 10 }}
-                onBlur={handleBlur}
-                onChange={(e) => {
-                  e.target.value = e.target.value.toUpperCase();
-                  handleChange(e);
+          <Box sx={{ pt: 0.5 }}>
+            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700, color: 'text.primary' }}>
+              Identity Proofs
+            </Typography>
+
+            {idProofs.map((proof, index) => (
+              <Card
+                key={proof.id}
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  mb: 2,
+                  borderRadius: 1.5,
+                  borderColor: 'divider',
+                  bgcolor: 'background.paper',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                 }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
-                  Upload PAN:
-                </Typography>
+              >
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+                  <Chip
+                    label={index === 0 ? 'Primary ID Proof' : `ID Proof #${index + 1}`}
+                    color={index === 0 ? 'primary' : 'default'}
+                    size="small"
+                    sx={{ fontWeight: 600 }}
+                  />
+                  {index > 0 && (
+                    <Button
+                      size="small"
+                      color="error"
+                      variant="outlined"
+                      startIcon={<Iconify icon="eva:trash-2-outline" />}
+                      onClick={() => handleRemoveIdProof(proof.id)}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </Stack>
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel id={`id-type-${proof.id}`}>Select ID Document Type</InputLabel>
+                      <Select
+                        labelId={`id-type-${proof.id}`}
+                        label="Select ID Document Type"
+                        value={proof.chooseId}
+                        onChange={(e) => handleIdProofChange(proof.id, 'chooseId', e.target.value)}
+                      >
+                        <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
+                        <MenuItem value="Driving License">Driving License</MenuItem>
+                        <MenuItem value="Passport">Passport</MenuItem>
+                        <MenuItem value="Ration Card">Ration Card</MenuItem>
+                        <MenuItem value="Voter ID">Voter ID</MenuItem>
+                        <MenuItem value="Others">Others</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      size="small"
+                      label="ID Number"
+                      placeholder="e.g. 1234 5678 9012"
+                      value={proof.idNo}
+                      fullWidth
+                      onChange={(e) => handleIdProofChange(proof.id, 'idNo', e.target.value)}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 90 }}>
+                        Upload ID:
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+                        <TextField
+                          type="file"
+                          id={`uploadIdInput-${proof.id}`}
+                          size="small"
+                          fullWidth
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            handleIdProofFileChange(proof.id, file);
+                          }}
+                        />
+                        {proof.preview && (
+                          <>
+                            <IconButton
+                              component="a"
+                              href={proof.preview}
+                              target="_blank"
+                              rel="noreferrer"
+                              color="secondary"
+                              title="View ID Document"
+                            >
+                              <Iconify icon="mdi:eye" />
+                            </IconButton>
+                            <IconButton
+                              color="error"
+                              size="small"
+                              title="Clear upload"
+                              onClick={() => {
+                                handleIdProofFileChange(proof.id, null);
+                                const el = document.getElementById(`uploadIdInput-${proof.id}`);
+                                if (el) el.value = '';
+                              }}
+                            >
+                              <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
+                            </IconButton>
+                          </>
+                        )}
+                      </Box>
+                    </Stack>
+                  </Grid>
+                </Grid>
+              </Card>
+            ))}
+
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Iconify icon="eva:plus-fill" />}
+              onClick={handleAddIdProof}
+              sx={{ mb: 2.5 }}
+            >
+              Add Another ID Proof
+            </Button>
+
+            <Divider sx={{ my: 2.5 }} />
+
+            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700, color: 'text.primary' }}>
+              PAN Card & Signature
+            </Typography>
+
+            <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
+              <Grid item xs={12} sm={6}>
                 <TextField
-                  name="uploadPan"
-                  type={'file'}
+                  name="panCardNumber"
+                  value={values.panCardNumber}
+                  error={touched.panCardNumber && errors.panCardNumber && true}
+                  label={touched.panCardNumber && errors.panCardNumber ? errors.panCardNumber : 'PAN Card Number'}
+                  placeholder="e.g. ABCDE1234F"
+                  fullWidth
+                  inputProps={{ style: { textTransform: 'uppercase' }, maxLength: 10 }}
                   onBlur={handleBlur}
                   onChange={(e) => {
-                    const file = e.target.files[0];
-                    setValues({ ...values, uploadPan: file });
-                    if (file) {
-                      setUploadPanPreview(URL.createObjectURL(file));
-                    }
+                    e.target.value = e.target.value.toUpperCase();
+                    handleChange(e);
                   }}
-                  size="small"
-                  fullWidth
                 />
-                {uploadPanPreview && (
-                  <IconButton
-                    component="a"
-                    href={uploadPanPreview}
-                    target="_blank"
-                    rel="noreferrer"
-                    color="secondary"
-                    title="View PAN Card"
-                  >
-                    <Iconify icon="mdi:eye" />
-                  </IconButton>
-                )}
-              </Stack>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 90 }}>
+                    Upload PAN:
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+                    <TextField
+                      name="uploadPan"
+                      type={'file'}
+                      onBlur={handleBlur}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setValues({ ...values, uploadPan: file });
+                        if (file) {
+                          setUploadPanPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      size="small"
+                      fullWidth
+                    />
+                    {uploadPanPreview && (
+                      <IconButton
+                        component="a"
+                        href={uploadPanPreview}
+                        target="_blank"
+                        rel="noreferrer"
+                        color="secondary"
+                        title="View PAN Card"
+                      >
+                        <Iconify icon="mdi:eye" />
+                      </IconButton>
+                    )}
+                  </Box>
+                </Stack>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 90 }}>
+                    Signature:
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+                    <TextField
+                      name="signature"
+                      type={'file'}
+                      onBlur={handleBlur}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        setValues({ ...values, signature: file });
+                        if (file) {
+                          setSignaturePreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      size="small"
+                      fullWidth
+                    />
+                    {signaturePreview && (
+                      <IconButton
+                        component="a"
+                        href={signaturePreview}
+                        target="_blank"
+                        rel="noreferrer"
+                        color="secondary"
+                        title="View Signature"
+                      >
+                        <Iconify icon="mdi:eye" />
+                      </IconButton>
+                    )}
+                  </Box>
+                </Stack>
+              </Grid>
             </Grid>
-            <Grid item xs={12} md={6}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
-                  Upload ID:
-                </Typography>
-                <TextField
-                  name="uploadId"
-                  type={'file'}
-                  onBlur={handleBlur}
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    setValues({ ...values, uploadId: file });
-                    if (file) {
-                      setUploadIdPreview(URL.createObjectURL(file));
-                    }
-                  }}
-                  size="small"
-                  fullWidth
-                />
-                {uploadIdPreview && (
-                  <IconButton
-                    component="a"
-                    href={uploadIdPreview}
-                    target="_blank"
-                    rel="noreferrer"
-                    color="secondary"
-                    title="View ID Document"
-                  >
-                    <Iconify icon="mdi:eye" />
-                  </IconButton>
-                )}
-              </Stack>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
-                  Signature:
-                </Typography>
-                <TextField
-                  name="signature"
-                  type={'file'}
-                  onBlur={handleBlur}
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    setValues({ ...values, signature: file });
-                    if (file) {
-                      setSignaturePreview(URL.createObjectURL(file));
-                    }
-                  }}
-                  size="small"
-                  fullWidth
-                />
-                {signaturePreview && (
-                  <IconButton
-                    component="a"
-                    href={signaturePreview}
-                    target="_blank"
-                    rel="noreferrer"
-                    color="secondary"
-                    title="View Signature"
-                  >
-                    <Iconify icon="mdi:eye" />
-                  </IconButton>
-                )}
-              </Stack>
-            </Grid>
-          </Grid>
+          </Box>
         )}
 
         {tabValue === 2 && (

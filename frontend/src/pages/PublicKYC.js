@@ -22,6 +22,7 @@ import {
   FormControlLabel,
   InputAdornment,
   Chip,
+  Divider,
 } from '@mui/material';
 import { styled, alpha } from '@mui/material/styles';
 import { LoadingButton } from '@mui/lab';
@@ -100,6 +101,160 @@ export default function PublicKYC() {
   const [uploadIdPreview, setUploadIdPreview] = useState(null);
   const [uploadPanPreview, setUploadPanPreview] = useState(null);
   const [signaturePreview, setSignaturePreview] = useState(null);
+
+  // Multiple ID Proofs State
+  const [idProofs, setIdProofs] = useState([
+    { id: 1, chooseId: '', idNo: '', file: null, preview: null },
+  ]);
+
+  // Multiple Addresses State
+  const [addresses, setAddresses] = useState([
+    {
+      id: 1,
+      label: 'Home',
+      line1: '',
+      line2: '',
+      city: '',
+      state: '',
+      pincode: '',
+      landmark: 'N/A',
+      residential: 'Owned',
+    },
+  ]);
+
+  const handleAddIdProof = () => {
+    setIdProofs((prev) => [
+      ...prev,
+      { id: Date.now() + Math.random(), chooseId: '', idNo: '', file: null, preview: null },
+    ]);
+  };
+
+  const handleRemoveIdProof = (id) => {
+    setIdProofs((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      if (next.length > 0) {
+        setFieldValue('chooseId', next[0].chooseId);
+        setFieldValue('idNo', next[0].idNo);
+        setFieldValue('uploadId', next[0].file);
+      }
+      return next;
+    });
+  };
+
+  const handleIdProofChange = (id, field, value) => {
+    setIdProofs((prev) =>
+      prev.map((item, index) => {
+        if (item.id === id) {
+          const updated = { ...item, [field]: value };
+          if (index === 0) {
+            setFieldValue(field === 'chooseId' ? 'chooseId' : 'idNo', value);
+          }
+          return updated;
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleIdProofFileChange = (id, file) => {
+    setIdProofs((prev) =>
+      prev.map((item, index) => {
+        if (item.id === id) {
+          const preview = file ? URL.createObjectURL(file) : null;
+          if (index === 0) {
+            setFieldValue('uploadId', file);
+          }
+          return { ...item, file, preview };
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleAddAddress = () => {
+    setAddresses((prev) => [
+      ...prev,
+      {
+        id: Date.now() + Math.random(),
+        label: prev.length === 1 ? 'Office' : `Address ${prev.length + 1}`,
+        line1: '',
+        line2: '',
+        city: '',
+        state: '',
+        pincode: '',
+        landmark: 'N/A',
+        residential: 'Owned',
+      },
+    ]);
+  };
+
+  const handleRemoveAddress = (id) => {
+    setAddresses((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      if (next.length > 0) {
+        setFieldValue('line1', next[0].line1);
+        setFieldValue('line2', next[0].line2);
+        setFieldValue('city', next[0].city);
+        setFieldValue('state', next[0].state);
+        setFieldValue('pincode', next[0].pincode);
+      }
+      return next;
+    });
+  };
+
+  const handleAddressChange = (id, field, value) => {
+    setAddresses((prev) =>
+      prev.map((item, index) => {
+        if (item.id === id) {
+          const updated = { ...item, [field]: value };
+          if (field === 'pincode' && String(value).trim().length === 6) {
+            try {
+              const pinData = pinToAddress(Number(value));
+              if (pinData) {
+                const divisionCity = pinData.divisionname
+                  ? pinData.divisionname.replace(/ Division/gi, '').replace(/ GPO/gi, '').trim()
+                  : '';
+                updated.city = divisionCity || pinData.district || pinData.block || updated.city;
+                updated.state = pinData.state || updated.state;
+              }
+            } catch (err) {
+              console.error('Error fetching pincode:', err);
+            }
+          }
+          if (index === 0) {
+            setFieldValue(field, value);
+            if (field === 'pincode' && updated.city) {
+              setFieldValue('city', updated.city);
+              setFieldValue('state', updated.state);
+            }
+          }
+          return updated;
+        }
+        return item;
+      })
+    );
+  };
+
+  const isDocumentsValid = () => {
+    if (!values.signature) return false;
+    if (!idProofs || idProofs.length === 0) return false;
+    if (!idProofs[0].chooseId || !idProofs[0].idNo || !idProofs[0].file) return false;
+    for (let i = 1; i < idProofs.length; i++) {
+      const p = idProofs[i];
+      if (!p.chooseId || !p.idNo || !p.file) return false;
+    }
+    return true;
+  };
+
+  const isAddressesValid = () => {
+    if (!addresses || addresses.length === 0) return false;
+    if (!addresses[0].line1 || !addresses[0].city || !addresses[0].state || !addresses[0].pincode) return false;
+    for (let i = 1; i < addresses.length; i++) {
+      const a = addresses[i];
+      if (!a.line1 || !a.city || !a.state || !a.pincode) return false;
+    }
+    return true;
+  };
 
   const capture = useCallback(() => {
     const imageSrc = webcamRef.current.getScreenshot();
@@ -259,8 +414,9 @@ export default function PublicKYC() {
         source: formValues.source,
         status: formValues.status,
         enqID: enquiryId,
-        chooseId: formValues.chooseId,
-        idNo: formValues.idNo,
+        chooseId: idProofs[0]?.chooseId || formValues.chooseId,
+        idNo: idProofs[0]?.idNo || formValues.idNo,
+        idProofs: idProofs.map((p) => ({ chooseId: p.chooseId, idNo: p.idNo })),
         panCardNumber: formValues.panCardNumber ? formValues.panCardNumber.trim().toUpperCase() : '',
       };
 
@@ -289,16 +445,19 @@ export default function PublicKYC() {
           await createFileKYC(formData);
         }
 
-        // Upload ID Document
-        if (formValues.uploadId) {
-          const formData = new FormData();
-          formData.append('uploadId', uploadId);
-          formData.append('uploadName', uploadName);
-          formData.append('uploadType', 'upload_id');
-          formData.append('uploadedFile', formValues.uploadId);
-          formData.append('documentType', formValues.chooseId);
-          formData.append('documentNo', formValues.idNo);
-          await createFileKYC(formData);
+        // Upload Multiple ID Documents
+        for (let i = 0; i < idProofs.length; i++) {
+          const proof = idProofs[i];
+          if (proof.file) {
+            const formData = new FormData();
+            formData.append('uploadId', uploadId);
+            formData.append('uploadName', uploadName);
+            formData.append('uploadType', 'upload_id');
+            formData.append('uploadedFile', proof.file);
+            formData.append('documentType', proof.chooseId || 'ID Document');
+            formData.append('documentNo', proof.idNo || '');
+            await createFileKYC(formData);
+          }
         }
 
         // Upload PAN Card Proof
@@ -323,28 +482,34 @@ export default function PublicKYC() {
           await createFileKYC(formData);
         }
 
-        // Create Address
-        const addressPayload = {
-          customerId: customerId,
-          address: formValues.line1,
-          area: formValues.line2 || formValues.city,
-          city: formValues.city,
-          state: formValues.state,
-          pincode: formValues.pincode,
-          landmark: 'N/A',
-          residential: 'Owned',
-          label: 'Home',
-        };
-        const addressRes = await createAddressKYC(addressPayload);
-        if (addressRes?.data?.fileUpload?.uploadId && formValues.uploadId) {
-          const addrFormData = new FormData();
-          addrFormData.append('uploadId', addressRes.data.fileUpload.uploadId);
-          addrFormData.append('uploadName', 'customer_address');
-          addrFormData.append('uploadType', 'proof');
-          addrFormData.append('uploadedFile', formValues.uploadId);
-          addrFormData.append('documentType', formValues.chooseId);
-          addrFormData.append('documentNo', formValues.idNo);
-          await createFileKYC(addrFormData);
+        // Create Multiple Addresses
+        for (let i = 0; i < addresses.length; i++) {
+          const addr = addresses[i];
+          if (!addr.line1) continue;
+
+          const addressPayload = {
+            customerId: customerId,
+            address: addr.line1,
+            area: addr.line2 || addr.city,
+            city: addr.city,
+            state: addr.state,
+            pincode: addr.pincode,
+            landmark: addr.landmark || 'N/A',
+            residential: addr.residential || 'Owned',
+            label: addr.label || (i === 0 ? 'Home' : `Address ${i + 1}`),
+          };
+          const addressRes = await createAddressKYC(addressPayload);
+
+          if (i === 0 && addressRes?.data?.fileUpload?.uploadId && idProofs[0]?.file) {
+            const addrFormData = new FormData();
+            addrFormData.append('uploadId', addressRes.data.fileUpload.uploadId);
+            addrFormData.append('uploadName', 'customer_address');
+            addrFormData.append('uploadType', 'proof');
+            addrFormData.append('uploadedFile', idProofs[0].file);
+            addrFormData.append('documentType', idProofs[0].chooseId || 'ID Document');
+            addrFormData.append('documentNo', idProofs[0].idNo || '');
+            await createFileKYC(addrFormData);
+          }
         }
 
         setSuccess(true);
@@ -463,6 +628,10 @@ export default function PublicKYC() {
   const handleNext = () => {
     if (tabValue === 0 && values.isAlternateWhatsapp && values.alternatePhoneNumber?.length === 10 && !isAltOtpVerified) {
       setError('Please verify your alternate WhatsApp number with OTP before proceeding.');
+      return;
+    }
+    if (tabValue === 1 && !isDocumentsValid()) {
+      setError('Please provide at least one complete ID proof (type, ID number, and file) and signature.');
       return;
     }
     setError('');
@@ -908,172 +1077,235 @@ export default function PublicKYC() {
                   )}
 
                   {tabValue === 1 && (
-                    <Grid container spacing={3}>
-                      <Grid item xs={12} md={6}>
-                        <FormControl required fullWidth error={touched.chooseId && Boolean(errors.chooseId)}>
-                          <InputLabel>ID Document Type</InputLabel>
-                          <Select
-                            label="ID Document Type"
-                            name="chooseId"
-                            value={values.chooseId}
-                            onBlur={handleBlur}
-                            onChange={handleChange}
-                          >
-                            <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
-                            <MenuItem value="Driving License">Driving License</MenuItem>
-                            <MenuItem value="Passport">Passport</MenuItem>
-                            <MenuItem value="Ration Card">Ration Card</MenuItem>
-                            <MenuItem value="Others">Others</MenuItem>
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          required
-                          name="idNo"
-                          value={values.idNo}
-                          error={touched.idNo && Boolean(errors.idNo)}
-                          helperText={touched.idNo && errors.idNo}
-                          label="ID Number"
-                          fullWidth
-                          onBlur={handleBlur}
-                          onChange={handleChange}
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          name="panCardNumber"
-                          value={values.panCardNumber}
-                          error={touched.panCardNumber && Boolean(errors.panCardNumber)}
-                          helperText={touched.panCardNumber && errors.panCardNumber}
-                          label="PAN Card Number"
-                          placeholder="e.g. ABCDE1234F"
-                          fullWidth
-                          inputProps={{ style: { textTransform: 'uppercase' }, maxLength: 10 }}
-                          onBlur={handleBlur}
-                          onChange={(e) => {
-                            e.target.value = e.target.value.toUpperCase();
-                            handleChange(e);
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700, color: 'text.primary' }}>
+                        Identity Proofs
+                      </Typography>
+
+                      {idProofs.map((proof, index) => (
+                        <Card
+                          key={proof.id}
+                          variant="outlined"
+                          sx={{
+                            p: 2.5,
+                            mb: 2.5,
+                            borderRadius: 2,
+                            borderColor: 'divider',
+                            bgcolor: 'background.paper',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                           }}
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
-                          Upload PAN Card Proof
-                        </Typography>
-                        <Stack direction="row" alignItems="center" spacing={1}>
+                        >
+                          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                            <Chip
+                              label={index === 0 ? 'Primary ID Proof *' : `ID Proof #${index + 1}`}
+                              color={index === 0 ? 'primary' : 'default'}
+                              size="small"
+                              sx={{ fontWeight: 600 }}
+                            />
+                            {index > 0 && (
+                              <Button
+                                size="small"
+                                color="error"
+                                variant="outlined"
+                                startIcon={<Iconify icon="eva:trash-2-outline" />}
+                                onClick={() => handleRemoveIdProof(proof.id)}
+                              >
+                                Remove
+                              </Button>
+                            )}
+                          </Stack>
+
+                          <Grid container spacing={2.5}>
+                            <Grid item xs={12} md={6}>
+                              <FormControl required fullWidth>
+                                <InputLabel>ID Document Type</InputLabel>
+                                <Select
+                                  label="ID Document Type"
+                                  value={proof.chooseId}
+                                  onChange={(e) => handleIdProofChange(proof.id, 'chooseId', e.target.value)}
+                                >
+                                  <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
+                                  <MenuItem value="Driving License">Driving License</MenuItem>
+                                  <MenuItem value="Passport">Passport</MenuItem>
+                                  <MenuItem value="Ration Card">Ration Card</MenuItem>
+                                  <MenuItem value="Voter ID">Voter ID</MenuItem>
+                                  <MenuItem value="Others">Others</MenuItem>
+                                </Select>
+                              </FormControl>
+                            </Grid>
+
+                            <Grid item xs={12} md={6}>
+                              <TextField
+                                required
+                                label="ID Number"
+                                placeholder="e.g. 1234 5678 9012"
+                                value={proof.idNo}
+                                fullWidth
+                                onChange={(e) => handleIdProofChange(proof.id, 'idNo', e.target.value)}
+                              />
+                            </Grid>
+
+                            <Grid item xs={12}>
+                              <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                                Upload ID Document * {proof.chooseId ? `(${proof.chooseId})` : ''}
+                              </Typography>
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                <TextField
+                                  required
+                                  type="file"
+                                  id={`uploadIdInput-${proof.id}`}
+                                  onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    handleIdProofFileChange(proof.id, file);
+                                  }}
+                                  size="small"
+                                  fullWidth
+                                  InputLabelProps={{ shrink: true }}
+                                />
+                                {proof.preview && (
+                                  <>
+                                    <IconButton component="a" href={proof.preview} target="_blank" color="primary">
+                                      <Iconify icon="mdi:eye" />
+                                    </IconButton>
+                                    <IconButton
+                                      color="error"
+                                      onClick={() => {
+                                        handleIdProofFileChange(proof.id, null);
+                                        const el = document.getElementById(`uploadIdInput-${proof.id}`);
+                                        if (el) el.value = '';
+                                      }}
+                                    >
+                                      <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
+                                    </IconButton>
+                                  </>
+                                )}
+                              </Stack>
+                            </Grid>
+                          </Grid>
+                        </Card>
+                      ))}
+
+                      <Button
+                        variant="outlined"
+                        startIcon={<Iconify icon="eva:plus-fill" />}
+                        onClick={handleAddIdProof}
+                        sx={{ mb: 2 }}
+                      >
+                        Add Another ID Proof
+                      </Button>
+
+                      <Divider sx={{ my: 3 }} />
+
+                      <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700, color: 'text.primary' }}>
+                        PAN Card Details (Optional)
+                      </Typography>
+                      <Grid container spacing={2.5} sx={{ mb: 2 }}>
+                        <Grid item xs={12} md={6}>
                           <TextField
-                            type="file"
-                            name="uploadPan"
-                            id="uploadPanInput"
+                            name="panCardNumber"
+                            value={values.panCardNumber}
+                            error={touched.panCardNumber && Boolean(errors.panCardNumber)}
+                            helperText={touched.panCardNumber && errors.panCardNumber}
+                            label="PAN Card Number"
+                            placeholder="e.g. ABCDE1234F"
+                            fullWidth
+                            inputProps={{ style: { textTransform: 'uppercase' }, maxLength: 10 }}
                             onBlur={handleBlur}
                             onChange={(e) => {
-                              const file = e.target.files[0];
-                              setValues({ ...values, uploadPan: file });
-                              if (file) setUploadPanPreview(URL.createObjectURL(file));
+                              e.target.value = e.target.value.toUpperCase();
+                              handleChange(e);
                             }}
-                            size="small"
-                            fullWidth
-                            InputLabelProps={{ shrink: true }}
                           />
-                          {uploadPanPreview && (
-                            <>
-                              <IconButton component="a" href={uploadPanPreview} target="_blank" color="primary">
-                                <Iconify icon="mdi:eye" />
-                              </IconButton>
-                              <IconButton
-                                color="error"
-                                onClick={() => {
-                                  setValues({ ...values, uploadPan: null });
-                                  setUploadPanPreview(null);
-                                  const el = document.getElementById('uploadPanInput');
-                                  if (el) el.value = '';
-                                }}
-                              >
-                                <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
-                              </IconButton>
-                            </>
-                          )}
-                        </Stack>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                            Upload PAN Card Proof
+                          </Typography>
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <TextField
+                              type="file"
+                              name="uploadPan"
+                              id="uploadPanInput"
+                              onBlur={handleBlur}
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                setValues({ ...values, uploadPan: file });
+                                if (file) setUploadPanPreview(URL.createObjectURL(file));
+                              }}
+                              size="small"
+                              fullWidth
+                              InputLabelProps={{ shrink: true }}
+                            />
+                            {uploadPanPreview && (
+                              <>
+                                <IconButton component="a" href={uploadPanPreview} target="_blank" color="primary">
+                                  <Iconify icon="mdi:eye" />
+                                </IconButton>
+                                <IconButton
+                                  color="error"
+                                  onClick={() => {
+                                    setValues({ ...values, uploadPan: null });
+                                    setUploadPanPreview(null);
+                                    const el = document.getElementById('uploadPanInput');
+                                    if (el) el.value = '';
+                                  }}
+                                >
+                                  <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
+                                </IconButton>
+                              </>
+                            )}
+                          </Stack>
+                        </Grid>
                       </Grid>
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
-                          Upload ID Document *
-                        </Typography>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <TextField
-                            required
-                            type="file"
-                            name="uploadId"
-                            id="uploadIdInput"
-                            onBlur={handleBlur}
-                            onChange={(e) => {
-                              const file = e.target.files[0];
-                              setValues({ ...values, uploadId: file });
-                              if (file) setUploadIdPreview(URL.createObjectURL(file));
-                            }}
-                            size="small"
-                            fullWidth
-                            InputLabelProps={{ shrink: true }}
-                          />
-                          {uploadIdPreview && (
-                            <>
-                              <IconButton component="a" href={uploadIdPreview} target="_blank" color="primary">
-                                <Iconify icon="mdi:eye" />
-                              </IconButton>
-                              <IconButton
-                                color="error"
-                                onClick={() => {
-                                  setValues({ ...values, uploadId: '' });
-                                  setUploadIdPreview(null);
-                                  const el = document.getElementById('uploadIdInput');
-                                  if (el) el.value = '';
-                                }}
-                              >
-                                <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
-                              </IconButton>
-                            </>
-                          )}
-                        </Stack>
+
+                      <Divider sx={{ my: 3 }} />
+
+                      <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700, color: 'text.primary' }}>
+                        Signature *
+                      </Typography>
+                      <Grid container spacing={2.5}>
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                            Upload Signature Image *
+                          </Typography>
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <TextField
+                              required
+                              type="file"
+                              name="signature"
+                              id="signatureInput"
+                              onBlur={handleBlur}
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                setValues({ ...values, signature: file });
+                                if (file) setSignaturePreview(URL.createObjectURL(file));
+                              }}
+                              size="small"
+                              fullWidth
+                              InputLabelProps={{ shrink: true }}
+                            />
+                            {signaturePreview && (
+                              <>
+                                <IconButton component="a" href={signaturePreview} target="_blank" color="primary">
+                                  <Iconify icon="mdi:eye" />
+                                </IconButton>
+                                <IconButton
+                                  color="error"
+                                  onClick={() => {
+                                    setValues({ ...values, signature: '' });
+                                    setSignaturePreview(null);
+                                    const el = document.getElementById('signatureInput');
+                                    if (el) el.value = '';
+                                  }}
+                                >
+                                  <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
+                                </IconButton>
+                              </>
+                            )}
+                          </Stack>
+                        </Grid>
                       </Grid>
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>Upload Signature</Typography>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <TextField
-                            type="file"
-                            name="signature"
-                            id="signatureInput"
-                            onBlur={handleBlur}
-                            onChange={(e) => {
-                              const file = e.target.files[0];
-                              setValues({ ...values, signature: file });
-                              if (file) setSignaturePreview(URL.createObjectURL(file));
-                            }}
-                            size="small"
-                            fullWidth
-                            InputLabelProps={{ shrink: true }}
-                          />
-                          {signaturePreview && (
-                            <>
-                              <IconButton component="a" href={signaturePreview} target="_blank" color="primary">
-                                <Iconify icon="mdi:eye" />
-                              </IconButton>
-                              <IconButton
-                                color="error"
-                                onClick={() => {
-                                  setValues({ ...values, signature: '' });
-                                  setSignaturePreview(null);
-                                  const el = document.getElementById('signatureInput');
-                                  if (el) el.value = '';
-                                }}
-                              >
-                                <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
-                              </IconButton>
-                            </>
-                          )}
-                        </Stack>
-                      </Grid>
-                    </Grid>
+                    </Box>
                   )}
 
                   {tabValue === 2 && (
@@ -1107,70 +1339,123 @@ export default function PublicKYC() {
                   )}
 
                   {tabValue === 3 && (
-                    <Grid container spacing={3}>
-                      <Grid item xs={12}>
-                        <TextField
-                          required
-                          name="line1"
-                          value={values.line1}
-                          error={touched.line1 && Boolean(errors.line1)}
-                          helperText={touched.line1 && errors.line1}
-                          label="Address Line 1"
-                          fullWidth
-                          onBlur={handleBlur}
-                          onChange={handleChange}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          name="line2"
-                          value={values.line2}
-                          label="Address Line 2 (Optional)"
-                          fullWidth
-                          onBlur={handleBlur}
-                          onChange={handleChange}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <TextField
-                          required
-                          name="city"
-                          value={values.city}
-                          error={touched.city && Boolean(errors.city)}
-                          helperText={touched.city && errors.city}
-                          label="City"
-                          fullWidth
-                          onBlur={handleBlur}
-                          onChange={handleChange}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <TextField
-                          required
-                          name="state"
-                          value={values.state}
-                          error={touched.state && Boolean(errors.state)}
-                          helperText={touched.state && errors.state}
-                          label="State"
-                          fullWidth
-                          onBlur={handleBlur}
-                          onChange={handleChange}
-                        />
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <TextField
-                          required
-                          name="pincode"
-                          value={values.pincode}
-                          error={touched.pincode && Boolean(errors.pincode)}
-                          helperText={touched.pincode && errors.pincode}
-                          label="Pincode"
-                          fullWidth
-                          onBlur={handleBlur}
-                          onChange={handleChange}
-                        />
-                      </Grid>
-                    </Grid>
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700, color: 'text.primary' }}>
+                        Customer Addresses
+                      </Typography>
+
+                      {addresses.map((addr, index) => (
+                        <Card
+                          key={addr.id}
+                          variant="outlined"
+                          sx={{
+                            p: 2.5,
+                            mb: 2.5,
+                            borderRadius: 2,
+                            borderColor: 'divider',
+                            bgcolor: 'background.paper',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                          }}
+                        >
+                          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                            <Stack direction="row" alignItems="center" spacing={1.5}>
+                              <Chip
+                                label={index === 0 ? 'Primary Address *' : `Address #${index + 1}`}
+                                color={index === 0 ? 'primary' : 'default'}
+                                size="small"
+                                sx={{ fontWeight: 600 }}
+                              />
+                              <TextField
+                                select
+                                size="small"
+                                label="Address Type"
+                                value={addr.label}
+                                onChange={(e) => handleAddressChange(addr.id, 'label', e.target.value)}
+                                sx={{ width: 140 }}
+                              >
+                                <MenuItem value="Home">Home</MenuItem>
+                                <MenuItem value="Office">Office</MenuItem>
+                                <MenuItem value="Permanent">Permanent</MenuItem>
+                                <MenuItem value="Present">Present</MenuItem>
+                                <MenuItem value="Other">Other</MenuItem>
+                              </TextField>
+                            </Stack>
+
+                            {index > 0 && (
+                              <Button
+                                size="small"
+                                color="error"
+                                variant="outlined"
+                                startIcon={<Iconify icon="eva:trash-2-outline" />}
+                                onClick={() => handleRemoveAddress(addr.id)}
+                              >
+                                Remove
+                              </Button>
+                            )}
+                          </Stack>
+
+                          <Grid container spacing={2.5}>
+                            <Grid item xs={12}>
+                              <TextField
+                                required
+                                label="Address Line 1"
+                                placeholder="House / Flat No., Building, Street Name"
+                                value={addr.line1}
+                                fullWidth
+                                onChange={(e) => handleAddressChange(addr.id, 'line1', e.target.value)}
+                              />
+                            </Grid>
+                            <Grid item xs={12}>
+                              <TextField
+                                label="Address Line 2 (Optional)"
+                                placeholder="Area, Landmark"
+                                value={addr.line2}
+                                fullWidth
+                                onChange={(e) => handleAddressChange(addr.id, 'line2', e.target.value)}
+                              />
+                            </Grid>
+                            <Grid item xs={12} sm={4}>
+                              <TextField
+                                required
+                                label="Pincode"
+                                placeholder="6-digit pincode"
+                                value={addr.pincode}
+                                fullWidth
+                                inputProps={{ maxLength: 6 }}
+                                onChange={(e) => handleAddressChange(addr.id, 'pincode', e.target.value)}
+                              />
+                            </Grid>
+                            <Grid item xs={12} sm={4}>
+                              <TextField
+                                required
+                                label="City"
+                                value={addr.city}
+                                fullWidth
+                                onChange={(e) => handleAddressChange(addr.id, 'city', e.target.value)}
+                              />
+                            </Grid>
+                            <Grid item xs={12} sm={4}>
+                              <TextField
+                                required
+                                label="State"
+                                value={addr.state}
+                                fullWidth
+                                onChange={(e) => handleAddressChange(addr.id, 'state', e.target.value)}
+                              />
+                            </Grid>
+                          </Grid>
+                        </Card>
+                      ))}
+
+                      <Button
+                        variant="outlined"
+                        startIcon={<Iconify icon="eva:plus-fill" />}
+                        onClick={handleAddAddress}
+                        sx={{ mt: 0.5 }}
+                      >
+                        Add Another Address
+                      </Button>
+                    </Box>
                   )}
 
                   <Stack direction="row" spacing={2} justifyContent="space-between" sx={{ mt: 5, pt: 2, borderTop: 1, borderColor: 'divider' }}>
@@ -1200,7 +1485,7 @@ export default function PublicKYC() {
                             !values.source ||
                             (values.isAlternateWhatsapp && values.alternatePhoneNumber?.length === 10 && !isAltOtpVerified)
                           )) ||
-                          (tabValue === 1 && (!values.chooseId || !values.idNo || !values.uploadId || !values.signature)) ||
+                          (tabValue === 1 && !isDocumentsValid()) ||
                           (tabValue === 2 && !img)
                         }
                       >
@@ -1214,9 +1499,9 @@ export default function PublicKYC() {
                         disabled={
                           loading || 
                           !values.name || !values.phoneNumber || !values.dob || !values.gender || !values.maritalStatus || !values.employmentStatus || !values.source ||
-                          !values.chooseId || !values.idNo || !values.uploadId || !values.signature ||
+                          !isDocumentsValid() ||
                           !img ||
-                          !values.line1 || !values.city || !values.state || !values.pincode
+                          !isAddressesValid()
                         }
                         sx={{ bgcolor: '#8A1B9F', color: '#fff', '&:hover': { bgcolor: '#711683' } }}
                       >

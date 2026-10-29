@@ -3,15 +3,24 @@ const jwt = require("jsonwebtoken");
 const User = require("../../models/user");
 const Employee = require("../../models/employee");
 const otpService = require("../../services/otp");
+const loginLogService = require("../../services/loginLog");
 const axios = require("axios");
 
 function login(req, res, next) {
   console.log("login")
   passport.authenticate("local", { session: false }, (err, user, info) => {
     if (err || !user) {
+      const failureReason = info ? info.message : "Invalid username or password.";
+      loginLogService.recordLogin({
+        req,
+        username: req.body?.username,
+        status: "failed",
+        failureReason: failureReason,
+        loginMethod: "password",
+      });
       return res.status(400).json({
         status: false,
-        message: info ? info.message : "Invalid username or password.",
+        message: failureReason,
         data: {},
       });
     }
@@ -104,6 +113,14 @@ function login(req, res, next) {
           });
           */
       } else {
+        loginLogService.recordLogin({
+          req,
+          user: user,
+          username: user.username,
+          status: "success",
+          loginMethod: "password",
+        });
+
         const token = jwt.sign(
           {
             sub: user._id,
@@ -139,8 +156,16 @@ function verifyLoginOtp(req, res, next) {
   }
 
   jwt.verify(req.body.token, process.env.SECRET, function (err, decoded) {
-    const data = decoded.sub;
     if (err) {
+      const unverified = jwt.decode(req.body.token);
+      loginLogService.recordLogin({
+        req,
+        user: unverified?.sub?.user,
+        username: unverified?.sub?.user?.username,
+        status: "failed",
+        failureReason: "Otp is expired.",
+        loginMethod: "otp",
+      });
       return res.json({
         status: false,
         message: "Otp is expired.",
@@ -148,7 +173,17 @@ function verifyLoginOtp(req, res, next) {
       });
     }
 
+    const data = decoded.sub;
+
     if (String(data.otp) !== String(req.body.otp)) {
+      loginLogService.recordLogin({
+        req,
+        user: data?.user,
+        username: data?.user?.username,
+        status: "failed",
+        failureReason: "Invalid otp.",
+        loginMethod: "otp",
+      });
       return res.json({
         status: false,
         message: "Invalid otp.",
@@ -158,12 +193,28 @@ function verifyLoginOtp(req, res, next) {
 
     User.findById(data.user._id).exec().then((freshUser) => {
       if (!freshUser || freshUser.status !== "active") {
+        loginLogService.recordLogin({
+          req,
+          user: freshUser || data?.user,
+          username: (freshUser || data?.user)?.username,
+          status: "failed",
+          failureReason: "Your account is not active.",
+          loginMethod: "otp",
+        });
         return res.json({
           status: false,
           message: "Your account is not active.",
           data: {},
         });
       }
+
+      loginLogService.recordLogin({
+        req,
+        user: freshUser,
+        username: freshUser.username,
+        status: "success",
+        loginMethod: "otp",
+      });
 
       const token = jwt.sign(
         {

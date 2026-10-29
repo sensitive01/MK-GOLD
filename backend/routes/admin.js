@@ -37,6 +37,7 @@ const qrEnquiry = require("../controllers/qrEnquiry");
 const transit = require("../controllers/admin/transit");
 const vendor = require("../controllers/admin/vendor");
 const task = require("../controllers/admin/task");
+const loginLog = require("../controllers/admin/loginLog");
 
 const { isAdmin, canDelete, enforceAuditorReadOnly } = require("../middlewares/authorization");
 const multer = require("../config/multer");
@@ -262,6 +263,10 @@ adminRouter.post("/support-reply/update/:id", supportReply.update);
 adminRouter.post("/support-reply/delete/:id", canDelete, supportReply.remove);
 adminRouter.get("/qr-enquiry/get", qrEnquiry.getEnquiries);
 adminRouter.post("/qr-enquiry/get", qrEnquiry.getEnquiries);
+
+adminRouter.get("/login-logs/get", loginLog.getLogs);
+adminRouter.post("/login-logs/get", loginLog.getLogs);
+adminRouter.get("/login-logs/stats", loginLog.getStats);
 
 router.use(
   function (req, res, next) {

@@ -157,6 +157,12 @@ const Customer = mongoose.model(
       idNo: {
         type: String,
       },
+      idProofs: [
+        {
+          chooseId: String,
+          idNo: String,
+        },
+      ],
       panCardNumber: {
         type: String,
         trim: true,

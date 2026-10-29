@@ -6,6 +6,97 @@ import { getSalesById } from '../../../apis/accounts/sales';
 import Iconify from '../../iconify';
 import global from '../../../utils/global';
 
+function extractPaymentRows(data) {
+  const rows = [];
+  const customerBanks = data?.customer?.bank || [];
+
+  const validFp = (data?.financePayments || []).filter(
+    (fp) => !fp.isVerificationOnly && Number(fp.amount) > 1
+  );
+
+  if (validFp.length > 0) {
+    validFp.forEach((fp) => {
+      const isCash = fp.paymentType === 'cash';
+      let bankInfo = null;
+      if (!isCash) {
+        const targetId = fp.bank?.bankId || fp.bank?._id;
+        const targetAcct = fp.bank?.accountNo;
+        const matched = customerBanks.find(
+          (b) => (targetId && String(b._id) === String(targetId)) ||
+                 (targetAcct && String(b.accountNo) === String(targetAcct))
+        );
+        bankInfo = {
+          bankName: matched?.bankName || fp.bank?.bankName || 'Bank Transfer',
+          accountNo: matched?.accountNo || fp.bank?.accountNo || '-',
+          ifscCode: matched?.ifscCode || '-',
+          accountHolderName: matched?.accountHolderName || data?.customer?.name || '-',
+          branch: matched?.branch || '',
+        };
+      }
+
+      const stageLabel = fp.stage === 'release' ? ' (Pledge Release)' : '';
+
+      rows.push({
+        paymentMode: isCash ? `Cash${stageLabel}` : `Bank Transfer${stageLabel}`,
+        bankName: isCash ? '-' : (bankInfo?.bankName || 'Bank Transfer'),
+        accountNo: isCash ? '-' : (bankInfo?.accountNo || '-'),
+        ifscCode: isCash ? '-' : (bankInfo?.ifscCode || '-'),
+        accountHolderName: isCash ? '-' : (bankInfo?.accountHolderName || '-'),
+        amount: Number(fp.verifiedAmount || fp.amount) || 0,
+        comments: fp.comments || '',
+      });
+    });
+  } else {
+    const pType = (data?.paymentType || '').toLowerCase();
+    const primaryBank = (typeof data?.bank === 'object' && data?.bank?.accountNo)
+      ? data.bank
+      : customerBanks.find((b) => String(b._id) === String(data?.bank?._id || data?.bank)) || customerBanks[0] || null;
+
+    if (pType === 'partial') {
+      if (Number(data?.cashAmount) > 0) {
+        rows.push({
+          paymentMode: 'Cash',
+          bankName: '-',
+          accountNo: '-',
+          ifscCode: '-',
+          accountHolderName: '-',
+          amount: Number(data.cashAmount),
+        });
+      }
+      if (Number(data?.bankAmount) > 0) {
+        rows.push({
+          paymentMode: 'Bank Transfer',
+          bankName: primaryBank?.bankName || 'Bank Transfer',
+          accountNo: primaryBank?.accountNo || '-',
+          ifscCode: primaryBank?.ifscCode || '-',
+          accountHolderName: primaryBank?.accountHolderName || data?.customer?.name || '-',
+          amount: Number(data.bankAmount),
+        });
+      }
+    } else if (pType === 'cash') {
+      rows.push({
+        paymentMode: 'Cash',
+        bankName: '-',
+        accountNo: '-',
+        ifscCode: '-',
+        accountHolderName: '-',
+        amount: Number(data?.payableAmount || 0),
+      });
+    } else {
+      rows.push({
+        paymentMode: 'Bank Transfer',
+        bankName: primaryBank?.bankName || 'Bank Transfer',
+        accountNo: primaryBank?.accountNo || '-',
+        ifscCode: primaryBank?.ifscCode || '-',
+        accountHolderName: primaryBank?.accountHolderName || data?.customer?.name || '-',
+        amount: Number(data?.payableAmount || 0),
+      });
+    }
+  }
+
+  return rows;
+}
+
 export default function SalePrint({ id }) {
   const [data, setData] = useState({});
 
@@ -148,6 +239,9 @@ export default function SalePrint({ id }) {
     ? (releasingCharges + paybackAmount)
     : paybackAmount;
 
+  const paymentRows = extractPaymentRows(data);
+  const totalSettledAmount = paymentRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || Number(data?.payableAmount || 0);
+
   return (
     <>
       {(data?.status?.toLowerCase() === 'approved' || data?.status?.toLowerCase() === 'completed') && (
@@ -184,8 +278,20 @@ export default function SalePrint({ id }) {
               const content = document.getElementById('pdf');
               const pri = document.getElementById('iframe').contentWindow;
               pri.document.open();
-              pri.document.write('<html><head><meta charset="utf-8"><title>Print Bill</title></head><body style="margin:0;">' + content.outerHTML + '</body></html>');
+              pri.document.write(`<html><head><meta charset="utf-8"><title>Print Bill</title><style>
+                @page { size: A4 portrait; margin: 8mm 10mm; }
+                * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+                .page-break-badge { display: none !important; }
+                .sheet-page { box-shadow: none !important; border-radius: 0 !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+                #pdf-page1 { page-break-after: always !important; break-after: page !important; }
+                #pdf-page2 { page-break-before: always !important; break-before: page !important; }
+              </style></head><body style="margin:0;">` + content.outerHTML + `</body></html>`);
               pri.document.close();
+              setTimeout(() => {
+                pri.focus();
+                pri.print();
+              }, 250);
               pri.onload = () => {
                 pri.focus();
                 pri.print();
@@ -196,8 +302,21 @@ export default function SalePrint({ id }) {
           </Button>
         </div>
       )}
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #pdf, #pdf * { visibility: visible; }
+          #pdf { position: absolute; left: 0; top: 0; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+          .page-break-badge { display: none !important; }
+          .sheet-page { box-shadow: none !important; border-radius: 0 !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+          #pdf-page1 { page-break-after: always !important; break-after: page !important; }
+          #pdf-page2 { page-break-before: always !important; break-before: page !important; }
+          @page { size: A4 portrait; margin: 8mm 10mm; }
+        }
+      `}</style>
       <iframe id="iframe" style={{ display: 'none', height: '0px', width: '0px', position: 'absolute' }} title="pdf" />
-      <div id="pdf" style={{ color: '#000', backgroundColor: '#fff', padding: '30px', fontFamily: 'Arial, sans-serif', fontSize: '13px', width: '750px', margin: '0 auto', boxSizing: 'border-box' }}>
+      <div id="pdf" style={{ padding: '20px 0 50px 0' }}>
+        <div id="pdf-page1" className="sheet-page" style={{ color: '#000', backgroundColor: '#fff', padding: '28px 32px', fontFamily: 'Arial, sans-serif', fontSize: '13px', width: '750px', margin: '0 auto 30px auto', boxSizing: 'border-box', boxShadow: '0 4px 16px rgba(0,0,0,0.25)', borderRadius: '6px' }}>
 
         {/* Header Section */}
         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px', tableLayout: 'fixed' }}>
@@ -249,7 +368,7 @@ export default function SalePrint({ id }) {
         </table>
 
         {/* Customer Details & Customer Photo Section */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
           <thead>
             <tr>
               <th style={{ textAlign: 'left', fontSize: '14px', paddingBottom: '6px', width: '72%' }}>Customer Details</th>
@@ -287,7 +406,7 @@ export default function SalePrint({ id }) {
                 </table>
               </td>
               <td style={{ verticalAlign: 'top', paddingLeft: '15px' }}>
-                <div style={{ width: '100%', height: '116px', border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa', overflow: 'hidden' }}>
+                <div style={{ width: '100%', height: '100px', border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fafafa', overflow: 'hidden' }}>
                   {data?.customer?.profileImage?.uploadedFile ? (
                     <img
                       src={data.customer.profileImage.uploadedFile.startsWith('http')
@@ -314,7 +433,7 @@ export default function SalePrint({ id }) {
         </div>
 
         {/* Ornament Table */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '20px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '10px' }}>
           <thead>
             <tr style={{ backgroundColor: '#FFD700' }}>
               <th style={{ border: '1px solid #000', padding: '6px', color: '#000', fontWeight: 'bold', width: '6%', textAlign: 'center' }}>Sno</th>
@@ -351,7 +470,7 @@ export default function SalePrint({ id }) {
         </table>
 
         {/* Ornament Photo & Valuation Summary Section */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
           <thead>
             <tr>
               <th style={{ textAlign: 'left', fontSize: '14px', paddingBottom: '6px', width: '40%' }}>Ornament Photo</th>
@@ -361,7 +480,7 @@ export default function SalePrint({ id }) {
           <tbody>
             <tr>
               <td style={{ verticalAlign: 'top' }}>
-                <div style={{ width: '100%', height: '185px', border: '1px solid #000', display: 'flex', flexWrap: 'wrap', alignContent: 'center', justifyContent: 'center', backgroundColor: '#fafafa', overflow: 'hidden', padding: '4px', boxSizing: 'border-box', gap: '4px' }}>
+                <div style={{ width: '100%', height: '140px', border: '1px solid #000', display: 'flex', flexWrap: 'wrap', alignContent: 'center', justifyContent: 'center', backgroundColor: '#fafafa', overflow: 'hidden', padding: '4px', boxSizing: 'border-box', gap: '4px' }}>
                   {uniqueOrnamentPhotos.length > 0 ? (
                     uniqueOrnamentPhotos.map((photo, idx) => {
                       let imgWidth = '100%';
@@ -458,7 +577,7 @@ export default function SalePrint({ id }) {
         </table>
 
         {/* Terms & Conditions Section */}
-        <div style={{ border: '1px solid #000', padding: '8px', marginBottom: '20px', boxSizing: 'border-box' }}>
+        <div style={{ border: '1px solid #000', padding: '6px 8px', marginBottom: '10px', boxSizing: 'border-box' }}>
           <strong style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>Terms & Conditions:</strong>
           <ol style={{ margin: 0, paddingLeft: '18px', fontSize: '10px', lineHeight: '1.3', color: '#333' }}>
             <li>All gold/silver purchase transactions are final and binding.</li>
@@ -469,7 +588,7 @@ export default function SalePrint({ id }) {
         </div>
 
         {/* Customer Declaration Section */}
-        <div style={{ marginBottom: '30px' }}>
+        <div style={{ marginBottom: '12px' }}>
           <strong style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>Customer Declaration</strong>
           <p style={{ margin: 0, fontSize: '11px', lineHeight: '1.4', textAlign: 'justify', color: '#333' }}>
             I hereby declare that the ornaments sold by me are my lawful property and are free from any legal dispute, theft, pledge, or encumbrance. I voluntarily agree to sell the above-mentioned ornaments to MK Gold World.
@@ -523,6 +642,113 @@ export default function SalePrint({ id }) {
         </table>
       </div>
 
+
+      {/* ================= PAGE 2 SEPARATOR & PAYMENTS TABLE ONLY ================= */}
+      <div
+        className="page-break-badge"
+        style={{
+          width: '750px',
+          margin: '25px auto',
+          textAlign: 'center',
+          padding: '10px 16px',
+          color: '#B8860B',
+          backgroundColor: '#FFFDF0',
+          border: '2px dashed #FFD700',
+          borderRadius: '6px',
+          fontWeight: 'bold',
+          fontSize: '13px',
+          letterSpacing: '1px',
+          boxSizing: 'border-box',
+        }}
+      >
+        📄 PAGE 2 OF 2 — PAYMENT &amp; SETTLEMENT DETAILS (ANNEXURE)
+      </div>
+
+      <div
+        id="pdf-page2"
+        className="sheet-page page-break"
+        style={{
+          color: '#000',
+          backgroundColor: '#fff',
+          padding: '28px 32px',
+          fontFamily: 'Arial, sans-serif',
+          fontSize: '13px',
+          width: '750px',
+          margin: '0 auto 40px auto',
+          boxSizing: 'border-box',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+          borderRadius: '6px',
+          pageBreakBefore: 'always',
+          breakBefore: 'page',
+        }}
+      >
+        
+        {/* Page 2 Header */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '12px' }}>
+          <tbody>
+            <tr>
+              <td style={{ verticalAlign: 'middle', width: '60%' }}>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: '#000' }}>PAYMENT &amp; SETTLEMENT RECEIPT</h2>
+                <span style={{ fontSize: '12px', color: '#555' }}>
+                  Annexure to Purchase Invoice No.: <strong>{data?.billId || ''}</strong>
+                </span>
+              </td>
+              <td style={{ textAlign: 'right', verticalAlign: 'middle', width: '40%' }}>
+                <p style={{ margin: 0, fontSize: '12px' }}><strong>Date:</strong> {data?.createdAt ? moment(data?.createdAt).format('YYYY-MM-DD HH:mm:ss') : ''}</p>
+                <p style={{ margin: '3px 0 0 0', fontSize: '12px' }}><strong>Customer:</strong> {data?.customer?.name || ''}</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <hr style={{ border: 'none', borderTop: '1px solid #000', marginBottom: '16px' }} />
+
+        {/* Payment Mode & Bank Breakdown Table */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '24px' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#FFD700', color: '#000' }}>
+              <th style={{ border: '1px solid #000', padding: '7px', textAlign: 'center', width: '6%', fontWeight: 'bold' }}>Sno</th>
+              <th style={{ border: '1px solid #000', padding: '7px', textAlign: 'left', width: '22%', fontWeight: 'bold' }}>Payment Mode</th>
+              <th style={{ border: '1px solid #000', padding: '7px', textAlign: 'left', width: '22%', fontWeight: 'bold' }}>Bank Name</th>
+              <th style={{ border: '1px solid #000', padding: '7px', textAlign: 'center', width: '24%', fontWeight: 'bold' }}>Account Number</th>
+              <th style={{ border: '1px solid #000', padding: '7px', textAlign: 'center', width: '12%', fontWeight: 'bold' }}>IFSC Code</th>
+              <th style={{ border: '1px solid #000', padding: '7px', textAlign: 'right', width: '14%', fontWeight: 'bold' }}>Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paymentRows.map((p, idx) => (
+              <tr key={idx}>
+                <td style={{ border: '1px solid #000', padding: '7px', textAlign: 'center' }}>{idx + 1}</td>
+                <td style={{ border: '1px solid #000', padding: '7px', textAlign: 'left', fontWeight: 'bold' }}>{p.paymentMode}</td>
+                <td style={{ border: '1px solid #000', padding: '7px', textAlign: 'left' }}>
+                  {p.bankName}
+                  {p.accountHolderName && p.accountHolderName !== '-' && (
+                    <div style={{ fontSize: '10px', color: '#555' }}>A/C Holder: {p.accountHolderName}</div>
+                  )}
+                </td>
+                <td style={{ border: '1px solid #000', padding: '7px', textAlign: 'center', fontFamily: 'monospace', fontWeight: 'bold', fontSize: '13px' }}>
+                  {p.accountNo}
+                </td>
+                <td style={{ border: '1px solid #000', padding: '7px', textAlign: 'center' }}>{p.ifscCode}</td>
+                <td style={{ border: '1px solid #000', padding: '7px', textAlign: 'right', fontWeight: 'bold' }}>
+                  {p.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+            ))}
+            <tr style={{ fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>
+              <td colSpan={5} style={{ border: '1px solid #000', padding: '8px', textAlign: 'right' }}>Total Amount Settled =</td>
+              <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'right', color: '#1b5e20', fontSize: '14px' }}>
+                &#8377; {totalSettledAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+
+
+
+      </div>
+    </div>
     </>
   );
 }

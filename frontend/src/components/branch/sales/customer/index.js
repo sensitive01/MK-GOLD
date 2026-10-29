@@ -26,6 +26,7 @@ import {
   DialogContent,
   DialogActions,
   Divider,
+  Chip,
   Tab,
   Tabs,
   IconButton,
@@ -125,6 +126,141 @@ function Customer(props) {
   const [uploadIdPreview, setUploadIdPreview] = useState(null);
   const [uploadPanPreview, setUploadPanPreview] = useState(null);
   const [signaturePreview, setSignaturePreview] = useState(null);
+
+  // Multiple ID Proofs State
+  const [idProofs, setIdProofs] = useState([
+    { id: 1, chooseId: '', idNo: '', file: null, preview: null, isExisting: false },
+  ]);
+
+  const handleCloseCustomerModal = () => {
+    setCustomerModal(false);
+    setIdProofs([{ id: 1, chooseId: '', idNo: '', file: null, preview: null, isExisting: false }]);
+  };
+
+  const handleAddIdProof = () => {
+    setIdProofs((prev) => [
+      ...prev,
+      { id: Date.now() + Math.random(), chooseId: '', idNo: '', file: null, preview: null, isExisting: false },
+    ]);
+  };
+
+  const handleRemoveIdProof = (id) => {
+    setIdProofs((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      if (next.length > 0 && typeof setFieldValue === 'function') {
+        setFieldValue('chooseId', next[0].chooseId);
+        setFieldValue('idNo', next[0].idNo);
+        setFieldValue('uploadId', next[0].file);
+      }
+      return next;
+    });
+  };
+
+  const handleIdProofChange = (id, field, value) => {
+    setIdProofs((prev) =>
+      prev.map((item, index) => {
+        if (item.id === id) {
+          const updated = { ...item, [field]: value };
+          if (index === 0 && typeof setFieldValue === 'function') {
+            setFieldValue(field === 'chooseId' ? 'chooseId' : 'idNo', value);
+          }
+          return updated;
+        }
+        return item;
+      })
+    );
+  };
+
+  const handleIdProofFileChange = (id, file) => {
+    setIdProofs((prev) =>
+      prev.map((item, index) => {
+        if (item.id === id) {
+          const preview = file ? URL.createObjectURL(file) : null;
+          if (index === 0 && typeof setFieldValue === 'function') {
+            setFieldValue('uploadId', file);
+          }
+          return { ...item, file, preview, isExisting: false };
+        }
+        return item;
+      })
+    );
+  };
+
+  const populateCustomerProofs = (customer) => {
+    const docs = [];
+    if (Array.isArray(customer?.idProofs) && customer.idProofs.length > 0) {
+      customer.idProofs.forEach((p, idx) => {
+        const matchedUpload = (customer.kycProofs || []).find(
+          (u) =>
+            u.uploadType !== 'profile_image' &&
+            u.uploadType !== 'signature' &&
+            u.uploadType !== 'pan_card' &&
+            u.documentType !== 'PAN Card' &&
+            (u.documentNo === p.idNo || u.documentType === p.chooseId)
+        ) || (idx === 0 ? customer.idProof : null);
+
+        const fileUrl = matchedUpload?.uploadedFile
+          ? (matchedUpload.uploadedFile.startsWith('http') ? matchedUpload.uploadedFile : `${global.baseURL}/${matchedUpload.uploadedFile}`)
+          : null;
+
+        docs.push({
+          id: p._id || Date.now() + Math.random(),
+          chooseId: p.chooseId || '',
+          idNo: p.idNo || '',
+          file: null,
+          preview: fileUrl,
+          isExisting: Boolean(fileUrl),
+        });
+      });
+    } else {
+      const nonPanKycProofs = (customer?.kycProofs || []).filter(
+        (u) =>
+          u.uploadType !== 'profile_image' &&
+          u.uploadType !== 'signature' &&
+          u.uploadType !== 'pan_card' &&
+          u.documentType !== 'PAN Card'
+      );
+
+      if (nonPanKycProofs.length > 0) {
+        nonPanKycProofs.forEach((u, idx) => {
+          const fileUrl = u.uploadedFile
+            ? (u.uploadedFile.startsWith('http') ? u.uploadedFile : `${global.baseURL}/${u.uploadedFile}`)
+            : null;
+          docs.push({
+            id: u._id || Date.now() + Math.random(),
+            chooseId: u.documentType || customer?.chooseId || 'Aadhar Card',
+            idNo: u.documentNo || (idx === 0 ? customer?.idNo : '') || '',
+            file: null,
+            preview: fileUrl,
+            isExisting: Boolean(fileUrl),
+          });
+        });
+      } else if (customer?.chooseId || customer?.idNo || customer?.idProof?.uploadedFile) {
+        const fileUrl = customer.idProof?.uploadedFile
+          ? (customer.idProof.uploadedFile.startsWith('http') ? customer.idProof.uploadedFile : `${global.baseURL}/${customer.idProof.uploadedFile}`)
+          : null;
+        docs.push({
+          id: 1,
+          chooseId: customer.chooseId || '',
+          idNo: customer.idNo || '',
+          file: null,
+          preview: fileUrl,
+          isExisting: Boolean(fileUrl),
+        });
+      }
+    }
+
+    if (docs.length === 0) {
+      docs.push({ id: 1, chooseId: '', idNo: '', file: null, preview: null, isExisting: false });
+    }
+
+    setIdProofs(docs);
+    if (docs[0]?.preview) {
+      setUploadIdPreview(docs[0].preview);
+    } else {
+      setUploadIdPreview(null);
+    }
+  };
   const webcamRef = useRef(null);
 
   useEffect(() => {
@@ -234,13 +370,8 @@ function Customer(props) {
           setImg(null);
         }
 
-        // Fetch ID Proof and Signature
-        if (e.idProof?.uploadedFile) {
-          const idImg = e.idProof.uploadedFile;
-          setUploadIdPreview(idImg.startsWith('http') ? idImg : `${global.baseURL}/${idImg}`);
-        } else {
-          setUploadIdPreview(null);
-        }
+        // Fetch ID Proofs and Signature
+        populateCustomerProofs(e);
 
         if (e.panCardProof?.uploadedFile) {
           const panImg = e.panCardProof.uploadedFile;
@@ -302,6 +433,7 @@ function Customer(props) {
     handleBlur,
     values,
     setValues,
+    setFieldValue,
     touched,
     errors,
     setFieldError,
@@ -345,6 +477,10 @@ function Customer(props) {
         });
         return;
       }
+      const primaryChooseId = idProofs[0]?.chooseId || values.chooseId || '';
+      const primaryIdNo = idProofs[0]?.idNo || values.idNo || '';
+      const activeIdProofs = idProofs.filter((p) => p.chooseId || p.idNo).map((p) => ({ chooseId: p.chooseId, idNo: p.idNo }));
+
       const payload = {
         branch: branch?._id,
         name: values.name,
@@ -358,8 +494,9 @@ function Customer(props) {
         maritalStatus: values.maritalStatus,
         source: values.source,
         status: values.status,
-        chooseId: values.chooseId,
-        idNo: values.idNo,
+        chooseId: primaryChooseId,
+        idNo: primaryIdNo,
+        idProofs: activeIdProofs,
         panCardNumber: values.panCardNumber ? values.panCardNumber.trim().toUpperCase() : '',
         enqID: enquiryId,
       };
@@ -385,15 +522,19 @@ function Customer(props) {
                     createFile(formData);
                 });
             }
-            if (values.uploadId instanceof File) {
+            // Upload multiple ID documents
+            for (let i = 0; i < idProofs.length; i++) {
+              const proof = idProofs[i];
+              if (proof.file instanceof File) {
                 const formData = new FormData();
                 formData.append('uploadId', openId);
                 formData.append('uploadName', 'customer');
                 formData.append('uploadType', 'upload_id');
-                formData.append('uploadedFile', values.uploadId);
-                formData.append('documentType', values.chooseId);
-                formData.append('documentNo', values.idNo);
+                formData.append('uploadedFile', proof.file);
+                formData.append('documentType', proof.chooseId || 'ID Document');
+                formData.append('documentNo', proof.idNo || '');
                 createFile(formData);
+              }
             }
             if (values.uploadPan instanceof File) {
                 const formData = new FormData();
@@ -418,6 +559,7 @@ function Customer(props) {
             setCustomerModal(false);
             setOpenId(null);
             setUploadPanPreview(null);
+            setIdProofs([{ id: 1, chooseId: '', idNo: '', file: null, preview: null, isExisting: false }]);
             resetForm();
             findCustomer({ phoneNumber: data.data.phoneNumber, all: true }).then((res) => {
               if (res.data && res.data.length > 0) {
@@ -456,9 +598,9 @@ function Customer(props) {
             idNo: existingUser.idNo || '',
             panCardNumber: existingUser.panCardNumber || '',
           });
-          const profileImg = existingUser.profileImage?.file;
+          const profileImg = existingUser.profileImage?.file || existingUser.profileImage?.uploadedFile;
           if (profileImg) {
-            setImg(`${global.baseURL}/${profileImg}`);
+            setImg(profileImg.startsWith('http') ? profileImg : `${global.baseURL}/${profileImg}`);
           }
           const panImg = existingUser.panCardProof?.uploadedFile;
           if (panImg) {
@@ -466,6 +608,7 @@ function Customer(props) {
           } else {
             setUploadPanPreview(null);
           }
+          populateCustomerProofs(existingUser);
           setEnquiryId(existingUser.enqID || '');
           setOtpStatus('success');
           setAltOtpStatus('success');
@@ -497,14 +640,20 @@ function Customer(props) {
               formData.append('uploadedFile', file);
               createFile(formData);
             });
-          const formData = new FormData();
-          formData.append('uploadId', data.data.fileUpload.uploadId);
-          formData.append('uploadName', data.data.fileUpload.uploadName);
-          formData.append('uploadType', 'upload_id');
-          formData.append('uploadedFile', values.uploadId);
-          formData.append('documentType', values.chooseId);
-          formData.append('documentNo', values.idNo);
-          createFile(formData);
+          // Upload multiple ID documents
+          for (let i = 0; i < idProofs.length; i++) {
+            const proof = idProofs[i];
+            if (proof.file instanceof File) {
+              const formData = new FormData();
+              formData.append('uploadId', data.data.fileUpload.uploadId);
+              formData.append('uploadName', data.data.fileUpload.uploadName);
+              formData.append('uploadType', 'upload_id');
+              formData.append('uploadedFile', proof.file);
+              formData.append('documentType', proof.chooseId || 'ID Document');
+              formData.append('documentNo', proof.idNo || '');
+              createFile(formData);
+            }
+          }
           if (values.uploadPan instanceof File) {
             const formDataPan = new FormData();
             formDataPan.append('uploadId', data.data.fileUpload.uploadId);
@@ -525,6 +674,7 @@ function Customer(props) {
           setCustomerModal(false);
           setImg(null);
           setUploadPanPreview(null);
+          setIdProofs([{ id: 1, chooseId: '', idNo: '', file: null, preview: null, isExisting: false }]);
           resetForm();
           const userObj = data.data.data || data.data;
           findCustomer({ phoneNumber: userObj.phoneNumber, all: true }).then((res) => {
@@ -573,13 +723,8 @@ function Customer(props) {
         setImg(null);
       }
 
-      // Fetch ID Proof and Signature
-      if (e.idProof?.uploadedFile) {
-        const idImg = e.idProof.uploadedFile;
-        setUploadIdPreview(idImg.startsWith('http') ? idImg : `${global.baseURL}/${idImg}`);
-      } else {
-        setUploadIdPreview(null);
-      }
+      // Fetch ID Proofs and Signature
+      populateCustomerProofs(e);
 
       if (e.panCardProof?.uploadedFile) {
         const panImg = e.panCardProof.uploadedFile;
@@ -664,6 +809,7 @@ function Customer(props) {
               onClick={() => {
                 setOpenId(null);
                 resetForm();
+                setIdProofs([{ id: 1, chooseId: '', idNo: '', file: null, preview: null, isExisting: false }]);
                 setImg(null);
                 setUploadIdPreview(null);
                 setUploadPanPreview(null);
@@ -752,13 +898,8 @@ function Customer(props) {
                               setImg(null);
                             }
 
-                            // Fetch ID Proof and Signature
-                            if (e.idProof?.uploadedFile) {
-                              const idImg = e.idProof.uploadedFile;
-                              setUploadIdPreview(idImg.startsWith('http') ? idImg : `${global.baseURL}/${idImg}`);
-                            } else {
-                              setUploadIdPreview(null);
-                            }
+                            // Fetch ID Proofs and Signature
+                            populateCustomerProofs(e);
 
                             if (e.panCardProof?.uploadedFile) {
                               const panImg = e.panCardProof.uploadedFile;
@@ -877,7 +1018,7 @@ function Customer(props) {
 
       <Dialog
         open={customerModal}
-        onClose={() => setCustomerModal(false)}
+        onClose={handleCloseCustomerModal}
         maxWidth="md"
         fullWidth
         scroll="paper"
@@ -907,7 +1048,7 @@ function Customer(props) {
           </Typography>
           <IconButton
             aria-label="close"
-            onClick={() => setCustomerModal(false)}
+            onClick={handleCloseCustomerModal}
             sx={{ color: 'text.secondary', p: 0.5 }}
           >
             <CloseIcon />
@@ -1020,6 +1161,7 @@ function Customer(props) {
                               } else {
                                 setUploadPanPreview(null);
                               }
+                              populateCustomerProofs(existingUser);
                               setEnquiryId(existingUser.enqID || '');
                               setOtpStatus('success');
                               if (existingUser.alternatePhoneNumber) {
@@ -1230,160 +1372,229 @@ function Customer(props) {
             )}
 
             {tabValue === 1 && (
-              <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }} sx={{ pt: 0.5 }}>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth error={touched.chooseId && errors.chooseId && true}>
-                    <InputLabel id="select-id-label">Select choose id</InputLabel>
-                    <Select
-                      labelId="select-id-label"
-                      id="select-id"
-                      label={touched.chooseId && errors.chooseId ? errors.chooseId : 'Select choose id'}
-                      name="chooseId"
-                      value={values.chooseId}
-                      onBlur={handleBlur}
-                      onChange={handleChange}
-                    >
-                      <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
-                      <MenuItem value="Driving License">Driving License</MenuItem>
-                      <MenuItem value="Passport">Passport</MenuItem>
-                      <MenuItem value="Ration Card">Ration Card</MenuItem>
-                      <MenuItem value="Others">Others</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    name="idNo"
-                    value={values.idNo}
-                    error={touched.idNo && errors.idNo && true}
-                    label={touched.idNo && errors.idNo ? errors.idNo : 'Id No'}
-                    fullWidth
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    name="panCardNumber"
-                    value={values.panCardNumber}
-                    error={touched.panCardNumber && errors.panCardNumber && true}
-                    label={touched.panCardNumber && errors.panCardNumber ? errors.panCardNumber : 'PAN Card Number'}
-                    placeholder="e.g. ABCDE1234F"
-                    fullWidth
-                    inputProps={{ style: { textTransform: 'uppercase' }, maxLength: 10 }}
-                    onBlur={handleBlur}
-                    onChange={(e) => {
-                      e.target.value = e.target.value.toUpperCase();
-                      handleChange(e);
+              <Box sx={{ pt: 0.5 }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700, color: 'text.primary' }}>
+                  Identity Proofs
+                </Typography>
+
+                {idProofs.map((proof, index) => (
+                  <Card
+                    key={proof.id}
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      mb: 2,
+                      borderRadius: 1.5,
+                      borderColor: 'divider',
+                      bgcolor: 'background.paper',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                     }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
-                      Upload PAN:
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
-                      <TextField
-                        name="uploadPan"
-                        type={'file'}
-                        onBlur={handleBlur}
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          setValues({ ...values, uploadPan: file });
-                          if (file) {
-                            setUploadPanPreview(URL.createObjectURL(file));
-                          }
-                        }}
+                  >
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+                      <Chip
+                        label={index === 0 ? 'Primary ID Proof' : `ID Proof #${index + 1}`}
+                        color={index === 0 ? 'primary' : 'default'}
                         size="small"
-                        fullWidth
+                        sx={{ fontWeight: 600 }}
                       />
-                      {uploadPanPreview && (
-                        <IconButton
-                          component="a"
-                          href={uploadPanPreview}
-                          target="_blank"
-                          rel="noreferrer"
-                          color="secondary"
-                          title="View PAN Card"
+                      {index > 0 && (
+                        <Button
+                          size="small"
+                          color="error"
+                          variant="outlined"
+                          startIcon={<Iconify icon="eva:trash-2-outline" />}
+                          onClick={() => handleRemoveIdProof(proof.id)}
                         >
-                          <Iconify icon="mdi:eye" />
-                        </IconButton>
+                          Remove
+                        </Button>
                       )}
-                    </Box>
-                  </Stack>
+                    </Stack>
+
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel id={`id-type-${proof.id}`}>Select ID Document Type</InputLabel>
+                          <Select
+                            labelId={`id-type-${proof.id}`}
+                            label="Select ID Document Type"
+                            value={proof.chooseId}
+                            onChange={(e) => handleIdProofChange(proof.id, 'chooseId', e.target.value)}
+                          >
+                            <MenuItem value="Aadhar Card">Aadhar Card</MenuItem>
+                            <MenuItem value="Driving License">Driving License</MenuItem>
+                            <MenuItem value="Passport">Passport</MenuItem>
+                            <MenuItem value="Ration Card">Ration Card</MenuItem>
+                            <MenuItem value="Voter ID">Voter ID</MenuItem>
+                            <MenuItem value="Others">Others</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          size="small"
+                          label="ID Number"
+                          placeholder="e.g. 1234 5678 9012"
+                          value={proof.idNo}
+                          fullWidth
+                          onChange={(e) => handleIdProofChange(proof.id, 'idNo', e.target.value)}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12}>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 90 }}>
+                            Upload ID:
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+                            <TextField
+                              type="file"
+                              id={`uploadIdInput-${proof.id}`}
+                              size="small"
+                              fullWidth
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                handleIdProofFileChange(proof.id, file);
+                              }}
+                            />
+                            {proof.preview && (
+                              <>
+                                <IconButton
+                                  component="a"
+                                  href={proof.preview}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  color="secondary"
+                                  title="View ID Document"
+                                >
+                                  <Iconify icon="mdi:eye" />
+                                </IconButton>
+                                <IconButton
+                                  color="error"
+                                  size="small"
+                                  title="Clear upload"
+                                  onClick={() => {
+                                    handleIdProofFileChange(proof.id, null);
+                                    const el = document.getElementById(`uploadIdInput-${proof.id}`);
+                                    if (el) el.value = '';
+                                  }}
+                                >
+                                  <span style={{ fontSize: '18px', lineHeight: 1 }}>&times;</span>
+                                </IconButton>
+                              </>
+                            )}
+                          </Box>
+                        </Stack>
+                      </Grid>
+                    </Grid>
+                  </Card>
+                ))}
+
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<Iconify icon="eva:plus-fill" />}
+                  onClick={handleAddIdProof}
+                  sx={{ mb: 2.5 }}
+                >
+                  Add Another ID Proof
+                </Button>
+
+                <Divider sx={{ my: 2.5 }} />
+
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700, color: 'text.primary' }}>
+                  PAN Card & Signature
+                </Typography>
+
+                <Grid container spacing={{ xs: 2, sm: 2.5, md: 3 }}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      name="panCardNumber"
+                      value={values.panCardNumber}
+                      error={touched.panCardNumber && errors.panCardNumber && true}
+                      label={touched.panCardNumber && errors.panCardNumber ? errors.panCardNumber : 'PAN Card Number'}
+                      placeholder="e.g. ABCDE1234F"
+                      fullWidth
+                      inputProps={{ style: { textTransform: 'uppercase' }, maxLength: 10 }}
+                      onBlur={handleBlur}
+                      onChange={(e) => {
+                        e.target.value = e.target.value.toUpperCase();
+                        handleChange(e);
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 90 }}>
+                        Upload PAN:
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+                        <TextField
+                          name="uploadPan"
+                          type={'file'}
+                          onBlur={handleBlur}
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            setValues({ ...values, uploadPan: file });
+                            if (file) {
+                              setUploadPanPreview(URL.createObjectURL(file));
+                            }
+                          }}
+                          size="small"
+                          fullWidth
+                        />
+                        {uploadPanPreview && (
+                          <IconButton
+                            component="a"
+                            href={uploadPanPreview}
+                            target="_blank"
+                            rel="noreferrer"
+                            color="secondary"
+                            title="View PAN Card"
+                          >
+                            <Iconify icon="mdi:eye" />
+                          </IconButton>
+                        )}
+                      </Box>
+                    </Stack>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 90 }}>
+                        Signature:
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+                        <TextField
+                          name="signature"
+                          type={'file'}
+                          onBlur={handleBlur}
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            setValues({ ...values, signature: file });
+                            if (file) {
+                              setSignaturePreview(URL.createObjectURL(file));
+                            }
+                          }}
+                          size="small"
+                          fullWidth
+                        />
+                        {signaturePreview && (
+                          <IconButton
+                            component="a"
+                            href={signaturePreview}
+                            target="_blank"
+                            rel="noreferrer"
+                            color="secondary"
+                            title="View Signature"
+                          >
+                            <Iconify icon="mdi:eye" />
+                          </IconButton>
+                        )}
+                      </Box>
+                    </Stack>
+                  </Grid>
                 </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
-                      Upload ID:
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
-                      <TextField
-                        name="uploadId"
-                        type={'file'}
-                        onBlur={handleBlur}
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          setValues({ ...values, uploadId: file });
-                          if (file) {
-                            setUploadIdPreview(URL.createObjectURL(file));
-                          }
-                        }}
-                        size="small"
-                        fullWidth
-                      />
-                      {uploadIdPreview && (
-                        <IconButton
-                          component="a"
-                          href={uploadIdPreview}
-                          target="_blank"
-                          rel="noreferrer"
-                          color="secondary"
-                          title="View ID Document"
-                        >
-                          <Iconify icon="mdi:eye" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  </Stack>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 80 }}>
-                      Signature:
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
-                      <TextField
-                        name="signature"
-                        type={'file'}
-                        onBlur={handleBlur}
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          setValues({ ...values, signature: file });
-                          if (file) {
-                            setSignaturePreview(URL.createObjectURL(file));
-                          }
-                        }}
-                        size="small"
-                        fullWidth
-                      />
-                      {signaturePreview && (
-                        <IconButton
-                          component="a"
-                          href={signaturePreview}
-                          target="_blank"
-                          rel="noreferrer"
-                          color="secondary"
-                          title="View Signature"
-                        >
-                          <Iconify icon="mdi:eye" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  </Stack>
-                </Grid>
-              </Grid>
+              </Box>
             )}
 
             {tabValue === 2 && (
@@ -1470,7 +1681,7 @@ function Customer(props) {
                 size="medium"
                 variant="outlined"
                 color="inherit"
-                onClick={() => setCustomerModal(false)}
+                onClick={handleCloseCustomerModal}
               >
                 Close
               </Button>

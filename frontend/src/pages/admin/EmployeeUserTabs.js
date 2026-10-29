@@ -5,6 +5,7 @@ import { Box, Container, Tab, Tabs, Typography, Card } from '@mui/material';
 // Import the actual page components
 import User from './User';
 import OTP from './OTP';
+import LoginLogs from './LoginLogs';
 
 // ----------------------------------------------------------------------
 
@@ -59,6 +60,7 @@ export default function EmployeeUserTabs() {
             <Tabs value={value} onChange={handleChange} aria-label="user tabs">
               <Tab label="Users" {...a11yProps(0)} />
               <Tab label="Login OTP" {...a11yProps(1)} />
+              <Tab label="Login Logs" {...a11yProps(2)} />
             </Tabs>
           </Box>
         </Card>
@@ -69,6 +71,10 @@ export default function EmployeeUserTabs() {
         
         <CustomTabPanel value={value} index={1}>
           <OTP />
+        </CustomTabPanel>
+
+        <CustomTabPanel value={value} index={2}>
+          <LoginLogs embedded />
         </CustomTabPanel>
 
       </Container>

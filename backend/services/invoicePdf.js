@@ -74,6 +74,100 @@ function maskPhoneNumber(phone) {
 }
 
 /**
+ * Extracts all payment modes and multi-bank settlement details
+ */
+function extractPaymentRows(data) {
+  const rows = [];
+  const customerBanks = data?.customer?.bank || [];
+
+  const validFp = (data?.financePayments || []).filter(
+    (fp) => !fp.isVerificationOnly && Number(fp.amount) > 1
+  );
+
+  if (validFp.length > 0) {
+    validFp.forEach((fp) => {
+      const isCash = fp.paymentType === 'cash';
+      let bankInfo = null;
+      if (!isCash) {
+        const targetId = fp.bank?.bankId || fp.bank?._id;
+        const targetAcct = fp.bank?.accountNo;
+        const matched = customerBanks.find(
+          (b) => (targetId && String(b._id) === String(targetId)) ||
+                 (targetAcct && String(b.accountNo) === String(targetAcct))
+        );
+        bankInfo = {
+          bankName: matched?.bankName || fp.bank?.bankName || 'Bank Transfer',
+          accountNo: matched?.accountNo || fp.bank?.accountNo || '-',
+          ifscCode: matched?.ifscCode || '-',
+          accountHolderName: matched?.accountHolderName || data?.customer?.name || '-',
+          branch: matched?.branch || '',
+        };
+      }
+
+      const stageLabel = fp.stage === 'release' ? ' (Pledge Release)' : '';
+
+      rows.push({
+        paymentMode: isCash ? `Cash${stageLabel}` : `Bank Transfer${stageLabel}`,
+        bankName: isCash ? '-' : (bankInfo?.bankName || 'Bank Transfer'),
+        accountNo: isCash ? '-' : (bankInfo?.accountNo || '-'),
+        ifscCode: isCash ? '-' : (bankInfo?.ifscCode || '-'),
+        accountHolderName: isCash ? '-' : (bankInfo?.accountHolderName || '-'),
+        amount: Number(fp.verifiedAmount || fp.amount) || 0,
+        comments: fp.comments || '',
+      });
+    });
+  } else {
+    const pType = (data?.paymentType || '').toLowerCase();
+    const primaryBank = (typeof data?.bank === 'object' && data?.bank?.accountNo)
+      ? data.bank
+      : customerBanks.find((b) => String(b._id) === String(data?.bank?._id || data?.bank)) || customerBanks[0] || null;
+
+    if (pType === 'partial') {
+      if (Number(data?.cashAmount) > 0) {
+        rows.push({
+          paymentMode: 'Cash',
+          bankName: '-',
+          accountNo: '-',
+          ifscCode: '-',
+          accountHolderName: '-',
+          amount: Number(data.cashAmount),
+        });
+      }
+      if (Number(data?.bankAmount) > 0) {
+        rows.push({
+          paymentMode: 'Bank Transfer',
+          bankName: primaryBank?.bankName || 'Bank Transfer',
+          accountNo: primaryBank?.accountNo || '-',
+          ifscCode: primaryBank?.ifscCode || '-',
+          accountHolderName: primaryBank?.accountHolderName || data?.customer?.name || '-',
+          amount: Number(data.bankAmount),
+        });
+      }
+    } else if (pType === 'cash') {
+      rows.push({
+        paymentMode: 'Cash',
+        bankName: '-',
+        accountNo: '-',
+        ifscCode: '-',
+        accountHolderName: '-',
+        amount: Number(data?.payableAmount || 0),
+      });
+    } else {
+      rows.push({
+        paymentMode: 'Bank Transfer',
+        bankName: primaryBank?.bankName || 'Bank Transfer',
+        accountNo: primaryBank?.accountNo || '-',
+        ifscCode: primaryBank?.ifscCode || '-',
+        accountHolderName: primaryBank?.accountHolderName || data?.customer?.name || '-',
+        amount: Number(data?.payableAmount || 0),
+      });
+    }
+  }
+
+  return rows;
+}
+
+/**
  * Generates exact HTML invoice matching the frontend SalePrint.js template
  * @param {Object} data - Sale document
  * @returns {Promise<string>}
@@ -214,6 +308,23 @@ async function generateExactInvoiceHtml(data) {
     ? `24karat Gold Rate per Gram: ₹ ${Number(data?.goldRate || 0).toLocaleString('en-IN')}`
     : `Silver Rate per Gram: ₹ ${Number(data?.silverRate || 0).toLocaleString('en-IN')}`;
 
+  const paymentRows = extractPaymentRows(data);
+  const totalSettledAmount = paymentRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || Number(data?.payableAmount || 0);
+
+  const paymentRowsHtml = paymentRows.map((p, idx) => `
+    <tr>
+      <td style="border: 1px solid #000; padding: 7px; text-align: center;">${idx + 1}</td>
+      <td style="border: 1px solid #000; padding: 7px; text-align: left; font-weight: bold;">${p.paymentMode}</td>
+      <td style="border: 1px solid #000; padding: 7px; text-align: left;">
+        ${p.bankName}
+        ${p.accountHolderName && p.accountHolderName !== '-' ? `<div style="font-size: 10px; color: #555;">A/C Holder: ${p.accountHolderName}</div>` : ''}
+      </td>
+      <td style="border: 1px solid #000; padding: 7px; text-align: center; font-family: monospace; font-weight: bold; font-size: 13px;">${p.accountNo}</td>
+      <td style="border: 1px solid #000; padding: 7px; text-align: center;">${p.ifscCode}</td>
+      <td style="border: 1px solid #000; padding: 7px; text-align: right; font-weight: bold;">${p.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+    </tr>
+  `).join('');
+
   const rowsHtml = tableRows.map((row, index) => `
     <tr>
       <td style="border: 1px solid #000; padding: 6px; text-align: center;">${index + 1}</td>
@@ -276,10 +387,14 @@ async function generateExactInvoiceHtml(data) {
       margin: 0 auto;
       box-sizing: border-box;
     }
+    .page-break {
+      page-break-before: always !important;
+      break-before: page !important;
+    }
   </style>
 </head>
 <body style="margin:0;">
-  <div id="pdf" style="color: #000; background-color: #fff; padding: 10px 0; font-family: Arial, sans-serif; font-size: 13px; width: 750px; margin: 0 auto; box-sizing: border-box;">
+  <div id="pdf" style="color: #000; background-color: #fff; padding: 10px 16px; font-family: Arial, sans-serif; font-size: 13px; width: 750px; margin: 0 auto; box-sizing: border-box;">
 
     <!-- Header Section -->
     <table style="width: 100%; border-collapse: collapse; margin-bottom: 14px; table-layout: fixed;">
@@ -357,7 +472,7 @@ async function generateExactInvoiceHtml(data) {
             </table>
           </td>
           <td style="vertical-align: top; padding-left: 15px;">
-            <div style="width: 100%; height: 116px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; background-color: #fafafa; overflow: hidden;">
+            <div style="width: 100%; height: 100px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; background-color: #fafafa; overflow: hidden;">
               ${customerPhotoBase64 ? `<img src="${customerPhotoBase64}" alt="Customer" style="width: 100%; height: 100%; object-fit: contain;" />` : '<span style="font-size: 11px; color: #999;">No Photo</span>'}
             </div>
           </td>
@@ -409,7 +524,7 @@ async function generateExactInvoiceHtml(data) {
       <tbody>
         <tr>
           <td style="vertical-align: top;">
-            <div style="width: 100%; height: 185px; border: 1px solid #000; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; background-color: #fafafa; overflow: hidden; padding: 4px; box-sizing: border-box; gap: 4px;">
+            <div style="width: 100%; height: 140px; border: 1px solid #000; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; background-color: #fafafa; overflow: hidden; padding: 4px; box-sizing: border-box; gap: 4px;">
               ${ornamentPhotosHtml}
             </div>
           </td>
@@ -455,7 +570,7 @@ async function generateExactInvoiceHtml(data) {
     </table>
 
     <!-- Terms & Conditions Section -->
-    <div style="border: 1px solid #000; padding: 8px; margin-bottom: 16px; box-sizing: border-box;">
+    <div style="border: 1px solid #000; padding: 6px 8px; margin-bottom: 10px; box-sizing: border-box;">
       <strong style="display: block; font-size: 12px; margin-bottom: 4px;">Terms & Conditions:</strong>
       <ol style="margin: 0; padding-left: 18px; font-size: 10px; line-height: 1.3; color: #333;">
         <li>All gold/silver purchase transactions are final and binding.</li>
@@ -466,7 +581,7 @@ async function generateExactInvoiceHtml(data) {
     </div>
 
     <!-- Customer Declaration Section -->
-    <div style="margin-bottom: 24px;">
+    <div style="margin-bottom: 12px;">
       <strong style="display: block; font-size: 12px; margin-bottom: 4px;">Customer Declaration</strong>
       <p style="margin: 0; font-size: 11px; line-height: 1.4; text-align: justify; color: #333;">
         I hereby declare that the ornaments sold by me are my lawful property and are free from any legal dispute, theft, pledge, or encumbrance. I voluntarily agree to sell the above-mentioned ornaments to MK Gold.
@@ -506,6 +621,56 @@ async function generateExactInvoiceHtml(data) {
         </tr>
       </tbody>
     </table>
+  </div>
+  <!-- ================= PAGE 2: PAYMENTS TABLE ONLY ================= -->
+  <div id="pdf-page2" class="page-break" style="color: #000; background-color: #fff; padding: 15px 16px; font-family: Arial, sans-serif; font-size: 13px; width: 750px; margin: 0 auto; box-sizing: border-box; page-break-before: always; break-before: page;">
+    
+    <!-- Page 2 Header -->
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
+      <tbody>
+        <tr>
+          <td style="vertical-align: middle; width: 60%;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: bold; color: #000;">PAYMENT &amp; SETTLEMENT RECEIPT</h2>
+            <span style="font-size: 12px; color: #555;">
+              Annexure to Purchase Invoice No.: <strong>${data?.billId || ''}</strong>
+            </span>
+          </td>
+          <td style="text-align: right; vertical-align: middle; width: 40%;">
+            <p style="margin: 0; font-size: 12px;"><strong>Date:</strong> ${formattedDate}</p>
+            <p style="margin: 3px 0 0 0; font-size: 12px;"><strong>Customer:</strong> ${data?.customer?.name || ''}</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr style="border: none; border-top: 1px solid #000; margin-bottom: 16px;" />
+
+    <!-- Payment Mode & Bank Breakdown Table -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 24px;">
+      <thead>
+        <tr style="background-color: #FFD700; color: #000;">
+          <th style="border: 1px solid #000; padding: 7px; text-align: center; width: 6%; font-weight: bold;">Sno</th>
+          <th style="border: 1px solid #000; padding: 7px; text-align: left; width: 22%; font-weight: bold;">Payment Mode</th>
+          <th style="border: 1px solid #000; padding: 7px; text-align: left; width: 22%; font-weight: bold;">Bank Name</th>
+          <th style="border: 1px solid #000; padding: 7px; text-align: center; width: 24%; font-weight: bold;">Account Number</th>
+          <th style="border: 1px solid #000; padding: 7px; text-align: center; width: 12%; font-weight: bold;">IFSC Code</th>
+          <th style="border: 1px solid #000; padding: 7px; text-align: right; width: 14%; font-weight: bold;">Amount (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${paymentRowsHtml}
+        <!-- Grand Total Row -->
+        <tr style="font-weight: bold; background-color: #f9f9f9;">
+          <td colspan="5" style="border: 1px solid #000; padding: 8px; text-align: right;">Total Amount Settled =</td>
+          <td style="border: 1px solid #000; padding: 8px; text-align: right; color: #1b5e20; font-size: 14px;">
+            &#8377; ${totalSettledAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+
+
   </div>
 </body>
 </html>`;
@@ -613,6 +778,38 @@ async function createPdfKitFallbackBuffer(sale) {
       } else {
         doc.text(`Total Amount: ₹ ${Math.abs(Math.round(sale.payableAmount || 0)).toLocaleString('en-IN')}`, margin, 88);
       }
+
+      // Page 2: Payment Details Table
+      const paymentRows = extractPaymentRows(sale);
+      const totalSettled = paymentRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || Number(sale.payableAmount || 0);
+
+      doc.addPage({ margin: 30, size: 'A4' });
+      doc.fillColor('#000000').fontSize(16).font('Helvetica-Bold').text('PAYMENT & SETTLEMENT RECEIPT', margin, 30);
+      doc.fontSize(9).font('Helvetica').text(`Annexure to Purchase Invoice No.: ${sale.billId || ''}`, margin, 52);
+      doc.text(`Customer: ${customer.name || ''}`, margin, 66);
+
+      let yPos = 90;
+      doc.fontSize(9).font('Helvetica-Bold').text('Sno', margin, yPos);
+      doc.text('Payment Mode', margin + 30, yPos);
+      doc.text('Bank Name', margin + 140, yPos);
+      doc.text('Account Number', margin + 260, yPos);
+      doc.text('IFSC Code', margin + 390, yPos);
+      doc.text('Amount (INR)', margin + 460, yPos);
+
+      yPos += 16;
+      doc.font('Helvetica');
+      paymentRows.forEach((p, idx) => {
+        doc.text(String(idx + 1), margin, yPos);
+        doc.text(p.paymentMode, margin + 30, yPos);
+        doc.text(p.bankName, margin + 140, yPos);
+        doc.text(p.accountNo, margin + 260, yPos);
+        doc.text(p.ifscCode, margin + 390, yPos);
+        doc.text(Math.round(p.amount).toLocaleString('en-IN'), margin + 460, yPos);
+        yPos += 16;
+      });
+
+      yPos += 8;
+      doc.font('Helvetica-Bold').text(`Total Amount Settled: INR ${Math.round(totalSettled).toLocaleString('en-IN')}`, margin, yPos);
 
       doc.end();
     } catch (e) {

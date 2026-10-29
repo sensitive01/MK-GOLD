@@ -2212,138 +2212,159 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
     }
 
     return (
-      <Stack
-        direction="row"
-        spacing={1.5}
-        alignItems="stretch"
-        justifyContent={{ xs: 'center', lg: 'flex-end' }}
-        sx={{
-          flexWrap: 'wrap',
-          gap: 1.5,
-          width: { xs: '100%', lg: 'auto' },
-          flexShrink: 0,
-        }}
-      >
-        {kycProofs.map((e, index) => {
-          const isSignature =
-            e?.uploadType?.toLowerCase() === 'signature' ||
-            e?.uploadName?.toLowerCase() === 'signature' ||
-            e?.documentType?.toLowerCase() === 'signature';
+      <Box sx={{ width: '100%', mt: 2.5, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+        <Typography
+          variant="subtitle2"
+          sx={{
+            mb: 1.5,
+            fontWeight: 700,
+            color: 'text.secondary',
+            textTransform: 'uppercase',
+            letterSpacing: 0.5,
+            fontSize: '0.75rem',
+          }}
+        >
+          Customer KYC Documents & Proofs
+        </Typography>
+        <Grid container spacing={2}>
+          {kycProofs.map((e, index) => {
+            const isSignature =
+              e?.uploadType?.toLowerCase() === 'signature' ||
+              e?.uploadName?.toLowerCase() === 'signature' ||
+              e?.documentType?.toLowerCase() === 'signature';
 
-          const docName = isSignature
-            ? 'Signature'
-            : (e?.documentType
-              ? sentenceCase(e.documentType)
-              : data?.customer?.chooseId
-                ? sentenceCase(data.customer.chooseId)
-                : sentenceCase(e.uploadType || 'ID Proof'));
+            const docName = isSignature
+              ? 'Signature'
+              : (e?.documentType
+                  ? sentenceCase(e.documentType)
+                  : data?.customer?.chooseId
+                  ? sentenceCase(data.customer.chooseId)
+                  : sentenceCase(e.uploadType || 'ID Proof'));
 
-          const docNumber = !isSignature ? (e?.documentNo || data?.customer?.idNo || '') : '';
-          const fileUrl = e?.uploadedFile?.startsWith('http')
-            ? e.uploadedFile
-            : `${global.baseURL}/${e?.uploadedFile}`;
-          const isImage = Boolean(e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i));
+            const docNumber = !isSignature ? (e?.documentNo || data?.customer?.idNo || '') : '';
+            const fileUrl = e?.uploadedFile?.startsWith('http')
+              ? e.uploadedFile
+              : `${global.baseURL}/${e?.uploadedFile}`;
+            const isImage = Boolean(e?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i));
 
-          return (
-            <Card
-              key={e._id || index}
-              sx={{
-                p: 1.25,
-                borderRadius: 1.5,
-                border: '1px solid',
-                borderColor: 'divider',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                bgcolor: 'background.paper',
-                width: { xs: '100%', sm: 190, md: 210 },
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'all 0.2s',
-                '&:hover': {
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  borderColor: 'primary.main',
-                },
-              }}
-            >
-              <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1} sx={{ minHeight: 24 }}>
-                <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
-                  <Iconify
-                    icon={isSignature ? 'fluent:signature-24-filled' : 'mdi:card-account-details-outline'}
-                    width={18}
-                    sx={{ color: isSignature ? 'info.main' : 'primary.main', flexShrink: 0 }}
-                  />
-                  <Typography variant="subtitle2" noWrap sx={{ fontWeight: 700, fontSize: '0.8rem' }}>
-                    {docName}
-                  </Typography>
-                </Stack>
-                {docNumber && (
-                  <Chip
-                    size="small"
-                    label={docNumber}
-                    variant="outlined"
-                    color="primary"
-                    sx={{ fontWeight: 600, fontSize: '0.7rem', height: 20, ml: 0.5, flexShrink: 0 }}
-                  />
-                )}
-              </Stack>
+            return (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={e._id || index}>
+                <Card
+                  sx={{
+                    p: 1.5,
+                    height: '100%',
+                    borderRadius: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    bgcolor: 'background.paper',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                      borderColor: 'primary.main',
+                    },
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    mb={1.25}
+                    spacing={1}
+                    sx={{ minHeight: 28 }}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0, flexGrow: 1 }}>
+                      <Iconify
+                        icon={isSignature ? 'fluent:signature-24-filled' : 'mdi:card-account-details-outline'}
+                        width={20}
+                        sx={{ color: isSignature ? 'info.main' : 'primary.main', flexShrink: 0 }}
+                      />
+                      <Typography
+                        variant="subtitle2"
+                        noWrap
+                        title={docName}
+                        sx={{ fontWeight: 700, fontSize: '0.85rem' }}
+                      >
+                        {docName}
+                      </Typography>
+                    </Stack>
+                    {docNumber && (
+                      <Chip
+                        size="small"
+                        label={docNumber}
+                        variant="outlined"
+                        color="primary"
+                        sx={{ fontWeight: 600, fontSize: '0.72rem', height: 22, flexShrink: 0 }}
+                      />
+                    )}
+                  </Stack>
 
-              <Box
-                sx={{
-                  width: '100%',
-                  height: 105,
-                  borderRadius: 1,
-                  bgcolor: isSignature ? '#ffffff' : 'background.neutral',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  p: 0.5,
-                }}
-              >
-                {isImage ? (
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
+                  <Box
+                    sx={{
                       width: '100%',
-                      height: '100%',
+                      height: 120,
+                      borderRadius: 1,
+                      bgcolor: isSignature ? '#ffffff' : 'background.neutral',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      overflow: 'hidden',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      p: 0.5,
                     }}
                   >
-                    <img
-                      src={fileUrl}
-                      alt={docName}
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '100%',
-                        objectFit: 'contain',
-                        borderRadius: 4,
-                      }}
-                    />
-                  </a>
-                ) : (
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ textDecoration: 'none', textAlign: 'center' }}
-                  >
-                    <img src="/assets/doc.svg" alt="document" style={{ width: '40px', margin: '0 auto' }} />
-                    <Typography variant="caption" display="block" sx={{ mt: 0.5, color: 'primary.main', fontWeight: 600, fontSize: '0.68rem' }}>
-                      View Document
-                    </Typography>
-                  </a>
-                )}
-              </Box>
-            </Card>
-          );
-        })}
-      </Stack>
+                    {isImage ? (
+                      <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <img
+                          src={fileUrl}
+                          alt={docName}
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain',
+                            borderRadius: 4,
+                          }}
+                        />
+                      </a>
+                    ) : (
+                      <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ textDecoration: 'none', textAlign: 'center' }}
+                      >
+                        <img src="/assets/doc.svg" alt="document" style={{ width: '40px', margin: '0 auto' }} />
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          sx={{ mt: 0.5, color: 'primary.main', fontWeight: 600, fontSize: '0.72rem' }}
+                        >
+                          View Document
+                        </Typography>
+                      </a>
+                    )}
+                  </Box>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </Box>
     );
   }
 
@@ -2391,7 +2412,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                     p.documentType !== 'signature' &&
                     p.uploadedFile
                 );
-                const proof = data?.customer?.addressProofs?.find(p => String(p.uploadId) === String(e._id)) || kycDocProof;
+                const proof = data?.customer?.addressProofs?.find(p => String(p.uploadId) === String(e._id)) || (index === 0 ? kycDocProof : null);
                 return (
                   <TableRow hover key={e._id} tabIndex={-1}>
                     <TableCell align="left">{sentenceCase(e.address || '')}</TableCell>
@@ -2402,30 +2423,47 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                     <TableCell align="left">{e.label}</TableCell>
                     <TableCell align="left">
                       {proof?.uploadedFile ? (
-                        proof?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
+                        <Stack direction="row" alignItems="center" spacing={1}>
                           <a
                             href={proof.uploadedFile.startsWith('http') ? proof.uploadedFile : `${global.baseURL}/${proof.uploadedFile}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ cursor: 'pointer' }}
+                            style={{ cursor: 'pointer', display: 'inline-flex' }}
                           >
-                            <img
-                              src={proof.uploadedFile.startsWith('http') ? proof.uploadedFile : `${global.baseURL}/${proof.uploadedFile}`}
-                              alt="document"
-                              style={{ width: '80px' }}
-                            />
+                            {proof?.uploadedFile?.match(/.*(\.jpg|\.jpeg|\.png|\.webp|\.avif)$/i) ? (
+                              <Box
+                                component="img"
+                                src={proof.uploadedFile.startsWith('http') ? proof.uploadedFile : `${global.baseURL}/${proof.uploadedFile}`}
+                                alt="document"
+                                sx={{
+                                  width: 70,
+                                  height: 48,
+                                  objectFit: 'contain',
+                                  borderRadius: 1,
+                                  border: '1px solid',
+                                  borderColor: 'divider',
+                                  p: 0.25,
+                                  bgcolor: '#fff',
+                                  '&:hover': {
+                                    borderColor: 'primary.main',
+                                    transform: 'scale(1.05)',
+                                    transition: 'all 0.2s',
+                                  },
+                                }}
+                              />
+                            ) : (
+                              <img src="/assets/doc.svg" alt="document" style={{ width: '40px' }} />
+                            )}
                           </a>
-                        ) : (
-                          <a
-                            href={proof.uploadedFile.startsWith('http') ? proof.uploadedFile : `${global.baseURL}/${proof.uploadedFile}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <img src="/assets/doc.svg" alt="document" style={{ width: '80px' }} />
-                          </a>
-                        )
-                      ) : 'N/A'}
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                            {proof.documentType || 'Proof'}
+                          </Typography>
+                        </Stack>
+                      ) : (
+                        <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
+                          No Proof
+                        </Typography>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -2518,119 +2556,117 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 </Typography>
                 <Box sx={{ p: { xs: 2, sm: 2.5 }, bgcolor: 'background.neutral', borderRadius: 2 }}>
                   <Stack
-                    direction={{ xs: 'column', lg: 'row' }}
+                    direction={{ xs: 'column', sm: 'row' }}
                     spacing={{ xs: 2, sm: 2.5 }}
-                    alignItems={{ xs: 'center', lg: 'flex-start' }}
-                    justifyContent="space-between"
+                    alignItems={{ xs: 'center', sm: 'flex-start' }}
+                    sx={{ width: '100%' }}
                   >
-                    <Stack
-                      direction={{ xs: 'column', sm: 'row' }}
-                      spacing={{ xs: 2, sm: 2.5 }}
-                      alignItems={{ xs: 'center', sm: 'flex-start' }}
-                      sx={{ flexGrow: 1, width: { xs: '100%', lg: 'auto' } }}
+                    <Avatar
+                      src={data?.customer?.profileImage?.uploadedFile ? (data.customer.profileImage.uploadedFile.startsWith('http')
+                        ? data.customer.profileImage.uploadedFile
+                        : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`) : null}
+                      imgProps={{
+                        onError: (e) => {
+                          e.target.style.display = 'none';
+                        },
+                      }}
+                      alt={data?.customer?.name}
+                      sx={{
+                        width: { xs: 72, sm: 84 },
+                        height: { xs: 72, sm: 84 },
+                        flexShrink: 0,
+                        bgcolor: 'primary.main',
+                        color: '#fff',
+                        fontSize: '1.75rem',
+                        fontWeight: 700,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        border: '2px solid',
+                        borderColor: 'divider',
+                      }}
                     >
-                      <Avatar
-                        src={data?.customer?.profileImage?.uploadedFile ? (data.customer.profileImage.uploadedFile.startsWith('http')
-                          ? data.customer.profileImage.uploadedFile
-                          : `${global.baseURL}/${data.customer.profileImage.uploadedFile}`) : null}
-                        alt={data?.customer?.name}
-                        sx={{
-                          width: { xs: 72, sm: 84 },
-                          height: { xs: 72, sm: 84 },
-                          flexShrink: 0,
-                          bgcolor: 'primary.main',
-                          color: '#fff',
-                          fontSize: '1.75rem',
-                          fontWeight: 700,
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                          border: '2px solid',
-                          borderColor: 'divider',
-                        }}
-                      >
-                        {(data?.customer?.name || 'C').charAt(0).toUpperCase()}
-                      </Avatar>
+                      {(data?.customer?.name || 'C').charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Stack
+                      spacing={0.75}
+                      sx={{
+                        width: '100%',
+                        alignItems: { xs: 'center', sm: 'flex-start' },
+                        textAlign: { xs: 'center', sm: 'left' },
+                      }}
+                    >
+                      <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.2 }}>
+                        {data?.customer?.name || 'N/A'}
+                      </Typography>
                       <Stack
-                        spacing={0.75}
-                        sx={{
-                          width: '100%',
-                          alignItems: { xs: 'center', sm: 'flex-start' },
-                          textAlign: { xs: 'center', sm: 'left' },
-                        }}
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={{ xs: 0.75, sm: 2 }}
+                        alignItems="center"
+                        justifyContent={{ xs: 'center', sm: 'flex-start' }}
+                        sx={{ color: 'text.secondary', flexWrap: 'wrap' }}
                       >
-                        <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.2 }}>
-                          {data?.customer?.name || 'N/A'}
-                        </Typography>
-                        <Stack
-                          direction={{ xs: 'column', sm: 'row' }}
-                          spacing={{ xs: 0.75, sm: 2 }}
-                          alignItems="center"
-                          justifyContent={{ xs: 'center', sm: 'flex-start' }}
-                          sx={{ color: 'text.secondary', flexWrap: 'wrap' }}
-                        >
-                          {data?.customer?.email && (
-                            <Stack direction="row" spacing={0.5} alignItems="center">
-                              <Iconify icon="eva:email-fill" width={16} sx={{ color: 'primary.main', flexShrink: 0 }} />
-                              <Typography variant="body2">{data?.customer?.email}</Typography>
-                            </Stack>
+                        {data?.customer?.email && (
+                          <Stack direction="row" spacing={0.5} alignItems="center">
+                            <Iconify icon="eva:email-fill" width={16} sx={{ color: 'primary.main', flexShrink: 0 }} />
+                            <Typography variant="body2">{data?.customer?.email}</Typography>
+                          </Stack>
+                        )}
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Iconify icon="eva:phone-fill" width={16} sx={{ color: 'primary.main', flexShrink: 0 }} />
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {isAdmin || visiblePhoneField === 'primary'
+                              ? data?.customer?.phoneNumber || 'N/A'
+                              : global.maskPhoneNumber(data?.customer?.phoneNumber) || data?.customer?.phoneNumber || 'N/A'}
+                          </Typography>
+                          {!isAdmin && data?.customer?.phoneNumber && (
+                            <IconButton
+                              size="small"
+                              onClick={() => setVisiblePhoneField(visiblePhoneField === 'primary' ? null : 'primary')}
+                              sx={{ p: 0.25 }}
+                            >
+                              <Iconify icon={visiblePhoneField === 'primary' ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={16} height={16} />
+                            </IconButton>
                           )}
-                          <Stack direction="row" spacing={0.5} alignItems="center">
-                            <Iconify icon="eva:phone-fill" width={16} sx={{ color: 'primary.main', flexShrink: 0 }} />
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              {isAdmin || visiblePhoneField === 'primary'
-                                ? data?.customer?.phoneNumber || 'N/A'
-                                : global.maskPhoneNumber(data?.customer?.phoneNumber) || data?.customer?.phoneNumber || 'N/A'}
-                            </Typography>
-                            {!isAdmin && data?.customer?.phoneNumber && (
-                              <IconButton
-                                size="small"
-                                onClick={() => setVisiblePhoneField(visiblePhoneField === 'primary' ? null : 'primary')}
-                                sx={{ p: 0.25 }}
-                              >
-                                <Iconify icon={visiblePhoneField === 'primary' ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={16} height={16} />
-                              </IconButton>
-                            )}
-                          </Stack>
-                          <Stack direction="row" spacing={0.5} alignItems="center">
-                            <Iconify icon="eva:phone-outline" width={16} sx={{ color: 'text.disabled', flexShrink: 0 }} />
-                            <Typography variant="body2">
-                              Alt: {(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
-                                ? (isAdmin || visiblePhoneField === 'alt'
-                                    ? (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
-                                    : (global.maskPhoneNumber(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) || (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)))
-                                : 'N/A'}
-                            </Typography>
-                            {!isAdmin && (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) && (
-                              <IconButton
-                                size="small"
-                                onClick={() => setVisiblePhoneField(visiblePhoneField === 'alt' ? null : 'alt')}
-                                sx={{ p: 0.25 }}
-                              >
-                                <Iconify icon={visiblePhoneField === 'alt' ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={16} height={16} />
-                              </IconButton>
-                            )}
-                          </Stack>
                         </Stack>
-                        <Stack
-                          direction="row"
-                          spacing={0.75}
-                          sx={{
-                            mt: 0.5,
-                            flexWrap: 'wrap',
-                            gap: 0.75,
-                            justifyContent: { xs: 'center', sm: 'flex-start' },
-                          }}
-                        >
-                          <Chip size="small" variant="outlined" label={`Gender: ${data?.customer?.gender || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
-                          <Chip size="small" variant="outlined" label={`Marital Status: ${data?.customer?.maritalStatus || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
-                          {data?.customer?.employmentStatus && (
-                            <Chip size="small" variant="outlined" label={`Employment: ${data?.customer?.employmentStatus}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <Iconify icon="eva:phone-outline" width={16} sx={{ color: 'text.disabled', flexShrink: 0 }} />
+                          <Typography variant="body2">
+                            Alt: {(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
+                              ? (isAdmin || visiblePhoneField === 'alt'
+                                  ? (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)
+                                  : (global.maskPhoneNumber(data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) || (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber)))
+                              : 'N/A'}
+                          </Typography>
+                          {!isAdmin && (data?.customer?.alternatePhoneNumber || data?.customer?.alternateNumber) && (
+                            <IconButton
+                              size="small"
+                              onClick={() => setVisiblePhoneField(visiblePhoneField === 'alt' ? null : 'alt')}
+                              sx={{ p: 0.25 }}
+                            >
+                              <Iconify icon={visiblePhoneField === 'alt' ? 'eva:eye-off-fill' : 'eva:eye-fill'} width={16} height={16} />
+                            </IconButton>
                           )}
-                          <Chip size="small" variant="outlined" label={`Source: ${data?.customer?.source || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
                         </Stack>
                       </Stack>
+                      <Stack
+                        direction="row"
+                        spacing={0.75}
+                        sx={{
+                          mt: 0.5,
+                          flexWrap: 'wrap',
+                          gap: 0.75,
+                          justifyContent: { xs: 'center', sm: 'flex-start' },
+                        }}
+                      >
+                        <Chip size="small" variant="outlined" label={`Gender: ${data?.customer?.gender || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
+                        <Chip size="small" variant="outlined" label={`Marital Status: ${data?.customer?.maritalStatus || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
+                        {data?.customer?.employmentStatus && (
+                          <Chip size="small" variant="outlined" label={`Employment: ${data?.customer?.employmentStatus}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
+                        )}
+                        <Chip size="small" variant="outlined" label={`Source: ${data?.customer?.source || 'N/A'}`} sx={{ bgcolor: 'background.paper', fontSize: '0.75rem' }} />
+                      </Stack>
                     </Stack>
-                    <KycProof />
                   </Stack>
+                  <KycProof />
                 </Box>
               </Grid>
               {data?.customer?.address && data.customer.address.length > 0 && (
