@@ -156,7 +156,7 @@ function AlertComponent(props, ref) {
 }
 const Alert = forwardRef(AlertComponent);
 
-export default function StoreGoldTransit() {
+export default function StoreGoldTransit({ isNested = false }) {
   const auth = useSelector((state) => state.auth);
   const navigate = useNavigate();
 
@@ -365,9 +365,11 @@ export default function StoreGoldTransit() {
 
   return (
     <>
-      <Helmet>
+      {!isNested && (
+        <Helmet>
         <title> Inward Transit | Store | MK Gold </title>
       </Helmet>
+      )}
 
       <Snackbar
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
@@ -384,7 +386,7 @@ export default function StoreGoldTransit() {
         </Alert>
       </Snackbar>
 
-      <Container maxWidth="xl">
+      <Container maxWidth={isNested ? false : "xl"} disableGutters={isNested}>
         {/* Header section */}
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
@@ -757,7 +759,8 @@ export default function StoreGoldTransit() {
         <MenuItem
           onClick={() => {
             handleCloseMenu();
-            navigate(`/store/transit-sales/${openId}`);
+            const basePath = window.location.pathname.startsWith('/melting') ? '/melting' : '/store';
+            navigate(`${basePath}/transit-sales/${openId}`);
           }}
         >
           <Iconify icon={'carbon:view-filled'} sx={{ mr: 2 }} />

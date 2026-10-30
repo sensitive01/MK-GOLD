@@ -969,7 +969,14 @@ export function CreateTransitModal({ open, handleClose, fetchData, auth, branche
       }
       // Sale Type filter
       if (filterSaleType !== 'all') {
-        if (sale.saleType?.toLowerCase() !== filterSaleType.toLowerCase()) return false;
+        const sType = (sale.saleType || '').toLowerCase();
+        if (filterSaleType === 'physical') {
+          if (sType !== 'physical') return false;
+        } else if (filterSaleType === 'released' || filterSaleType === 'pledged') {
+          if (sType !== 'released' && sType !== 'release' && sType !== 'pledged') return false;
+        } else if (sType !== filterSaleType.toLowerCase()) {
+          return false;
+        }
       }
       // Search query filter
       if (searchQuery.trim()) {
@@ -1296,6 +1303,7 @@ export function CreateTransitModal({ open, handleClose, fetchData, auth, branche
                     <MenuItem value="all">All Sale Types</MenuItem>
                     <MenuItem value="physical">Physical Gold</MenuItem>
                     <MenuItem value="released">Released Gold</MenuItem>
+
                   </Select>
                 </FormControl>
               </Grid>

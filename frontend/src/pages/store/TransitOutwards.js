@@ -134,7 +134,7 @@ function applySortFilter(array, comparator, query, filters) {
   return filteredData;
 }
 
-export default function StoreTransitOutwards() {
+export default function StoreTransitOutwards({ isNested = false }) {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -573,11 +573,13 @@ export default function StoreTransitOutwards() {
 
   return (
     <>
-      <Helmet>
+      {!isNested && (
+        <Helmet>
         <title> Transit Outwards | Store | MK Gold </title>
       </Helmet>
+      )}
 
-      <Container maxWidth="xl">
+      <Container maxWidth={isNested ? false : "xl"} disableGutters={isNested}>
         {/* Header section */}
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
@@ -889,7 +891,10 @@ export default function StoreTransitOutwards() {
                               variant="outlined"
                               color="primary"
                               startIcon={<Iconify icon="eva:eye-fill" />}
-                              onClick={() => navigate(`/store/transit-sales/${_id}`)}
+                              onClick={() => {
+                                const basePath = window.location.pathname.startsWith('/melting') ? '/melting' : '/store';
+                                navigate(`${basePath}/transit-sales/${_id}`);
+                              }}
                               sx={{
                                 fontWeight: 600,
                                 fontSize: '0.75rem',

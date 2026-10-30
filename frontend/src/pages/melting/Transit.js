@@ -1,1098 +1,128 @@
-import { sentenceCase } from 'change-case';
-import { filter } from 'lodash';
-import { forwardRef, useEffect, useState, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import {
-    Backdrop,
-    Box,
-    Button,
-    Card,
-    Checkbox,
-    CircularProgress,
-    Container,
-    IconButton,
-    MenuItem,
-    Modal,
-    Paper,
-    Popover,
-    Snackbar,
-    Stack,
-    Table,
-    TableHead,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TablePagination,
-    TableRow,
-    Typography,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    FormControl,
-    InputLabel,
-    Select,
-    TextField,
-    InputAdornment,
-    Tooltip,
-    FormHelperText,
-} from '@mui/material';
-import MuiAlert from '@mui/material/Alert';
-import moment from 'moment';
-import { useSelector } from 'react-redux';
-import Iconify from '../../components/iconify';
-import Label from '../../components/label';
-import Scrollbar from '../../components/scrollbar';
-import { getTransitMeltingStatus } from '../../utils/transit';
-import { TransitListHead, TransitListToolbar } from '../../sections/@dashboard/transit';
-import { findTransit, updateTransitStatus, deleteTransitById } from '../../apis/admin/transit';
-import { createTransit, generateTransitId } from '../../apis/branch/transit';
-import { generateRandomTransitId, calculateTransitDays } from '../branch/Transit';
-import { createFile } from '../../apis/branch/fileupload';
-import TransitPrint from '../../components/branch/transit/TransitPrint';
-import { findSales } from '../../apis/admin/sales';
-import global from '../../utils/global';
-import { useFormik } from 'formik';
-import * as Yup from 'yup';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { LoadingButton } from '@mui/lab';
-import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
-import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import Grid from '@mui/material/Grid';
+import PropTypes from 'prop-types';
+import { Box, Card, Container, Tab, Tabs, Typography } from '@mui/material';
+import MoveToInboxIcon from '@mui/icons-material/MoveToInbox';
+import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 
-const TABLE_HEAD = [
-  { id: 'branch', label: 'Branch', alignRight: false },
-  { id: 'transitId', label: 'Transit ID', alignRight: false },
-  { id: 'numberOfPackets', label: 'Packets', alignRight: false },
-  { id: 'physical', label: 'Physical', alignRight: false },
-  { id: 'released', label: 'Released', alignRight: false },
-  { id: 'totalNetWeight', label: 'Net Weight', alignRight: false },
-  { id: 'deliveryBy', label: 'Delivery By', alignRight: false },
-  { id: 'status', label: 'Status', alignRight: false },
-  { id: 'createdAt', label: 'Date', alignRight: false },
-  { id: '' },
-];
+// Inward and Outward Transit Views
+import StoreGoldTransit from '../store/GoldTransit';
+import StoreTransitOutwards from '../store/TransitOutwards';
 
-function descendingComparator(a, b, orderBy) {
-  if (b[orderBy] < a[orderBy]) {
-    return -1;
-  }
-  if (b[orderBy] > a[orderBy]) {
-    return 1;
-  }
-  return 0;
-}
+// ----------------------------------------------------------------------
 
-function getComparator(order, orderBy) {
-  return order === 'desc'
-    ? (a, b) => descendingComparator(a, b, orderBy)
-    : (a, b) => -descendingComparator(a, b, orderBy);
-}
+function CustomTabPanel(props) {
+  const { children, value, index, ...other } = props;
 
-function applySortFilter(array, comparator, query, filters) {
-  const stabilizedThis = array?.map((el, index) => [el, index]) || [];
-  stabilizedThis.sort((a, b) => {
-    const order = comparator(a[0], b[0]);
-    if (order !== 0) return order;
-    return a[1] - b[1];
-  });
-  
-  let filteredData = stabilizedThis?.map((el) => el[0]);
-  
-  if (query) {
-    filteredData = filter(filteredData, (row) => row?.transitId?.toLowerCase().indexOf(query.toLowerCase()) !== -1);
-  }
-
-  if (filters) {
-    if (filters.status && filters.status !== 'all') {
-      if (filters.status.toLowerCase() === 'melted') {
-        filteredData = filteredData.filter(row => getTransitMeltingStatus(row) === 'melted');
-      } else if (filters.status.toLowerCase() === 'moved') {
-        filteredData = filteredData.filter(row => row.status?.toLowerCase() === 'moved' && getTransitMeltingStatus(row) !== 'melted');
-      } else {
-        filteredData = filteredData.filter(row => row.status?.toLowerCase() === filters.status.toLowerCase());
-      }
-    }
-    if (filters.branch && filters.branch !== 'all') {
-      filteredData = filteredData.filter(row => row.branch?.branchName === filters.branch);
-    }
-    if (filters.fromDate) {
-      filteredData = filteredData.filter(row => moment(row.createdAt).isSameOrAfter(moment(filters.fromDate), 'day'));
-    }
-    if (filters.toDate) {
-      filteredData = filteredData.filter(row => moment(row.createdAt).isSameOrBefore(moment(filters.toDate), 'day'));
-    }
-  }
-
-  return filteredData;
-}
-
-export default function Transit() {
-  const auth = useSelector((state) => state.auth);
-  const [open, setOpen] = useState(null);
-  const [openBackdrop, setOpenBackdrop] = useState(true);
-  const [openId, setOpenId] = useState(null);
-  const [data, setData] = useState([]);
-  const [page, setPage] = useState(0);
-  const [order, setOrder] = useState('desc');
-  const [selected, setSelected] = useState([]);
-  const [orderBy, setOrderBy] = useState('createdAt');
-  const [filterName, setFilterName] = useState('');
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [openDeleteModal, setOpenDeleteModal] = useState(false);
-  const [deleteType, setDeleteType] = useState('single');
-  const [adminNotes, setAdminNotes] = useState('');
-  const [deviation, setDeviation] = useState('no');
-  const [adminProof, setAdminProof] = useState(null);
-  const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [uploadLoading, setUploadLoading] = useState(false);
-  const [verifyTransitId, setVerifyTransitId] = useState(null);
-  const fileInputRef = useRef();
-
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    fromDate: '',
-    toDate: '',
-    status: 'all',
-    branch: 'all'
-  });
-  const handleFilterOpen = () => setFilterOpen(true);
-  const handleFilterClose = () => setFilterOpen(false);
-  const handleClearFilters = () => setFilters({ fromDate: '', toDate: '', status: 'all', branch: 'all' });
-  const isFilterApplied = filters.fromDate || filters.toDate || filters.status !== 'all' || filters.branch !== 'all';
-
-  const userType = auth?.user?.userType?.toLowerCase();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const createTransitMode = searchParams.get('createTransit') === 'true';
-  const saleIdsString = searchParams.get('saleIds');
-  const [openCreateModal, setOpenCreateModal] = useState(false);
-  const [prefillData, setPrefillData] = useState(null);
-
-  const handleOpenDeleteModal = () => setOpenDeleteModal(true);
-  const handleCloseDeleteModal = () => setOpenDeleteModal(false);
-
-  const [notify, setNotify] = useState({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
-
-  const handleDelete = async () => {
-    handleCloseDeleteModal();
-    setOpenBackdrop(true);
-    try {
-      const res = await deleteTransitById(openId);
-      if (res?.status) {
-        setNotify({ open: true, message: 'Transit deleted successfully!', severity: 'success' });
-        fetchData();
-        setSelected([]);
-      } else {
-        setNotify({ open: true, message: res?.message || 'Error deleting transit', severity: 'error' });
-        setOpenBackdrop(false);
-      }
-    } catch (error) {
-      setNotify({ open: true, message: 'An error occurred', severity: 'error' });
-      setOpenBackdrop(false);
-    }
-  };
-
-  const fetchData = useCallback(
-    (
-      query = {
-        createdAt: {
-          $gte: moment()?.subtract(1, 'month').format("YYYY-MM-DD"),
-          $lte: moment()?.add(1, 'days').format("YYYY-MM-DD"),
-        },
-      }
-    ) => {
-      findTransit(query).then((data) => {
-        setData(data.data || []);
-        setOpenBackdrop(false);
-      });
-    },
-    []
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`transit-tabpanel-${index}`}
+      aria-labelledby={`transit-tab-${index}`}
+      {...other}
+      style={{ paddingTop: '20px' }}
+    >
+      {value === index && <Box sx={{ p: 0 }}>{children}</Box>}
+    </div>
   );
+}
+
+CustomTabPanel.propTypes = {
+  children: PropTypes.node,
+  index: PropTypes.number.isRequired,
+  value: PropTypes.number.isRequired,
+};
+
+function a11yProps(index) {
+  return {
+    id: `transit-tab-${index}`,
+    'aria-controls': `transit-tabpanel-${index}`,
+  };
+}
+
+export default function MeltingTransit() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') ? parseInt(searchParams.get('tab'), 10) : 0;
+  const [value, setValue] = useState(initialTab >= 0 && initialTab <= 1 ? initialTab : 0);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  useEffect(() => {
-    if (createTransitMode && saleIdsString) {
-      const saleIdsArray = saleIdsString.split(',');
-      findSales({ _id: { $in: saleIdsArray } }).then((res) => {
-        if (res.data?.length > 0) {
-          const sales = res.data;
-          
-          let totalNetWeight = 0;
-          let totalGrossWeight = 0;
-          let numberOfOrnaments = 0;
-          let physicalCount = 0;
-          let releaseCount = 0;
-          let minEndDate = null;
-          let maxEndDate = null;
-
-          sales.forEach((sale) => {
-            totalNetWeight += Number(sale.netWeight || 0);
-            totalGrossWeight += sale.ornaments?.reduce((acc, curr) => acc + (Number(curr.grossWeight) || 0), 0) || 0;
-            numberOfOrnaments += sale.ornaments?.reduce((acc, curr) => acc + (Number(curr.quantity) || 1), 0) || 0;
-            if (sale.saleType === 'physical') {
-              physicalCount++;
-            } else if (sale.saleType === 'release' || sale.saleType === 'pledged') {
-              releaseCount++;
-            }
-            
-            const endDate = moment(sale.updatedAt);
-            if (!minEndDate || endDate.isBefore(minEndDate)) {
-              minEndDate = endDate;
-            }
-            if (!maxEndDate || endDate.isAfter(maxEndDate)) {
-              maxEndDate = endDate;
-            }
-          });
-
-          const fDate = minEndDate ? minEndDate.format('YYYY-MM-DD') : moment().format('YYYY-MM-DD');
-          const tDate = maxEndDate ? maxEndDate.format('YYYY-MM-DD') : moment().format('YYYY-MM-DD');
-          setPrefillData({
-            saleIds: saleIdsArray,
-            totalNetWeight: totalNetWeight.toFixed(3),
-            totalGrossWeight: totalGrossWeight.toFixed(3),
-            numberOfOrnaments: numberOfOrnaments,
-            numberOfPackets: sales.length,
-            physical: physicalCount,
-            released: releaseCount,
-            fromDate: fDate,
-            toDate: tDate,
-            numberOfDays: calculateTransitDays(fDate, tDate),
-            branch: sales[0]?.branch?._id || sales[0]?.branch,
-          });
-          setOpenCreateModal(true);
-          setSearchParams({});
-        }
-      });
-    }
-  }, [createTransitMode, saleIdsString, setSearchParams]);
-
-  const handleOpenMenu = (event) => {
-    setOpen(event.currentTarget);
-  };
-
-  const handleCloseMenu = () => {
-    setOpen(null);
-  };
-
-  const handleRequestSort = (event, property) => {
-    const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
-    setOrderBy(property);
-  };
-
-  const handleSelectAllClick = (event) => {
-    if (event.target.checked) {
-      const newSelecteds = data?.map((n) => n._id);
-      setSelected(newSelecteds);
-      return;
-    }
-    setSelected([]);
-  };
-
-  const handleClick = (event, _id) => {
-    const selectedIndex = selected.indexOf(_id);
-    let newSelected = [];
-    if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selected, _id);
-    } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selected?.slice(1));
-    } else if (selectedIndex === selected?.length - 1) {
-      newSelected = newSelected.concat(selected?.slice(0, -1));
-    } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(selected?.slice(0, selectedIndex), selected?.slice(selectedIndex + 1));
-    }
-    setSelected(newSelected);
-  };
-
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setPage(0);
-    setRowsPerPage(parseInt(event.target.value, 10));
-  };
-
-  const handleFilterByName = (event) => {
-    setPage(0);
-    setFilterName(event.target.value);
-  };
-
-  const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - (data?.length || 0)) : 0;
-  const filteredData = applySortFilter(data, getComparator(order, orderBy), filterName, filters);
-  const isNotFound = !filteredData?.length && !!filterName;
-
-  const handleUpdateStatus = () => {
-    if (!adminProof) {
-      setNotify({ open: true, message: 'Proof is required to receive transit', severity: 'error' });
-      return;
-    }
-    const proofId = typeof adminProof === 'object' ? adminProof._id : adminProof;
-    const newStatus = deviation === 'yes' ? 'submitted' : 'moved';
-    updateTransitStatus(openId, { status: newStatus, deviations: deviation, receivedNotes: adminNotes, receivedProof: proofId }).then((data) => {
-      handleCloseMenu();
-      setViewModalOpen(false);
-      if (data.status) {
-        fetchData();
-        setNotify({ open: true, message: deviation === 'yes' ? 'Transit marked with deviations (Status: Submitted)' : 'Transit received successfully (Status: Moved)', severity: deviation === 'yes' ? 'warning' : 'success' });
-      } else {
-        setNotify({ open: true, message: data.message || 'Error updating status', severity: 'error' });
-      }
-    });
-  };
-
-  function AlertComponent(props, ref) {
-    return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
-  }
-
-  const Alert = forwardRef(AlertComponent);
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setUploadLoading(true);
-      const formData = new FormData();
-      formData.append('uploadedFile', file);
-      formData.append('uploadName', 'transit_received_proof');
-      formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
-      const response = await createFile(formData);
-      setUploadLoading(false);
-      if (response.status) {
-        setAdminProof(response.data?._id);
-        setNotify({ open: true, message: 'Proof uploaded successfully', severity: 'success' });
-      } else {
-        alert('File upload failed');
+    const tabParam = searchParams.get('tab');
+    if (tabParam !== null) {
+      const parsed = parseInt(tabParam, 10);
+      if (!isNaN(parsed) && (parsed === 0 || parsed === 1)) {
+        setValue(parsed);
       }
     }
-  };
+  }, [searchParams]);
 
-  const selectedTransitObj = data?.find(item => item._id === openId);
+  const handleChange = (event, newValue) => {
+    setValue(newValue);
+    setSearchParams({ tab: newValue });
+  };
 
   return (
     <>
       <Helmet>
-        <title> Transit | MK Gold </title>
+        <title> Transit Management | Melting | MK Gold </title>
       </Helmet>
 
-      <Snackbar
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        open={notify.open}
-        onClose={() => setNotify({ ...notify, open: false })}
-        autoHideDuration={3000}
-      >
-        <Alert
-          onClose={() => setNotify({ ...notify, open: false })}
-          severity={notify.severity}
-          sx={{ width: '100%', color: 'white' }}
-        >
-          {notify.message}
-        </Alert>
-      </Snackbar>
-
       <Container maxWidth="xl">
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-          <Typography variant="h4" gutterBottom sx={{ color: '#fff' }}>
-            Transit Management
-          </Typography>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            {isFilterApplied && (
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={<Iconify icon="eva:trash-2-outline" />}
-                onClick={handleClearFilters}
-              >
-                Clear Filter
-              </Button>
-            )}
-            <Button
-              variant="contained"
-              startIcon={<Iconify icon="material-symbols:filter-alt-off" />}
-              onClick={handleFilterOpen}
+        <Typography variant="h4" sx={{ mb: 3, color: '#fff', fontWeight: 700 }}>
+          Transit Management
+        </Typography>
+
+        <Card sx={{ p: 1.5, mb: 1, bgcolor: '#ffffff', borderRadius: 2, boxShadow: 2 }}>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs
+              value={value}
+              onChange={handleChange}
+              aria-label="melting transit tabs"
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                '& .MuiTab-root': {
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  textTransform: 'none',
+                  minHeight: 48,
+                  color: 'text.secondary',
+                  '&.Mui-selected': {
+                    color: '#8A1B9F',
+                  },
+                },
+                '& .MuiTabs-indicator': {
+                  backgroundColor: '#8A1B9F',
+                  height: 3,
+                  borderRadius: '3px 3px 0 0',
+                },
+              }}
             >
-              Filter
-            </Button>
-            {['admin', 'melting'].includes(userType) && (
-              <Button variant="contained" startIcon={<Iconify icon="eva:plus-fill" />} onClick={() => navigate(`/${userType}/purchase?tab=0&selectForTransit=true`)}>
-                New Transit
-              </Button>
-            )}
-          </Stack>
-        </Stack>
-
-        <Card>
-          <TransitListToolbar
-            numSelected={selected?.length}
-            filterName={filterName}
-            onFilterName={handleFilterByName}
-          />
-
-          <Scrollbar>
-            <TableContainer>
-              <Table sx={{ minWidth: 800 }}>
-                <TransitListHead
-                  order={order}
-                  orderBy={orderBy}
-                  headLabel={TABLE_HEAD}
-                  rowCount={data?.length || 0}
-                  numSelected={selected?.length}
-                  onRequestSort={handleRequestSort}
-                  onSelectAllClick={handleSelectAllClick}
-                />
-                <TableBody>
-                  {filteredData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)?.map((row) => {
-                    const {
-                      _id,
-                      branch,
-                      transitId,
-                      numberOfPackets,
-                      physical,
-                      released,
-                      totalNetWeight,
-                      deliveryBy,
-                      status,
-                      createdAt,
-                    } = row;
-                    const selectedData = selected.indexOf(_id) !== -1;
-
-                    return (
-                      <TableRow
-                        hover
-                        key={_id}
-                        tabIndex={-1}
-                        role="checkbox"
-                        selected={selectedData}
-                        sx={{ cursor: 'pointer' }}
-                        onClick={() => navigate(`/${userType}/transit-sales/${_id}`)}
-                      >
-                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
-                        </TableCell>
-                        <TableCell align="left">{branch?.branchName || 'N/A'}</TableCell>
-                        <TableCell align="left">{transitId}</TableCell>
-                        <TableCell align="left">{numberOfPackets}</TableCell>
-                        <TableCell align="left">{physical}</TableCell>
-                        <TableCell align="left">{released}</TableCell>
-                        <TableCell align="left">{totalNetWeight}</TableCell>
-                        <TableCell align="left">{sentenceCase(deliveryBy || '')}</TableCell>
-                        <TableCell align="left">
-                          {getTransitMeltingStatus(row) === 'melted' ? (
-                            <Label sx={{ bgcolor: '#7b1fa2', color: '#fff', fontWeight: 600 }}>Melted</Label>
-                          ) : getTransitMeltingStatus(row) === 'partial' ? (
-                            <Label color="info">Partially Melted</Label>
-                          ) : row.isMovedToMelting || status === 'moved_to_melting' ? (
-                            <Label color="secondary" sx={{ fontWeight: 600 }}>Ready for Melting</Label>
-                          ) : (
-                            <Label color={status?.toLowerCase() === 'moved' ? 'success' : 'warning'}>
-                              {sentenceCase(status || '')}
-                            </Label>
-                          )}
-                        </TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD')}</TableCell>
-                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                          <IconButton
-                            size="large"
-                            color="inherit"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenId(_id);
-                              handleOpenMenu(e);
-                            }}
-                          >
-                            <Iconify icon={'eva:more-vertical-fill'} />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {emptyRows > 0 && (
-                    <TableRow style={{ height: 53 * emptyRows }}>
-                      <TableCell colSpan={10} />
-                    </TableRow>
-                  )}
-                  {filteredData?.length === 0 && (
-                    <TableRow>
-                      <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
-                        <Paper sx={{ textAlign: 'center' }}>
-                          <Typography paragraph>No data in table</Typography>
-                        </Paper>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-
-                {filteredData?.length > 0 && isNotFound && (
-                  <TableBody>
-                    <TableRow>
-                      <TableCell align="center" colSpan={10} sx={{ py: 3 }}>
-                        <Paper sx={{ textAlign: 'center' }}>
-                          <Typography variant="h6" paragraph>
-                            Not found
-                          </Typography>
-                          <Typography variant="body2">
-                            No results found for &nbsp;
-                            <strong>&quot;{filterName}&quot;</strong>.
-                            <br /> Try checking for typos or using complete words.
-                          </Typography>
-                        </Paper>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                )}
-              </Table>
-            </TableContainer>
-          </Scrollbar>
-
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={data?.length || 0}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-          />
-        </Card>
-      </Container>
-
-      <Popover
-        open={Boolean(open)}
-        anchorEl={open}
-        onClose={handleCloseMenu}
-        anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        PaperProps={{
-          sx: { p: 1, width: 160, '& .MuiMenuItem-root': { px: 1, typography: 'body2', borderRadius: 0.75 } },
-        }}
-      >
-        <MenuItem
-          onClick={() => {
-            handleCloseMenu();
-            navigate(`/${userType}/transit-sales/${openId}`);
-          }}
-        >
-          <Iconify icon={'carbon:view-filled'} sx={{ mr: 2 }} />
-          View Transit
-        </MenuItem>
-
-        <MenuItem
-          onClick={() => {
-            handleCloseMenu();
-            setVerifyTransitId(openId);
-          }}
-        >
-          <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
-          Print Transit
-        </MenuItem>
-
-        {/* <MenuItem sx={{ color: 'error.main' }} onClick={() => { handleCloseMenu(); setDeleteType('single'); setOpenDeleteModal(true); }}>
-          <Iconify icon={'eva:trash-2-outline'} sx={{ mr: 2 }} />
-          Delete
-        </MenuItem> */}
-      </Popover>
-
-      <Dialog open={viewModalOpen} onClose={() => setViewModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>View Transit Details</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              Notes:
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 3 }}>
-              {selectedTransitObj?.notes || 'No notes provided.'}
-            </Typography>
-            <Typography variant="subtitle1" gutterBottom>
-              Proof:
-            </Typography>
-            {selectedTransitObj?.proof?.uploadedFile ? (
-              <Box component="img" src={selectedTransitObj.proof.uploadedFile.startsWith('http') ? selectedTransitObj.proof.uploadedFile : `${global.BASE_URL}/${selectedTransitObj.proof.uploadedFile}`} alt="proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain', mb: 3 }} />
-            ) : (
-              <Typography variant="body2" sx={{ mb: 3 }}>
-                No proof uploaded.
-              </Typography>
-            )}
-            <Typography variant="h6" gutterBottom sx={{ mt: 3, borderTop: '1px solid #ccc', pt: 2 }}>
-              Received Details
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              label="Admin Notes"
-              value={adminNotes}
-              onChange={(e) => setAdminNotes(e.target.value)}
-              sx={{ mt: 2 }}
-            />
-            <Button
-              variant="contained"
-              component="label"
-              sx={{ mt: 2, mb: 1 }}
-              disabled={uploadLoading}
-            >
-              {uploadLoading ? 'Uploading...' : 'Upload Proof'}
-              <input
-                type="file"
-                hidden
-                onChange={handleFileUpload}
+              <Tab
+                icon={<MoveToInboxIcon sx={{ mr: 1, fontSize: 22 }} />}
+                iconPosition="start"
+                label="Inward Transit"
+                {...a11yProps(0)}
               />
-            </Button>
-            {adminProof && typeof adminProof === 'object' && adminProof.uploadedFile ? (
-              <Box component="img" src={adminProof.uploadedFile.startsWith('http') ? adminProof.uploadedFile : `${global.BASE_URL}/${adminProof.uploadedFile}`} alt="Admin proof" sx={{ width: '100%', maxHeight: 400, objectFit: 'contain', mb: 3, mt: 2 }} />
-            ) : adminProof ? (
-              <Typography variant="body2" sx={{ color: 'success.main', mb: 2 }}>
-                Proof uploaded successfully!
-              </Typography>
-            ) : null}
-
-            <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel id="deviations-label">Deviations</InputLabel>
-              <Select
-                labelId="deviations-label"
-                value={deviation}
-                label="Deviations"
-                onChange={(e) => setDeviation(e.target.value)}
-              >
-                <MenuItem value="yes">Yes</MenuItem>
-                <MenuItem value="no">No</MenuItem>
-              </Select>
-            </FormControl>
+              <Tab
+                icon={<FlightTakeoffIcon sx={{ mr: 1, fontSize: 22 }} />}
+                iconPosition="start"
+                label="Transit Outwards"
+                {...a11yProps(1)}
+              />
+            </Tabs>
           </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setViewModalOpen(false)} color="inherit">
-            Cancel
-          </Button>
-          <Button onClick={handleUpdateStatus} variant="contained" color="primary">
-            Received
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Card>
 
-      <Modal
-        open={openDeleteModal}
-        onClose={handleCloseDeleteModal}
-      >
-        <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, bgcolor: 'background.paper', boxShadow: 24, p: 4, borderRadius: 2 }}>
-          <Typography variant="h6" component="h2">
-            Delete Transit
-          </Typography>
-          <Typography sx={{ mt: 3 }}>
-            Do you want to delete this transit record?
-          </Typography>
-          <Stack direction="row" alignItems="center" spacing={2} mt={3}>
-            <Button variant="contained" color="error" onClick={handleDelete}>
-              Delete
-            </Button>
-            <Button variant="outlined" onClick={handleCloseDeleteModal}>
-              Cancel
-            </Button>
-          </Stack>
-        </Box>
-      </Modal>
+        <CustomTabPanel value={value} index={0}>
+          <StoreGoldTransit isNested />
+        </CustomTabPanel>
 
-      {/* Printable Transit Voucher */}
-      {verifyTransitId && (
-        <TransitPrint
-          id={verifyTransitId}
-          open={Boolean(verifyTransitId)}
-          onClose={() => setVerifyTransitId(null)}
-        />
-      )}
-
-      <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
-        <CircularProgress color="inherit" />
-      </Backdrop>
-
-      {openCreateModal && (
-        <CreateTransitModal 
-          open={openCreateModal} 
-          handleClose={() => setOpenCreateModal(false)} 
-          fetchData={fetchData} 
-          auth={auth} 
-          setNotify={setNotify} 
-          prefillData={prefillData}
-        />
-      )}
-      <Dialog open={filterOpen} onClose={handleFilterClose}>
-        <DialogTitle>Filter Transits</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={3} sx={{ p: 1, mt: 1 }}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
-                label="From Date"
-                InputLabelProps={{ shrink: true }}
-                value={filters.fromDate || ''}
-                onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
-                label="To Date"
-                InputLabelProps={{ shrink: true }}
-                value={filters.toDate || ''}
-                onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={filters.status}
-                  label="Status"
-                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                >
-                  <MenuItem value="all">All</MenuItem>
-                  <MenuItem value="intransit">In-Transit</MenuItem>
-                  <MenuItem value="moved">Moved</MenuItem>
-                  <MenuItem value="received">Received</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Branch</InputLabel>
-                <Select
-                  value={filters.branch}
-                  label="Branch"
-                  onChange={(e) => setFilters({ ...filters, branch: e.target.value })}
-                >
-                  <MenuItem value="all">All</MenuItem>
-                  {Array.from(new Set(data.map(item => item.branch?.branchName))).filter(Boolean).map(branch => (
-                    <MenuItem key={branch} value={branch}>{branch}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleFilterClose} variant="contained">Apply</Button>
-        </DialogActions>
-      </Dialog>
+        <CustomTabPanel value={value} index={1}>
+          <StoreTransitOutwards isNested />
+        </CustomTabPanel>
+      </Container>
     </>
-  );
-}
-
-function CreateTransitModal({ open, handleClose, fetchData, auth, setNotify, prefillData }) {
-  const [loading, setLoading] = useState(false);
-  const fileInputRef = useRef();
-
-  const schema = Yup.object({
-    saleIds: Yup.array().min(1, 'At least one Sale ID is required').required('Sale IDs are required'),
-    transitId: Yup.string().required('Transit ID is required'),
-    numberOfPackets: Yup.number().required('Number of packets is required'),
-    physical: Yup.number().required('Physical is required'),
-    released: Yup.number().required('Released is required'),
-    numberOfOrnaments: Yup.number().required('Number of ornaments is required'),
-    totalGrossWeight: Yup.number().required('Total gross weight is required'),
-    totalNetWeight: Yup.number().required('Total net weight is required'),
-    fromDate: Yup.mixed().nullable(),
-    toDate: Yup.mixed().nullable(),
-    numberOfDays: Yup.number().required('Number of days is required'),
-    packetWeight: Yup.number().required('Packet weight is required'),
-    deliveryBy: Yup.string().required('Delivery by is required'),
-    transitMovedThrough: Yup.string().required('Transit moved through is required'),
-    notes: Yup.string(),
-    proof: Yup.string().required('Proof is required'),
-  });
-
-  const { handleSubmit, handleChange, handleBlur, touched, errors, values, setFieldValue, resetForm, setValues, submitCount, setFieldTouched } = useFormik({
-    initialValues: {
-      saleIds: [],
-      transitId: generateRandomTransitId(),
-      numberOfPackets: '',
-      physical: '',
-      released: '',
-      numberOfOrnaments: '',
-      totalGrossWeight: '',
-      totalNetWeight: '',
-      fromDate: moment(),
-      toDate: moment(),
-      numberOfDays: calculateTransitDays(moment(), moment()),
-      packetWeight: '',
-      deliveryBy: '',
-      transitMovedThrough: '',
-      notes: '',
-      proof: '',
-    },
-    validationSchema: schema,
-    onSubmit: (values) => {
-      setLoading(true);
-      const payload = { ...values, branch: auth.user?.branch?._id || auth.user?.branch || prefillData?.branch, createdBy: auth.user?._id, status: 'intransit' };
-      createTransit(payload).then((data) => {
-        setLoading(false);
-        if (data.status) {
-          handleClose();
-          fetchData();
-          resetForm();
-          setNotify({ open: true, message: 'Transit created successfully', severity: 'success' });
-        } else {
-          setNotify({ open: true, message: data.message || 'Error creating transit', severity: 'error' });
-        }
-      });
-    },
-  });
-
-  useEffect(() => {
-    if (open) {
-      const from = prefillData?.fromDate ? moment(prefillData.fromDate) : moment();
-      const to = prefillData?.toDate ? moment(prefillData.toDate) : moment();
-      const days = prefillData?.numberOfDays !== undefined && prefillData?.numberOfDays !== ''
-        ? prefillData.numberOfDays
-        : calculateTransitDays(from, to);
-
-      setValues((prev) => ({
-        ...prev,
-        saleIds: prefillData?.saleIds || prev.saleIds || [],
-        numberOfPackets: prefillData?.numberOfPackets !== undefined ? prefillData.numberOfPackets : '',
-        physical: prefillData?.physical !== undefined ? prefillData.physical : '',
-        released: prefillData?.released !== undefined ? prefillData.released : '',
-        numberOfOrnaments: prefillData?.numberOfOrnaments || '',
-        totalGrossWeight: prefillData?.totalGrossWeight || '',
-        totalNetWeight: prefillData?.totalNetWeight || '',
-        fromDate: from,
-        toDate: to,
-        numberOfDays: days,
-      }));
-
-      // Autogenerate unique transit ID via backend check, with client generator fallback
-      generateTransitId().then((res) => {
-        if (res?.status && res?.transitId) {
-          setFieldValue('transitId', res.transitId);
-        } else {
-          setFieldValue('transitId', generateRandomTransitId());
-        }
-      }).catch(() => {
-        setFieldValue('transitId', generateRandomTransitId());
-      });
-    }
-  }, [prefillData, open, setValues, setFieldValue]);
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setLoading(true);
-      const formData = new FormData();
-      formData.append('uploadedFile', file);
-      formData.append('uploadName', 'transit_proof');
-      formData.append('uploadId', [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
-      const response = await createFile(formData);
-      setLoading(false);
-      if (response.status) {
-        setFieldValue('proof', response.data?._id);
-        setFieldTouched('proof', true, false);
-      } else {
-        alert('File upload failed');
-      }
-    }
-  };
-
-  return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>Create Transit</DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          {submitCount > 0 && Object.keys(errors).length > 0 && (
-            <Box mb={3}>
-              <MuiAlert severity="error">
-                Please fix the following errors: {Object.values(errors).join(', ')}
-              </MuiAlert>
-            </Box>
-          )}
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                name="transitId"
-                label="Transit ID"
-                value={values.transitId}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.transitId && !!errors.transitId}
-                helperText={touched.transitId && errors.transitId}
-                fullWidth
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <Tooltip title="Regenerate Transit ID">
-                        <IconButton
-                          edge="end"
-                          size="small"
-                          onClick={() => {
-                            generateTransitId().then((res) => {
-                              if (res?.status && res?.transitId) {
-                                setFieldValue('transitId', res.transitId);
-                              } else {
-                                setFieldValue('transitId', generateRandomTransitId());
-                              }
-                            }).catch(() => {
-                              setFieldValue('transitId', generateRandomTransitId());
-                            });
-                          }}
-                        >
-                          <Iconify icon="eva:refresh-fill" />
-                        </IconButton>
-                      </Tooltip>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="numberOfPackets" type="number" label="Number of Packets" value={values.numberOfPackets} onChange={handleChange} onBlur={handleBlur} error={touched.numberOfPackets && !!errors.numberOfPackets} helperText={touched.numberOfPackets && errors.numberOfPackets} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="physical" type="number" label="Physical" value={values.physical} onChange={handleChange} onBlur={handleBlur} error={touched.physical && !!errors.physical} helperText={touched.physical && errors.physical} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="released" type="number" label="Released" value={values.released} onChange={handleChange} onBlur={handleBlur} error={touched.released && !!errors.released} helperText={touched.released && errors.released} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="numberOfOrnaments" type="number" label="Number of Ornaments" value={values.numberOfOrnaments} onChange={handleChange} onBlur={handleBlur} error={touched.numberOfOrnaments && !!errors.numberOfOrnaments} helperText={touched.numberOfOrnaments && errors.numberOfOrnaments} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="totalGrossWeight" type="number" label="Total Gross Weight" value={values.totalGrossWeight} onChange={handleChange} onBlur={handleBlur} error={touched.totalGrossWeight && !!errors.totalGrossWeight} helperText={touched.totalGrossWeight && errors.totalGrossWeight} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="totalNetWeight" type="number" label="Total Net Weight" value={values.totalNetWeight} onChange={handleChange} onBlur={handleBlur} error={touched.totalNetWeight && !!errors.totalNetWeight} helperText={touched.totalNetWeight && errors.totalNetWeight} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <LocalizationProvider dateAdapter={AdapterMoment}>
-                <DesktopDatePicker
-                  label="From Date"
-                  inputFormat="MM/DD/YYYY"
-                  value={values.fromDate}
-                  onChange={(v) => {
-                    setFieldValue('fromDate', v);
-                    setFieldValue('numberOfDays', calculateTransitDays(v, values.toDate));
-                  }}
-                  renderInput={(params) => <TextField {...params} fullWidth error={touched.fromDate && !!errors.fromDate} helperText={touched.fromDate && errors.fromDate} />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <LocalizationProvider dateAdapter={AdapterMoment}>
-                <DesktopDatePicker
-                  label="To Date"
-                  inputFormat="MM/DD/YYYY"
-                  value={values.toDate}
-                  onChange={(v) => {
-                    setFieldValue('toDate', v);
-                    setFieldValue('numberOfDays', calculateTransitDays(values.fromDate, v));
-                  }}
-                  renderInput={(params) => <TextField {...params} fullWidth error={touched.toDate && !!errors.toDate} helperText={touched.toDate && errors.toDate} />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="numberOfDays" type="number" label="Number of Days" value={values.numberOfDays} onChange={handleChange} onBlur={handleBlur} error={touched.numberOfDays && !!errors.numberOfDays} helperText={touched.numberOfDays && errors.numberOfDays} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="packetWeight" type="number" label="Packet Weight" value={values.packetWeight} onChange={handleChange} onBlur={handleBlur} error={touched.packetWeight && !!errors.packetWeight} helperText={touched.packetWeight && errors.packetWeight} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="deliveryBy" label="Delivery By" value={values.deliveryBy} onChange={handleChange} onBlur={handleBlur} error={touched.deliveryBy && !!errors.deliveryBy} helperText={touched.deliveryBy && errors.deliveryBy} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField name="transitMovedThrough" label="Transit Moved Through" value={values.transitMovedThrough} onChange={handleChange} onBlur={handleBlur} error={touched.transitMovedThrough && !!errors.transitMovedThrough} helperText={touched.transitMovedThrough && errors.transitMovedThrough} fullWidth />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <input
-                type="file"
-                style={{ display: 'none' }}
-                ref={fileInputRef}
-                accept="image/*,application/pdf"
-                onChange={handleFileUpload}
-              />
-              {(() => {
-                const hasProofError = (Boolean(touched.proof) || submitCount > 0) && (!values.proof || Boolean(errors.proof));
-                return (
-                  <Box sx={{ width: '100%' }}>
-                    <LoadingButton
-                      loading={loading}
-                      variant={values.proof ? 'contained' : 'outlined'}
-                      color={hasProofError ? 'error' : (values.proof ? 'success' : 'primary')}
-                      onClick={() => {
-                        setFieldTouched('proof', true, false);
-                        fileInputRef.current?.click();
-                      }}
-                      fullWidth
-                      sx={{
-                        height: 56,
-                        fontWeight: 600,
-                        textTransform: 'none',
-                        fontSize: '0.95rem',
-                        ...(hasProofError && {
-                          borderColor: 'error.main',
-                          borderWidth: 2,
-                          color: 'error.main',
-                          bgcolor: 'rgba(255, 72, 66, 0.04)',
-                          '&:hover': { borderWidth: 2, borderColor: 'error.dark' },
-                        }),
-                        ...(values.proof && {
-                          bgcolor: 'success.main',
-                          color: '#fff',
-                          '&:hover': { bgcolor: 'success.dark' },
-                        }),
-                      }}
-                    >
-                      {values.proof ? '✓ Proof Uploaded (Click to Change)' : 'Upload Proof (Image/PDF) *'}
-                    </LoadingButton>
-                    <FormHelperText
-                      error={hasProofError}
-                      sx={{
-                        mx: 1.5,
-                        mt: 0.5,
-                        fontWeight: hasProofError ? 600 : 500,
-                        color: hasProofError
-                          ? 'error.main'
-                          : (values.proof ? 'success.main' : 'error.main'),
-                      }}
-                    >
-                      {hasProofError
-                        ? (errors.proof || '* Proof is mandatory. Please upload an image or PDF.')
-                        : (values.proof ? '✓ Proof document attached' : '* Proof is mandatory')}
-                    </FormHelperText>
-                  </Box>
-                );
-              })()}
-            </Grid>
-            <Grid item xs={12}>
-              <TextField name="notes" label="Notes" value={values.notes} onChange={handleChange} onBlur={handleBlur} fullWidth multiline rows={3} />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <LoadingButton
-            type="submit"
-            variant="contained"
-            loading={loading}
-            onClick={() => {
-              if (!values.proof) {
-                setFieldTouched('proof', true, false);
-              }
-            }}
-            sx={{ color: '#fff' }}
-          >
-            Create
-          </LoadingButton>
-        </DialogActions>
-      </form>
-    </Dialog>
   );
 }

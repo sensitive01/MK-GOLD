@@ -63,12 +63,12 @@ const navConfig = [
         path: '/admin/employee/user',
         icon: icon('ic_user'),
       },
-      {
-        title: 'Login Logs',
-        path: '/admin/employee/login-logs',
-        icon: <HistoryIcon sx={{ width: 1, height: 1 }} />,
-      },
     ]
+  },
+  {
+    title: 'Login Logs',
+    path: '/admin/login-logs',
+    icon: <HistoryIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Billing',

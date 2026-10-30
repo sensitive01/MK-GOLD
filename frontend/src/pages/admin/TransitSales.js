@@ -143,7 +143,11 @@ export default function TransitSales() {
   const auth = useSelector((state) => state.auth);
   const userType = auth.user?.userType;
   const isAdmin = userType?.toLowerCase() === 'admin';
-  const isStore = userType?.toLowerCase() === 'store' || window.location.pathname.startsWith('/store');
+  const isStore =
+    userType?.toLowerCase() === 'store' ||
+    userType?.toLowerCase() === 'melting' ||
+    window.location.pathname.startsWith('/store') ||
+    window.location.pathname.startsWith('/melting');
   const tableHead = useMemo(() => {
     if (isStore) return TABLE_HEAD.filter((col) => !col.nonStoreOnly);
     return TABLE_HEAD.filter((col) => !col.storeOnly);
