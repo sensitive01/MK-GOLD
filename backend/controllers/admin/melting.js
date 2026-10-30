@@ -46,6 +46,32 @@ async function create(req, res) {
       payload.meltProof = payload.proof;
     }
 
+    // Ensure each ornament has an articleNumber sequence if missing
+    if (payload.ornaments && payload.ornaments.length > 0) {
+      const salesCache = {};
+      for (let i = 0; i < payload.ornaments.length; i++) {
+        const orn = payload.ornaments[i];
+        if (!orn.articleNumber || !String(orn.articleNumber).trim() || orn.articleNumber === '-') {
+          const sId = String(orn.saleId);
+          if (!salesCache[sId]) {
+            salesCache[sId] = await salesModel.findById(orn.saleId).lean();
+          }
+          const s = salesCache[sId];
+          if (s) {
+            const rawArt = s.articleNumber || '';
+            const match = String(rawArt).trim().match(/(\d+)-(\d+)$/) || String(rawArt).trim().match(/\d+/);
+            const baseArt = match ? match[0] : String(rawArt).trim();
+            let ornIdx = i;
+            if (s.ornaments && Array.isArray(s.ornaments)) {
+              const fIdx = s.ornaments.findIndex(o => String(o._id) === String(orn.ornamentId));
+              if (fIdx !== -1) ornIdx = fIdx;
+            }
+            orn.articleNumber = baseArt ? `${baseArt}-${ornIdx + 1}` : `1-${ornIdx + 1}`;
+          }
+        }
+      }
+    }
+
     const data = await service.create(payload);
 
     // Update sales status for the selected ornaments

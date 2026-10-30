@@ -6,6 +6,7 @@ import { styled } from '@mui/material/styles';
 import Header from './header';
 import Nav from './nav';
 import { NotificationDisplay } from '../../../components/announcement';
+import { NotificationBannerAndModal } from '../../../components/notification';
 
 // ----------------------------------------------------------------------
 
@@ -41,12 +42,14 @@ export default function DashboardLayout() {
   return (
     <>
       <NotificationDisplay />
+
       <StyledRoot sx={{ display: 'flex' }}>
         <Header onOpenNav={() => setOpen(true)} />
 
         <Nav openNav={open} onCloseNav={() => setOpen(false)} />
 
         <Main>
+          <NotificationBannerAndModal />
           <Outlet />
         </Main>
       </StyledRoot>

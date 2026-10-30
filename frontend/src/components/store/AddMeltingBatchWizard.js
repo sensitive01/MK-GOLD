@@ -43,9 +43,12 @@ const steps = ['Select Transits', 'Select Sales', 'Select Ornaments', 'Summary &
 const formatArticleNumber = (art) => {
   if (!art) return '-';
   const str = String(art).trim();
-  const lastPart = str.includes('-') ? str.split('-').pop() : str;
-  const match = lastPart.match(/\d{3,}/) || str.match(/\d{3,}/) || str.match(/\d+/);
-  return match ? match[0] : (lastPart || str);
+  const seqMatch = str.match(/(\d+)-(\d+)$/);
+  if (seqMatch) {
+    return `${seqMatch[1]}-${seqMatch[2]}`;
+  }
+  const match = str.match(/\d{2,}/) || str.match(/\d+/);
+  return match ? match[0] : str;
 };
 
 const getTransitArticleNumbers = (transit) => {
@@ -238,12 +241,18 @@ export default function AddMeltingBatchWizard({ open, onClose, onSuccess }) {
     const orns = [];
     sales.forEach((sale) => {
       if (selectedSales.includes(sale._id) && sale.ornaments) {
-        sale.ornaments.forEach((orn) => {
+        const baseArt = formatArticleNumber(sale.articleNumber);
+        const unmelted = sale.ornaments.filter((orn) => orn.status !== 'melted');
+        unmelted.forEach((orn, idx) => {
+          const seqMatch = orn.articleNumber && String(orn.articleNumber).trim().match(/(\d+)-(\d+)$/);
+          const seqNumber = seqMatch
+            ? `${seqMatch[1]}-${seqMatch[2]}`
+            : (baseArt !== '-' ? `${baseArt}-${idx + 1}` : (orn.articleNumber ? formatArticleNumber(orn.articleNumber) : '-'));
           if (orn.status !== 'melted') {
             orns.push({
               saleId: sale._id,
               billId: sale.billId,
-              articleNumber: sale.articleNumber,
+              articleNumber: seqNumber,
               ornamentId: orn._id,
               ornamentType: orn.ornamentType,
               grossWeight: orn.grossWeight,

@@ -5,6 +5,7 @@ import { styled } from '@mui/material/styles';
 //
 import Header from './header';
 import Nav from './nav';
+import { NotificationBannerAndModal } from '../../../components/notification';
 
 // ----------------------------------------------------------------------
 
@@ -44,14 +45,18 @@ export default function DashboardLayout() {
   const [open, setOpen] = useState(false);
 
   return (
+    <>
+
     <StyledRoot>
       <Header onOpenNav={() => setOpen(true)} />
 
       <Nav openNav={open} onCloseNav={() => setOpen(false)} />
 
       <Main>
+        <NotificationBannerAndModal />
         <Outlet />
       </Main>
     </StyledRoot>
+    </>
   );
 }

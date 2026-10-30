@@ -16,6 +16,7 @@ import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 import SettingsIcon from '@mui/icons-material/Settings';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import HistoryIcon from '@mui/icons-material/History';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -120,6 +121,11 @@ const navConfig = [
     title: 'Announcement',
     path: '/admin/announcement',
     icon: <CampaignIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Notification Management',
+    path: '/admin/notification-management',
+    icon: <NotificationsActiveIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Task Management',

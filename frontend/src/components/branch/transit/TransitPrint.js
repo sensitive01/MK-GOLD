@@ -41,9 +41,12 @@ export default function TransitPrint({ id, open, onClose }) {
       const formatArticleNumber = (art) => {
         if (!art) return '-';
         const str = String(art).trim();
-        const lastPart = str.includes('-') ? str.split('-').pop() : str;
-        const match = lastPart.match(/\d{3,}/) || str.match(/\d{3,}/) || str.match(/\d+/);
-        return match ? match[0] : (lastPart || str);
+        const seqMatch = str.match(/(\d+)-(\d+)$/);
+        if (seqMatch) {
+          return `${seqMatch[1]}-${seqMatch[2]}`;
+        }
+        const match = str.match(/\d{2,}/) || str.match(/\d+/);
+        return match ? match[0] : str;
       };
 
       tableRows.push({

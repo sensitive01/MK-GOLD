@@ -24,6 +24,7 @@ const meltingSchema = new mongoose.Schema({
     ornaments: [{
         saleId: { type: mongoose.Schema.Types.ObjectId, ref: 'sales' },
         ornamentId: { type: mongoose.Schema.Types.ObjectId },
+        articleNumber: { type: String },
         ornamentType: { type: String },
         grossWeight: { type: Number },
         netWeight: { type: Number },

@@ -31,6 +31,7 @@ import AdminLoginLogs from './pages/admin/LoginLogs';
 import AdminOrnament from './pages/admin/Ornament';
 import AdminDesignation from './pages/admin/Designation';
 import AdminAnnouncement from './pages/admin/Announcements';
+import AdminNotificationManagement from './pages/admin/NotificationManagement';
 import AdminTasks from './pages/admin/TaskManagement';
 import EmployeeTasks from './pages/employee/Tasks';
 import AdminQREnquiry from './pages/admin/QREnquiry';
@@ -208,6 +209,7 @@ export default function Router() {
         { path: 'settings', element: <AdminSettings /> },
         { path: 'designation', element: <AdminDesignation /> },
         { path: 'announcement', element: <AdminAnnouncement /> },
+        { path: 'notification-management', element: <AdminNotificationManagement /> },
         { path: 'tasks', element: <AdminTasks /> },
         { path: 'qr-enquiry', element: <AdminQREnquiry /> },
         { path: 'transit', element: <AdminTransit /> },

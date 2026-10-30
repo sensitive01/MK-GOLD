@@ -511,11 +511,48 @@ export default function MeltingDetailDialog({ open, onClose, melting }) {
                   </TableHead>
                   <TableBody>
                     {melting.ornaments.map((orn, idx) => {
-                      const art = orn.articleNumber;
-                      const artStr = art ? String(art).trim() : '-';
-                      const lastPart = artStr.includes('-') ? artStr.split('-').pop() : artStr;
-                      const match = lastPart.match(/\d{3,}/) || artStr.match(/\d{3,}/) || artStr.match(/\d+/);
-                      const displayArt = match ? match[0] : (lastPart || artStr);
+                      const rawArt = orn.articleNumber ? String(orn.articleNumber).trim() : '';
+                      const seqMatch = rawArt.match(/(\d+)-(\d+)$/);
+                      let displayArt = seqMatch ? `${seqMatch[1]}-${seqMatch[2]}` : '';
+
+                      if (!displayArt) {
+                        const allSales = [];
+                        (melting.transitIds || (melting.transitId ? [melting.transitId] : [])).forEach((t) => {
+                          if (t?.saleIds && Array.isArray(t.saleIds)) {
+                            allSales.push(...t.saleIds);
+                          }
+                        });
+                        if (melting.saleIds && Array.isArray(melting.saleIds)) {
+                          allSales.push(...melting.saleIds);
+                        }
+                        const parentSale = allSales.find((s) =>
+                          String(s?._id || s) === String(orn.saleId?._id || orn.saleId) ||
+                          (s?.ornaments && s.ornaments.some((o) => String(o?._id || o) === String(orn.ornamentId?._id || orn.ornamentId)))
+                        );
+                        if (parentSale) {
+                          const saleArtRaw = parentSale.articleNumber || parentSale.article;
+                          const baseArt = saleArtRaw ? String(saleArtRaw).trim() : '';
+                          const baseMatch = baseArt.match(/(\d+)-(\d+)$/) || baseArt.match(/\d{2,}/) || baseArt.match(/\d+/);
+                          const cleanBase = baseMatch ? baseMatch[0] : baseArt;
+                          if (cleanBase) {
+                            let ornIdx = idx;
+                            if (parentSale.ornaments && Array.isArray(parentSale.ornaments)) {
+                              const foundIdx = parentSale.ornaments.findIndex((o) => String(o?._id || o) === String(orn.ornamentId?._id || orn.ornamentId));
+                              if (foundIdx !== -1) ornIdx = foundIdx;
+                            }
+                            displayArt = `${cleanBase}-${ornIdx + 1}`;
+                          }
+                        }
+                      }
+
+                      if (!displayArt) {
+                        const match = rawArt.match(/(\d+)-(\d+)$/) || rawArt.match(/\d{2,}/) || rawArt.match(/\d+/);
+                        displayArt = match ? match[0] : (rawArt || '-');
+                      }
+
+
+
+
 
                       return (
                         <TableRow key={idx} hover>
