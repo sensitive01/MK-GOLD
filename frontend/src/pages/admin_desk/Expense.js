@@ -29,7 +29,7 @@ import {
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
 // components
-import { CreateExpense, UpdateExpense } from '../../components/branch/expense';
+import { CreateExpense, UpdateExpense, ViewExpense } from '../../components/branch/expense';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
@@ -42,10 +42,9 @@ import { deleteExpenseById, getExpense } from '../../apis/branch/expense';
 
 const TABLE_HEAD = [
   { id: 'type', label: 'Type', alignRight: false },
-  { id: 'amount', label: 'Amount', alignRight: false },
-  { id: 'branchId', label: 'Branch Id', alignRight: false },
-  { id: 'branchName', label: 'Branch Name', alignRight: false },
-  { id: 'note', label: 'Note', alignRight: false },
+  { id: 'amount', label: 'Amount (₹)', alignRight: false },
+  { id: 'branchName', label: 'Branch', alignRight: false },
+  { id: 'details', label: 'Details / Notes', alignRight: false },
   { id: 'attachments', label: 'Attachments', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
@@ -101,6 +100,7 @@ export default function AdminDeskExpense() {
   const handleOpenDeleteModal = () => setOpenDeleteModal(true);
   const handleCloseDeleteModal = () => setOpenDeleteModal(false);
 
+  const [openViewModal, setOpenViewModal] = useState(false);
   const [notify, setNotify] = useState({
     open: false,
     message: '',
@@ -298,11 +298,26 @@ export default function AdminDeskExpense() {
                         <TableCell padding="checkbox">
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
-                        <TableCell align="left">{type}</TableCell>
-                        <TableCell align="left">{amount}</TableCell>
-                        <TableCell align="left">{branch?.branchId}</TableCell>
-                        <TableCell align="left">{branch?.branchName}</TableCell>
-                        <TableCell align="left">{note}</TableCell>
+                        <TableCell align="left" sx={{ whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => { setOpenId(_id); setOpenViewModal(true); }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{type}</Typography>
+                          {type === 'Others' && row.otherTypeName && (
+                            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>({row.otherTypeName})</Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="left" sx={{ whiteSpace: 'nowrap', fontWeight: 600, cursor: 'pointer' }} onClick={() => { setOpenId(_id); setOpenViewModal(true); }}>
+                          ₹{Number(amount || 0).toLocaleString()}
+                        </TableCell>
+                        <TableCell align="left" sx={{ whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => { setOpenId(_id); setOpenViewModal(true); }}>
+                          {branch?.branchName ? (
+                            <>
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>{branch.branchName}</Typography>
+                              {branch.branchId && <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>({branch.branchId})</Typography>}
+                            </>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell align="left" sx={{ minWidth: 200, cursor: 'pointer' }} onClick={() => { setOpenId(_id); setOpenViewModal(true); }}>
+                          {note && <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>{note}</Typography>}
+                        </TableCell>
                         <TableCell align="left">
                           {row.attachments && row.attachments.length > 0 ? (
                             <Stack direction="row" spacing={0.5}>
@@ -407,6 +422,12 @@ export default function AdminDeskExpense() {
         </Card>
       </Container>
 
+      <ViewExpense
+        open={openViewModal}
+        onClose={() => setOpenViewModal(false)}
+        id={openId}
+      />
+
       <Container
         maxWidth="xl"
         sx={{ display: toggleContainer === true && toggleContainerType === 'create' ? 'block' : 'none' }}
@@ -469,6 +490,16 @@ export default function AdminDeskExpense() {
           },
         }}
       >
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
+            setOpenViewModal(true);
+          }}
+        >
+          <Iconify icon={'eva:eye-fill'} sx={{ mr: 2 }} />
+          View
+        </MenuItem>
+
         <MenuItem
           onClick={() => {
             setOpen(null);

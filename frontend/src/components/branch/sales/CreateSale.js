@@ -1319,7 +1319,7 @@ function CreateSale(props) {
                 <Grid item xs={12} sm={4}>
                   <TextField
                     name="cashAmount"
-                    value={values.cashAmount}
+                    value={values.cashAmount ?? ''}
                     label={'Cash Amount'}
                     fullWidth
                     InputProps={{
@@ -1330,7 +1330,7 @@ function CreateSale(props) {
                 <Grid item xs={12} sm={4}>
                   <TextField
                     name="bankAmount"
-                    value={values.bankAmount}
+                    value={values.bankAmount ?? ''}
                     label={'Bank Amount'}
                     fullWidth
                     InputProps={{
@@ -1356,7 +1356,7 @@ function CreateSale(props) {
                 <Grid item xs={12} sm={4}>
                   <TextField
                     name="accountNo"
-                    value={selectedBank?.accountNo}
+                    value={selectedBank?.accountNo || ''}
                     label={'Account No'}
                     fullWidth
                     InputProps={{
@@ -1367,7 +1367,7 @@ function CreateSale(props) {
                 <Grid item xs={12} sm={4}>
                   <TextField
                     name="bankName"
-                    value={selectedBank?.bankName}
+                    value={selectedBank?.bankName || ''}
                     label={'Bank Name'}
                     fullWidth
                     InputProps={{
@@ -1378,7 +1378,7 @@ function CreateSale(props) {
                 <Grid item xs={12} sm={4}>
                   <TextField
                     name="branch"
-                    value={selectedBank?.branch}
+                    value={selectedBank?.branch || ''}
                     label={'Branch'}
                     fullWidth
                     InputProps={{
@@ -1389,7 +1389,7 @@ function CreateSale(props) {
                 <Grid item xs={12} sm={4}>
                   <TextField
                     name="ifscCode"
-                    value={selectedBank?.ifscCode}
+                    value={selectedBank?.ifscCode || ''}
                     label={'IFSC Code'}
                     fullWidth
                     InputProps={{

@@ -47,6 +47,8 @@ branchRouter.post("/branch/state", branch.getState);
 branchRouter.get("/expense/get", expense.find);
 branchRouter.post("/expense/get", expense.find);
 branchRouter.get("/expense/get/:id", expense.findById);
+branchRouter.get("/expense/today-bills/:branchId?", expense.getTodayBills);
+branchRouter.post("/expense/today-bills", expense.getTodayBills);
 branchRouter.post("/expense/create", expense.create);
 branchRouter.post("/expense/update/:id", expense.update);
 // branchRouter.post("/expense/delete/:id", expense.remove);

@@ -18,6 +18,18 @@ async function getExpenseById(id) {
   }
 }
 
+async function getTodayBills(branchId) {
+  try {
+    const url = branchId
+      ? `/api/v1.0/accounts/expense/today-bills/${branchId}`
+      : '/api/v1.0/accounts/expense/today-bills';
+    const response = await apiClient().get(url);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
 async function createExpense(payload) {
   try {
     const response = await apiClient().post('/api/v1.0/accounts/expense/create', payload);
@@ -45,4 +57,4 @@ async function deleteExpenseById(id) {
   }
 }
 
-export { getExpense, getExpenseById, createExpense, updateExpense, deleteExpenseById };
+export { getExpense, getExpenseById, getTodayBills, createExpense, updateExpense, deleteExpenseById };

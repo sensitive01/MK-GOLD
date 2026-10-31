@@ -1,4 +1,5 @@
 const Expense = require("../models/expense");
+const mongoose = require("mongoose");
 
 async function find(query = {}) {
   try {
@@ -15,11 +16,13 @@ async function find(query = {}) {
     
     // Convert string IDs to ObjectIds for aggregation
     if (query.branch && typeof query.branch === 'string') {
-      const mongoose = require("mongoose");
-      if (mongoose.Types.ObjectId.isValid(String(query.branch))) { query.branch = new mongoose.Types.ObjectId(String(query.branch)); } else { delete query.branch; }
+      if (mongoose.Types.ObjectId.isValid(String(query.branch))) {
+        query.branch = new mongoose.Types.ObjectId(String(query.branch));
+      } else {
+        delete query.branch;
+      }
     }
     if (query._id && typeof query._id === 'string') {
-      const mongoose = require("mongoose");
       query._id = new mongoose.Types.ObjectId(query._id);
     }
 
@@ -36,6 +39,33 @@ async function find(query = {}) {
       { $unwind: { path: "$branch", preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
+          from: "employees",
+          localField: "employee",
+          foreignField: "_id",
+          as: "employee",
+        },
+      },
+      { $unwind: { path: "$employee", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "sales",
+          localField: "bill",
+          foreignField: "_id",
+          as: "billData",
+        },
+      },
+      { $unwind: { path: "$billData", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "createdBy",
+          foreignField: "_id",
+          as: "creator",
+        },
+      },
+      { $unwind: { path: "$creator", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
           from: "fileuploads",
           let: { expenseId: "$_id" },
           pipeline: [
@@ -60,7 +90,8 @@ async function find(query = {}) {
       },
       {
         $addFields: {
-          imageLink: { $arrayElemAt: ["$attachments.uploadedFile", 0] }
+          imageLink: { $arrayElemAt: ["$attachments.uploadedFile", 0] },
+          billId: { $ifNull: ["$billId", "$billData.billId"] },
         }
       },
       { $sort: { createdAt: -1 } },
@@ -72,7 +103,6 @@ async function find(query = {}) {
 
 async function findById(id) {
   try {
-    const mongoose = require("mongoose");
     const results = await Expense.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(id) } },
       {
@@ -86,6 +116,33 @@ async function findById(id) {
       { $unwind: { path: "$branch", preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
+          from: "employees",
+          localField: "employee",
+          foreignField: "_id",
+          as: "employee",
+        },
+      },
+      { $unwind: { path: "$employee", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "sales",
+          localField: "bill",
+          foreignField: "_id",
+          as: "billData",
+        },
+      },
+      { $unwind: { path: "$billData", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "createdBy",
+          foreignField: "_id",
+          as: "creator",
+        },
+      },
+      { $unwind: { path: "$creator", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
           from: "fileuploads",
           let: { expenseId: "$_id" },
           pipeline: [
@@ -110,7 +167,8 @@ async function findById(id) {
       },
       {
         $addFields: {
-          imageLink: { $arrayElemAt: ["$attachments.uploadedFile", 0] }
+          imageLink: { $arrayElemAt: ["$attachments.uploadedFile", 0] },
+          billId: { $ifNull: ["$billId", "$billData.billId"] },
         }
       },
     ]).exec();
@@ -130,8 +188,8 @@ async function aggregate(query = {}) {
 
 async function create(payload) {
   try {
-    let goldRate = new Expense(payload);
-    return await goldRate.save();
+    let expense = new Expense(payload);
+    return await expense.save();
   } catch (err) {
     throw err;
   }

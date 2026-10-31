@@ -50,7 +50,15 @@ function UpdateExpense(props) {
     resetForm();
     if (props.id) {
       getExpenseById(props.id).then((data) => {
-        setValues(data.data ?? {});
+        const item = data?.data || {};
+        setValues({
+          type: item.type || '',
+          amount: item.amount ?? '',
+          from: item.from || '',
+          note: item.note || '',
+          status: item.status || 'pending',
+          ...item,
+        });
       });
     }
   }, [props.id]);
@@ -67,19 +75,26 @@ function UpdateExpense(props) {
         <Grid container spacing={3}>
           <Grid item xs={12} sm={4}>
             <TextField
+              select
               name="type"
-              value={values.type}
+              value={values.type || ''}
               error={touched.type && errors.type && true}
               label={touched.type && errors.type ? errors.type : 'Type'}
               fullWidth
               onBlur={handleBlur}
               onChange={handleChange}
-            />
+            >
+              {['Fuel', 'Sales Incentive', 'Purchases', 'Service and Maintenance', 'Others'].map((opt) => (
+                <MenuItem key={opt} value={opt}>
+                  {opt}
+                </MenuItem>
+              ))}
+            </TextField>
           </Grid>
           <Grid item xs={12} sm={4}>
             <TextField
               name="amount"
-              value={values.amount}
+              value={values.amount ?? ''}
               error={touched.amount && errors.amount && true}
               label={touched.amount && errors.amount ? errors.amount : 'Amount'}
               fullWidth
@@ -90,7 +105,7 @@ function UpdateExpense(props) {
           <Grid item xs={12} sm={4}>
             <TextField
               name="note"
-              value={values.note}
+              value={values.note || ''}
               error={touched.note && errors.note && true}
               label={touched.note && errors.note ? errors.note : 'Note'}
               fullWidth
@@ -106,7 +121,7 @@ function UpdateExpense(props) {
                 id="select"
                 label={touched.status && errors.status ? errors.status : 'Select status'}
                 name="status"
-                value={values.status}
+                value={values.status || 'pending'}
                 onBlur={handleBlur}
                 onChange={handleChange}
               >

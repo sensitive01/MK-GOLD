@@ -86,6 +86,8 @@ hrRouter.post("/profile/change-password", profile.changePassword);
 hrRouter.get("/expense/get", expense.find);
 hrRouter.post("/expense/get", expense.find);
 hrRouter.get("/expense/get/:id", expense.findById);
+hrRouter.get("/expense/today-bills/:branchId?", expense.getTodayBills);
+hrRouter.post("/expense/today-bills", expense.getTodayBills);
 hrRouter.post("/expense/create", expense.create);
 hrRouter.post("/expense/update/:id", expense.update);
 // hrRouter.post("/expense/delete/:id", expense.remove);

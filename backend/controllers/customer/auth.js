@@ -4,6 +4,7 @@ const Customer = require("../../models/customer");
 const otpService = require("../../services/otp");
 const axios = require("axios");
 const { sendWhatsAppOtp } = require("../../services/whatsapp");
+const { getEndOfTodayISTSeconds } = require("../../utils/auth");
 
 async function login(req, res) {
   try {
@@ -79,6 +80,8 @@ async function verifyOtp(req, res) {
         id: customer._id,
         customerId: customer.customerId,
         phoneNumber: customer.phoneNumber,
+        iat: Math.floor(Date.now() / 1000),
+        exp: getEndOfTodayISTSeconds(),
       },
       process.env.SECRET
     );

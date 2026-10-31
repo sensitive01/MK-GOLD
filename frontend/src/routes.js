@@ -1,6 +1,9 @@
+import { useEffect } from 'react';
 import { Navigate, useRoutes } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
+import { logout } from './features/authSlice';
+import { isTokenExpired } from './utils/token';
 import ErrorPageLayout from './layouts/error';
 import LoginPage from './pages/LoginPage';
 import Page404 from './pages/Page404';
@@ -159,8 +162,20 @@ import EmployeeDashboardLayout from './layouts/dashboard/employee';
 // ----------------------------------------------------------------------
 
 function Protected({ children }) {
+  const dispatch = useDispatch();
   const auth = useSelector((state) => state.auth);
-  if (auth.isAuthenticated !== true) {
+  const token = localStorage.getItem('token') || auth?.token;
+  const expired = isTokenExpired(token);
+
+  useEffect(() => {
+    if (expired && auth.isAuthenticated) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('persist:root');
+      dispatch(logout());
+    }
+  }, [expired, auth.isAuthenticated, dispatch]);
+
+  if (auth.isAuthenticated !== true || expired) {
     return <Navigate to="/login" replace />;
   }
   return children;

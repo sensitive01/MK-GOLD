@@ -7,7 +7,7 @@ const Expense = mongoose.model(
       branch: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "branches",
-        required: true,
+        required: false,
       },
       amount: {
         type: Number,
@@ -17,13 +17,68 @@ const Expense = mongoose.model(
         type: String,
         required: true,
       },
+      otherTypeName: {
+        type: String,
+      },
       note: {
         type: String,
-        required: true,
+        default: "",
       },
       status: {
         type: String,
-        required: true,
+        default: "pending",
+      },
+      // Fuel specific fields
+      openingRead: {
+        type: Number,
+      },
+      closingRead: {
+        type: Number,
+      },
+      overallRead: {
+        type: Number,
+      },
+      openingProof: {
+        type: String,
+      },
+      closingProof: {
+        type: String,
+      },
+      proof: {
+        type: String,
+      },
+      // Sales Incentive specific fields
+      bill: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "sales",
+      },
+      billId: {
+        type: String,
+      },
+      employee: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "employees",
+      },
+      // Workflow / Audit tracking
+      createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+      },
+      creatorRole: {
+        type: String,
+      },
+      approvedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+      },
+      approvedRole: {
+        type: String,
+      },
+      approvedAt: {
+        type: Date,
+      },
+      rejectionReason: {
+        type: String,
       },
       attachments: [
         {

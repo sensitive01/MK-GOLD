@@ -52,6 +52,8 @@ accountsRouter.post("/fund/delete/:id", fund.remove);
 accountsRouter.get("/expense/get", expense.find);
 accountsRouter.post("/expense/get", expense.find);
 accountsRouter.get("/expense/get/:id", expense.findById);
+accountsRouter.get("/expense/today-bills/:branchId?", expense.getTodayBills);
+accountsRouter.post("/expense/today-bills", expense.getTodayBills);
 accountsRouter.post("/expense/create", expense.create);
 accountsRouter.post("/expense/update/:id", expense.update);
 accountsRouter.post("/expense/delete/:id", expense.remove);

@@ -43,7 +43,7 @@ import * as FileSaver from 'file-saver';
 import { useFormik } from 'formik';
 import moment from 'moment';
 import * as XLSX from 'xlsx';
-import { UpdateExpense, CreateExpense } from '../../components/hr/expense';
+import { UpdateExpense, CreateExpense, ViewExpense } from '../../components/hr/expense';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
@@ -53,10 +53,10 @@ import { deleteExpenseById, getExpense, updateExpense } from '../../apis/hr/expe
 
 const TABLE_HEAD = [
   { id: 'type', label: 'Type', alignRight: false },
-  { id: 'amount', label: 'Amount', alignRight: false },
-  { id: 'branchId', label: 'Branch Id', alignRight: false },
-  { id: 'branchName', label: 'Branch Name', alignRight: false },
-  { id: 'note', label: 'Note', alignRight: false },
+  { id: 'amount', label: 'Amount (₹)', alignRight: false },
+  { id: 'branchName', label: 'Branch', alignRight: false },
+  { id: 'details', label: 'Details / Notes', alignRight: false },
+  { id: 'proofs', label: 'Proofs / Files', alignRight: false },
   { id: 'status', label: 'Status', alignRight: false },
   { id: 'createdAt', label: 'Date', alignRight: false },
   { id: '' },
@@ -113,6 +113,7 @@ export default function Expense() {
   const [filterOpen, setFilterOpen] = useState(false);
   const form = useRef();
 
+  const [openViewModal, setOpenViewModal] = useState(false);
   const [notify, setNotify] = useState({
     open: false,
     message: '',
@@ -462,25 +463,97 @@ export default function Expense() {
                         <TableCell padding="checkbox">
                           <Checkbox checked={selectedData} onChange={(event) => handleClick(event, _id)} />
                         </TableCell>
-                        <TableCell align="left">{type}</TableCell>
-                        <TableCell align="left">{amount}</TableCell>
-                        <TableCell align="left">{branch?.branchId}</TableCell>
-                        <TableCell align="left">{branch?.branchName}</TableCell>
-                        <TableCell align="left">{note}</TableCell>
-                        <TableCell align="left">
-                          {status === 'pending' ? (
-                            <Status status={status} _id={_id} />
-                          ) : (
-                            <Label
-                              color={
-                                (status === 'approved' && 'success') || (status === 'rejected' && 'error') || 'warning'
-                              }
-                            >
-                              {sentenceCase(status)}
-                            </Label>
+                        <TableCell align="left" sx={{ whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => { setOpenId(_id); setOpenViewModal(true); }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                            {type}
+                          </Typography>
+                          {type === 'Others' && row.otherTypeName && (
+                            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                              ({row.otherTypeName})
+                            </Typography>
                           )}
                         </TableCell>
-                        <TableCell align="left">{moment(createdAt).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+                        <TableCell align="left" sx={{ whiteSpace: 'nowrap', fontWeight: 600, cursor: 'pointer' }} onClick={() => { setOpenId(_id); setOpenViewModal(true); }}>
+                          ₹{Number(amount || 0).toLocaleString()}
+                        </TableCell>
+                        <TableCell align="left" sx={{ whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => { setOpenId(_id); setOpenViewModal(true); }}>
+                          {branch?.branchName ? (
+                            <>
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {branch.branchName}
+                              </Typography>
+                              {branch.branchId && (
+                                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                                  ({branch.branchId})
+                                </Typography>
+                              )}
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell align="left" sx={{ minWidth: 200, cursor: 'pointer' }} onClick={() => { setOpenId(_id); setOpenViewModal(true); }}>
+                          {type === 'Fuel' && (
+                            <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 0.5 }}>
+                              Start: <strong>{row.openingRead ?? '-'}</strong> | End: <strong>{row.closingRead ?? '-'}</strong> | Total: <strong>{row.overallRead != null ? `${row.overallRead} km` : '-'}</strong>
+                            </Typography>
+                          )}
+                          {type === 'Sales Incentive' && (
+                            <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 0.5 }}>
+                              Bill: <strong>{row.billId || '-'}</strong> | Emp: <strong>{row.employee?.name || '-'}</strong>
+                            </Typography>
+                          )}
+                          {note && (
+                            <Typography variant="body2" sx={{ display: 'block', color: 'text.primary', fontSize: '0.82rem' }}>
+                              {note}
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="left" sx={{ whiteSpace: 'nowrap' }}>
+                          {row.attachments && row.attachments.length > 0 ? (
+                            <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="nowrap">
+                              {row.attachments.map((file, idx) => (
+                                <IconButton
+                                  key={idx}
+                                  size="small"
+                                  color="primary"
+                                  component="a"
+                                  href={file.uploadedFile}
+                                  target="_blank"
+                                  title={file.uploadType || 'Proof'}
+                                  sx={{
+                                    bgcolor: 'action.hover',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    p: 0.5,
+                                    borderRadius: 1,
+                                  }}
+                                >
+                                  <Iconify icon="mdi:file-eye-outline" width={18} height={18} />
+                                </IconButton>
+                              ))}
+                            </Stack>
+                          ) : (
+                            <Typography variant="caption" color="text.secondary">None</Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="left" sx={{ minWidth: 120, whiteSpace: 'nowrap' }}>
+                          <Label
+                            color={
+                              (status === 'approved' && 'success') || (status === 'rejected' && 'error') || 'warning'
+                            }
+                          >
+                            {sentenceCase(status)}
+                          </Label>
+                        </TableCell>
+                        <TableCell align="left" sx={{ whiteSpace: 'nowrap' }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>
+                            {moment(createdAt).format('YYYY-MM-DD')}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                            {moment(createdAt).format('HH:mm:ss')}
+                          </Typography>
+                        </TableCell>
                         <TableCell align="right">
                           <IconButton
                             size="large"
@@ -620,6 +693,16 @@ export default function Expense() {
         <MenuItem
           onClick={() => {
             setOpen(null);
+            setOpenViewModal(true);
+          }}
+        >
+          <Iconify icon={'eva:eye-fill'} sx={{ mr: 2 }} />
+          View
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            setOpen(null);
             setToggleContainerType('update');
             setToggleContainer(!toggleContainer);
           }}
@@ -751,6 +834,12 @@ export default function Expense() {
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
       </Backdrop>
+
+      <ViewExpense
+        open={openViewModal}
+        onClose={() => setOpenViewModal(false)}
+        id={openId}
+      />
     </>
   );
 }

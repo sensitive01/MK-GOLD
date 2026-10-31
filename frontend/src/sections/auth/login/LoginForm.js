@@ -15,7 +15,8 @@ import MuiAlert from '@mui/material/Alert';
 import { LoadingButton } from '@mui/lab';
 // components
 import Iconify from '../../../components/iconify';
-import { login } from '../../../features/authSlice';
+import { login, logout } from '../../../features/authSlice';
+import { isTokenExpired } from '../../../utils/token';
 import { loginApi, getUserTypeApi, verifyLoginOtp } from '../../../apis/auth';
 
 // ----------------------------------------------------------------------
@@ -40,7 +41,14 @@ export default function LoginForm() {
     severity: 'success',
   });
 
+  const tokenValue = localStorage.getItem('token') || auth?.token;
   if (auth.isAuthenticated === true) {
+    if (isTokenExpired(tokenValue)) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('persist:root');
+      dispatch(logout());
+      return null;
+    }
     if (!auth.user) {
       return null;
     }

@@ -5,6 +5,7 @@ const Employee = require("../../models/employee");
 const otpService = require("../../services/otp");
 const loginLogService = require("../../services/loginLog");
 const axios = require("axios");
+const { getEndOfTodayISTSeconds } = require("../../utils/auth");
 
 function login(req, res, next) {
   console.log("login")
@@ -124,7 +125,8 @@ function login(req, res, next) {
         const token = jwt.sign(
           {
             sub: user._id,
-            iat: new Date().getTime(),
+            iat: Math.floor(Date.now() / 1000),
+            exp: getEndOfTodayISTSeconds(),
           },
           process.env.SECRET
         );
@@ -219,10 +221,10 @@ function verifyLoginOtp(req, res, next) {
       const token = jwt.sign(
         {
           sub: freshUser._id,
-          iat: new Date().getTime(),
+          iat: Math.floor(Date.now() / 1000),
+          exp: getEndOfTodayISTSeconds(),
         },
-        process.env.SECRET,
-        { expiresIn: "1d" }
+        process.env.SECRET
       );
 
       return res.json({
