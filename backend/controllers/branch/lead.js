@@ -271,6 +271,24 @@ async function bullionReject(req, res) {
   }
 }
 
+async function submitHouseVerification(req, res) {
+  try {
+    const data = await leadService.submitHouseVerification(req.params.id, req.body, req.user);
+    res.json({ status: true, message: "House verification submitted successfully!", data });
+  } catch (err) {
+    res.json({ status: false, message: err.message, data: {} });
+  }
+}
+
+async function getHouseVerificationByMobile(req, res) {
+  try {
+    const data = await leadService.getHouseVerificationByMobile(req.params.mobile);
+    res.json({ status: true, message: "", data });
+  } catch (err) {
+    res.json({ status: false, message: err.message, data: null });
+  }
+}
+
 module.exports = {
   find,
   findById,
@@ -282,6 +300,8 @@ module.exports = {
   getStats,
   markExclusive,
   assignExecutive,
+  submitHouseVerification,
+  getHouseVerificationByMobile,
   getBranchExecutives,
   moveToBusiness,
   tlApprove,

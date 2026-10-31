@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Navigate, useRoutes } from 'react-router-dom';
+import { Navigate, useRoutes, useLocation } from 'react-router-dom';
+import { useAttendance } from './context/AttendanceContext';
 import { useSelector, useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
 import { logout } from './features/authSlice';
@@ -164,7 +165,9 @@ import EmployeeDashboardLayout from './layouts/dashboard/employee';
 function Protected({ children }) {
   const dispatch = useDispatch();
   const auth = useSelector((state) => state.auth);
+  const location = useLocation();
   const token = localStorage.getItem('token') || auth?.token;
+  const { hasMarkedAttendance, attendanceLoading } = useAttendance();
   const expired = isTokenExpired(token);
 
   useEffect(() => {
@@ -178,6 +181,18 @@ function Protected({ children }) {
   if (auth.isAuthenticated !== true || expired) {
     return <Navigate to="/login" replace />;
   }
+  if (auth.user?.userType !== 'admin' && !attendanceLoading && !hasMarkedAttendance) {
+    const currentPath = location.pathname.toLowerCase();
+    const isAttendancePage = currentPath.endsWith('/attendance');
+    const isProfilePage = currentPath.endsWith('/profile');
+
+    if (!isAttendancePage && !isProfilePage) {
+      const segments = location.pathname.split('/').filter(Boolean);
+      const rolePrefix = segments[0] || auth.user?.userType || 'branch';
+      return <Navigate to={`/${rolePrefix}/attendance`} replace />;
+    }
+  }
+
   return children;
 }
 
@@ -352,6 +367,7 @@ export default function Router() {
         { path: 'profile', element: <Profile /> },
         { element: <Navigate to="/master/dashboard" />, index: true },
         { path: 'dashboard', element: <MasterDashboard /> },
+        { path: 'attendance', element: <AdminAttendance /> },
         { path: 'tasks', element: <EmployeeTasks /> },
         { path: 'tickets', element: <TicketingTool /> },
       ],

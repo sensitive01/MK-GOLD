@@ -54,4 +54,13 @@ async function updateProfileApi(payload) {
   }
 }
 
-export { loginApi, getUserTypeApi, getBranchUserApi, verifyLoginOtp, getProfileApi, updateProfileApi };
+async function getTodayAttendanceApi() {
+  try {
+    const response = await apiClient().get('/api/v1.0/auth/today-attendance');
+    return response.data;
+  } catch (err) {
+    return err?.response?.data ?? err;
+  }
+}
+
+export { loginApi, getUserTypeApi, getBranchUserApi, verifyLoginOtp, getProfileApi, updateProfileApi, getTodayAttendanceApi };

@@ -8,6 +8,7 @@ const {
   getBranchUser,
   getProfile,
   updateProfile,
+  getTodayAttendanceStatus,
 } = require("../controllers/auth");
 
 router.post("/login", login);
@@ -16,5 +17,6 @@ router.post("/get-user-type", getUserType);
 router.post("/get-branch-user", getBranchUser);
 router.get("/profile", passport.authenticate("jwt", { session: false }), getProfile);
 router.post("/profile", passport.authenticate("jwt", { session: false }), updateProfile);
+router.get("/today-attendance", passport.authenticate("jwt", { session: false }), getTodayAttendanceStatus);
 
 module.exports = router;

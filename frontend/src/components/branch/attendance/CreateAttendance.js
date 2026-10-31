@@ -13,9 +13,11 @@ import { createFile as createBranchFile } from '../../../apis/branch/fileupload'
 import { createAttendance as createAccountsAttendance } from '../../../apis/accounts/attendance';
 import { getEmployee as getAccountsEmployee } from '../../../apis/accounts/employee';
 import { createFile as createAccountsFile } from '../../../apis/accounts/fileupload';
+import { useAttendance } from '../../../context/AttendanceContext';
 
 function CreateAttendance(props) {
   const auth = useSelector((state) => state.auth);
+  const { refreshAttendance } = useAttendance();
   const [img, setImg] = useState(null);
   const webcamRef = useRef(null);
   const [employees, setEmloyees] = useState([]);
@@ -173,6 +175,8 @@ function CreateAttendance(props) {
           props.setToggleContainer(false);
           resetForm();
           setImg(null);
+          if (refreshAttendance) refreshAttendance();
+          if (props.fetchData) props.fetchData();
           props.setNotify({
             open: true,
             message: 'Attendance created',

@@ -38,6 +38,7 @@ import { LoadingButton } from '@mui/lab';
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import CustomerDocumentsGallery from './CustomerDocumentsGallery';
+import HouseVerificationModal from './HouseVerificationModal';
 import { getLeadById, addDisposition, assignExecutive, getBranchExecutives, moveToBusiness, tlApproveLead, tlRejectLead, bullionApproveLead, bullionRejectLead } from '../../../apis/branch/lead';
 import { getBranch } from '../../../apis/branch/branch';
 import global from '../../../utils/global';
@@ -89,6 +90,8 @@ function PreviewLead(props) {
   const [branchExecutives, setBranchExecutives] = useState([]);
   const [loadingExecutives, setLoadingExecutives] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [houseVerificationRequired, setHouseVerificationRequired] = useState('no');
+  const [openVerificationModal, setOpenVerificationModal] = useState(false);
 
   const [logForm, setLogForm] = useState({
     status: '',
@@ -179,6 +182,7 @@ function PreviewLead(props) {
     const currExecId = data?.assignedExecutive?._id || data?.assignedExecutive || '';
     setSelectedBranchId(currBranchId);
     setSelectedExecutiveId(currExecId);
+    setHouseVerificationRequired(data?.houseVerificationRequired ? 'yes' : 'no');
     if (currBranchId) {
       setLoadingExecutives(true);
       getBranchExecutives(currBranchId).then((res) => {
@@ -399,6 +403,7 @@ function PreviewLead(props) {
       branch: selectedBranchId,
       assignedExecutive: selectedExecutiveId,
       assignedExecutiveName: execName,
+      houseVerificationRequired: houseVerificationRequired === 'yes',
     })
       .then((res) => {
         setAssigning(false);
@@ -679,6 +684,17 @@ function PreviewLead(props) {
           >
             Edit Lead
           </Button>
+          {!isBullionDesk && data.houseVerificationRequired && (
+            <Button
+              variant={data.houseVerification?.status === 'verified' ? 'outlined' : 'contained'}
+              color={data.houseVerification?.status === 'verified' ? 'success' : data.houseVerification?.status === 'rejected' ? 'error' : 'warning'}
+              onClick={() => setOpenVerificationModal(true)}
+              startIcon={<Iconify icon={data.houseVerification?.status === 'verified' ? 'eva:checkmark-circle-2-fill' : 'mdi:home-search'} />}
+              sx={{ fontWeight: 600 }}
+            >
+              {data.houseVerification?.status === 'verified' ? 'House Verified' : data.houseVerification?.status === 'rejected' ? 'House Rejected' : 'House Verification'}
+            </Button>
+          )}
           {!['marketing', 'branch'].includes(auth?.user?.userType) && (
             <Button
               variant="contained"
@@ -1061,8 +1077,199 @@ function PreviewLead(props) {
         </Card>
       )}
 
+      {data.houseVerificationRequired && (
+        <Card sx={{ p: 2.5, mb: 3, border: '1px solid #e1bee7', bgcolor: '#faf5fc', borderRadius: 2 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1} mb={2}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Box sx={{ width: 40, height: 40, borderRadius: '50%', bgcolor: '#f3e5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Iconify icon="mdi:home-search" sx={{ width: 24, height: 24, color: '#8A1B9F' }} />
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ color: '#8A1B9F', fontWeight: 700, lineHeight: 1.2 }}>
+                  House Verification Details
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Premises physical verification and proof records
+                </Typography>
+              </Box>
+            </Stack>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Chip
+                label={data.houseVerification?.status === 'verified' ? 'House Verified' : data.houseVerification?.status === 'rejected' ? 'House Rejected' : 'Pending Verification'}
+                color={data.houseVerification?.status === 'verified' ? 'success' : data.houseVerification?.status === 'rejected' ? 'error' : 'warning'}
+                size="medium"
+                icon={<Iconify icon={data.houseVerification?.status === 'verified' ? 'eva:checkmark-circle-2-fill' : data.houseVerification?.status === 'rejected' ? 'eva:close-circle-fill' : 'mdi:clock-outline'} />}
+                sx={{ fontWeight: 600, px: 1 }}
+              />
+              {!isBullionDesk && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setOpenVerificationModal(true)}
+                  sx={{ color: '#8A1B9F', borderColor: '#8A1B9F', fontWeight: 600, textTransform: 'none' }}
+                >
+                  {data.houseVerification?.status === 'verified' ? 'Update Verification' : 'Complete Verification'}
+                </Button>
+              )}
+            </Stack>
+          </Stack>
+
+          <Grid container spacing={2.5}>
+            {data.houseVerification?.verifiedByName && (
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.5 }}>
+                  Verified By:
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                  {data.houseVerification.verifiedByName}
+                </Typography>
+              </Grid>
+            )}
+            {data.houseVerification?.verifiedAt && (
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.5 }}>
+                  Verified At:
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                  {new Date(data.houseVerification.verifiedAt).toLocaleString('en-IN')}
+                </Typography>
+              </Grid>
+            )}
+            {data.houseVerification?.comments && (
+              <Grid item xs={12}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.5 }}>
+                  Comments / Remarks:
+                </Typography>
+                <Typography variant="body2" sx={{ bgcolor: '#fff', p: 1.5, borderRadius: 1.5, border: '1px solid #ede7f6' }}>
+                  {data.houseVerification.comments}
+                </Typography>
+              </Grid>
+            )}
+            {Array.isArray(data.houseVerification?.photos) && data.houseVerification.photos.length > 0 && (
+              <Grid item xs={12}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 1 }}>
+                  Photo Proofs ({data.houseVerification.photos.length}):
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                  {data.houseVerification.photos.map((photo, pIdx) => {
+                    const fullUrl = photo.startsWith('http') ? photo : `${global.baseURL}/${photo}`;
+                    return (
+                      <Box
+                        key={`hv-prev-${pIdx}`}
+                        component="a"
+                        href={fullUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        sx={{
+                          width: 90,
+                          height: 90,
+                          borderRadius: 1.5,
+                          overflow: 'hidden',
+                          border: '1px solid #d1c4e9',
+                          display: 'block',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                          '&:hover': { transform: 'scale(1.04)', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(138,27,159,0.2)' },
+                        }}
+                      >
+                        <img src={fullUrl} alt={`Proof ${pIdx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Grid>
+            )}
+          </Grid>
+        </Card>
+      )}
+
       <Grid container spacing={3}>
         <Grid item xs={12} sm={3}>
+        {false && (
+          <Grid item xs={12}>
+            <Card sx={{ p: 2.5, border: '1px solid #e1bee7', bgcolor: '#faf5fc', borderRadius: 2 }}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1} mb={1.5}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Iconify icon="mdi:home-search" sx={{ width: 24, height: 24, color: '#8A1B9F' }} />
+                  <Typography variant="h6" sx={{ color: '#8A1B9F', fontWeight: 700 }}>
+                    House Verification
+                  </Typography>
+                </Stack>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Chip
+                    label={data.houseVerification?.status === 'verified' ? 'Verified' : data.houseVerification?.status === 'rejected' ? 'Rejected' : 'Pending Verification'}
+                    color={data.houseVerification?.status === 'verified' ? 'success' : data.houseVerification?.status === 'rejected' ? 'error' : 'warning'}
+                    size="small"
+                    icon={<Iconify icon={data.houseVerification?.status === 'verified' ? 'eva:checkmark-circle-2-fill' : data.houseVerification?.status === 'rejected' ? 'eva:close-circle-fill' : 'mdi:clock-outline'} />}
+                  />
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    disabled={isBullionDesk}
+                    style={{ display: isBullionDesk ? 'none' : 'inline-flex' }}
+                    onClick={() => setOpenVerificationModal(true)}
+                    sx={{ color: '#8A1B9F', borderColor: '#8A1B9F', fontWeight: 600 }}
+                  >
+                    {data.houseVerification?.status === 'verified' ? 'Update Verification' : 'Complete Verification'}
+                  </Button>
+                </Stack>
+              </Stack>
+
+              <Grid container spacing={2}>
+                {data.houseVerification?.verifiedByName && (
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="textSecondary">Verified By:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{data.houseVerification.verifiedByName}</Typography>
+                  </Grid>
+                )}
+                {data.houseVerification?.verifiedAt && (
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="textSecondary">Verified At:</Typography>
+                    <Typography variant="body2">{new Date(data.houseVerification.verifiedAt).toLocaleString('en-IN')}</Typography>
+                  </Grid>
+                )}
+                {data.houseVerification?.comments && (
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="textSecondary">Comments / Remarks:</Typography>
+                    <Typography variant="body2" sx={{ bgcolor: '#fff', p: 1.5, borderRadius: 1, border: '1px solid #f0e6f5' }}>
+                      {data.houseVerification.comments}
+                    </Typography>
+                  </Grid>
+                )}
+                {Array.isArray(data.houseVerification?.photos) && data.houseVerification.photos.length > 0 && (
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="textSecondary" sx={{ mb: 1, display: 'block' }}>Photo Proofs ({data.houseVerification.photos.length}):</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                      {data.houseVerification.photos.map((photo, pIdx) => {
+                        const fullUrl = photo.startsWith('http') ? photo : `${global.baseURL}/${photo}`;
+                        return (
+                          <Box
+                            key={`hv-prev-${pIdx}`}
+                            component="a"
+                            href={fullUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            sx={{
+                              width: 80,
+                              height: 80,
+                              borderRadius: 1,
+                              overflow: 'hidden',
+                              border: '1px solid #ddd',
+                              display: 'block',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                              '&:hover': { transform: 'scale(1.04)', transition: 'all 0.2s' },
+                            }}
+                          >
+                            <img src={fullUrl} alt={`Proof ${pIdx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+            </Card>
+          </Grid>
+        )}
           <Typography variant="subtitle2" sx={{ color: 'purple' }}>Name</Typography>
           <Typography variant="body1">{data.name}</Typography>
         </Grid>
@@ -1668,6 +1875,19 @@ function PreviewLead(props) {
               </Select>
             </FormControl>
 
+            <FormControl fullWidth size="small">
+              <InputLabel id="house-verification-label">House Verification</InputLabel>
+              <Select
+                labelId="house-verification-label"
+                value={houseVerificationRequired}
+                label="House Verification"
+                onChange={(e) => setHouseVerificationRequired(e.target.value)}
+              >
+                <MenuItem value="no">No</MenuItem>
+                <MenuItem value="yes">Yes</MenuItem>
+              </Select>
+            </FormControl>
+
             <FormControl fullWidth size="small" disabled={!selectedBranchId || loadingExecutives}>
               <InputLabel id="assign-executive-label">
                 {loadingExecutives ? 'Loading executives...' : 'Choose Executive'}
@@ -1719,6 +1939,19 @@ function PreviewLead(props) {
           </Stack>
         </Box>
       </Modal>
+
+      {data && (
+        <HouseVerificationModal
+          open={openVerificationModal}
+          onClose={() => setOpenVerificationModal(false)}
+          lead={data}
+          onSuccess={(updated) => {
+            if (updated) setData(updated);
+            if (props.fetchData) props.fetchData();
+          }}
+          setNotify={props.setNotify}
+        />
+      )}
 
       {/* Confirmation Dialog for Move to Business */}
       <Dialog

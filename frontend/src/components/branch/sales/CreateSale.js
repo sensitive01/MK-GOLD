@@ -57,6 +57,7 @@ import { getEmployee } from '../../../apis/branch/employee';
 import global from '../../../utils/global';
 import { getAddressById, createAddress } from '../../../apis/branch/customer-address';
 import Iconify from '../../iconify';
+import { getHouseVerificationByMobile } from '../../../apis/branch/lead';
 import { pinToAddress } from 'india-pincode-finder';
 
 const getFileUrl = (url) => {
@@ -86,6 +87,23 @@ function CreateSale(props) {
   const [assignees, setAssignees] = useState([]);
   const [addresses, setAddresses] = useState([]);
   const [addressModalOpen, setAddressModalOpen] = useState(false);
+  const [houseVerificationData, setHouseVerificationData] = useState(null);
+
+  useEffect(() => {
+    if (selectedUser?.phoneNumber) {
+      getHouseVerificationByMobile(selectedUser.phoneNumber)
+        .then((res) => {
+          if (res?.data) {
+            setHouseVerificationData(res.data);
+          } else {
+            setHouseVerificationData(null);
+          }
+        })
+        .catch(() => setHouseVerificationData(null));
+    } else {
+      setHouseVerificationData(null);
+    }
+  }, [selectedUser?.phoneNumber, step]);
   // Inline release form state for saleType === 'release'
   const [releaseForm, setReleaseForm] = useState({
     weight: '',
@@ -847,6 +865,81 @@ function CreateSale(props) {
         <Card sx={{ display: step === 4 ? 'block' : 'none', p: { xs: 2, md: 4 }, my: { xs: 2, md: 4 } }}>
           <Typography variant="h4" gutterBottom sx={{ mt: 1, mb: 3 }}>
             Billing Summary
+          </Typography>
+
+          {houseVerificationData?.houseVerificationRequired && (
+            <Card sx={{ p: 2.5, mb: 3, border: '1px solid #e1bee7', bgcolor: '#faf5fc', borderRadius: 2 }}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1} mb={1.5}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Iconify icon="mdi:home-search" sx={{ width: 24, height: 24, color: '#8A1B9F' }} />
+                  <Typography variant="h6" sx={{ color: '#8A1B9F', fontWeight: 700 }}>
+                    House Verification Details ({houseVerificationData.leadName || 'Lead'})
+                  </Typography>
+                </Stack>
+                <Chip
+                  label={houseVerificationData.houseVerification?.status === 'verified' ? 'House Verified' : houseVerificationData.houseVerification?.status === 'rejected' ? 'House Rejected' : 'Verification Pending'}
+                  color={houseVerificationData.houseVerification?.status === 'verified' ? 'success' : houseVerificationData.houseVerification?.status === 'rejected' ? 'error' : 'warning'}
+                  size="small"
+                  icon={<Iconify icon={houseVerificationData.houseVerification?.status === 'verified' ? 'eva:checkmark-circle-2-fill' : houseVerificationData.houseVerification?.status === 'rejected' ? 'eva:close-circle-fill' : 'mdi:clock-outline'} />}
+                />
+              </Stack>
+
+              <Grid container spacing={2}>
+                {houseVerificationData.houseVerification?.verifiedByName && (
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="textSecondary">Verified By:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{houseVerificationData.houseVerification.verifiedByName}</Typography>
+                  </Grid>
+                )}
+                {houseVerificationData.houseVerification?.verifiedAt && (
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="textSecondary">Verified Date:</Typography>
+                    <Typography variant="body2">{new Date(houseVerificationData.houseVerification.verifiedAt).toLocaleString('en-IN')}</Typography>
+                  </Grid>
+                )}
+                {houseVerificationData.houseVerification?.comments && (
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="textSecondary">Executive Comments / Remarks:</Typography>
+                    <Typography variant="body2" sx={{ bgcolor: '#fff', p: 1.5, borderRadius: 1, border: '1px solid #f0e6f5' }}>
+                      {houseVerificationData.houseVerification.comments}
+                    </Typography>
+                  </Grid>
+                )}
+                {Array.isArray(houseVerificationData.houseVerification?.photos) && houseVerificationData.houseVerification.photos.length > 0 && (
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="textSecondary" sx={{ mb: 1, display: 'block' }}>Photo Proofs ({houseVerificationData.houseVerification.photos.length}):</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                      {houseVerificationData.houseVerification.photos.map((photo, pIdx) => {
+                        const fullUrl = photo.startsWith('http') ? photo : `${global.baseURL}/${photo}`;
+                        return (
+                              <Box
+                                key={`hv-sale-proof-${pIdx}`}
+                                component="a"
+                                href={fullUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                sx={{
+                                  width: 80,
+                                  height: 80,
+                                  borderRadius: 1,
+                                  overflow: 'hidden',
+                                  border: '1px solid #ddd',
+                                  display: 'block',
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                                  '&:hover': { transform: 'scale(1.04)', transition: 'all 0.2s' },
+                                }}
+                              >
+                                <img src={fullUrl} alt={`Proof ${pIdx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              </Box>
+                        );
+                      })}
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+            </Card>
+          )}
+          <Typography sx={{ display: 'none' }}>
           </Typography>
           <Grid container spacing={3}>
             <Grid item xs={12}>

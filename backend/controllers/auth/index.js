@@ -2,6 +2,8 @@ const passport = require("passport");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/user");
 const Employee = require("../../models/employee");
+const Attendance = require("../../models/attendance");
+const mongoose = require("mongoose");
 const otpService = require("../../services/otp");
 const loginLogService = require("../../services/loginLog");
 const axios = require("axios");
@@ -409,4 +411,64 @@ async function updateProfile(req, res) {
   }
 }
 
-module.exports = { login, verifyLoginOtp, getUserType, getBranchUser, getProfile, updateProfile };
+async function getTodayAttendanceStatus(req, res) {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ status: false, message: "Unauthorized" });
+    }
+
+    if (user.userType === "admin") {
+      return res.json({
+        status: true,
+        required: false,
+        hasMarkedAttendance: true,
+      });
+    }
+
+    const employeeId = user.employee?._id || user.employee || user._id;
+
+    // Get today's start and end in IST (Asia/Kolkata)
+    const now = new Date();
+    const todayIST = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(now);
+    const startOfDay = new Date(`${todayIST}T00:00:00+05:30`);
+    const endOfDay = new Date(`${todayIST}T23:59:59.999+05:30`);
+
+    const query = {
+      $and: [
+        {
+          $or: [
+            { employee: employeeId },
+            ...(mongoose.Types.ObjectId.isValid(String(employeeId)) ? [{ employee: new mongoose.Types.ObjectId(String(employeeId)) }] : []),
+            { employee: user._id },
+            ...(mongoose.Types.ObjectId.isValid(String(user._id)) ? [{ employee: new mongoose.Types.ObjectId(String(user._id)) }] : []),
+          ],
+        },
+        {
+          $or: [
+            { attendanceDate: { $gte: startOfDay, $lte: endOfDay } },
+            { loginTime: { $gte: startOfDay, $lte: endOfDay } },
+            { createdAt: { $gte: startOfDay, $lte: endOfDay } },
+          ],
+        },
+      ],
+    };
+
+    const attendance = await Attendance.findOne(query).sort({ createdAt: -1 });
+
+    return res.json({
+      status: true,
+      required: true,
+      hasMarkedAttendance: !!attendance,
+      attendance: attendance || null,
+    });
+  } catch (err) {
+    return res.json({
+      status: false,
+      message: err.message || "Failed to check today attendance status",
+      data: {},
+    });
+  }
+}
+
+module.exports = { login, verifyLoginOtp, getUserType, getBranchUser, getProfile, updateProfile, getTodayAttendanceStatus };

@@ -227,6 +227,8 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
   const [selectedExecutiveId, setSelectedExecutiveId] = useState('');
   const [loadingExecutives, setLoadingExecutives] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [houseVerificationRequired, setHouseVerificationRequired] = useState('no');
+
 
   // Bullion Approve & Reject Modal states
   const [openRejectModal, setOpenRejectModal] = useState(false);
@@ -283,6 +285,7 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
     const currExecId = lead.assignedExecutive?._id || lead.assignedExecutive || '';
     setSelectedBranchId(currBranchId);
     setSelectedExecutiveId(currExecId);
+    setHouseVerificationRequired(lead.houseVerificationRequired ? 'yes' : 'no');
     if (currBranchId) {
       setLoadingExecutives(true);
       getBranchExecutives(currBranchId).then((res) => {
@@ -323,6 +326,7 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
       branch: selectedBranchId,
       assignedExecutive: selectedExecutiveId,
       assignedExecutiveName: execName,
+      houseVerificationRequired: houseVerificationRequired === 'yes',
     })
       .then((res) => {
         setAssigning(false);
@@ -690,6 +694,21 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
                             </Tooltip>
                           ) : row.assignedExecutive?.employee?.name || row.assignedExecutiveName ? (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {/* Bullion desk only chooses Yes/No during assignment; executive completes verification */}
+                              {false && (
+                                <Chip
+                                  size="small"
+                                  icon={<Iconify icon={row.houseVerification?.status === 'verified' ? 'eva:checkmark-circle-2-fill' : row.houseVerification?.status === 'rejected' ? 'eva:close-circle-fill' : 'mdi:home-search'} />}
+                                  label={row.houseVerification?.status === 'verified' ? 'House Verified' : row.houseVerification?.status === 'rejected' ? 'House Rejected' : 'HV Required'}
+                                  color={row.houseVerification?.status === 'verified' ? 'success' : row.houseVerification?.status === 'rejected' ? 'error' : 'warning'}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedLeadForVerification(row);
+                                    setOpenVerificationModal(true);
+                                  }}
+                                  sx={{ fontSize: '0.68rem', height: 20, cursor: 'pointer', mr: 0.5 }}
+                                />
+                              )}
                               <Typography variant="body2" sx={{ fontWeight: 600, color: '#1967d2' }}>
                                 {row.assignedExecutive?.employee?.name || row.assignedExecutiveName}
                               </Typography>
@@ -1144,6 +1163,18 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
               </Select>
             </FormControl>
 
+            <FormControl fullWidth size="small">
+              <InputLabel>House Verification</InputLabel>
+              <Select
+                value={houseVerificationRequired}
+                label="House Verification"
+                onChange={(e) => setHouseVerificationRequired(e.target.value)}
+              >
+                <MenuItem value="no">No</MenuItem>
+                <MenuItem value="yes">Yes</MenuItem>
+              </Select>
+            </FormControl>
+
             <FormControl fullWidth size="small" disabled={!selectedBranchId || loadingExecutives}>
               <InputLabel>{loadingExecutives ? 'Loading executives...' : 'Select Executive'}</InputLabel>
               <Select
@@ -1329,6 +1360,19 @@ export default function BullionDeskLeads({ title = "Bullion Desk Leads" }) {
         leadId={openId}
         onSuccess={() => fetchData()}
       />
+
+      {false && (
+        <HouseVerificationModal
+          open={openVerificationModal}
+          onClose={() => {
+            setOpenVerificationModal(false);
+            setSelectedLeadForVerification(null);
+          }}
+          lead={selectedLeadForVerification}
+          onSuccess={() => fetchData()}
+          setNotify={setNotify}
+        />
+      )}
 
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />

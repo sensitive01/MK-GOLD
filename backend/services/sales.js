@@ -1389,7 +1389,25 @@ async function findById(id) {
       },
       { $limit: 1 },
     ]).exec();
-    return sales[0];
+    const sale = sales[0];
+    if (sale && sale.customer && sale.customer.phoneNumber) {
+      const Lead = require("../models/lead");
+      const cleanMobile = String(sale.customer.phoneNumber).trim();
+      const lead = await Lead.findOne({
+        $or: [
+          { mobile: cleanMobile },
+          { mobile: cleanMobile.slice(-10) },
+        ],
+      })
+        .select("houseVerification houseVerificationRequired name mobile address assignedExecutiveName createdAt")
+        .sort({ createdAt: -1 })
+        .lean();
+      if (lead) {
+        sale.leadHouseVerification = lead.houseVerification;
+        sale.houseVerificationRequired = lead.houseVerificationRequired;
+      }
+    }
+    return sale;
   } catch (err) {
     throw err;
   }

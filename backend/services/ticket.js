@@ -43,7 +43,14 @@ async function create(payload = {}, file, user) {
     let assignedEmpName = "";
     if (payload.assignedEmployee) {
       const assignedEmp = await Employee.findById(payload.assignedEmployee).select("name").lean();
-      if (assignedEmp) assignedEmpName = assignedEmp.name;
+      if (assignedEmp) {
+        assignedEmpName = assignedEmp.name;
+      } else {
+        const assignedUser = await User.findById(payload.assignedEmployee).select("username").lean();
+        if (assignedUser) {
+          assignedEmpName = assignedUser.username === "admin" ? "Admin" : `Admin (${assignedUser.username})`;
+        }
+      }
     }
 
     let proofUrl = payload.proof || "";
@@ -136,6 +143,9 @@ async function findAssignedToMe(user, query = {}) {
 
     if (emp?._id) {
       orConds.push({ assignedEmployee: new mongoose.Types.ObjectId(emp._id) });
+    }
+    if (user?.userType === "admin") {
+      orConds.push({ designation: { $regex: /^admin$/i } });
     }
     if (user?._id) {
       orConds.push({ assignedEmployee: new mongoose.Types.ObjectId(user._id) });
@@ -325,7 +335,7 @@ async function getDesignations() {
 
     // Also get distinct designations used in Employee collection
     const empDesigs = await Employee.distinct("designation", { status: "active" });
-    const allSet = new Set([...names, ...empDesigs].filter(Boolean));
+    const allSet = new Set(["Admin", ...names, ...empDesigs].filter(Boolean));
     return Array.from(allSet).sort();
   } catch (err) {
     return [];
@@ -333,6 +343,51 @@ async function getDesignations() {
 }
 
 async function getEmployeesByDesignation(designation) {
+  const desigLower = (designation || "").trim().toLowerCase();
+
+  if (desigLower === "admin") {
+    try {
+      const empAdmins = await Employee.find({
+        status: "active",
+        designation: { $regex: new RegExp("^admin$", "i") },
+      })
+        .select("_id name employeeId designation branch")
+        .populate("branch", "name")
+        .lean();
+
+      const userAdmins = await User.find({ userType: "admin", status: "active" })
+        .select("_id username employee")
+        .populate({
+          path: "employee",
+          select: "_id name employeeId designation branch",
+          populate: { path: "branch", select: "name" },
+        })
+        .lean();
+
+      const results = [...empAdmins];
+      const seenIds = new Set(results.map((r) => String(r._id)));
+
+      for (const u of userAdmins) {
+        if (u.employee && !seenIds.has(String(u.employee._id))) {
+          seenIds.add(String(u.employee._id));
+          results.push(u.employee);
+        } else if (!u.employee && !seenIds.has(String(u._id))) {
+          seenIds.add(String(u._id));
+          results.push({
+            _id: u._id,
+            name: u.username === "admin" ? "Admin" : `Admin (${u.username})`,
+            employeeId: "ADMIN",
+            designation: "Admin",
+            branch: null,
+          });
+        }
+      }
+
+      return results;
+    } catch (err) {
+      return [];
+    }
+  }
   try {
     const query = { status: "active" };
     if (designation && designation !== "all") {

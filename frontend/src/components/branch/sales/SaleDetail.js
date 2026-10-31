@@ -2732,6 +2732,87 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 <KycProof />
               </Box>
             </Grid>
+            {data?.houseVerificationRequired && (
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mb: 1, fontSize: { xs: '1.05rem', sm: '1.15rem' }, fontWeight: 600 }}>
+                  House Verification:
+                </Typography>
+                <Card sx={{ p: 2.5, border: '1px solid #e1bee7', bgcolor: '#faf5fc', borderRadius: 2 }}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1} mb={1.5}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Iconify icon="mdi:home-search" sx={{ width: 24, height: 24, color: '#8A1B9F' }} />
+                      <Typography variant="subtitle1" sx={{ color: '#8A1B9F', fontWeight: 700 }}>
+                        Lead House Verification
+                      </Typography>
+                    </Stack>
+                    <Chip
+                      label={data?.leadHouseVerification?.status === 'verified' ? 'House Verified' : data?.leadHouseVerification?.status === 'rejected' ? 'House Rejected' : 'Pending Verification'}
+                      color={data?.leadHouseVerification?.status === 'verified' ? 'success' : data?.leadHouseVerification?.status === 'rejected' ? 'error' : 'warning'}
+                      size="small"
+                      icon={<Iconify icon={data?.leadHouseVerification?.status === 'verified' ? 'eva:checkmark-circle-2-fill' : data?.leadHouseVerification?.status === 'rejected' ? 'eva:close-circle-fill' : 'mdi:clock-outline'} />}
+                    />
+                  </Stack>
+
+                  <Grid container spacing={2}>
+                    {data?.leadHouseVerification?.verifiedByName && (
+                      <Grid item xs={12} sm={4}>
+                        <Typography variant="caption" color="textSecondary">Verified By:</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{data.leadHouseVerification.verifiedByName}</Typography>
+                      </Grid>
+                    )}
+                    {data?.leadHouseVerification?.verifiedAt && (
+                      <Grid item xs={12} sm={4}>
+                        <Typography variant="caption" color="textSecondary">Verified Date:</Typography>
+                        <Typography variant="body2">{new Date(data.leadHouseVerification.verifiedAt).toLocaleString('en-IN')}</Typography>
+                      </Grid>
+                    )}
+                    {data?.leadHouseVerification?.comments && (
+                      <Grid item xs={12}>
+                        <Typography variant="caption" color="textSecondary">Executive Remarks:</Typography>
+                        <Typography variant="body2" sx={{ bgcolor: '#fff', p: 1.5, borderRadius: 1, border: '1px solid #f0e6f5' }}>
+                          {data.leadHouseVerification.comments}
+                        </Typography>
+                      </Grid>
+                    )}
+                    {Array.isArray(data?.leadHouseVerification?.photos) && data.leadHouseVerification.photos.length > 0 && (
+                      <Grid item xs={12}>
+                        <Typography variant="caption" color="textSecondary" sx={{ mb: 1, display: 'block' }}>Photo Proofs ({data.leadHouseVerification.photos.length}):</Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                          {data.leadHouseVerification.photos.map((photo, pIdx) => {
+                            const fullUrl = photo.startsWith('http') ? photo : `${global.baseURL}/${photo}`;
+                            return (
+                              <Box
+                                key={`hv-sale-proof-${pIdx}`}
+                                component="a"
+                                href={fullUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                sx={{
+                                  width: 80,
+                                  height: 80,
+                                  borderRadius: 1,
+                                  overflow: 'hidden',
+                                  border: '1px solid #ddd',
+                                  display: 'block',
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                                  '&:hover': { transform: 'scale(1.04)', transition: 'all 0.2s' },
+                                }}
+                              >
+                                <img src={fullUrl} alt={`Proof ${pIdx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Card>
+              </Grid>
+            )}
+            <Grid item xs={12} sx={{ display: 'none' }}>
+              <Box>
+              </Box>
+            </Grid>
             {data?.customer?.address && data.customer.address.length > 0 && (
               <Grid item xs={12}>
                 <Typography variant="h6" sx={{ mb: 1 }}>

@@ -45,6 +45,7 @@ import * as Yup from 'yup';
 // components
 import { logout } from '../../features/authSlice';
 import { CreateAttendance } from '../../components/branch/attendance';
+import { useAttendance } from '../../context/AttendanceContext';
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
 // sections
@@ -87,6 +88,7 @@ function applySortFilter(array, comparator, query) {
 
 export default function Attendance() {
   const auth = useSelector((state) => state.auth);
+  const { hasMarkedAttendance } = useAttendance();
   const dispatch = useDispatch();
   const [open, setOpen] = useState(null);
   const [openBackdrop, setOpenBackdrop] = useState(true);
@@ -528,6 +530,21 @@ export default function Attendance() {
       </Snackbar>
 
       <Container maxWidth="xl" sx={{ px: { xs: 1, sm: 2, md: 3 }, display: toggleContainer === true ? 'none' : 'block' }}>
+        {!hasMarkedAttendance && auth.user?.userType !== 'admin' && (
+          <MuiAlert
+            severity="warning"
+            variant="filled"
+            sx={{
+              mb: 3,
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              boxShadow: '0 4px 12px rgba(237, 108, 2, 0.3)',
+              borderRadius: 1.5,
+            }}
+          >
+            📌 Attendance Required: Please punch in your attendance today to access your dashboard and menus.
+          </MuiAlert>
+        )}
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           alignItems={{ xs: 'flex-start', sm: 'center' }}

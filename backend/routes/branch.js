@@ -124,6 +124,8 @@ branchRouter.post("/lead/tl-approve/:id", lead.tlApprove);
 branchRouter.post("/lead/tl-reject/:id", lead.tlReject);
 branchRouter.post("/lead/bullion-approve/:id", lead.bullionApprove);
 branchRouter.post("/lead/bullion-reject/:id", lead.bullionReject);
+branchRouter.post("/lead/house-verification/:id", lead.submitHouseVerification);
+branchRouter.get("/lead/house-verification-by-mobile/:mobile", lead.getHouseVerificationByMobile);
 
 branchRouter.post("/imported-lead/import", importedLead.importLeads);
 branchRouter.get("/imported-lead/get", importedLead.find);

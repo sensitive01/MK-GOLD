@@ -219,6 +219,41 @@ const leadSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    houseVerificationRequired: {
+      type: Boolean,
+      default: false,
+    },
+    houseVerification: {
+      isVerified: {
+        type: Boolean,
+        default: false,
+      },
+      status: {
+        type: String,
+        enum: ["pending", "verified", "rejected"],
+        default: "pending",
+      },
+      photos: [
+        {
+          type: String,
+        },
+      ],
+      comments: {
+        type: String,
+        trim: true,
+      },
+      verifiedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+      },
+      verifiedByName: {
+        type: String,
+        trim: true,
+      },
+      verifiedAt: {
+        type: Date,
+      },
+    },
   },
   { timestamps: true }
 );

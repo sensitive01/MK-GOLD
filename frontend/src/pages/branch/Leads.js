@@ -39,7 +39,7 @@ import {
 import MuiAlert from '@mui/material/Alert';
 import moment from 'moment';
 import * as XLSX from 'xlsx';
-import { CreateLead, UpdateLead, PreviewLead } from '../../components/branch/lead';
+import { CreateLead, UpdateLead, PreviewLead, HouseVerificationModal } from '../../components/branch/lead';
 import AddCallLogModal from '../../components/branch/lead/AddCallLogModal';
 import Iconify from '../../components/iconify';
 import Scrollbar from '../../components/scrollbar';
@@ -257,6 +257,8 @@ export default function Leads({ title = "Leads Management" }) {
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [autoOpenLogModal, setAutoOpenLogModal] = useState(false);
+  const [openVerificationModal, setOpenVerificationModal] = useState(false);
+  const [selectedLeadForVerification, setSelectedLeadForVerification] = useState(null);
   const [data, setData] = useState([]);
   const location = useLocation();
   const [currentTab, setCurrentTab] = useState(location.state?.tab || 'pending');
@@ -1232,6 +1234,20 @@ export default function Leads({ title = "Leads Management" }) {
                         <TableCell align="left" sx={{ maxWidth: 150 }}>
                           {!row.isImported ? (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {row.houseVerificationRequired && (
+                                <Chip
+                                  size="small"
+                                  icon={<Iconify icon={row.houseVerification?.status === 'verified' ? 'eva:checkmark-circle-2-fill' : row.houseVerification?.status === 'rejected' ? 'eva:close-circle-fill' : 'mdi:home-search'} />}
+                                  label={row.houseVerification?.status === 'verified' ? 'House Verified' : row.houseVerification?.status === 'rejected' ? 'House Rejected' : 'HV Required'}
+                                  color={row.houseVerification?.status === 'verified' ? 'success' : row.houseVerification?.status === 'rejected' ? 'error' : 'warning'}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedLeadForVerification(row);
+                                    setOpenVerificationModal(true);
+                                  }}
+                                  sx={{ fontSize: '0.68rem', height: 24, cursor: 'pointer', fontWeight: 600 }}
+                                />
+                              )}
                               {dispositions?.length > 0 ? (
                                 <Button
                                   variant="outlined"
@@ -1527,6 +1543,19 @@ export default function Leads({ title = "Leads Management" }) {
           </Stack>
         </Box>
       </Modal>
+
+      {selectedLeadForVerification && (
+        <HouseVerificationModal
+          open={openVerificationModal}
+          onClose={() => {
+            setOpenVerificationModal(false);
+            setSelectedLeadForVerification(null);
+          }}
+          lead={selectedLeadForVerification}
+          onSuccess={() => fetchData()}
+          setNotify={setNotify}
+        />
+      )}
 
       <AddCallLogModal
         open={autoOpenLogModal}

@@ -666,6 +666,17 @@ async function assignExecutive(id, payload, user = null) {
       updateData.bullionApprovedAt = new Date();
     }
     if (payload.assignedExecutiveName) updateData.assignedExecutiveName = payload.assignedExecutiveName;
+    if (payload.houseVerificationRequired !== undefined) {
+      updateData.houseVerificationRequired = Boolean(
+        payload.houseVerificationRequired === true ||
+        payload.houseVerificationRequired === "yes" ||
+        payload.houseVerificationRequired === "true"
+      );
+      if (updateData.houseVerificationRequired) {
+        updateData["houseVerification.status"] = "pending";
+        updateData["houseVerification.isVerified"] = false;
+      }
+    }
     if (user) {
       updateData.updatedBy = user._id;
       if (!updateData.bullionApprovedBy) updateData.bullionApprovedBy = user._id;
@@ -682,6 +693,65 @@ async function assignExecutive(id, payload, user = null) {
         select: "username employee userType",
         populate: { path: "employee", select: "name employeeId phoneNumber designation" },
       });
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function submitHouseVerification(id, payload, user = null) {
+  try {
+    const isVerified = Boolean(
+      payload.verified === true ||
+      payload.verified === "yes" ||
+      payload.verified === "true"
+    );
+
+    const updateData = {
+      "houseVerification.isVerified": isVerified,
+      "houseVerification.status": isVerified ? "verified" : "rejected",
+      "houseVerification.comments": payload.comments ? String(payload.comments).trim() : "",
+      "houseVerification.photos": Array.isArray(payload.photos) ? payload.photos : [],
+      "houseVerification.verifiedAt": new Date(),
+    };
+
+    if (user) {
+      updateData["houseVerification.verifiedBy"] = user._id;
+      updateData["houseVerification.verifiedByName"] =
+        user.employee?.name || user.username || "Executive";
+      updateData.updatedBy = user._id;
+    }
+
+    return await Lead.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true }
+    )
+      .populate("branch", "branchName")
+      .populate({
+        path: "assignedExecutive",
+        select: "username employee userType",
+        populate: { path: "employee", select: "name employeeId phoneNumber designation" },
+      });
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function getHouseVerificationByMobile(mobile) {
+  try {
+    if (!mobile) return null;
+    const cleanMobile = String(mobile).trim();
+    const lead = await Lead.findOne({
+      $or: [
+        { mobile: cleanMobile },
+        { mobile: cleanMobile.slice(-10) },
+      ],
+    })
+      .select("houseVerification houseVerificationRequired name mobile address assignedExecutiveName createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return lead || null;
   } catch (err) {
     throw err;
   }
@@ -729,6 +799,8 @@ module.exports = {
   markExclusive,
   getNextTelecaller,
   assignExecutive,
+  submitHouseVerification,
+  getHouseVerificationByMobile,
   getBranchExecutives,
   moveToBusiness,
   tlApprove,
