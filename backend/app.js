@@ -19,6 +19,7 @@ const customerRouter = require("./routes/customer");
 const announcementRouter = require("./routes/announcement");
 const notificationManagementRouter = require("./routes/notificationManagement");
 const taskRouter = require("./routes/task");
+const ticketRouter = require("./routes/ticket");
 const publicRouter = require("./routes/public");
 const campaignRouter = require("./routes/campaign");
 const webhookRouter = require("./routes/webhook");
@@ -79,6 +80,7 @@ app.use("/api/v1.0/customer", customerRouter);
 app.use("/api/v1.0/announcement", announcementRouter);
 app.use("/api/v1.0/notification-management", notificationManagementRouter);
 app.use("/api/v1.0/task", taskRouter);
+app.use("/api/v1.0/ticket", ticketRouter);
 app.use("/api/v1.0/public", publicRouter);
 
 app.use("/api/v1.0/campaign", campaignRouter);

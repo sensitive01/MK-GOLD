@@ -17,6 +17,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import HistoryIcon from '@mui/icons-material/History';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -131,6 +132,11 @@ const navConfig = [
     title: 'Task Management',
     path: '/admin/tasks',
     icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Ticketing Tool',
+    path: '/admin/tickets',
+    icon: <ConfirmationNumberIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Settings',

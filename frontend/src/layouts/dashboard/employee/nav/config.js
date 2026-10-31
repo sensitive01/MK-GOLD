@@ -1,6 +1,7 @@
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DescriptionIcon from '@mui/icons-material/Description';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 
 // ----------------------------------------------------------------------
 
@@ -20,7 +21,11 @@ const navConfig = [
     path: '/employee/tasks',
     icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
   },
+  {
+    title: 'Ticketing Tool',
+    path: '/employee/tickets',
+    icon: <ConfirmationNumberIcon sx={{ width: 1, height: 1 }} />,
+  },
 ];
-
 
 export default navConfig;

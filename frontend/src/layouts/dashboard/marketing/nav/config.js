@@ -13,6 +13,7 @@ import CampaignIcon from '@mui/icons-material/Campaign';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import GroupsIcon from '@mui/icons-material/Groups';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -30,6 +31,11 @@ const navConfig = [
     title: 'My Tasks',
     path: '/marketing/tasks',
     icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Ticketing Tool',
+    path: '/marketing/tickets',
+    icon: <ConfirmationNumberIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Attendance',

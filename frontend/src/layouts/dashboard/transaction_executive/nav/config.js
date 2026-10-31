@@ -3,6 +3,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -32,6 +33,11 @@ const navConfig = [
     icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
   },
   {
+    title: 'Ticketing Tool',
+    path: '/transaction-executive/tickets',
+    icon: <ConfirmationNumberIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
     title: 'Leave',
     path: '/transaction-executive/leave',
     icon: <DescriptionIcon sx={{ width: 1, height: 1 }} />,
@@ -46,11 +52,6 @@ const navConfig = [
     path: '/transaction-executive/release',
     icon: <AccessTimeIcon sx={{ width: 1, height: 1 }} />,
   },
-  // {
-  //   title: 'Customers',
-  //   path: '/transaction-executive/customer',
-  //   icon: icon('ic_user'),
-  // },
   {
     title: 'Leads',
     path: '/transaction-executive/leads',

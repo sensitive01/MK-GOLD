@@ -7,6 +7,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DescriptionIcon from '@mui/icons-material/Description';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -54,6 +55,11 @@ const navConfig = [
     title: 'My Tasks',
     path: '/auditor/tasks',
     icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Ticketing Tool',
+    path: '/auditor/tickets',
+    icon: <ConfirmationNumberIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Leaves',

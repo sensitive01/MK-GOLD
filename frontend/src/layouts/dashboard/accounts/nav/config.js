@@ -7,6 +7,7 @@ import RequestPageIcon from '@mui/icons-material/RequestPage';
 import TimeToLeaveIcon from '@mui/icons-material/TimeToLeave';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -64,6 +65,11 @@ const navConfig = [
     title: 'My Tasks',
     path: '/accounts/tasks',
     icon: <TaskAltIcon sx={{ width: 1, height: 1 }} />,
+  },
+  {
+    title: 'Ticketing Tool',
+    path: '/accounts/tickets',
+    icon: <ConfirmationNumberIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'leaves',

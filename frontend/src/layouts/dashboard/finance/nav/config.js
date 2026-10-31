@@ -7,6 +7,7 @@ import RequestPageIcon from '@mui/icons-material/RequestPage';
 import TimeToLeaveIcon from '@mui/icons-material/TimeToLeave';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -81,6 +82,11 @@ const navConfig = [
     title: 'My Tasks',
     path: '/finance/tasks',
     icon: icon('ic_analytics'),
+  },
+  {
+    title: 'Ticketing Tool',
+    path: '/finance/tickets',
+    icon: <ConfirmationNumberIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Releases',

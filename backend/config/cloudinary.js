@@ -24,5 +24,13 @@ const taskStorage = new CloudinaryStorage({
   }),
 });
 
-module.exports = { cloudinary, storage, taskStorage };
+const ticketStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => ({
+    folder: 'mk_gold_tickets',
+    resource_type: 'auto',
+  }),
+});
+
+module.exports = { cloudinary, storage, taskStorage, ticketStorage };
 

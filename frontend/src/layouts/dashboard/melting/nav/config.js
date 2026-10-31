@@ -6,6 +6,7 @@ import PaymentsIcon from '@mui/icons-material/Payments';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DescriptionIcon from '@mui/icons-material/Description';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import SvgColor from '../../../../components/svg-color';
 
 // ----------------------------------------------------------------------
@@ -28,16 +29,6 @@ const navConfig = [
     path: '/melting/melting',
     icon: <AccountBalanceWalletIcon sx={{ width: 1, height: 1 }} />,
   },
-  // {
-  //   title: 'Sell Gold',
-  //   path: '/melting/sell-gold',
-  //   icon: <LocalOfferIcon sx={{ width: 1, height: 1 }} />,
-  // },
-  // {
-  //   title: 'Vendor',
-  //   path: '/melting/vendor',
-  //   icon: icon('ic_user'),
-  // },
   {
     title: 'Billing',
     path: '/melting/sale',
@@ -67,6 +58,11 @@ const navConfig = [
     title: 'My Tasks',
     path: '/melting/tasks',
     icon: icon('ic_analytics'),
+  },
+  {
+    title: 'Ticketing Tool',
+    path: '/melting/tickets',
+    icon: <ConfirmationNumberIcon sx={{ width: 1, height: 1 }} />,
   },
   {
     title: 'Leaves',

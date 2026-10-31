@@ -2,6 +2,7 @@ import HomeWorkIcon from '@mui/icons-material/HomeWork';
 import DescriptionIcon from '@mui/icons-material/Description';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 // component
 import SvgColor from '../../../../components/svg-color';
 
@@ -56,6 +57,11 @@ const navConfig = [
     title: 'My Tasks',
     path: '/hr/tasks',
     icon: icon('ic_analytics'),
+  },
+  {
+    title: 'Ticketing Tool',
+    path: '/hr/tickets',
+    icon: <ConfirmationNumberIcon sx={{ width: 1, height: 1 }} />,
   },
 ];
 
