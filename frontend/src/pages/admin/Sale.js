@@ -60,6 +60,7 @@ import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 import global from '../../utils/global';
+import { canPrintSaleInvoice } from '../../utils/saleInvoice';
 import TimelineView from '../../components/TimelineView';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 // sections
@@ -140,7 +141,8 @@ export default function Sale() {
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
   const [detailedSale, setDetailedSale] = useState(null);
-  const selectedSale = useMemo(() => data?.find((s) => s._id === saleIdToEdit), [data, saleIdToEdit]);
+  const selectedSale = useMemo(() => data?.find((s) => String(s._id) === String(saleIdToEdit)), [data, saleIdToEdit]);
+  const currentSale = (detailedSale && String(detailedSale._id) === String(saleIdToEdit)) ? detailedSale : selectedSale;
   const isSaleCompleted = ['completed', 'intransit', 'moved', 'moved_to_melting', 'melted'].includes((detailedSale?.status || selectedSale?.status)?.toLowerCase());
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
@@ -692,6 +694,7 @@ export default function Sale() {
             Sale Details
           </Typography>
           <Stack direction="row" spacing={2}>
+            {canPrintSaleInvoice(currentSale, 'admin', window.location.pathname) ? (
             <Button
               variant="contained"
               sx={{
@@ -702,11 +705,19 @@ export default function Sale() {
                 },
               }}
               startIcon={<Iconify icon="material-symbols:print" />}
+              onClick={() => setToggleContainerType('print')}
+            >
+              {/*
               onClick={() => {
                 setToggleContainerType('print');
+          }}
+          sx={{ display: canPrintSaleInvoice(selectedSale, 'admin', window.location.pathname) ? 'flex' : 'none' }}
+        >
+          {/*
+
               }}
             >
-              Print
+              */}Print</Button>) : null}<Button style={{ display: 'none' }}>
             </Button>
             <Button
               variant="contained"
@@ -790,7 +801,13 @@ export default function Sale() {
             setToggleContainer(!toggleContainer);
             setToggleContainerType('print');
           }}
+          sx={{ display: canPrintSaleInvoice(selectedSale, 'admin', window.location.pathname) ? 'flex' : 'none' }}
         >
+          {/*
+
+          }}
+        >
+          */}
           <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
           Print
         </MenuItem>

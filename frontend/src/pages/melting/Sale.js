@@ -1,6 +1,6 @@
 import { sentenceCase } from 'change-case';
 import { filter } from 'lodash';
-import { forwardRef, useEffect, useRef, useState, useCallback } from 'react';
+import { forwardRef, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 // @mui
@@ -56,6 +56,7 @@ import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
 import global from '../../utils/global';
+import { canPrintSaleInvoice } from '../../utils/saleInvoice';
 import TimelineView from '../../components/TimelineView';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 // sections
@@ -135,6 +136,9 @@ export default function Sale() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [toggleContainer, setToggleContainer] = useState(false);
   const [toggleContainerType, setToggleContainerType] = useState('');
+  const [detailedSale, setDetailedSale] = useState(null);
+  const selectedSale = useMemo(() => data?.find((s) => String(s._id) === String(saleIdToEdit)), [data, saleIdToEdit]);
+  const currentSale = (detailedSale && String(detailedSale._id) === String(saleIdToEdit)) ? detailedSale : selectedSale;
   const [data, setData] = useState([]);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
@@ -648,6 +652,7 @@ export default function Sale() {
             Sale Details
           </Typography>
           <Stack direction="row" spacing={2}>
+            {canPrintSaleInvoice(currentSale, 'melting', window.location.pathname) ? (
             <Button
               variant="contained"
               sx={{
@@ -658,11 +663,19 @@ export default function Sale() {
                 },
               }}
               startIcon={<Iconify icon="material-symbols:print" />}
+              onClick={() => setToggleContainerType('print')}
+            >
+              {/*
               onClick={() => {
                 setToggleContainerType('print');
+          }}
+          sx={{ display: canPrintSaleInvoice(selectedSale, 'melting', window.location.pathname) ? 'flex' : 'none' }}
+        >
+          {/*
+          {...{ _dummy: () => {
               }}
             >
-              Print
+              */}Print</Button>) : null}<Button style={{ display: 'none' }}>
             </Button>
             <Button
               variant="contained"
@@ -676,7 +689,7 @@ export default function Sale() {
           </Stack>
         </Stack>
 
-        <SaleDetail id={saleIdToEdit} setNotify={setNotify} />
+        <SaleDetail id={saleIdToEdit} setNotify={setNotify} onSaleLoaded={setDetailedSale} />
       </Container>
 
       <Container
@@ -745,7 +758,13 @@ export default function Sale() {
             setToggleContainer(!toggleContainer);
             setToggleContainerType('print');
           }}
+          sx={{ display: canPrintSaleInvoice(selectedSale, 'melting', window.location.pathname) ? 'flex' : 'none' }}
         >
+          {/*
+          {...{ _dummy: () => {
+          }}
+        >
+          */}
           <Iconify icon={'material-symbols:print'} sx={{ mr: 2 }} />
           Print
         </MenuItem>

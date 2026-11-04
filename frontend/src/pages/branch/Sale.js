@@ -55,6 +55,7 @@ import { getBranch } from '../../apis/branch/branch';
 import { deleteSalesById, findSales, updateSales, getSalesById, checkArticleNumberApi } from '../../apis/branch/sales';
 import { createFile } from '../../apis/branch/fileupload';
 import global from '../../utils/global';
+import { canPrintSaleInvoice } from '../../utils/saleInvoice';
 import TimelineView from '../../components/TimelineView';
 import PropTypes from 'prop-types';
 import { useFormik } from 'formik';
@@ -170,7 +171,8 @@ export default function Sale() {
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
   const [detailedSale, setDetailedSale] = useState(null);
-  const selectedSale = useMemo(() => data?.find((s) => s._id === saleIdToEdit), [data, saleIdToEdit]);
+  const selectedSale = useMemo(() => data?.find((s) => String(s._id) === String(saleIdToEdit)), [data, saleIdToEdit]);
+  const currentSale = (detailedSale && String(detailedSale._id) === String(saleIdToEdit)) ? detailedSale : selectedSale;
   const isSaleCompleted = ['completed', 'intransit', 'moved', 'moved_to_melting', 'melted'].includes((detailedSale?.status || selectedSale?.status)?.toLowerCase());
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
@@ -487,6 +489,7 @@ export default function Sale() {
                 startIcon={<Iconify icon="eva:plus-fill" />}
                 onClick={() => {
                   setSaleIdToEdit(null);
+                 setDetailedSale(null);
                   setToggleContainer(true);
                   setToggleContainerType('create');
                 }}
@@ -751,6 +754,7 @@ export default function Sale() {
                             if (isSelectForTransit) {
                               handleClick(null, _id);
                             } else {
+                              setDetailedSale(null);
                               setSaleIdToEdit(_id);
                               setToggleContainer(true);
                               setToggleContainerType('detail');
@@ -975,7 +979,7 @@ export default function Sale() {
               Billing Summary
             </Typography>
             <Stack direction="row" spacing={2}>
-              {(isBullionDesk || isSaleCompleted) && (
+              {canPrintSaleInvoice(currentSale, userType, window.location.pathname) && (
                 <Button
                   variant="contained"
                   sx={{
@@ -999,6 +1003,7 @@ export default function Sale() {
                 onClick={() => {
                   setToggleContainer(false);
                   setSaleIdToEdit(null);
+                 setDetailedSale(null);
                   setDetailedSale(null);
                   fetchData();
                 }}
@@ -1062,7 +1067,7 @@ export default function Sale() {
           <Iconify icon={'carbon:view-filled'} sx={{ mr: 2 }} />
           View
         </MenuItem>
-        {(isBullionDesk || ['completed', 'intransit', 'moved', 'moved_to_melting', 'melted'].includes(selectedSale?.status?.toLowerCase())) && (
+        {canPrintSaleInvoice(selectedSale, userType, window.location.pathname) && (
           <MenuItem
             onClick={() => {
               setOpen(null);

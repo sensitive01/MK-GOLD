@@ -57,6 +57,7 @@ import PropTypes from 'prop-types';
 import { SaleDetail, SalePrint } from '../../components/accounts/sales';
 import CreateSale from '../../components/branch/sales/CreateSale';
 import global from '../../utils/global';
+import { canPrintSaleInvoice } from '../../utils/saleInvoice';
 import Iconify from '../../components/iconify';
 import Label from '../../components/label';
 import Scrollbar from '../../components/scrollbar';
@@ -158,7 +159,8 @@ export default function Sale() {
   const [toggleContainerType, setToggleContainerType] = useState('');
   const [data, setData] = useState([]);
   const [detailedSale, setDetailedSale] = useState(null);
-  const selectedSale = useMemo(() => data?.find((s) => s._id === openId), [data, openId]);
+  const selectedSale = useMemo(() => data?.find((s) => String(s._id) === String(openId)), [data, openId]);
+  const currentSale = (detailedSale && String(detailedSale._id) === String(openId)) ? detailedSale : selectedSale;
   const isSaleCompleted = ['completed', 'intransit', 'moved', 'moved_to_melting', 'melted'].includes((detailedSale?.status || selectedSale?.status)?.toLowerCase());
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState('single');
@@ -850,6 +852,7 @@ export default function Sale() {
             Sale Details
           </Typography>
           <Stack direction="row" spacing={2}>
+            {canPrintSaleInvoice(currentSale, auth?.user?.userType, window.location.pathname) ? (
             <Button
               variant="contained"
               sx={{
@@ -864,7 +867,7 @@ export default function Sale() {
                 setToggleContainerType('print');
               }}
             >
-              Print
+              Print</Button>) : null}<Button style={{ display: 'none' }}>
             </Button>
             <Button
               variant="contained"
@@ -918,7 +921,7 @@ export default function Sale() {
           <Iconify icon={'carbon:view-filled'} sx={{ mr: 2 }} />
           View
         </MenuItem>
-        {['completed', 'intransit', 'moved', 'melted'].includes(selectedSale?.status?.toLowerCase()) && (
+        {canPrintSaleInvoice(selectedSale, auth?.user?.userType, window.location.pathname) && (
           <MenuItem
             onClick={() => {
               setOpen(null);
