@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { canPrintSaleInvoice } from '../../../utils/saleInvoice';
 import PropTypes from 'prop-types';
 import { Button } from '@mui/material';
 import moment from 'moment';
@@ -98,6 +100,8 @@ function extractPaymentRows(data) {
 }
 
 export default function SalePrint({ id }) {
+  const auth = useSelector((state) => state.auth);
+  const userType = auth?.user?.userType;
   const [data, setData] = useState({});
 
   useEffect(() => {
@@ -244,7 +248,7 @@ export default function SalePrint({ id }) {
 
   return (
     <>
-      {(data?.status?.toLowerCase() === 'approved' || data?.status?.toLowerCase() === 'completed') && (
+      {canPrintSaleInvoice(data, userType, window.location.pathname) && (
         <div style={{ width: '750px', margin: '0 auto', paddingBottom: '10px', textAlign: 'right' }}>
           <Button
             variant="contained"
