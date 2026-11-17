@@ -366,6 +366,17 @@ async function update(id, payload) {
       returnDocument: "after",
     }).exec();
 
+    // If ID proof, PAN, name, or phone was updated, clear cached invoice PDF on all sales for this customer
+    try {
+      const Sales = require("../models/sales");
+      await Sales.updateMany(
+        { customer: id },
+        { $set: { invoicePdfUrl: "" } }
+      ).exec();
+    } catch (e) {
+      console.warn("Could not invalidate invoicePdfUrl for sales:", e.message);
+    }
+
     // Log to enquiry if ID is provided
     if (payload.enqID) {
       await QREnquiry.findOneAndUpdate(

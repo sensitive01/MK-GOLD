@@ -34,6 +34,38 @@ async function create(req, res) {
   }
 }
 
+async function update(req, res) {
+  try {
+    if (req.user?.userType?.toLowerCase() === "bullion_desk") {
+      return res.status(403).json({
+        status: false,
+        message: "Forbidden: Bullion Desk does not have permission to edit customer address",
+        data: {},
+      });
+    }
+    const customerId = req.params.id || req.body.customerId;
+    const addressId = req.body.addressId || req.body._id;
+    const updatedData = await customerAddressService.update(customerId, addressId, req.body);
+    res.json({
+      status: true,
+      message: "Address updated successfully",
+      data: {
+        data: updatedData,
+        fileUpload: {
+          uploadId: addressId,
+          uploadName: "customer_address",
+        },
+      },
+    });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: err.errors ?? err.message,
+      data: {},
+    });
+  }
+}
+
 async function remove(req, res) {
   try {
     await fileUploadService.removeMany({
@@ -59,4 +91,4 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { findById, create, remove };
+module.exports = { findById, create, update, remove };

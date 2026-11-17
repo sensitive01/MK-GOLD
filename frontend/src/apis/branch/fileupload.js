@@ -36,6 +36,17 @@ async function createFile(payload) {
   }
 }
 
+async function updateFile(id, payload) {
+  try {
+    const isAdmin = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+    const prefix = isAdmin ? '/api/v1.0/admin' : '/api/v1.0/branch';
+    const response = await apiClient().post(`${prefix}/file-upload/update/${id}`, payload);
+    return response.data;
+  } catch (err) {
+    return err;
+  }
+}
+
 async function deleteFileById(id) {
   try {
     const response = await apiClient().post(`/api/v1.0/branch/file-upload/delete/${id}`);
@@ -45,4 +56,4 @@ async function deleteFileById(id) {
   }
 }
 
-export { findFile, getFile, getFileById, createFile, deleteFileById };
+export { findFile, getFile, getFileById, createFile, updateFile, deleteFileById };

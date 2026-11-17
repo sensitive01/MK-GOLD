@@ -59,6 +59,43 @@ async function create(payload) {
   }
 }
 
+async function update(customerId, addressId, payload) {
+  try {
+    const updateFields = {};
+    if (payload.address !== undefined) updateFields["address.$.address"] = payload.address;
+    if (payload.area !== undefined) updateFields["address.$.area"] = payload.area;
+    if (payload.city !== undefined) updateFields["address.$.city"] = payload.city;
+    if (payload.state !== undefined) updateFields["address.$.state"] = payload.state;
+    if (payload.pincode !== undefined) updateFields["address.$.pincode"] = String(payload.pincode);
+    if (payload.landmark !== undefined) updateFields["address.$.landmark"] = payload.landmark;
+    if (payload.residential !== undefined) updateFields["address.$.residential"] = payload.residential;
+    if (payload.label !== undefined) updateFields["address.$.label"] = payload.label;
+
+    const updatedCustomer = await Customer.findOneAndUpdate(
+      { _id: customerId, "address._id": addressId },
+      { $set: updateFields },
+      {
+        returnDocument: "after",
+      }
+    ).exec();
+
+    // Invalidate cached invoice PDF for any sales of this customer so fresh address appears
+    try {
+      const Sales = require("../models/sales");
+      await Sales.updateMany(
+        { customer: customerId },
+        { $set: { invoicePdfUrl: "" } }
+      ).exec();
+    } catch (e) {
+      console.warn("Could not invalidate invoicePdfUrl for sales:", e.message);
+    }
+
+    return updatedCustomer;
+  } catch (err) {
+    throw err;
+  }
+}
+
 async function remove(customerId, id) {
   try {
     return await Customer.findByIdAndUpdate(
@@ -73,4 +110,4 @@ async function remove(customerId, id) {
   }
 }
 
-module.exports = { findById, create, remove };
+module.exports = { findById, create, update, remove };

@@ -100,6 +100,7 @@ branchRouter.post("/customer/verify-otp", customer.verifyOtp);
 
 branchRouter.get("/customer-address/get/:id", customerAddress.findById);
 branchRouter.post("/customer-address/create", customerAddress.create);
+branchRouter.post("/customer-address/update/:id", customerAddress.update);
 // branchRouter.post("/customer-address/delete/:id", customerAddress.remove);
 
 branchRouter.get("/customer-bank/get/:id", customerBank.findById);
@@ -173,6 +174,11 @@ branchRouter.post(
   "/file-upload/create",
   multer.single("uploadedFile"),
   fileUpload.create
+);
+branchRouter.post(
+  "/file-upload/update/:id",
+  multer.single("uploadedFile"),
+  fileUpload.update
 );
 // branchRouter.post("/file-upload/delete/:id", fileUpload.remove);
 

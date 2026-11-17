@@ -132,18 +132,23 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
     setOpenVerifyModal(true);
   };
 
-  useEffect(() => {
+  const reloadSale = () => {
     if (id) {
-      getSalesById(id).then((data) => {
-        if (data.status && data.data) {
-          setData(data.data);
+      setOpenBackdrop(true);
+      getSalesById(id).then((res) => {
+        if (res?.status && res?.data) {
+          setData(res.data);
           if (onSaleLoaded) {
-            onSaleLoaded(data.data);
+            onSaleLoaded(res.data);
           }
         }
         setOpenBackdrop(false);
       });
     }
+  };
+
+  useEffect(() => {
+    reloadSale();
   }, [id]);
 
   function Ornament() {
@@ -1772,7 +1777,26 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
     );
 
     if (!kycProofs || kycProofs.length === 0) {
-      return null;
+      return (
+        <Box sx={{ width: '100%', mt: 2.5, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              fontWeight: 700,
+              color: 'text.secondary',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              fontSize: '0.75rem',
+              mb: 1.5,
+            }}
+          >
+            Customer KYC Documents & Proofs
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            No KYC documents uploaded yet.
+          </Typography>
+        </Box>
+      );
     }
 
     return (
@@ -1780,12 +1804,12 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
         <Typography
           variant="subtitle2"
           sx={{
-            mb: 1.5,
             fontWeight: 700,
             color: 'text.secondary',
             textTransform: 'uppercase',
             letterSpacing: 0.5,
             fontSize: '0.75rem',
+            mb: 1.5,
           }}
         >
           Customer KYC Documents & Proofs

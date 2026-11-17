@@ -40,6 +40,33 @@ async function create(req, res) {
   }
 }
 
+async function update(req, res) {
+  try {
+    if (req.user?.userType?.toLowerCase() === "bullion_desk") {
+      return res.status(403).json({
+        status: false,
+        message: "Forbidden: Bullion Desk does not have permission to edit customer documents",
+        data: {},
+      });
+    }
+    const payload = { ...req.body };
+    if (req.file) {
+      payload.uploadedFile = req.file;
+    }
+    res.json({
+      status: true,
+      message: "",
+      data: await fileUpload.update(req.params.id, payload),
+    });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: err.errors ?? err.message,
+      data: {},
+    });
+  }
+}
+
 async function remove(req, res) {
   try {
     res.json({
@@ -56,4 +83,4 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { find, findById, findOne, create, remove };
+module.exports = { find, findById, findOne, create, update, remove };

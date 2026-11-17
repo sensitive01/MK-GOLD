@@ -25,6 +25,17 @@ async function findById(id) {
   }
 }
 
+async function update(id, payload) {
+  try {
+    if (payload.uploadedFile && (payload.uploadedFile.path || payload.uploadedFile.secure_url)) {
+      payload.uploadedFile = payload.uploadedFile.path || payload.uploadedFile.secure_url;
+    }
+    return await fileUpload.findByIdAndUpdate(id, payload, { returnDocument: "after" }).exec();
+  } catch (err) {
+    throw err;
+  }
+}
+
 async function create(payload) {
   try {
     if (!payload.uploadedFile) {
@@ -91,4 +102,4 @@ async function removeMany(query) {
   }
 }
 
-module.exports = { find, findOne, findById, create, remove, removeMany };
+module.exports = { find, findOne, findById, create, update, remove, removeMany };

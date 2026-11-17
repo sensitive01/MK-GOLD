@@ -15,6 +15,7 @@ const attendance = require("../controllers/admin/attendance");
 const sales = require("../controllers/admin/sales");
 const ornament = require("../controllers/admin/ornament");
 const customer = require("../controllers/admin/customer");
+const customerAddress = require("../controllers/branch/customer-address");
 const release = require("../controllers/admin/release");
 const fileUpload = require("../controllers/admin/fileupload");
 const report = require("../controllers/admin/report");
@@ -210,6 +211,10 @@ adminRouter.post("/customer/delete/:id", canDelete, customer.remove);
 adminRouter.post("/customer/send-otp", customer.sendOtp);
 adminRouter.post("/customer/verify-otp", customer.verifyOtp);
 
+adminRouter.get("/customer-address/get/:id", customerAddress.findById);
+adminRouter.post("/customer-address/create", customerAddress.create);
+adminRouter.post("/customer-address/update/:id", customerAddress.update);
+
 adminRouter.get("/payprocess/get", payprocess.find);
 adminRouter.post("/payprocess/get", payprocess.find);
 adminRouter.get("/payprocess/get/:id", payprocess.findById);
@@ -224,6 +229,11 @@ adminRouter.post(
   "/file-upload/create",
   multer.single("uploadedFile"),
   fileUpload.create
+);
+adminRouter.post(
+  "/file-upload/update/:id",
+  multer.single("uploadedFile"),
+  fileUpload.update
 );
 adminRouter.post("/file-upload/delete/:id", canDelete, fileUpload.remove);
 

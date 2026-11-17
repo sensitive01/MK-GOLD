@@ -45,6 +45,8 @@ import TimelineView from '../../TimelineView';
 import Scrollbar from '../../scrollbar';
 import BankDetailCard from '../../BankDetailCard';
 import VerifyBankPaymentModal from '../../VerifyBankPaymentModal';
+import EditCustomerKycModal from '../../EditCustomerKycModal';
+import EditCustomerAddressModal from '../../EditCustomerAddressModal';
 
 export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoaded, isTransitSale }) {
   const auth = useSelector((state) => state.auth);
@@ -56,6 +58,9 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
   const [openBackdrop, setOpenBackdrop] = useState(true);
   const [openVerifyBankModal, setOpenVerifyBankModal] = useState(false);
   const [selectedVerifyTarget, setSelectedVerifyTarget] = useState(null);
+  const [openKycModal, setOpenKycModal] = useState(false);
+  const [openAddressModal, setOpenAddressModal] = useState(false);
+  const [selectedEditAddress, setSelectedEditAddress] = useState(null);
 
   // Store Transit Ornament Edit State
   const [editOrnamentModal, setEditOrnamentModal] = useState(false);
@@ -212,6 +217,19 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
       });
     }
   }, [id]);
+
+  const reloadSale = () => {
+    if (id) {
+      getSalesById(id).then((res) => {
+        if (res && res.status && res.data) {
+          setData(res.data);
+          if (onSaleLoaded) {
+            onSaleLoaded(res.data);
+          }
+        }
+      });
+    }
+  };
 
   const getProofUrl = (proof) => {
     if (!proof) return null;
@@ -2208,24 +2226,61 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
     );
 
     if (!kycProofs || kycProofs.length === 0) {
-      return null;
+      return (
+        <Box sx={{ width: '100%', mt: 2.5, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1.5}>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                fontWeight: 700,
+                color: 'text.secondary',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+                fontSize: '0.75rem',
+              }}
+            >
+              Customer KYC Documents & Proofs
+            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<Iconify icon="mdi:account-edit-outline" />}
+              onClick={() => setOpenKycModal(true)}
+            >
+              Add / Upload KYC Proofs
+            </Button>
+          </Stack>
+          <Typography variant="body2" color="text.secondary">
+            No KYC documents uploaded yet.
+          </Typography>
+        </Box>
+      );
     }
 
     return (
       <Box sx={{ width: '100%', mt: 2.5, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-        <Typography
-          variant="subtitle2"
-          sx={{
-            mb: 1.5,
-            fontWeight: 700,
-            color: 'text.secondary',
-            textTransform: 'uppercase',
-            letterSpacing: 0.5,
-            fontSize: '0.75rem',
-          }}
-        >
-          Customer KYC Documents & Proofs
-        </Typography>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1.5}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              fontWeight: 700,
+              color: 'text.secondary',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              fontSize: '0.75rem',
+            }}
+          >
+            Customer KYC Documents & Proofs
+          </Typography>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<Iconify icon="mdi:account-edit-outline" />}
+            onClick={() => setOpenKycModal(true)}
+          >
+            Edit KYC Proofs
+          </Button>
+        </Stack>
         <Grid container spacing={2}>
           {kycProofs.map((e, index) => {
             const isSignature =
@@ -2399,6 +2454,7 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                 <TableCell align="left">Landmark</TableCell>
                 <TableCell align="left">Label</TableCell>
                 <TableCell align="left">Proof</TableCell>
+                <TableCell align="center">Action</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -2465,17 +2521,30 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
                         </Typography>
                       )}
                     </TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        title="Edit this address"
+                        onClick={() => {
+                          setSelectedEditAddress(e);
+                          setOpenAddressModal(true);
+                        }}
+                      >
+                        <Iconify icon="mdi:pencil-outline" />
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
                 );
               })}
               {emptyRows > 0 && (
                 <TableRow style={{ height: 53 * emptyRows }}>
-                  <TableCell colSpan={7} />
+                  <TableCell colSpan={8} />
                 </TableRow>
               )}
               {data?.customer?.address?.length === 0 && (
                 <TableRow>
-                  <TableCell align="center" colSpan={7} sx={{ py: 3 }}>
+                  <TableCell align="center" colSpan={8} sx={{ py: 3 }}>
                     <Paper
                       sx={{
                         textAlign: 'center',
@@ -3523,6 +3592,23 @@ export default function SaleDetail({ id, setNotify, onActionComplete, onSaleLoad
           </LoadingButton>
         </DialogActions>
       </Dialog>
+
+      <EditCustomerKycModal
+        open={openKycModal}
+        onClose={() => setOpenKycModal(false)}
+        customer={data?.customer}
+        onSuccess={reloadSale}
+        setNotify={setNotify}
+      />
+
+      <EditCustomerAddressModal
+        open={openAddressModal}
+        onClose={() => setOpenAddressModal(false)}
+        customer={data?.customer}
+        address={selectedEditAddress || data?.customer?.address?.[0]}
+        onSuccess={reloadSale}
+        setNotify={setNotify}
+      />
     </>
   );
 }
